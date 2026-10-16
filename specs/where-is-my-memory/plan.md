@@ -84,7 +84,7 @@ Default applicato se l'utente non risponde. Le Q bloccanti per una fase vanno ch
   con id invariato (default). B) in Fase 1 rischio assente e "recuperabile ora" a zero.
 - **Q-5 [Fase 3]** §8.3 permette di togliere voci dal dialogo multiplo, ma il `Plan` è immutabile e
   `ActionRequest(kind, group_id, target_id)` non ha esclusioni. A) `ActionRequest` riceve
-  `excluded_ids: tuple[str, ...]` e ogni toggle chiede un nuovo piano (default). B) niente toggle.
+  `excluded_ids: frozenset[str]` e ogni toggle chiede un nuovo piano (default). B) niente toggle.
 - **Q-6 [Fase 1]** `reclaimable_now.disk` sta nello snapshot, ma il disco arriva da un report su un
   ciclo diverso. A) somma delle voci `safe` dell'ultimo report disco, `0` prima della prima scansione
   (Fase 1-4: sempre `0`) (default). B) campo `null` finché non c'è un report.
