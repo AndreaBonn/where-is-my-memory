@@ -44,3 +44,10 @@ il 2026-10-16. BASIS: measured.
   BASIS: inferred da packages.ubuntu.com; la CI remota non è ancora stata eseguita.
 - La CI esegue `make test`, non `make test-all`: i test UI, D-Bus e di integrazione hanno
   bisogno di una sessione grafica e di Docker (decisione D-U3 di `plan.md`).
+
+## `stop_group` / `group_stop` (T-0.2a)
+
+§6.5 (esempio JSON, `primary_action.kind`) e l'esempio di chiamata in §8.1 scrivono
+`stop_group`. L'enum `ActionKind` di §8.1 e il paragrafo "Semantica di `group_stop`" usano
+invece `group_stop`. Vale `group_stop`, perché l'enum è la definizione e gli esempi sono
+illustrativi. Il decoder rifiuta `stop_group`. BASIS: measured.

@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "taken_at": "2026-10-16T10:30:00+02:00",
+  "monitor_started_at": "2026-10-16T08:00:00+02:00",
+  "memory": {
+    "total": 41742000000, "available": 8800000000, "used": 32900000000,
+    "swap_total": 4294967296, "swap_used": 120000000,
+    "breakdown": {"CONTAINER": 950000000, "DEV_SERVER": 2100000000, "BROWSER": 9800000000,
+                  "DESKTOP_APP": 3200000000, "AI_CLI": 2400000000, "kernel_cache": 6500000000,
+                  "unattributed": 1900000000}
+  },
+  "disk": {"mount": "/", "total": 375809638400, "used": 329638211584, "free": 27917287424},
+  "reclaimable_now": {"ram": 4200000000, "disk": 7400000000},
+  "pressure": "warning",
+  "docker": {"available": true, "error": null},
+  "groups": [
+    {
+      "id": "g_3f9a1c", "name": "whitebox", "category": "PROJECT", "protection": "actionable",
+      "activity": {"state": "idle", "since": "2026-10-16T05:12:00+02:00",
+                   "reason": "nessuna connessione in ingresso e CPU media 0,1% negli ultimi 30 minuti"},
+      "memory": {"used": 1100000000, "reclaimable": 1050000000}, "ports": [8000, 8080],
+      "primary_action": {"kind": "group_stop", "risk": "safe"},
+      "ignored": false, "snoozed_until": null,
+      "explanation": "progetto compose 'whitebox' in /home/bonn/projects/ai-whitebox-core più un processo uvicorn lanciato dal terminale nella stessa cartella",
+      "members": [
+        {"kind": "container", "id": "2c9184903a37", "name": "whitebox-keycloak",
+         "image": "quay.io/keycloak/keycloak:26.0.8", "state": "running",
+         "memory": {"used": 682000000, "reclaimable": 682000000},
+         "mounts": [{"type": "bind", "source": "/home/bonn/projects/ai-whitebox-core/vault", "destination": "/opt/keycloak/vault"}],
+         "activity": {"state": "idle", "since": "2026-10-16T05:12:00+02:00", "reason": "CPU e rete sotto soglia"},
+         "actions": [{"kind": "container_stop", "risk": "safe"}]},
+        {"kind": "process", "pid": 941149, "create_time": 1760590000.12, "name": "uvicorn",
+         "cmdline": ["uvicorn", "app:main", "--port", "8000"], "cwd": "/home/bonn/projects/ai-whitebox-core",
+         "category": "DEV_SERVER", "listen_ports": [8000],
+         "memory": {"used": 180000000, "reclaimable": 165000000},
+         "activity": {"state": "idle", "since": "2026-10-16T05:12:00+02:00", "reason": "Nessuna nuova connessione"},
+         "actions": [{"kind": "process_terminate", "risk": "safe"}]}
+      ]
+    }
+  ],
+  "protected_summary": [{"label": "Sessione GNOME", "memory": 1400000000, "reason": "componente del desktop"}]
+}
