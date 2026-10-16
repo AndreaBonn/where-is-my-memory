@@ -42,8 +42,11 @@ def test_meminfo_matches_free() -> None:
         args=["/usr/bin/free", "-b"], capture_output=True, text=True, check=True, timeout=5
     ).stdout
     row = next(line.split() for line in output.splitlines() if line.startswith("Mem:"))
-    for actual, expected in ((memory.mem_total, int(row[1])), (memory.mem_available, int(row[-1]))):
-        assert abs(actual - expected) / expected < TOLERANCE
+    total = int(row[1])
+    # Spec DoD 2 bounds the error at 2% of the machine's RAM: MemAvailable moves between
+    # the two reads, and under pressure a relative bound on it alone flakes (52 MB on 886 MB).
+    for actual, expected in ((memory.mem_total, total), (memory.mem_available, int(row[-1]))):
+        assert abs(actual - expected) / total < TOLERANCE
 
 
 def test_parse_meminfo_all_counters_and_extra_fields() -> None:
