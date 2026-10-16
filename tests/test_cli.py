@@ -218,9 +218,7 @@ def test_window_host_survives_a_window_that_cannot_open(caplog: pytest.LogCaptur
 
 def test_build_window_fails_fast_without_a_display() -> None:
     environment = {
-        key: value
-        for key, value in os.environ.items()
-        if key not in ("DISPLAY", "WAYLAND_DISPLAY")
+        key: value for key, value in os.environ.items() if key not in ("DISPLAY", "WAYLAND_DISPLAY")
     }
     result = subprocess.run(
         args=[
