@@ -2,7 +2,9 @@ import logging
 import os
 import signal
 import sys
-from typing import TYPE_CHECKING, Any
+from collections.abc import Callable, Mapping
+from functools import partial
+from typing import TYPE_CHECKING, Any, Protocol
 
 from wimm import __version__
 
@@ -15,11 +17,43 @@ APPLICATION_ID = "io.github.wimm.WhereIsMyMemory"
 LOGGER = logging.getLogger(__name__)
 
 
+class PresentableWindow(Protocol):
+    def show_group(self, group_id: str | None) -> None: ...
+
+
 class WindowHost:
+    """Owns the panel window, built on the first request so GTK loads only then."""
+
+    def __init__(self, *, factory: Callable[[], PresentableWindow]) -> None:
+        self._factory = factory
+        self._window: PresentableWindow | None = None
+
     def present(self, group_id: str | None) -> None:
-        if group_id is not None:
-            LOGGER.info("Requested group %s", group_id)
-        LOGGER.info("window not implemented yet")
+        if self._window is None:
+            self._window = self._factory()
+        self._window.show_group(group_id=group_id)
+
+
+# The GL renderer maps Mesa and LLVM into a process that stays resident all day: with it
+# the hidden window costs 227 MB RSS, with Cairo and GL disabled 130 MB (docs/PERF.md).
+GRAPHICS_DEFAULTS = {"GSK_RENDERER": "cairo", "GDK_DEBUG": "gl-disable,vulkan-disable"}
+
+
+def graphics_defaults(environment: Mapping[str, str]) -> dict[str, str]:
+    """GTK rendering variables to set, leaving any the user already chose untouched."""
+    return {key: value for key, value in GRAPHICS_DEFAULTS.items() if key not in environment}
+
+
+def _build_window(application: Any) -> PresentableWindow:
+    # GDK reads these when GTK initialises, so they must be set before the import below.
+    os.environ.update(graphics_defaults(environment=os.environ))
+    # Importing wimm.ui.window pulls in GTK and libadwaita (docs/DEVIATIONS.md).
+    from wimm.service.sampler import wall_clock
+    from wimm.ui.window import create_main_window
+
+    return create_main_window(
+        application=application, source=application._service, clock=wall_clock
+    )
 
 
 def _activate(application: Any) -> None:
@@ -122,7 +156,7 @@ def create_application() -> "Gio.Application":
         application_id=os.environ.get("WIMM_APP_ID", APPLICATION_ID),
         flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
     )
-    application._window_host = WindowHost()
+    application._window_host = WindowHost(factory=partial(_build_window, application))
     _configure_options(application=application)
     return application
 

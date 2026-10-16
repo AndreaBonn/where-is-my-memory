@@ -34,3 +34,15 @@ Misura: `OverviewPage` in una `Gtk.Window` mappata sotto Xvfb, 300 `Adw.Expander
 | 2026-10-16 | `Gtk.ListBox.set_sort_func` + `invalidate_sort()`, righe aggiunte o tolte per id, niente remove+insert | ordine invertito 11,6 s; jitter 3% 11,9 s; una riga che si sposta 5,8 s | invertito 0,38 s; jitter 0,41 s; una riga 0,30 s (slice unico) | tenuta | ogni remove+insert invalidava il layout della lista |
 | 2026-10-16 | Membri aggiornati in place per chiave in `GroupRowWidget`, ricostruzione solo se cambia la sequenza di chiavi | 20 righe x 8 membri aperti: 1599 ms | 533 ms | tenuta | menu aperto e focus restano; costo 3x minore |
 | 2026-10-16 | Costruzione e update a blocchi con `GLib.idle_add`, budget 10 ms per slice | costruzione 595 ms in uno slice; update con tutte le righe cambiate 530 ms | slice di lavoro della pagina max 15 ms; slice massimo del main loop 14-32 ms in update, 55 ms alla costruzione (layout dell'ultimo frame con 300 righe) | tenuta | totale più lungo (costruzione 2 s) ma nessun blocco; ListView non implementata, da valutare solo se la costruzione supera ancora 50 ms |
+
+## Memoria con la finestra aperta e poi nascosta (RNF-02: sotto 200 MB)
+
+Misura: `scripts/dev_run.sh` sul display reale (X11), finestra aperta 35 s con circa 40 gruppi
+reali, poi chiusa (nascosta) con `wmctrl -c`; RSS e PSS da `/proc/<pid>`.
+
+| Data | Configurazione | RSS | PSS | Verdetto |
+|---|---|---|---|---|
+| 2026-10-16 | renderer di default (GL: Mesa `libgallium` e `libLLVM` caricate) | 227 MB | 196 MB | sopra il limite |
+| 2026-10-16 | `GSK_RENDERER=cairo` | 210 MB | 178 MB | scartata da sola: GDK inizializza comunque GL |
+| 2026-10-16 | `GSK_RENDERER=cairo` + `GDK_DEBUG=gl-disable,vulkan-disable` | 130 MB | 100 MB | tenuta: render visivamente identico (screenshot confrontati) |
+| 2026-10-16 | stessa configurazione come default dell'app, avvio senza variabili | 126 MB | - | verifica: nessuna libreria GL nelle mappe |

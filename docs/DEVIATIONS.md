@@ -157,3 +157,12 @@ azioni `app.*` continuano a funzionare. Il comportamento visibile non cambia: ch
 Prototipo verificato sotto Xvfb: finestra mostrata, chiusura che nasconde, processo vivo. Il
 consumo dopo l'apertura della finestra va misurato sul display reale (RNF-02, seconda soglia:
 200 MB).
+
+## Rendering senza GL (T-1.9b)
+
+La spec non prescrive un renderer. Con quello di default GTK carica il driver OpenGL (Mesa
+`libgallium`, `libLLVM`) e la finestra nascosta costa 227 MB di RSS, oltre la seconda soglia di
+RNF-02 (200 MB). L'app imposta quindi `GSK_RENDERER=cairo` e
+`GDK_DEBUG=gl-disable,vulkan-disable` prima di caricare GTK, solo se l'utente non ha già scelto
+un valore: 126-130 MB misurati, render identico per un'interfaccia fatta di liste e testo.
+Misure in `docs/PERF.md`.

@@ -91,20 +91,29 @@ def test_module_version_subprocess() -> None:
     assert result.stderr == ""
 
 
-def test_window_host_logs_placeholder_and_group(caplog: pytest.LogCaptureFixture) -> None:
-    import logging
+class RecordingWindow:
+    def __init__(self) -> None:
+        self.shown: list[str | None] = []
 
+    def show_group(self, group_id: str | None) -> None:
+        self.shown.append(group_id)
+
+
+def test_window_host_builds_the_window_once_and_reuses_it() -> None:
     from wimm.app import WindowHost
 
-    host = WindowHost()
-    with caplog.at_level(level=logging.INFO):
-        host.present(group_id=None)
-        host.present(group_id="example")
-    assert caplog.messages == [
-        "window not implemented yet",
-        "Requested group example",
-        "window not implemented yet",
-    ]
+    built: list[RecordingWindow] = []
+
+    def factory() -> RecordingWindow:
+        built.append(RecordingWindow())
+        return built[-1]
+
+    host = WindowHost(factory=factory)
+    assert built == []  # nothing (and no GTK) until the first request
+    host.present(group_id=None)
+    host.present(group_id="g_3f9a1c")
+    assert len(built) == 1
+    assert built[0].shown == [None, "g_3f9a1c"]
 
 
 def test_background_service_two_cycles_do_not_import_gtk_or_adw() -> None:
@@ -174,3 +183,14 @@ def test_command_line_reports_failed_service_startup() -> None:
         _command_line(application=SimpleNamespace(_service=None), command_line=None)
         == STARTUP_FAILED
     )
+
+
+def test_graphics_defaults_disable_gl_only_when_unset() -> None:
+    from wimm.app import graphics_defaults
+
+    assert graphics_defaults(environment={}) == {
+        "GSK_RENDERER": "cairo",
+        "GDK_DEBUG": "gl-disable,vulkan-disable",
+    }
+    # A user choice wins: nothing is overridden.
+    assert graphics_defaults(environment={"GSK_RENDERER": "ngl", "GDK_DEBUG": "misc"}) == {}
