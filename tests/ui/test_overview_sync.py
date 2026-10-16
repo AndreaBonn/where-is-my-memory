@@ -32,6 +32,14 @@ FIRST_SLICE_BUDGET_S = 10.0
 SETTLE_ITERATIONS = 20
 HOUR_S = 3600
 FOCUS_SCROLL = 15_000.0
+# One row per slice: with the real 10 ms budget an idle machine can finish all 300 rows in
+# the first slice, and the tests below need a sync that is still running.
+ONE_ROW_SLICE_BUDGET_S = 0.0
+
+
+@pytest.fixture(autouse=True)
+def one_row_per_slice(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(overview_module, "SLICE_BUDGET_S", ONE_ROW_SLICE_BUDGET_S)
 
 
 @pytest.fixture
