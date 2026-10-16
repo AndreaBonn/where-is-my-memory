@@ -42,6 +42,11 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
+# PyGObject requires gi.require_version() before the gi.repository imports.
+"src/wimm/ui/**" = ["E402"]
+"src/wimm/tray/**" = ["E402"]
+"tests/ui/**" = ["E402"]
+"tests/tray/**" = ["E402"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -62,4 +67,7 @@ markers = [
     "integration: tests using resources created by the test",
     "ui: tests requiring a graphical display",
     "dbus: tests requiring a private session bus",
+    "perf: wall-clock budgets, run on a quiet machine with make perf",
 ]
+# Wall-clock budgets fail under unrelated load; they run on purpose with make perf.
+addopts = ["-m", "not perf"]

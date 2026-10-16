@@ -1,4 +1,4 @@
-.PHONY: setup test test-all lint run deb
+.PHONY: setup test test-all perf lint run deb
 
 # Enforce core coverage only once executable core code exists.
 CORE_HAS_CODE := $(shell test ! -d src/wimm/core || \
@@ -15,6 +15,9 @@ test:
 
 test-all:
 	dbus-run-session -- xvfb-run -a uv run pytest
+
+perf:
+	xvfb-run -a uv run pytest -m perf -s
 
 lint:
 	uv run ruff check .
