@@ -1,4 +1,6 @@
 from collections.abc import Mapping
+from dataclasses import replace
+from typing import Unpack
 
 import pytest
 
@@ -8,7 +10,7 @@ from wimm.core.grouping_keys import Pair, stable_group_id
 from wimm.model.enums import Category, MetricsSource
 from wimm.model.raw import Mount, RawContainer, RawProcess
 
-from .helpers import process
+from .helpers import ProcessChanges, process
 
 HOME = "/home/bonn"
 WHITEBOX_DIR = "/home/bonn/dev/ai-whitebox-core"
@@ -38,8 +40,10 @@ def container(*, name: str, project: str | None = None, workdir: str | None = No
     )
 
 
-def dev(pid: int, *, category: Category = Category.DEV_PROCESS, **changes: object) -> Pair:
-    proc = process(pid=pid, **changes)  # type: ignore[arg-type]
+def dev(
+    pid: int, /, *, category: Category = Category.DEV_PROCESS, **changes: Unpack[ProcessChanges]
+) -> Pair:
+    proc = replace(process(**changes), pid=pid)
     return proc, CategoryDecision(category=category, reason_code="x")
 
 

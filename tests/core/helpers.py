@@ -20,11 +20,19 @@ class ProcessChanges(TypedDict, total=False):
     ppid: int
     uid: int
     name: str
+    exe: str | None
     cmdline: tuple[str, ...] | None
-    cgroup: str
+    cwd: str | None
+    create_time: float | None
+    cpu_time_s: float | None
     pss: int | None
     uss: int | None
     swap: int | None
+    rss: int
+    cgroup: str
+    terminal: str | None
+    tpgid: int | None
+    pgid: int | None
 
 
 class GroupChanges(TypedDict, total=False):

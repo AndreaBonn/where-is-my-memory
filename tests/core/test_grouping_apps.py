@@ -1,11 +1,13 @@
 from collections.abc import Mapping
+from dataclasses import replace
+from typing import Unpack
 
 from wimm.core.categorize import CategoryDecision
 from wimm.core.grouping import GroupDraft, GroupingInput, build_groups
 from wimm.model.enums import Category
 from wimm.model.raw import RawProcess
 
-from .helpers import FIREFOX, TERMINAL, USER_PATH, VTE, process
+from .helpers import FIREFOX, TERMINAL, USER_PATH, VTE, ProcessChanges, process
 
 HOME = "/home/bonn"
 CODE_SCOPE = USER_PATH + "app-gnome-code-1.scope"
@@ -16,12 +18,13 @@ Pair = tuple[RawProcess, CategoryDecision]
 def pair(
     pid: int,
     category: Category,
+    /,
     *,
     appid: str | None = None,
     scope: str | None = None,
-    **changes: object,
+    **changes: Unpack[ProcessChanges],
 ) -> Pair:
-    proc = process(pid=pid, **changes)  # type: ignore[arg-type]
+    proc = replace(process(**changes), pid=pid)
     return proc, CategoryDecision(category=category, reason_code="x", appid=appid, scope=scope)
 
 

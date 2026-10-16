@@ -1,4 +1,5 @@
 from dataclasses import replace
+from typing import TypedDict, Unpack
 
 import pytest
 
@@ -163,7 +164,18 @@ def test_group_unknown_reason_agrees_in_number(measurable: int, expected: str) -
     assert text.reason_group_unknown(measurable=measurable) == expected
 
 
-def _facts(**changes: object) -> text.GroupFacts:
+class FactsChanges(TypedDict, total=False):
+    category: Category
+    name: str
+    folder: str | None
+    containers: int
+    processes: int
+    ports: tuple[int, ...]
+    compose_project: str | None
+    lead_process: str | None
+
+
+def _facts(**changes: Unpack[FactsChanges]) -> text.GroupFacts:
     base = text.GroupFacts(
         category=Category.OTHER,
         name="x",
@@ -174,7 +186,7 @@ def _facts(**changes: object) -> text.GroupFacts:
         compose_project=None,
         lead_process=None,
     )
-    return replace(base, **changes)  # type: ignore[arg-type]
+    return replace(base, **changes)
 
 
 @pytest.mark.parametrize(
