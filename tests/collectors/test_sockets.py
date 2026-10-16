@@ -76,6 +76,26 @@ def test_collect_sockets_fake() -> None:
     assert result.error is None
 
 
+def test_collect_sockets_converts_psutil_address_namedtuples() -> None:
+    address = psutil._common.addr  # the type psutil.net_connections really returns
+
+    def source(*, kind: str) -> list[SimpleNamespace]:
+        return [
+            SimpleNamespace(
+                pid=10,
+                laddr=address(ip="127.0.0.1", port=PORT),
+                raddr=address(ip="127.0.0.1", port=40000),
+                status="ESTABLISHED",
+            )
+        ]
+
+    result = collect_sockets(source=source)
+    assert result.error is None
+    assert result.data is not None
+    assert type(result.data[0].laddr) is tuple
+    assert result.data[0].raddr == ("127.0.0.1", 40000)
+
+
 @pytest.mark.parametrize(
     "error",
     [

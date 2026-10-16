@@ -30,13 +30,24 @@ class Connection(Protocol):
     def status(self) -> str: ...
 
 
+def plain_address(address: tuple[str, int] | tuple[()]) -> tuple[str, int] | None:
+    # psutil returns an `addr` namedtuple; the model stores a plain, exact tuple.
+    if not address:
+        return None
+    host, port = address
+    return (host, port)
+
+
 def collect_sockets(
     source: Callable[..., Iterable[Connection]] = psutil.net_connections,
 ) -> CollectorResult[tuple[RawSocket, ...]]:
     try:
         sockets = tuple(
             RawSocket(
-                pid=item.pid, laddr=item.laddr or None, raddr=item.raddr or None, status=item.status
+                pid=item.pid,
+                laddr=plain_address(address=item.laddr),
+                raddr=plain_address(address=item.raddr),
+                status=item.status,
             )
             for item in source(kind=TCP_KIND)
         )
