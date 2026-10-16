@@ -50,6 +50,8 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
 
 [tool.mypy]
 python_version = "3.12"
+# make deb stages a full copy of the package under build/: never a second "wimm".
+exclude = ["^build/", "^dist/"]
 
 [[tool.mypy.overrides]]
 module = ["wimm.core.*", "wimm.model", "wimm.model.*"]
