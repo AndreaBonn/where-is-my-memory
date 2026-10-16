@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from wimm.core import text
@@ -159,3 +161,64 @@ def test_group_idle_reason_agrees_in_number(measurable: int, expected: str) -> N
 )
 def test_group_unknown_reason_agrees_in_number(measurable: int, expected: str) -> None:
     assert text.reason_group_unknown(measurable=measurable) == expected
+
+
+def _facts(**changes: object) -> text.GroupFacts:
+    base = text.GroupFacts(
+        category=Category.OTHER,
+        name="x",
+        folder=None,
+        containers=0,
+        processes=1,
+        ports=(),
+        compose_project=None,
+        lead_process=None,
+    )
+    return replace(base, **changes)  # type: ignore[arg-type]
+
+
+@pytest.mark.parametrize(
+    ("ports", "expected"),
+    [
+        ((), "un processo uvicorn"),
+        ((80,), "un processo uvicorn in ascolto sulla porta 80"),
+        ((80, 81), "un processo uvicorn in ascolto sulle porte 80 e 81"),
+        ((80, 81, 82), "un processo uvicorn in ascolto sulle porte 80, 81 e 82"),
+    ],
+)
+def test_explain_group_dev_server_lists_ports_without_terminal_claim(
+    ports: tuple[int, ...], expected: str
+) -> None:
+    facts = _facts(category=Category.DEV_SERVER, lead_process="uvicorn", ports=ports)
+
+    assert text.explain_group(facts=facts) == expected
+
+
+def test_explain_group_launched_plural_and_folder_basename() -> None:
+    facts = _facts(category=Category.AI_CLI, processes=3, folder="/work/api/")
+
+    assert text.explain_group(facts=facts) == (
+        "3 processi lanciati dal terminale nella cartella `api`"
+    )
+
+
+def test_explain_group_one_container_is_singular_count() -> None:
+    facts = _facts(
+        category=Category.CONTAINER, containers=1, processes=0, compose_project="p", folder="/srv"
+    )
+
+    assert text.explain_group(facts=facts) == "progetto compose 'p' con 1 container in /srv"
+
+
+def test_explain_group_process_without_lead_name() -> None:
+    assert text.explain_group(facts=_facts()) == (
+        "un processo non riconducibile a un progetto o a un'app"
+    )
+
+
+def test_explain_group_dev_process_keeps_launched_from_terminal() -> None:
+    facts = _facts(category=Category.DEV_PROCESS, lead_process="make", ports=(80,))
+
+    assert text.explain_group(facts=facts) == (
+        "un processo make lanciato dal terminale, in ascolto sulla porta 80"
+    )
