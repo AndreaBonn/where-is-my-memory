@@ -103,6 +103,7 @@ def member(category: Category) -> ProcessMember:
     return ProcessMember(
         pid=20,
         create_time=1,
+        uid=1000,
         name="worker",
         cmdline=(),
         cwd=None,
@@ -111,4 +112,6 @@ def member(category: Category) -> ProcessMember:
         memory=MemoryUse(used=100, reclaimable=70),
         activity=group().activity,
         actions=(),
+        has_documents=False,
+        is_foreground=False,
     )

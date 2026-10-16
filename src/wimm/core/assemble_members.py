@@ -63,20 +63,23 @@ def _process_target(
 
 
 def _process_member(
-    *, facts: ProcessFacts, category: Category, actions: tuple[ActionOffer, ...]
+    *, facts: ProcessFacts, target: RiskTarget, actions: tuple[ActionOffer, ...]
 ) -> ProcessMember:
     proc = facts.proc
     return ProcessMember(
         pid=proc.pid,
         create_time=UNKNOWN_CREATE_TIME if proc.create_time is None else proc.create_time,
+        uid=proc.uid,
         name=proc.name,
         cmdline=proc.cmdline or (),
         cwd=proc.cwd,
-        category=category,
+        category=target.category,
         listen_ports=tuple(sorted(facts.listen_ports)),
         memory=process_memory_use(proc=proc),
         activity=facts.activity,
         actions=actions,
+        has_documents=target.has_documents,
+        is_foreground=target.is_foreground_on_tty,
     )
 
 
@@ -103,7 +106,7 @@ def build_process_member(
     target = _process_target(facts=facts, category=category, desktop_categories=desktop_categories)
     # No start time, no fingerprint (spec 8.2): the action could hit a recycled pid.
     actions = () if facts.proc.create_time is None else available_actions(target=target)
-    return _process_member(facts=facts, category=category, actions=actions)
+    return _process_member(facts=facts, target=target, actions=actions)
 
 
 def build_container_member(

@@ -29,12 +29,13 @@
          "mounts": [{"type": "bind", "source": "/home/bonn/projects/ai-whitebox-core/vault", "destination": "/opt/keycloak/vault"}],
          "activity": {"state": "idle", "since": "2026-10-16T05:12:00+02:00", "reason": "CPU e rete sotto soglia"},
          "actions": [{"kind": "container_stop", "risk": "safe"}]},
-        {"kind": "process", "pid": 941149, "create_time": 1760590000.12, "name": "uvicorn",
+        {"kind": "process", "pid": 941149, "create_time": 1760590000.12, "uid": 1000, "name": "uvicorn",
          "cmdline": ["uvicorn", "app:main", "--port", "8000"], "cwd": "/home/bonn/projects/ai-whitebox-core",
          "category": "DEV_SERVER", "listen_ports": [8000],
          "memory": {"used": 180000000, "reclaimable": 165000000},
          "activity": {"state": "idle", "since": "2026-10-16T05:12:00+02:00", "reason": "Nessuna nuova connessione"},
-         "actions": [{"kind": "process_terminate", "risk": "safe"}]}
+         "actions": [{"kind": "process_terminate", "risk": "safe"}],
+         "has_documents": false, "is_foreground": true}
       ]
     }
   ],

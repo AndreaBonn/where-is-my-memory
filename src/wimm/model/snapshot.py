@@ -53,6 +53,7 @@ def require_protected_actions(category: Category, actions: tuple[ActionOffer, ..
 class ProcessMember(ImmutableModel):
     pid: int
     create_time: float
+    uid: int
     name: str
     cmdline: tuple[str, ...]
     cwd: str | None
@@ -61,10 +62,13 @@ class ProcessMember(ImmutableModel):
     memory: MemoryUse
     activity: ActivityAssessment
     actions: tuple[ActionOffer, ...]
+    has_documents: bool
+    is_foreground: bool
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
         require_nonnegative(value=self.pid, field="pid")
+        require_nonnegative(value=self.uid, field="uid")
         require_ports(values=self.listen_ports, field="listen_ports")
         if self.category is Category.PROJECT:
             raise ValueError("category PROJECT is only valid for groups")

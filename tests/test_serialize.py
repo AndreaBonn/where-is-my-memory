@@ -17,7 +17,7 @@ from wimm.model import (
     ProcessMember,
     Protection,
 )
-from wimm.serialize import snapshot_from_json, snapshot_to_json
+from wimm.serialize import SnapshotFormatError, snapshot_from_json, snapshot_to_json
 
 FIXTURE = Path(__file__).parent / "fixtures" / "snapshot_whitebox.json"
 
@@ -284,3 +284,26 @@ def test_snapshot_auxiliary_byte_fields_reject_invalid_values(snapshot: m.Snapsh
     assert protected.memory == 1400000000
     with pytest.raises(ValueError, match="memory"):
         replace(protected, memory=invalid_model_value(True))
+
+
+def test_process_risk_facts_roundtrip_and_are_required(document: dict[str, Any]) -> None:
+    process = snapshot_from_json(text=FIXTURE.read_text()).groups[0].members[1]
+    assert isinstance(process, ProcessMember)
+    assert (process.uid, process.has_documents, process.is_foreground) == (1000, False, True)
+    for field in ("uid", "has_documents", "is_foreground"):
+        broken = json.loads(json.dumps(document))
+        del broken["groups"][0]["members"][1][field]
+        with pytest.raises(SnapshotFormatError, match=field):
+            snapshot_from_json(text=json.dumps(broken))
+
+
+@pytest.mark.parametrize(
+    "field,value", [("uid", -1), ("uid", True), ("has_documents", 1), ("is_foreground", "yes")]
+)
+def test_process_risk_facts_reject_invalid_values(
+    document: dict[str, Any], field: str, value: object
+) -> None:
+    document["groups"][0]["members"][1][field] = value
+
+    with pytest.raises(SnapshotFormatError, match=field):
+        snapshot_from_json(text=json.dumps(document))

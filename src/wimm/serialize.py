@@ -156,6 +156,7 @@ SCHEMAS: dict[type, Schema] = {
         "kind": literal(expected="process"),
         "pid": INTEGER,
         "create_time": float_value,
+        "uid": INTEGER,
         "name": TEXT,
         "cmdline": sequence(decoder=TEXT),
         "cwd": nullable(decoder=TEXT),
@@ -164,6 +165,8 @@ SCHEMAS: dict[type, Schema] = {
         "memory": MEMORY,
         "activity": ACTIVITY,
         "actions": ACTIONS,
+        "has_documents": BOOLEAN,
+        "is_foreground": BOOLEAN,
     },
     m.ContainerMember: {
         "kind": literal(expected="container"),
