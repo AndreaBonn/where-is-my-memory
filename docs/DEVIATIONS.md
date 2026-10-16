@@ -105,3 +105,19 @@ systemd fa l'escape dei caratteri nei nomi delle unit (`app-gnome-google\x2dchro
 `update\x2dnotifier`; verificato sulla macchina). I pattern di §5.1 e il lookup dei `.desktop`
 si applicano al nome decodificato. Senza decodifica Chrome risulterebbe `DESKTOP_APP` e ogni
 appid con un trattino perderebbe il nome e le categorie del suo `.desktop`.
+
+## Attività: CPU mai misurabile nella finestra (T-1.7b)
+
+§5.4 ammette `unknown` solo per una storia troppo corta o per un tipo non misurabile.
+Se però in nessun intervallo della finestra la CPU di un'entità è stata misurabile (letture
+negate o contatori azzerati a ogni ciclo), dichiararla `idle` vorrebbe dire affermare
+un'inattività che nessun dato prova. In quel caso lo stato è `unknown`, con il motivo "CPU
+non misurabile negli ultimi campioni".
+
+## Conseguenza per la categoria `OTHER` (T-3.1a)
+
+La tabella di §5.3 non ha una riga per `OTHER`. Il testo generico delle app ("L'applicazione si
+chiude.") sarebbe fuorviante per un servizio utente come syncthing, che non è un'applicazione
+e che systemd può far ripartire. Testo usato: "Il programma si ferma: ciò che ha in memoria e
+non ha salvato va perso. Se è un servizio, potrebbe riavviarsi da solo." Il rischio resta
+`caution`.

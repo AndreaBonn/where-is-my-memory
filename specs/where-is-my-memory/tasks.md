@@ -168,3 +168,13 @@ della spec citate, le decisioni Q applicate, la riga `SCOPE:` (unione degli SCOP
 
 I rilievi S1-S7 e T1-T12 sono mappati sui task in `plan.md` § Rilievi degli specialisti integrati.
 Il prompt di delega di ogni lotto riporta i criteri dei propri task, perché l'agent non legge il piano.
+
+### Criteri aggiunti dalla review di T-1.7 (per T-1.8a)
+
+- La CPU "processo più figli" di §5.4 si calcola come somma dei delta per PID presenti in
+  entrambi i campioni, con identità `pid` + `create_time`, non dal cumulato aggregato. Un figlio
+  che termina fra due campioni farebbe scendere il cumulato, il delta diventerebbe `None` e
+  l'attività andrebbe persa.
+- Le quadruple di un server sono quelle non-LISTEN sulle porte in LISTEN del processo **e dei
+  suoi discendenti** (`non_listening_for_ports`). Se la scansione dei socket fallisce, il
+  campione porta `connections=None`.
