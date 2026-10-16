@@ -1,13 +1,6 @@
-class WimmError(Exception):
-    """Service failure with an internal message and a separate Italian UI message."""
-
-    code = "WIMM_ERROR"
-    message = "Application operation failed"
-    user_message = "L'operazione non è riuscita"
-
-    def __init__(self, message: str | None = None) -> None:
-        self.message = self.message if message is None else message
-        super().__init__(self.message)
+from wimm.model.errors import InvalidRequest as InvalidRequest
+from wimm.model.errors import ProtectedTarget as ProtectedTarget
+from wimm.model.errors import WimmError as WimmError
 
 
 class PlanExpired(WimmError):
@@ -34,19 +27,7 @@ class ConfirmationMismatch(WimmError):
     user_message = "Il testo di conferma non corrisponde"
 
 
-class ProtectedTarget(WimmError):
-    code = "PROTECTED_TARGET"
-    message = "Action target is protected"
-    user_message = "L'elemento è protetto e non può essere modificato"
-
-
 class DockerUnavailable(WimmError):
     code = "DOCKER_UNAVAILABLE"
     message = "Docker is unavailable"
     user_message = "Docker non è disponibile"
-
-
-class InvalidRequest(WimmError):
-    code = "INVALID_REQUEST"
-    message = "Action request is invalid"
-    user_message = "La richiesta non è valida"

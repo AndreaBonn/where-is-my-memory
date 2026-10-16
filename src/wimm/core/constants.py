@@ -155,3 +155,6 @@ SESSION_SERVICE_PATTERNS = (
     "ibus*",
     "org.gnome.SettingsDaemon.*",
 )
+
+PLAN_TTL_S = 120
+PLAN_ID_BYTES = 16
