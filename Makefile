@@ -19,7 +19,7 @@ test-all:
 lint:
 	uv run ruff check .
 	uv run ruff format --check .
-	uv run mypy src
+	uv run mypy src tests
 
 run:
 	@test -f scripts/dev_run.sh || { echo 'Missing script: scripts/dev_run.sh' >&2; exit 2; }
