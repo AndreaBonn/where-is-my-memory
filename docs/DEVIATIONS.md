@@ -51,3 +51,57 @@ il 2026-10-16. BASIS: measured.
 `stop_group`. L'enum `ActionKind` di §8.1 e il paragrafo "Semantica di `group_stop`" usano
 invece `group_stop`. Vale `group_stop`, perché l'enum è la definizione e gli esempi sono
 illustrativi. Il decoder rifiuta `stop_group`. BASIS: measured.
+
+## Ordine di `categorize_process`: esclusione Docker prima di SYSTEM (T-1.4a)
+
+Con l'ordine letterale di §5.1 la regola 3 non si raggiunge mai. Un processo in
+`system.slice/docker-<id>.scope` sta sempre fuori da `user@<uid>.service`, quindi la regola 2
+lo classifica `SYSTEM` prima che l'esclusione possa scattare. La riga `CONTAINER` della stessa
+tabella chiede invece di escludere questi processi dal censimento, perché li rappresenta il
+container. Senza esclusione la loro memoria comparirebbe due volte, nella vista Sistema e nel
+gruppo del container.
+
+Ordine applicato: `SELF`, esclusione per scope Docker, `SYSTEM`, poi le regole 4-9 invariate.
+
+## Ereditarietà di `TERMINAL` (Q-1, T-1.4b)
+
+Nella regola 5 di §5.1 l'ereditarietà per antenato vale solo per `BROWSER` e `DESKTOP_APP`.
+`TERMINAL` si assegna per scope al solo processo del terminale. Ogni processo lanciato da
+gnome-terminal ha come padre `gnome-terminal-server` (verificato su `zsh` il 2026-10-16):
+con l'ereditarietà letterale ogni dev server e ogni CLI diventerebbe `TERMINAL`. Motivazione
+completa in `specs/where-is-my-memory/plan.md` § Decisioni prese.
+
+## Radice di progetto: la home non è una radice (T-1.2b)
+
+§5.5.3 risale dalla `cwd` fino alla prima cartella con un marker (`.git`, `pyproject.toml`,
+...). Un repository dei dotfiles in `~/.git` renderebbe la home la radice di ogni processo
+senza un marker più vicino, e fonderebbe in un solo gruppo processi senza relazione tra loro.
+La risalita si ferma quindi prima della home. Senza marker sotto la home vale la regola
+"senza radice trovata: la `cwd` stessa".
+
+## Container in rete `host` (T-1.5b)
+
+Con `NetworkMode=host`, `/proc/<pid>/net/dev` riporta il traffico dell'intero host, non quello
+del container. Per questi container `net_bytes` vale `None` e l'attività si misura solo dalla
+CPU (§5.4), invece di attribuire al container il traffico di tutto il sistema.
+
+## Categorie: servizi utente e app con documenti lanciate dal terminale (T-1.4b)
+
+Due casi in cui la lettera di §5.1 avrebbe classificato `safe` un'azione che può far perdere
+lavoro o stato. Si applica la regola di §0.6, l'opzione più conservativa:
+
+- Un servizio systemd dell'utente (`<nome>.service` sotto `user@<uid>.service/app.slice` o
+  `session.slice`, che non sia un terminale né un servizio di sessione noto) con una porta in
+  ascolto non è `DEV_SERVER`. È `OTHER` (rischio `caution`, motivo `user_service`), perché lo
+  gestisce systemd e "si riavvia con lo stesso comando" non vale. Esempi: syncthing, ollama
+  avviato come servizio utente.
+- Un'app con documenti (`DOCUMENT_APP_NAMES`, per esempio `code .`) lanciata da un terminale
+  sta nello scope `vte-spawn`. È comunque `DESKTOP_APP`, con i figli, e non `DEV_PROCESS`:
+  chiuderla può perdere file non salvati (§5.3).
+
+## Nomi delle unit systemd con escape (T-1.4b)
+
+systemd fa l'escape dei caratteri nei nomi delle unit (`app-gnome-google\x2dchrome-123.scope`,
+`update\x2dnotifier`; verificato sulla macchina). I pattern di §5.1 e il lookup dei `.desktop`
+si applicano al nome decodificato. Senza decodifica Chrome risulterebbe `DESKTOP_APP` e ogni
+appid con un trattino perderebbe il nome e le categorie del suo `.desktop`.
