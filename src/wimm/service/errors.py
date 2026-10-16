@@ -31,3 +31,9 @@ class DockerUnavailable(WimmError):
     code = "DOCKER_UNAVAILABLE"
     message = "Docker is unavailable"
     user_message = "Docker non è disponibile"
+
+
+class ControlFailed(WimmError):
+    code = "CONTROL_FAILED"
+    message = "System control call failed"
+    user_message = "L'operazione non è riuscita"
