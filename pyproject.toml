@@ -1,0 +1,65 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "where-is-my-memory"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = []
+license = "GPL-3.0-or-later"
+
+[project.scripts]
+wimm = "wimm.app:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/wimm"]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "ruff",
+    "mypy",
+    "pygobject-stubs",
+    # Stubs matching the apt runtime (psutil 5.9.8); no stubs exist for docker 5.x.
+    "types-psutil==5.9.5.20240516",
+]
+
+[tool.uv]
+# PyGObject comes from python3-gi (apt); the stubs must not pull a PyPI build of it.
+override-dependencies = ["pygobject; sys_platform == 'never'"]
+# The stubs select GTK4 only when built from source with this config setting.
+no-binary-package = ["pygobject-stubs"]
+config-settings-package = { pygobject-stubs = { config = "Gtk4,Gdk4,Soup3" } }
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+python_version = "3.12"
+
+[[tool.mypy.overrides]]
+module = ["wimm.core.*", "wimm.model"]
+strict = true
+
+# docker 5.0.3 ships no type information and types-docker starts at 7.x, whose API
+# differs; the SDK is wrapped behind typed Protocols at the service boundary instead.
+[[tool.mypy.overrides]]
+module = ["docker", "docker.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: tests using resources created by the test",
+    "ui: tests requiring a graphical display",
+    "dbus: tests requiring a private session bus",
+]
