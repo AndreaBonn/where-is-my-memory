@@ -94,9 +94,13 @@ def test_module_version_subprocess() -> None:
 class RecordingWindow:
     def __init__(self) -> None:
         self.shown: list[str | None] = []
+        self.tray_missing: list[bool] = []
 
     def show_group(self, group_id: str | None) -> None:
         self.shown.append(group_id)
+
+    def set_tray_missing(self, missing: bool) -> None:
+        self.tray_missing.append(missing)
 
 
 def test_window_host_builds_the_window_once_and_reuses_it() -> None:

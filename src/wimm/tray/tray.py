@@ -18,6 +18,7 @@ from wimm.tray.menu_model import (
     tray_tooltip,
 )
 from wimm.tray.status_notifier import StatusNotifierItem
+from wimm.tray.watcher import TrayWatcher, WatcherCallbacks
 
 LOGGER = logging.getLogger(__name__)
 TITLE = "Where Is My Memory"
@@ -53,7 +54,10 @@ class Tray:
         on_open: Callable[[str | None], None],
         on_quit: Callable[[], None],
     ) -> None:
+        self._connection = connection
         self._service, self._on_open, self._on_quit = service, on_open, on_quit
+        self._watcher: TrayWatcher | None = None
+        self._reported_missing = False
         self._item = StatusNotifierItem(
             connection=connection,
             on_activate=lambda: on_open(None),
@@ -72,9 +76,34 @@ class Tray:
             self.close()
             raise
 
-    def start(self) -> None:
-        """Ask the watcher to show the icon (re-registration is not handled here)."""
-        self._item.register_with_watcher()
+    def start(self, *, on_missing: Callable[[bool], None] | None = None) -> None:
+        """Register with the watcher now and at every reappearance (shell restart).
+
+        ``on_missing(True)`` fires when no watcher shows up in time, ``on_missing(False)``
+        when one appears afterwards.
+        """
+        if self._watcher is not None:
+            return
+        notify = on_missing or (lambda _missing: None)
+        self._reported_missing = False
+
+        def absent() -> None:
+            self._reported_missing = True
+            notify(True)
+
+        def registered(succeeded: bool) -> None:
+            # The banner goes only once the icon is really registered, not when the watcher shows.
+            if succeeded and self._reported_missing:
+                self._reported_missing = False
+                notify(False)
+
+        self._watcher = TrayWatcher(
+            connection=self._connection,
+            callbacks=WatcherCallbacks(
+                on_appeared=lambda: self._item.register_with_watcher(on_done=registered),
+                on_absent=absent,
+            ),
+        )
 
     def refresh(self) -> None:
         snapshot = self._service.snapshot()
@@ -94,6 +123,9 @@ class Tray:
         for handler in self._handlers:
             self._service.disconnect(handler)
         self._handlers = []
+        if self._watcher is not None:
+            self._watcher.close()
+            self._watcher = None
         self._menu.close()
         self._item.close()
 

@@ -20,6 +20,8 @@ LOGGER = logging.getLogger(__name__)
 class PresentableWindow(Protocol):
     def show_group(self, group_id: str | None) -> None: ...
 
+    def set_tray_missing(self, missing: bool) -> None: ...
+
 
 class WindowHost:
     """Owns the panel window, built on the first request so GTK loads only then."""
@@ -27,6 +29,13 @@ class WindowHost:
     def __init__(self, *, factory: Callable[[], PresentableWindow]) -> None:
         self._factory = factory
         self._window: PresentableWindow | None = None
+        self._tray_missing = False
+
+    def set_tray_missing(self, *, missing: bool) -> None:
+        """Remember whether the icon has no host; a window not built yet is not created."""
+        self._tray_missing = missing
+        if self._window is not None:
+            self._window.set_tray_missing(missing)
 
     def present(self, group_id: str | None) -> None:
         if group_id is not None:
@@ -38,6 +47,8 @@ class WindowHost:
                 # No display (session gone, SSH, tests): monitoring and notifications go on.
                 LOGGER.exception("Cannot open the window")
                 return
+            if self._tray_missing:
+                self._window.set_tray_missing(True)
         self._window.show_group(group_id=group_id)
 
 
@@ -109,6 +120,13 @@ def _start_service(application: Any) -> None:
     application._service = AppService(sampler=sampler, config=loaded.config)
 
 
+def _tray_missing(application: Any, missing: bool) -> None:
+    # No host for the icon: open the window even with --background, so the banner explains why.
+    application._window_host.set_tray_missing(missing=missing)
+    if missing:
+        application._window_host.present(group_id=None)
+
+
 def _start_tray(application: Any, connection: Any) -> None:
     # Gio and GLib only: the tray must never pull GTK into the resident process.
     from wimm.tray.tray import Tray
@@ -120,7 +138,7 @@ def _start_tray(application: Any, connection: Any) -> None:
             on_open=lambda group_id: application._window_host.present(group_id=group_id),
             on_quit=lambda: application.activate_action("quit", None),
         )
-        tray.start()
+        tray.start(on_missing=partial(_tray_missing, application))
     except Exception:
         # Monitoring, notifications and the window still work without the icon.
         LOGGER.exception("Cannot show the tray icon")

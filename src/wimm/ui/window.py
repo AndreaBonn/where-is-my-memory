@@ -35,6 +35,7 @@ ACTION_SNOOZE_ALL = "app.snooze-all"
 ACTION_QUIT = "app.quit"
 ACTION_ABOUT = "win.about"
 ACTION_REFRESH = "win.refresh"
+TRAY_MISSING_TEXT = "L'icona nella barra richiede l'estensione AppIndicator di Ubuntu"
 ABOUT_COMMENTS = "Mostra dove va la memoria e cosa si può liberare."
 
 
@@ -102,6 +103,8 @@ class MainWindow(Adw.Window):
         header.pack_end(self._refresh_button())
         toolbar = Adw.ToolbarView(content=stack)
         toolbar.add_top_bar(header)
+        self.tray_banner = Adw.Banner(title=TRAY_MISSING_TEXT, revealed=False)
+        toolbar.add_top_bar(self.tray_banner)
         toolbar.add_bottom_bar(bar)
         self.set_content(toolbar)
         breakpoint_ = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NARROW_CONDITION))
@@ -197,6 +200,10 @@ class MainWindow(Adw.Window):
             self.system.show_waiting()
         else:
             self.system.show_snapshot(snapshot=snapshot)
+
+    def set_tray_missing(self, missing: bool) -> None:
+        """Show the banner that explains the absent tray icon, or hide it."""
+        self.tray_banner.set_revealed(missing)
 
     def show_group(self, group_id: str | None) -> None:
         """Present the window in front; with an id, expand that group in the Panoramica."""

@@ -1,5 +1,6 @@
 import logging
 from collections.abc import Callable
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -159,8 +160,8 @@ class StatusNotifierItem:
             self._guide = value
             self._emit_label()
 
-    def register_with_watcher(self) -> None:
-        """Ask the watcher to show this item; the outcome is only logged."""
+    def register_with_watcher(self, *, on_done: Callable[[bool], None] | None = None) -> None:
+        """Ask the watcher to show this item; the outcome is logged and passed to ``on_done``."""
         self._connection.call(
             bus_name=WATCHER_NAME,
             object_path=WATCHER_PATH,
@@ -172,7 +173,7 @@ class StatusNotifierItem:
             flags=Gio.DBusCallFlags.NONE,
             timeout_msec=WATCHER_TIMEOUT_MS,
             cancellable=None,
-            callback=self._registered,
+            callback=partial(self._registered, on_done=on_done),
         )
 
     def close(self) -> None:
@@ -180,13 +181,23 @@ class StatusNotifierItem:
             self._connection.unregister_object(registration_id=self._registration)
             self._registration = 0
 
-    def _registered(self, connection: Gio.DBusConnection, result: Gio.AsyncResult) -> None:
+    @staticmethod
+    def _registered(
+        connection: Gio.DBusConnection,
+        result: Gio.AsyncResult,
+        *,
+        on_done: Callable[[bool], None] | None,
+    ) -> None:
         try:
             connection.call_finish(res=result)
         except GLib.Error as error:
             LOGGER.warning("StatusNotifierWatcher registration failed: %s", error.message)
-            return
-        LOGGER.info("Registered with StatusNotifierWatcher")
+            succeeded = False
+        else:
+            LOGGER.info("Registered with StatusNotifierWatcher")
+            succeeded = True
+        if on_done is not None:
+            on_done(succeeded)
 
     def _emit_label(self) -> None:
         parameters = GLib.Variant("(ss)", (self._label, self._guide))
