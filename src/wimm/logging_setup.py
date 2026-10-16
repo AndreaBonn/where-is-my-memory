@@ -2,7 +2,6 @@ import copy
 import json
 import logging
 import os
-import re
 import sys
 from datetime import UTC, datetime
 from io import TextIOWrapper
@@ -10,21 +9,10 @@ from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
 from wimm.paths import PRIVATE_FILE_MODE, UserPaths, ensure_private_dir
+from wimm.redaction import REDACTED, SECRET_FIELD, redact_text
 
 LOG_MAX_BYTES = 1024 * 1024
 LOG_BACKUP_COUNT = 3
-REDACTED = "[REDACTED]"
-CREDENTIAL_PATTERN = r"(?:[\w-]*(?:key|token|password|secret))"
-SECRET_ARGUMENT = re.compile(
-    rf"""(?P<prefix>(?<![\w-])(?:--{CREDENTIAL_PATTERN}(?:\s*=\s*|\s+)|"""
-    rf"""['\"]?{CREDENTIAL_PATTERN}['\"]?\s*[:=]\s*))"""
-    r"""(?:"[^"\n]*"|'[^'\n]*'|[^\s,;}]+)""",
-    re.IGNORECASE,
-)
-AUTH_HEADER = re.compile(r"(\bAuthorization\s*:\s*(?:Bearer|Basic)\s+)\S+", re.IGNORECASE)
-COOKIE_HEADER = re.compile(r"(\b(?:Set-)?Cookie\s*:\s*)[^\r\n]+", re.IGNORECASE)
-URL_PASSWORD = re.compile(r"(\b[a-z][a-z0-9+.-]*://[^\s/@:]+:)[^\s/@]*(@)", re.IGNORECASE)
-SECRET_FIELD = re.compile(rf"^{CREDENTIAL_PATTERN}$", re.IGNORECASE)
 STANDARD_FIELDS = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
 CMDLINE_FIELDS = frozenset({"cmdline", "command_line"})
 OWNED_HANDLER = "_wimm_handler"
@@ -34,10 +22,7 @@ def _redact(value: object) -> object:
     if not isinstance(value, str | dict | list | tuple | int | float | bool | type(None)):
         value = str(value)
     if isinstance(value, str):
-        value = AUTH_HEADER.sub(repl=rf"\1{REDACTED}", string=value)
-        value = COOKIE_HEADER.sub(repl=rf"\1{REDACTED}", string=value)
-        value = URL_PASSWORD.sub(repl=rf"\1{REDACTED}\2", string=value)
-        return SECRET_ARGUMENT.sub(repl=lambda match: match["prefix"] + REDACTED, string=value)
+        return redact_text(text=value)
     if isinstance(value, dict):
         return {
             key: REDACTED if SECRET_FIELD.fullmatch(str(key)) else _redact(value=item)
