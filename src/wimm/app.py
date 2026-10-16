@@ -29,8 +29,15 @@ class WindowHost:
         self._window: PresentableWindow | None = None
 
     def present(self, group_id: str | None) -> None:
+        if group_id is not None:
+            LOGGER.info("Window requested for group %s", group_id)
         if self._window is None:
-            self._window = self._factory()
+            try:
+                self._window = self._factory()
+            except Exception:
+                # No display (session gone, SSH, tests): monitoring and notifications go on.
+                LOGGER.exception("Cannot open the window")
+                return
         self._window.show_group(group_id=group_id)
 
 
@@ -47,7 +54,18 @@ def graphics_defaults(environment: Mapping[str, str]) -> dict[str, str]:
 def _build_window(application: Any) -> PresentableWindow:
     # GDK reads these when GTK initialises, so they must be set before the import below.
     os.environ.update(graphics_defaults(environment=os.environ))
-    # Importing wimm.ui.window pulls in GTK and libadwaita (docs/DEVIATIONS.md).
+    import gi
+
+    gi.require_version("Gdk", "4.0")
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import Gdk, Gtk
+
+    # Without a display Adw.init() waits about 25 s for portals before failing, which
+    # would freeze the main loop of the resident process. init_check() reports success
+    # even then under PyGObject, so the opened display is what tells.
+    if not Gtk.init_check() or Gdk.Display.get_default() is None:
+        raise RuntimeError("No graphical display available")
+    # Importing wimm.ui.window pulls in libadwaita (docs/DEVIATIONS.md).
     from wimm.service.sampler import wall_clock
     from wimm.ui.window import create_main_window
 

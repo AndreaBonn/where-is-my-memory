@@ -202,6 +202,10 @@ def test_application_exports_only_quit_and_handles_remote_group(
         "GSETTINGS_BACKEND": "memory",
         "XDG_RUNTIME_DIR": str(tmp_path),
     }
+    # No display: the remote --group must not pop a real window on the developer's screen,
+    # and the primary must survive a window that cannot open.
+    for variable in ("DISPLAY", "WAYLAND_DISPLAY"):
+        environment.pop(variable, None)
     log_path = tmp_path / "application.log"
     with log_path.open(mode="w") as log:
         application = subprocess.Popen(
@@ -239,8 +243,9 @@ def test_application_exports_only_quit_and_handles_remote_group(
             assert application.wait(timeout=5) == 0
         finally:
             stop_application(application=application)
-    assert "Requested group example" in log_path.read_text()
-    assert "window not implemented yet" in log_path.read_text()
+    written = log_path.read_text()
+    assert "Window requested for group example" in written
+    assert "Cannot open the window" in written
 
 
 def test_inspection_xml_has_exact_read_only_contract() -> None:

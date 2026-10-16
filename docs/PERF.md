@@ -46,3 +46,11 @@ reali, poi chiusa (nascosta) con `wmctrl -c`; RSS e PSS da `/proc/<pid>`.
 | 2026-10-16 | `GSK_RENDERER=cairo` | 210 MB | 178 MB | scartata da sola: GDK inizializza comunque GL |
 | 2026-10-16 | `GSK_RENDERER=cairo` + `GDK_DEBUG=gl-disable,vulkan-disable` | 130 MB | 100 MB | tenuta: render visivamente identico (screenshot confrontati) |
 | 2026-10-16 | stessa configurazione come default dell'app, avvio senza variabili | 126 MB | - | verifica: nessuna libreria GL nelle mappe |
+
+## Apertura della finestra senza display (RNF-03: main loop mai bloccato oltre 50 ms)
+
+Misura: `_build_window` in un sottoprocesso senza `DISPLAY` né `WAYLAND_DISPLAY`, su bus privato.
+
+| Data | Idea | Prima | Dopo | Verdetto | Perché |
+|---|---|---|---|---|---|
+| 2026-10-16 | Controllo del display aperto da GTK prima di importare libadwaita | `Adw.init()` blocca 25,1 s prima del `RuntimeError` | errore in meno di 1 s (test D-Bus `--group` da 25 s a 2,5 s) | tenuta | il processo residente non resta fermo quando la sessione grafica manca |

@@ -194,3 +194,50 @@ def test_graphics_defaults_disable_gl_only_when_unset() -> None:
     }
     # A user choice wins: nothing is overridden.
     assert graphics_defaults(environment={"GSK_RENDERER": "ngl", "GDK_DEBUG": "misc"}) == {}
+
+
+def test_window_host_survives_a_window_that_cannot_open(caplog: pytest.LogCaptureFixture) -> None:
+    import logging
+
+    from wimm.app import WindowHost
+
+    attempts: list[int] = []
+
+    def failing() -> RecordingWindow:
+        attempts.append(1)
+        raise RuntimeError("Gtk couldn't be initialized")
+
+    host = WindowHost(factory=failing)
+    with caplog.at_level(level=logging.INFO):
+        host.present(group_id="example")
+        host.present(group_id=None)
+    assert len(attempts) == 2  # retried on the next request, not cached as broken
+    assert "Window requested for group example" in caplog.messages
+    assert any(message.startswith("Cannot open the window") for message in caplog.messages)
+
+
+def test_build_window_fails_fast_without_a_display() -> None:
+    environment = {
+        key: value
+        for key, value in os.environ.items()
+        if key not in ("DISPLAY", "WAYLAND_DISPLAY")
+    }
+    result = subprocess.run(
+        args=[
+            sys.executable,
+            "-c",
+            "import time; from types import SimpleNamespace; from wimm.app import _build_window\n"
+            "started = time.monotonic()\n"
+            "try:\n"
+            "    _build_window(application=SimpleNamespace(_service=None))\n"
+            "except RuntimeError as error:\n"
+            "    print(f'{error}|{time.monotonic() - started < 5}')",
+        ],
+        env=environment,
+        capture_output=True,
+        text=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        check=False,
+    )
+    assert result.returncode == SUCCESS, result.stderr
+    assert result.stdout == "No graphical display available|True\n"
