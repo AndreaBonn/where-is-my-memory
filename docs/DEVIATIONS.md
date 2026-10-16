@@ -121,3 +121,19 @@ chiude.") sarebbe fuorviante per un servizio utente come syncthing, che non è u
 e che systemd può far ripartire. Testo usato: "Il programma si ferma: ciò che ha in memoria e
 non ha salvato va perso. Se è un servizio, potrebbe riavviarsi da solo." Il rischio resta
 `caution`.
+
+## Id stabile dei gruppi: classe della chiave al posto della categoria (T-1.6b)
+
+§5.5 calcola l'id come hash di (categoria, chiave) e chiede che sia stabile fra campioni,
+perché notifiche, silenzi e storia vi si appoggiano. Con la categoria risolta nell'hash l'id
+cambierebbe quando un gruppo cartella passa da `DEV_SERVER` a `DEV_PROCESS` (il server smette
+di ascoltare), oppure quando un progetto compose si fonde con un dev server in `PROJECT`, e un
+silenzio impostato dall'utente andrebbe perso. L'id usa quindi la classe della chiave
+(`compose`, `container`, `folder`, `app`, `root_process`, `protected`), che non cambia mentre
+il gruppo vive.
+
+## Vista Sistema: gruppi per etichetta (T-1.6b)
+
+I processi protetti si raggruppano nelle etichette di RF-07: "Sessione GNOME", "Audio",
+"Servizi di sistema", "Altri utenti", più l'app stessa. Un gruppo per nome di processo
+avrebbe prodotto decine di righe, e id instabili per i thread del kernel con il nome numerato.
