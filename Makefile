@@ -17,7 +17,8 @@ test-all:
 	dbus-run-session -- xvfb-run -a uv run pytest
 
 perf:
-	xvfb-run -a uv run pytest -m perf -s
+	# Same renderer the app sets for itself in wimm.app.GRAPHICS_DEFAULTS.
+	GSK_RENDERER=cairo GDK_DEBUG=gl-disable,vulkan-disable xvfb-run -a uv run pytest -m perf -s
 
 lint:
 	uv run ruff check .
