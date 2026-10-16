@@ -1,0 +1,4 @@
+0::/user.slice/user-1000.slice/user@1000.service/app.slice/snap.firefox.firefox-<uuid>.scope
+0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.gnome.Terminal.slice/vte-spawn-<uuid>.scope
+0::/user.slice/user-1000.slice/user@1000.service/app.slice/app-org.gnome.Terminal.slice/gnome-terminal-server.service
+0::/system.slice/docker-<container_id>.scope

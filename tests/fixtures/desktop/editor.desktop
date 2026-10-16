@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Editor
+Name[it]=Editor italiano
+Categories=Development;IDE;
+StartupWMClass=Code
+Exec=editor %U
