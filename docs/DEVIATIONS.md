@@ -137,3 +137,23 @@ il gruppo vive.
 I processi protetti si raggruppano nelle etichette di RF-07: "Sessione GNOME", "Audio",
 "Servizi di sistema", "Altri utenti", più l'app stessa. Un gruppo per nome di processo
 avrebbe prodotto decine di righe, e id instabili per i thread del kernel con il nome numerato.
+
+## Processo residente senza GTK: `Gio.Application` con finestra caricata a richiesta (T-1.8c)
+
+§6.1 prevede un'`Adw.Application` residente e mette in conto che "GTK4 resta caricato anche a
+finestra nascosta (budget in RNF-02)". Misurato sulla macchina di destinazione il 2026-10-16,
+con il Python di sistema: il solo `from gi.repository import Gtk` (GTK 4) porta un processo da
+19 MB (Gio e GLib) a 124 MB di RSS, già sopra i 120 MB di RNF-02 prima di qualunque dato.
+Con l'architettura letterale il requisito non si può rispettare.
+
+Il processo residente è quindi una `Gio.Application` con lo stesso `application_id`, le
+opzioni da riga di comando, `hold()`, l'istanza unica, l'Inspector D-Bus, l'icona
+StatusNotifierItem e le notifiche `Gio.Notification`. Nessuna di queste parti dipende da GTK
+(§6.1 lo dice già per l'icona). GTK e libadwaita si importano alla prima apertura della
+finestra. La finestra è un'`Adw.Window` con `insert_action_group("app", applicazione)`, così le
+azioni `app.*` continuano a funzionare. Il comportamento visibile non cambia: chiudere nasconde,
+"Esci" termina, la seconda invocazione porta la finestra in primo piano.
+
+Prototipo verificato sotto Xvfb: finestra mostrata, chiusura che nasconde, processo vivo. Il
+consumo dopo l'apertura della finestra va misurato sul display reale (RNF-02, seconda soglia:
+200 MB).
