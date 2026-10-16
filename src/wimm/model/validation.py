@@ -1,6 +1,7 @@
 from dataclasses import dataclass, fields
 from datetime import datetime
-from typing import get_origin
+from types import UnionType
+from typing import Union, get_args, get_origin
 
 
 def require_aware(value: datetime, field: str) -> datetime:
@@ -22,14 +23,41 @@ def require_immutable(value: object, field: str) -> None:
             require_immutable(value=item, field=field)
 
 
+COLLECTION_TYPES = (tuple, frozenset)
+
+
+@dataclass(frozen=True, slots=True)
+class CollectionSpec:
+    kind: type
+    optional: bool
+
+
+def declared_collection(annotation: object) -> CollectionSpec | None:
+    """Describe a tuple or frozenset annotation, plain or `| None`; None for anything else."""
+    origin = get_origin(annotation)
+    for kind in COLLECTION_TYPES:
+        if origin is kind:
+            return CollectionSpec(kind=kind, optional=False)
+    if origin in (Union, UnionType):
+        members = [arg for arg in get_args(annotation) if arg is not type(None)]
+        inner = declared_collection(annotation=members[0]) if len(members) == 1 else None
+        if inner is not None:
+            return CollectionSpec(kind=inner.kind, optional=True)
+    return None
+
+
+def collection_matches(value: object, spec: CollectionSpec) -> bool:
+    return type(value) is spec.kind or (spec.optional and value is None)
+
+
 @dataclass(frozen=True, slots=True)
 class ImmutableModel:
     def __post_init__(self) -> None:
         for item in fields(self):
             value = getattr(self, item.name)
-            collection = get_origin(item.type)
-            if collection in (tuple, frozenset) and type(value) is not collection:
-                raise ValueError(f"{item.name} must be a {collection.__name__}")
+            spec = declared_collection(annotation=item.type)
+            if spec is not None and not collection_matches(value=value, spec=spec):
+                raise ValueError(f"{item.name} must be a {spec.kind.__name__}")
             require_immutable(value=value, field=item.name)
             if isinstance(value, datetime):
                 require_aware(value=value, field=item.name)
