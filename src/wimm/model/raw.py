@@ -79,7 +79,7 @@ class RawContainer(ImmutableModel):
     pid: int
     memory_bytes: int
     cpu_usage_usec: int
-    net_bytes: int
+    net_bytes: int | None
     metrics_source: MetricsSource
 
     def __post_init__(self) -> None:
@@ -87,8 +87,9 @@ class RawContainer(ImmutableModel):
         require_nonnegative(value=self.pid, field="pid")
         require_nonnegative(value=self.cpu_usage_usec, field="cpu_usage_usec")
         require_ports(values=self.ports, field="ports")
-        for name in ("memory_bytes", "net_bytes"):
-            require_bytes(value=getattr(self, name), field=name)
+        require_bytes(value=self.memory_bytes, field="memory_bytes")
+        if self.net_bytes is not None:
+            require_bytes(value=self.net_bytes, field="net_bytes")
 
 
 @dataclass(frozen=True, slots=True)

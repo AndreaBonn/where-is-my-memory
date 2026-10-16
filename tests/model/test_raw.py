@@ -89,6 +89,8 @@ def test_raw_container_byte_fields_and_nested_immutability(
     assert container.memory_bytes == 100
     with pytest.raises(ValueError, match=field):
         replace(container, **invalid_model_value({field: 0.5}))
+    with pytest.raises(ValueError, match=field):
+        replace(container, **invalid_model_value({field: -1}))
     with pytest.raises(ValueError, match="labels"):
         replace(container, labels=invalid_model_value((("key", ["mutable"]),)))
 
@@ -219,3 +221,8 @@ def test_raw_process_requires_rss(process: RawProcess) -> None:
     assert replace(process, rss=0).rss == 0
     with pytest.raises(ValueError, match="rss"):
         replace(process, rss=invalid_model_value(None))
+
+
+def test_raw_container_net_bytes_none_means_not_measured(container: RawContainer) -> None:
+    assert replace(container, net_bytes=None).net_bytes is None
+    assert replace(container, net_bytes=0).net_bytes == 0
