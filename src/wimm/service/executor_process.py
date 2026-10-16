@@ -59,3 +59,20 @@ def terminate_tree(*, control: ProcessControl, request: TerminationRequest) -> S
         message = f"still running after {request.timeout_s:g}s: {listing}"
         return StepOutcome(order=request.order, status=StepStatus.NOT_RESPONDING, message=message)
     return StepOutcome(order=request.order, status=StepStatus.DONE)
+
+
+def close_root(*, control: ProcessControl, request: TerminationRequest) -> StepOutcome:
+    """SIGTERM the main process of an app and wait for it; its children get no signal.
+
+    A browser or desktop app closes its own processes and saves its session (8.4), so
+    the tree is neither listed nor signalled. A root still alive after the timeout is
+    `not_responding`, same as `terminate_tree`.
+    """
+    failures = _signal_all(control=control, pids=[request.pid])
+    if failures:
+        message = "; ".join(failures)
+        return StepOutcome(order=request.order, status=StepStatus.FAILED, message=message)
+    if control.wait_gone(pids=[request.pid], timeout_s=request.timeout_s):
+        message = f"still running after {request.timeout_s:g}s: {request.pid}"
+        return StepOutcome(order=request.order, status=StepStatus.NOT_RESPONDING, message=message)
+    return StepOutcome(order=request.order, status=StepStatus.DONE)

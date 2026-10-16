@@ -1,42 +1,17 @@
 import threading
-from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from time import monotonic
 
 import pytest
 from gi.repository import GLib
 
 from tests.core.assemble_helpers import build_input
+from tests.service.service_helpers import TIMEOUT_S as TIMEOUT_S
+from tests.service.service_helpers import FakeSampler as FakeSampler
+from tests.service.service_helpers import FixedClock as FixedClock
+from tests.service.service_helpers import spin_until as spin_until
 from wimm.config import Config
 from wimm.core.assemble import assemble_snapshot
-from wimm.model.snapshot import Snapshot
 from wimm.service.app_service import AppService
-
-TIMEOUT_S = 5
-
-
-def spin_until(predicate: Callable[[], bool]) -> None:
-    context = GLib.MainContext.default()
-    deadline = monotonic() + TIMEOUT_S
-    while not predicate() and monotonic() < deadline:
-        context.iteration(may_block=False)
-    assert predicate()
-
-
-class FakeSampler:
-    def __init__(self) -> None:
-        self.entered = threading.Event()
-        self.proceed = threading.Event()
-        self.calls = 0
-        self.fail = False
-
-    def run_cycle(self) -> Snapshot:
-        self.calls += 1
-        self.entered.set()
-        assert self.proceed.wait(timeout=TIMEOUT_S)
-        if self.fail:
-            raise RuntimeError("sample failed")
-        return assemble_snapshot(inputs=build_input([]))
 
 
 def test_service_emits_on_main_thread_and_never_overlaps() -> None:
@@ -125,14 +100,6 @@ def test_failed_cycle_emits_cycle_failed_with_updated_counter() -> None:
         assert seen == [1]
     finally:
         service.stop()
-
-
-class FixedClock:
-    def __init__(self, now: datetime) -> None:
-        self.now = now
-
-    def __call__(self) -> datetime:
-        return self.now
 
 
 def test_mute_notifications_sets_expiry_that_lapses_with_the_clock() -> None:

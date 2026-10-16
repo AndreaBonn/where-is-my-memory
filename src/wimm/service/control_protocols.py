@@ -1,10 +1,13 @@
 """Typed seams between the executor and the system (psutil, Docker SDK)."""
 
+import logging
 import signal
 from collections.abc import Sequence
 from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
+
+from .errors import WimmError
 
 
 class StepStatus(Enum):
@@ -21,6 +24,24 @@ class StepOutcome:
     order: int
     status: StepStatus
     message: str | None = None
+
+
+LOGGER = logging.getLogger(__name__)
+UNEXPECTED_FAILURE = "unexpected error, see the log"
+
+
+def failed_outcome(*, order: int, error: Exception) -> StepOutcome:
+    """Turn any error raised by one step into its `failed` outcome.
+
+    A `WimmError` carries its own message; anything else is logged with its traceback and
+    reported generically, so the steps after it still run and earlier ones are not lost.
+    """
+    if isinstance(error, WimmError):
+        message = error.message
+    else:
+        LOGGER.error("Step %d failed unexpectedly", order, exc_info=error)
+        message = UNEXPECTED_FAILURE
+    return StepOutcome(order=order, status=StepStatus.FAILED, message=message)
 
 
 @dataclass(frozen=True, slots=True)

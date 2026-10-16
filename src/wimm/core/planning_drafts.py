@@ -1,6 +1,7 @@
 """Single-target step drafts for the planner (SPECIFICHE 8.1, 8.2). Pure, no I/O."""
 
 import hashlib
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
@@ -16,8 +17,15 @@ from wimm.model.errors import InvalidRequest
 from wimm.model.snapshot import ContainerMember, Group, ProcessMember
 
 from .assemble_members import STOPPABLE_STATES
-from .risk import RiskAssessment, RiskTarget, assess_risk
+from .risk import RiskAssessment, RiskTarget, TargetKind, assess_risk
 
+# `app_close` targets desktop apps, browsers and terminals (sections 5.3 and 8.4).
+APP_CLOSE_KINDS: Mapping[Category, TargetKind] = {
+    Category.BROWSER: "browser",
+    Category.DESKTOP_APP: "desktop_app",
+    # Section 5.3: closing a terminal ends gnome-terminal-server, the group's root, not a shell.
+    Category.TERMINAL: "terminal",
+}
 ARGV_SEPARATOR = "\0"
 VOLUME_MOUNT_TYPE = "volume"
 
@@ -59,6 +67,15 @@ def is_actionable_process(*, group: Group, member: ProcessMember, owner_uid: int
         and member.protection is Protection.ACTIONABLE
         and bool(member.actions)
         and member.uid == owner_uid
+    )
+
+
+def _fingerprint(*, member: ProcessMember) -> ProcessFingerprint:
+    return ProcessFingerprint(
+        pid=member.pid,
+        create_time=member.create_time,
+        uid=member.uid,
+        cmdline_hash=cmdline_hash(cmdline=member.cmdline),
     )
 
 
@@ -141,4 +158,48 @@ def volume_draft(*, name: str, kind: ActionKind) -> Draft:
         fingerprint=VolumeFingerprint(name=name),
         assessed=_assess(target=RiskTarget(kind="volume"), kind=kind),
         reclaim_ram=0,
+    )
+
+
+def app_root(*, group: Group) -> ProcessMember:
+    """Return the main process of an app group: the root of its process tree.
+
+    The snapshot carries no parent pid, and a child never starts before its parent, so the
+    oldest member (lowest `create_time`) cannot have a parent inside the group: it is a
+    root. Among equally old members the lowest pid wins, because a parent's pid is almost
+    always lower than its children's (pids grow, wrapping aside).
+
+    Limit: a helper that started before the app, and is grouped with it, is older and so
+    is chosen, and it receives the signal instead of the app.
+    """
+    members = [member for member in group.members if isinstance(member, ProcessMember)]
+    if not members:
+        raise InvalidRequest(f"Group {group.id} has no processes")
+    return min(members, key=lambda m: (m.create_time, m.pid))
+
+
+def app_close_draft(*, group: Group, root: ProcessMember) -> Draft:
+    """Draft the single `app_close` step on the group's main process.
+
+    Risk is assessed on the whole app (documents of any member, the app kind of the
+    group); the label and the danger phrase use the app name, not the process name.
+    """
+    processes = [m for m in group.members if isinstance(m, ProcessMember)]
+    target = RiskTarget(
+        kind=APP_CLOSE_KINDS[group.category],
+        category=group.category,
+        activity=root.activity.state,
+        is_foreground_on_tty=root.is_foreground,
+        has_documents=any(member.has_documents for member in processes),
+        process_name=root.name,
+        cwd=root.cwd,
+    )
+    return Draft(
+        owner_ids=frozenset({group.id}),
+        kind=ActionKind.APP_CLOSE,
+        label=f"{group.name} (pid {root.pid})",
+        name=group.name,
+        fingerprint=_fingerprint(member=root),
+        assessed=_assess(target=target, kind=ActionKind.APP_CLOSE),
+        reclaim_ram=sum(member.memory.reclaimable for member in processes),
     )

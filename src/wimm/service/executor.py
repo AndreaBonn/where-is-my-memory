@@ -13,8 +13,9 @@ from .control_protocols import (
     ProcessControl,
     StepOutcome,
     StepStatus,
+    failed_outcome,
 )
-from .errors import DockerUnavailable, InvalidRequest, WimmError
+from .errors import DockerUnavailable, InvalidRequest
 from .executor_checks import (
     CONTAINER_KINDS,
     PROCESS_KINDS,
@@ -24,7 +25,7 @@ from .executor_checks import (
     check_supported,
 )
 from .executor_docker import run_container_step
-from .executor_process import TerminationRequest, terminate_tree
+from .executor_process import TerminationRequest, close_root, terminate_tree
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -91,6 +92,7 @@ class PlanExecutor:
             live = check_process(step=step, control=self.processes, rules=rules)
             if live is None:
                 return StepOutcome(order=step.order, status=StepStatus.ALREADY_GONE)
-            return terminate_tree(control=self.processes, request=request)
-        except WimmError as error:
-            return StepOutcome(order=step.order, status=StepStatus.FAILED, message=error.message)
+            stop = close_root if step.kind is ActionKind.APP_CLOSE else terminate_tree
+            return stop(control=self.processes, request=request)
+        except Exception as error:
+            return failed_outcome(order=step.order, error=error)

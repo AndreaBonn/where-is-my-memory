@@ -30,6 +30,7 @@ class FakeProcesses:
     lineage: frozenset[int] = frozenset({WIMM_PID, 1})
     stubborn: frozenset[int] = frozenset()
     failing: frozenset[int] = frozenset()
+    crashing: frozenset[int] = frozenset()
     broken_trees: frozenset[int] = frozenset()
     on_wait: Callable[[], None] = lambda: None
     signals: list[tuple[int, signal.Signals]] = field(default_factory=list)
@@ -47,6 +48,8 @@ class FakeProcesses:
         return self.tree.get(pid, ())
 
     def send_signal(self, *, pid: int, sig: signal.Signals) -> None:
+        if pid in self.crashing:
+            raise RuntimeError(f"unexpected failure signalling {pid}")
         if pid in self.failing:
             raise ControlFailed(f"cannot signal {pid}")
         self.signals.append((pid, sig))
@@ -61,12 +64,15 @@ class FakeProcesses:
 class FakeDocker:
     live: dict[str, LiveContainer] = field(default_factory=dict)
     failing: frozenset[str] = frozenset()
+    crashing: frozenset[str] = frozenset()
     calls: list[tuple[str, str]] = field(default_factory=list)
 
     def inspect(self, *, container_id: str) -> LiveContainer | None:
         return self.live.get(container_id)
 
     def stop(self, *, container_id: str, timeout_s: int) -> None:
+        if container_id in self.crashing:
+            raise RuntimeError(f"unexpected failure stopping {container_id}")
         if container_id in self.failing:
             raise ControlFailed(f"cannot stop {container_id}")
         self.calls.append(("stop", f"{container_id}:{timeout_s}"))
@@ -111,7 +117,9 @@ def container_step(
 
 
 def make_plan(*, steps: Sequence[PlanStep]) -> Plan:
-    if len(steps) == 1:
+    if len(steps) == 1 and steps[0].kind is ActionKind.APP_CLOSE:
+        request = ActionRequest(kind=ActionKind.APP_CLOSE, group_id=GroupId("g_test"))
+    elif len(steps) == 1:
         request = ActionRequest(kind=steps[0].kind, target_id=TargetId("target"))
     else:
         request = ActionRequest(kind=ActionKind.GROUP_STOP, group_id=GroupId("g_test"))

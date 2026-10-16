@@ -5,8 +5,14 @@ from wimm.core.constants import CONTAINER_STOP_TIMEOUT_S
 from wimm.model.actions import ContainerFingerprint, PlanStep
 from wimm.model.enums import ActionKind
 
-from .control_protocols import DockerControl, LiveContainer, StepOutcome, StepStatus
-from .errors import ControlFailed, InvalidRequest
+from .control_protocols import (
+    DockerControl,
+    LiveContainer,
+    StepOutcome,
+    StepStatus,
+    failed_outcome,
+)
+from .errors import InvalidRequest
 
 
 def _container_id(*, step: PlanStep) -> str:
@@ -45,5 +51,5 @@ def run_container_step(*, control: DockerControl, step: PlanStep) -> StepOutcome
         if step.kind is ActionKind.CONTAINER_STOP:
             return _stop(control=control, step=step, live=live)
         return _remove(control=control, step=step, live=live)
-    except ControlFailed as error:
-        return StepOutcome(order=step.order, status=StepStatus.FAILED, message=error.message)
+    except Exception as error:
+        return failed_outcome(order=step.order, error=error)

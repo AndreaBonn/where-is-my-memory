@@ -14,7 +14,10 @@ from wimm.model.snapshot import ContainerMember, Group, Member, ProcessMember, S
 from .assemble_members import STOPPABLE_STATES
 from .constants import PLAN_ID_BYTES, PLAN_TTL_S
 from .planning_drafts import (
+    APP_CLOSE_KINDS,
     Draft,
+    app_close_draft,
+    app_root,
     cmdline_hash,
     compose_draft,
     container_draft,
@@ -68,6 +71,17 @@ def _plan_process(*, request: ActionRequest, snapshot: Snapshot, owner_uid: int)
                 raise ProtectedTarget(f"Process {member.pid} is protected or not actionable")
             return [process_draft(member=member, kind=request.kind)]
     raise InvalidRequest(f"Unknown process {request.target_id}")
+
+
+def _plan_app_close(*, request: ActionRequest, snapshot: Snapshot, owner_uid: int) -> list[Draft]:
+    """Plan one SIGTERM on the main process of an app group (spec 8.4), children untouched."""
+    group = _actionable_group(snapshot=snapshot, group_id=request.group_id)
+    if group.category not in APP_CLOSE_KINDS:
+        raise InvalidRequest(f"Group {group.id} is not an app and cannot be closed")
+    root = app_root(group=group)
+    if not is_actionable_process(group=group, member=root, owner_uid=owner_uid):
+        raise ProtectedTarget(f"Main process {root.pid} is protected or not actionable")
+    return [app_close_draft(group=group, root=root)]
 
 
 def _plan_container(*, request: ActionRequest, snapshot: Snapshot, owner_uid: int) -> list[Draft]:
@@ -131,6 +145,7 @@ def _plan_stop_all(*, request: ActionRequest, snapshot: Snapshot, owner_uid: int
 _PLANNERS: dict[ActionKind, _Planner] = {
     ActionKind.PROCESS_TERMINATE: _plan_process,
     ActionKind.PROCESS_KILL: _plan_process,
+    ActionKind.APP_CLOSE: _plan_app_close,
     ActionKind.CONTAINER_STOP: _plan_container,
     ActionKind.CONTAINER_REMOVE: _plan_container,
     ActionKind.COMPOSE_DOWN: _plan_compose,

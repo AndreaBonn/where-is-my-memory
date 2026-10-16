@@ -182,3 +182,24 @@ def test_container_plan_without_docker_raises_before_touching_processes() -> Non
         build_executor(docker=None, processes=processes).execute(plan=make_plan(steps=steps))
 
     assert processes.signals == []
+
+
+def test_unexpected_exception_in_a_container_step_is_a_failed_step() -> None:
+    docker = FakeDocker(
+        live={
+            "c1": LiveContainer(id="c1", status="running"),
+            "c2": LiveContainer(id="c2", status="running"),
+        },
+        crashing=frozenset({"c1"}),
+    )
+    plan = make_plan(
+        steps=[
+            container_step(order=1, container_id="c1", kind=ActionKind.CONTAINER_STOP),
+            container_step(order=2, container_id="c2", kind=ActionKind.CONTAINER_STOP),
+        ]
+    )
+    executor = PlanExecutor(processes=FakeProcesses(), containers=docker, owner_uid=OWNER_UID)
+
+    outcomes = executor.execute(plan=plan)
+
+    assert [o.status for o in outcomes] == [StepStatus.FAILED, StepStatus.DONE]

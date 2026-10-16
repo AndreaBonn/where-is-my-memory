@@ -2,15 +2,25 @@ import logging
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta
+from functools import partial
 from typing import ClassVar, Protocol
 
 from gi.repository import GLib, GObject
 
 from wimm.config import Config
+from wimm.core.planning import PlanningContext, plan_action
+from wimm.model.actions import ActionRequest, Plan
+from wimm.model.enums import PlanId
 from wimm.model.snapshot import Snapshot
+from wimm.service.actions import ActionExecutor, ActionSetup
+from wimm.service.control_protocols import StepOutcome
+from wimm.service.errors import ControlFailed, InvalidRequest, WimmError
+from wimm.service.plan_registry import PlanRegistry
+from wimm.service.reclaim import ReclaimTracker
 from wimm.service.sampler import wall_clock
 
 LOGGER = logging.getLogger(__name__)
+_ActionResult = tuple[tuple[StepOutcome, ...], Snapshot | None]
 
 
 class CycleSampler(Protocol):
@@ -22,6 +32,25 @@ class AppService(GObject.Object):
         "snapshot-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
         # Emitted after consecutive_failures was incremented.
         "cycle-failed": (GObject.SignalFlags.RUN_LAST, None, ()),
+        # (plan_id, tuple[StepOutcome, ...]): every step ran, successfully or not.
+        "action-finished": (
+            GObject.SignalFlags.RUN_LAST,
+            None,
+            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
+        ),
+        # (plan_id, WimmError): the plan was refused before any step ran. Errors raised by a
+        # step come back as a `failed` outcome in `action-finished`.
+        "action-rejected": (
+            GObject.SignalFlags.RUN_LAST,
+            None,
+            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
+        ),
+        # (plan_id, ReclaimDelta): measured on a sample taken after the measuring delay.
+        "reclaim-measured": (
+            GObject.SignalFlags.RUN_LAST,
+            None,
+            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
+        ),
     }
 
     def __init__(
@@ -30,14 +59,21 @@ class AppService(GObject.Object):
         sampler: CycleSampler,
         config: Config,
         clock: Callable[[], datetime] = wall_clock,
+        actions: ActionSetup | None = None,
     ) -> None:
         super().__init__()
+        self._actions = actions
+        self._plans = PlanRegistry()
+        self._reclaim = ReclaimTracker()
+        self._cycle_cohort: frozenset[PlanId] = frozenset()
+        self._last_sampled: Snapshot | None = None
         self._clock = clock
         self._muted_until: datetime | None = None
         self._sampler = sampler
         self._config = config
         self._snapshot: Snapshot | None = None
-        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="wimm-sampler")
+        # One worker for sampling and actions: a sample never reads mid-action.
+        self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="wimm-worker")
         self._timer = 0
         self._busy = False
         self._stopped = False
@@ -71,9 +107,22 @@ class AppService(GObject.Object):
     def request_cycle(self) -> bool:
         if not self._busy and not self._stopped:
             self._busy = True
-            future = self._executor.submit(self._sampler.run_cycle)
+            self._cycle_cohort = self._reclaim.due_ids
+            future = self._executor.submit(self._sample)
             future.add_done_callback(self._completed)
         return GLib.SOURCE_CONTINUE
+
+    def _sample(self) -> Snapshot:
+        """Worker side: also remember the sample, the baseline of an action that follows."""
+        self._last_sampled = self._sampler.run_cycle()
+        return self._last_sampled
+
+    def _run_action(
+        self, executor: ActionExecutor, plan: Plan
+    ) -> tuple[tuple[StepOutcome, ...], Snapshot | None]:
+        """Worker side: the baseline is the last sample taken before this action starts."""
+        baseline = self._last_sampled
+        return executor.execute(plan=plan), baseline
 
     def _completed(self, future: Future[Snapshot]) -> None:
         GLib.idle_add(self._publish, future)
@@ -92,7 +141,80 @@ class AppService(GObject.Object):
             self._snapshot = snapshot
             self.consecutive_failures = 0
             self.emit("snapshot-updated")
+            self._measure_reclaim(snapshot=snapshot)
         return GLib.SOURCE_REMOVE
+
+    def plan(self, *, request: ActionRequest) -> Plan:
+        """Build and register a confirmation plan from the latest snapshot (spec 8.1)."""
+        setup = self._require_actions()
+        if self._snapshot is None:
+            raise InvalidRequest("No snapshot yet, cannot plan an action")
+        context = PlanningContext(owner_uid=setup.owner_uid, now=self._clock)
+        plan = plan_action(request=request, snapshot=self._snapshot, context=context)
+        self._plans.add(plan=plan, now=self._clock())
+        return plan
+
+    def execute(self, *, plan_id: PlanId, typed_confirmation: str | None) -> None:
+        """Validate expiry and phrase, then run the plan on the worker; returns at once.
+
+        The plan leaves the registry before it runs, so it executes at most once. The
+        result arrives on the main loop as `action-finished` or `action-rejected`.
+
+        Raises
+        ------
+        PlanNotFound, PlanExpired, ConfirmationMismatch
+            From the registry; a mismatch keeps the plan so the user can retype.
+        """
+        setup = self._require_actions()
+        if self._stopped:
+            raise InvalidRequest("Service is stopped")
+        plan = self._plans.take(
+            plan_id=plan_id, typed_confirmation=typed_confirmation, now=self._clock()
+        )
+        future = self._executor.submit(self._run_action, setup.executor, plan)
+        future.add_done_callback(partial(self._action_completed, plan_id))
+
+    def _require_actions(self) -> ActionSetup:
+        if self._actions is None:
+            raise InvalidRequest("Actions are not available")
+        return self._actions
+
+    def _action_completed(self, plan_id: PlanId, future: Future[_ActionResult]) -> None:
+        GLib.idle_add(self._publish_action, plan_id, future)
+
+    def _publish_action(self, plan_id: PlanId, future: Future[_ActionResult]) -> bool:
+        if self._stopped:
+            return GLib.SOURCE_REMOVE
+        try:
+            outcomes, before = future.result()
+        except Exception as error:
+            if not isinstance(error, WimmError):
+                LOGGER.exception("Action %s crashed", plan_id)
+            self.emit(
+                "action-rejected",
+                plan_id,
+                error if isinstance(error, WimmError) else ControlFailed(),
+            )
+            return GLib.SOURCE_REMOVE
+        self.emit("action-finished", plan_id, outcomes)
+        if self._reclaim.watch(plan_id=plan_id, before=before):
+            delay_ms = round(self._require_actions().measure_delay_s * 1000)
+            GLib.timeout_add(delay_ms, self._delay_elapsed, plan_id)
+        self.request_cycle()
+        return GLib.SOURCE_REMOVE
+
+    def _delay_elapsed(self, plan_id: PlanId) -> bool:
+        if not self._stopped:
+            self._reclaim.mark_due(plan_id=plan_id)
+            self.request_cycle()
+        return GLib.SOURCE_REMOVE
+
+    def _measure_reclaim(self, *, snapshot: Snapshot) -> None:
+        """Measure plans already due at submit time; later ones wait for their own sample."""
+        for plan_id, delta in self._reclaim.resolve(after=snapshot, plan_ids=self._cycle_cohort):
+            self.emit("reclaim-measured", plan_id, delta)
+        if self._reclaim.due_ids:
+            self.request_cycle()
 
     def stop(self) -> None:
         if self._stopped:
@@ -101,4 +223,5 @@ class AppService(GObject.Object):
         if self._timer:
             GLib.source_remove(self._timer)
             self._timer = 0
-        self._executor.shutdown(wait=True, cancel_futures=True)
+        # Not waiting: the main loop must not freeze until a running action ends.
+        self._executor.shutdown(wait=False, cancel_futures=True)

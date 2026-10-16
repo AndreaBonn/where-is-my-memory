@@ -10,7 +10,7 @@ from wimm.model.enums import ActionKind
 from .control_protocols import DockerControl, LiveProcess, ProcessControl
 from .errors import InvalidRequest, ProtectedTarget, TargetChanged
 
-PROCESS_KINDS = frozenset({ActionKind.PROCESS_TERMINATE})
+PROCESS_KINDS = frozenset({ActionKind.PROCESS_TERMINATE, ActionKind.APP_CLOSE})
 CONTAINER_KINDS = frozenset({ActionKind.CONTAINER_STOP, ActionKind.CONTAINER_REMOVE})
 SUPPORTED_KINDS = PROCESS_KINDS | CONTAINER_KINDS
 
