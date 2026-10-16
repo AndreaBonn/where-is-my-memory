@@ -1,0 +1,11 @@
+<node>
+  <interface name="io.github.wimm.Inspector1">
+    <method name="GetSnapshot">
+      <arg name="snapshot" type="s" direction="out"/>
+    </method>
+    <method name="GetDiskReport">
+      <arg name="report" type="s" direction="out"/>
+    </method>
+    <property name="Version" type="s" access="read"/>
+  </interface>
+</node>

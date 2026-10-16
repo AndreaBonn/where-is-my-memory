@@ -1,0 +1,299 @@
+import logging
+import os
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
+from functools import partial
+from pathlib import Path
+from time import monotonic
+
+from wimm.collectors import CollectorResult
+from wimm.collectors.desktop_entries import DesktopEntry, DesktopEntryIndex
+from wimm.collectors.disk import collect_disk_usage
+from wimm.collectors.docker_source import DockerSample, DockerSource
+from wimm.collectors.meminfo import collect_meminfo
+from wimm.collectors.processes import collect_processes
+from wimm.collectors.project_roots import ProjectRootResolver
+from wimm.collectors.sockets import collect_sockets
+from wimm.config import Config
+from wimm.core.activity import ActivityConfig, ActivityInputs, EntitySample, assess_activity
+from wimm.core.assemble import (
+    AssemblyInput,
+    Entities,
+    SystemState,
+    Thresholds,
+    Verdicts,
+    assemble_snapshot,
+)
+from wimm.core.categorize import CategorizationContext, categorize_process
+from wimm.core.grouping import GroupDraft, GroupingInput, build_groups
+from wimm.model.enums import Category, MetricsSource
+from wimm.model.memory import DiskUsage
+from wimm.model.raw import MemInfo, RawProcess, RawSocket
+from wimm.model.snapshot import ActivityAssessment, DockerStatus, Snapshot
+from wimm.paths import UserPaths
+
+from .history import EntityKey, SampleHistory
+from .sampler_steps import ListenPorts, ProcessCycle, ProcessSamples, identity
+
+LOGGER = logging.getLogger(__name__)
+MICROSECONDS_PER_SECOND = 1_000_000
+
+
+@dataclass(frozen=True)
+class Collectors:
+    processes: Callable[[], CollectorResult[tuple[RawProcess, ...]]]
+    sockets: Callable[[], CollectorResult[tuple[RawSocket, ...]]]
+    docker: Callable[[], CollectorResult[DockerSample]]
+    meminfo: Callable[[], CollectorResult[MemInfo | None]]
+    disks: Callable[[], CollectorResult[tuple[DiskUsage, ...]]]
+    desktop: Callable[[], CollectorResult[Mapping[str, DesktopEntry]]]
+
+
+@dataclass(frozen=True)
+class SamplerEnvironment:
+    paths: UserPaths
+    own_pid: int
+    uid: int
+    home: Path
+    persisted_last_active: Mapping[EntityKey, datetime] = field(default_factory=dict)
+
+
+def default_collectors(*, environment: SamplerEnvironment) -> Collectors:
+    return Collectors(
+        processes=partial(collect_processes, own_uid=environment.uid),
+        sockets=collect_sockets,
+        docker=DockerSource().collect,
+        meminfo=collect_meminfo,
+        disks=partial(collect_disk_usage, home=environment.home),
+        desktop=DesktopEntryIndex().collect,
+    )
+
+
+def wall_clock() -> datetime:
+    return datetime.now(tz=UTC)
+
+
+def default_environment(*, paths: UserPaths) -> SamplerEnvironment:
+    return SamplerEnvironment(paths=paths, own_pid=os.getpid(), uid=os.getuid(), home=Path.home())
+
+
+def group_entities(
+    *, entities: Entities, environment: SamplerEnvironment, desktop: Mapping[str, DesktopEntry]
+) -> tuple[GroupDraft, ...]:
+    resolver = ProjectRootResolver(is_marker=Path.exists, home=environment.home)
+    roots = {
+        proc.cwd: str(resolver.resolve(cwd=Path(proc.cwd)))
+        for proc, _ in entities.processes.values()
+        if proc.cwd is not None
+    }
+    return build_groups(
+        grouping=GroupingInput(
+            pairs=tuple(entities.processes.values()),
+            containers=tuple(entities.containers.values()),
+            project_root_by_cwd=roots,
+            desktop_name_by_appid={key: item.name for key, item in desktop.items()},
+            own_home=str(environment.home),
+            own_uid=environment.uid,
+            listen_ports_by_pid=entities.listen_ports_by_pid,
+        )
+    )
+
+
+class Sampler:
+    def __init__(
+        self,
+        *,
+        collectors: Collectors,
+        environment: SamplerEnvironment,
+        config: Config,
+        clock: Callable[[], datetime] = wall_clock,
+    ) -> None:
+        self.collectors, self.environment, self.settings, self.clock = (
+            collectors,
+            environment,
+            config,
+            clock,
+        )
+        self.monitor_started_at = clock()
+        self.history = SampleHistory(
+            window_s=config.activity_window_s, interval_s=config.sample_interval_s
+        )
+        self._cpu = ProcessSamples()
+        self._process_warning = False
+        self._ports = ListenPorts()
+        self._mem: MemInfo | None = None
+        self._disks: tuple[DiskUsage, ...] = ()
+        self._activity = ActivityConfig(
+            window_s=config.activity_window_s,
+            interval_s=config.sample_interval_s,
+            cpu_threshold_pct=config.cpu_active_threshold_pct,
+            net_threshold_bps=config.net_active_threshold_bps,
+        )
+
+    def run_cycle(self) -> Snapshot:
+        started = monotonic()
+        try:
+            return self._run_cycle()
+        finally:
+            LOGGER.debug("Sampling cycle duration %.6f s", monotonic() - started)
+
+    def _run_cycle(self) -> Snapshot:
+        processes = self._collect_processes()
+        sockets = self.collectors.sockets()
+        docker = self.collectors.docker()
+        mem, disks = self.collectors.meminfo(), self.collectors.disks()
+        self._mem = mem.data if mem.data is not None else self._mem
+        self._disks = disks.data or self._disks
+        if self._mem is None or not self._disks:
+            raise RuntimeError("Memory and disk counters are not ready")
+        now = self.clock()
+        ports = self._ports.collect(processes=processes, sockets=sockets)
+        desktop = self.collectors.desktop().data
+        entities = self._entities(processes=processes, ports=ports, docker=docker, desktop=desktop)
+        drafts = group_entities(entities=entities, environment=self.environment, desktop=desktop)
+        cycle = ProcessCycle(
+            processes={p.pid: p for p in processes},
+            ports=ports,
+            sockets=None if sockets.error else sockets.data,
+            now=now,
+        )
+        verdicts = self._verdicts(entities=entities, cycle=cycle)
+        status = (
+            DockerStatus(available=False, error=docker.error)
+            if docker.error
+            else docker.data.status
+        )
+        return self._assemble(
+            drafts=drafts, entities=entities, verdicts=verdicts, system=(now, status)
+        )
+
+    def _collect_processes(self) -> tuple[RawProcess, ...]:
+        result = self.collectors.processes()
+        if result.error and not result.data:
+            raise RuntimeError(f"Process collection failed: {result.error}")
+        if result.error and not self._process_warning:
+            LOGGER.warning("Partial process collection: %s", result.error)
+        self._process_warning = bool(result.error)
+        return result.data
+
+    def _entities(
+        self,
+        *,
+        processes: tuple[RawProcess, ...],
+        ports: Mapping[int, frozenset[int]],
+        docker: CollectorResult[DockerSample],
+        desktop: Mapping[str, DesktopEntry],
+    ) -> Entities:
+        categories = {key: item.categories for key, item in desktop.items()}
+        context = CategorizationContext(
+            own_uid=self.environment.uid,
+            own_pid=self.environment.own_pid,
+            processes={p.pid: p for p in processes},
+            listen_ports_by_pid=ports,
+            extra_protected_names=self.settings.extra_protected_names,
+            desktop_categories=categories,
+        )
+        pairs = [(proc, categorize_process(proc=proc, context=context)) for proc in processes]
+        return Entities(
+            processes={
+                proc.pid: (proc, decision)
+                for proc, decision in pairs
+                if decision.category is not None
+            },
+            containers={} if docker.error else {item.id: item for item in docker.data.containers},
+            listen_ports_by_pid=ports,
+            desktop_categories=categories,
+        )
+
+    def _record_samples(self, *, entities: Entities, cycle: ProcessCycle) -> None:
+        self._cpu.prepare(cycle=cycle)
+        samples: dict[EntityKey, EntitySample] = {
+            key: self._cpu.sample(proc=proc, cycle=cycle)
+            for proc, _ in entities.processes.values()
+            if (key := identity(proc=proc)) is not None
+        }
+        samples.update(
+            {
+                item.id: EntitySample(
+                    taken_at=cycle.now,
+                    cpu_time_s=None
+                    if item.metrics_source is MetricsSource.UNAVAILABLE
+                    else item.cpu_usage_usec / MICROSECONDS_PER_SECOND,
+                    net_bytes=item.net_bytes,
+                )
+                for item in entities.containers.values()
+            }
+        )
+        self.history.append(cycle_samples=samples)
+        self._cpu.finish(processes=cycle.processes)
+
+    def _verdicts(self, *, entities: Entities, cycle: ProcessCycle) -> Verdicts:
+        self._record_samples(entities=entities, cycle=cycle)
+        by_pid = {
+            pid: self._assess(
+                key=identity(proc=proc),
+                category=decision.category,
+                now=cycle.now,
+                ports=cycle.subtree_ports[pid],
+            )
+            for pid, (proc, decision) in entities.processes.items()
+        }
+        by_container = {
+            key: self._assess(key=key, category=Category.CONTAINER, now=cycle.now)
+            for key in entities.containers
+        }
+        return Verdicts(by_pid=by_pid, by_container=by_container)
+
+    def _assess(
+        self,
+        *,
+        key: EntityKey | None,
+        category: Category | None,
+        now: datetime,
+        ports: frozenset[int] = frozenset(),
+    ) -> ActivityAssessment:
+        created = (
+            datetime.fromtimestamp(key[1], tz=UTC)
+            if isinstance(key, tuple)
+            else self.monitor_started_at
+        )
+        return assess_activity(
+            inputs=ActivityInputs(
+                category=category or Category.OTHER,
+                history=self.history.history_for(key=key) if key is not None else (),
+                now=now,
+                created_at=created,
+                monitor_started_at=self.monitor_started_at,
+                persisted_last_active=self.environment.persisted_last_active.get(key)
+                if key is not None
+                else None,
+                server_ports=ports,
+            ),
+            config=self._activity,
+        )
+
+    def _assemble(
+        self,
+        *,
+        drafts: tuple[GroupDraft, ...],
+        entities: Entities,
+        verdicts: Verdicts,
+        system: tuple[datetime, DockerStatus],
+    ) -> Snapshot:
+        if self._mem is None:
+            raise RuntimeError("Memory counters are not ready")
+        return assemble_snapshot(
+            inputs=AssemblyInput(
+                drafts=drafts,
+                entities=entities,
+                verdicts=verdicts,
+                system=SystemState(mem=self._mem, disks=self._disks, docker=system[1]),
+                taken_at=system[0],
+                monitor_started_at=self.monitor_started_at,
+                thresholds=Thresholds(
+                    warning_pct=self.settings.pressure_warning_pct,
+                    critical_pct=self.settings.pressure_critical_pct,
+                ),
+            )
+        )
