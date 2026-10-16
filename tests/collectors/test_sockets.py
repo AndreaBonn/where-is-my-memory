@@ -11,9 +11,11 @@ import pytest
 from wimm.collectors.sockets import (
     collect_sockets,
     connections_for_server,
+    connections_from_index,
     listening_ports_by_pid,
     non_listening_by_pid,
     non_listening_for_ports,
+    non_listening_port_index,
 )
 from wimm.model.raw import RawSocket
 
@@ -207,3 +209,25 @@ def test_mapped_local_interface_client_matches_server() -> None:
         pid=20, laddr=("::", 40000), raddr=("::ffff:192.0.2.1", PORT), status="TIME_WAIT"
     )
     assert connections_for_server(sockets=(server, client), pid=10, ppid={}) == (client,)
+
+
+@pytest.mark.parametrize("address", ["127.0.0.1", "::1", "::ffff:192.0.2.1"])
+def test_port_index_preserves_local_remote_and_duplicate_semantics(address: str) -> None:
+    server = RawSocket(pid=10, laddr=("192.0.2.1", PORT), raddr=None, status="LISTEN")
+    client = RawSocket(pid=None, laddr=("::", 40000), raddr=(address, PORT), status="TIME_WAIT")
+    incomplete = RawSocket(pid=None, laddr=None, raddr=None, status="CLOSE")
+    sockets = (server, WORKER, client, UNRELATED, incomplete, WORKER)
+    index = non_listening_port_index(sockets=sockets)
+    assert WORKER.laddr is not None and WORKER.raddr is not None
+    assert connections_from_index(index=index, ports=frozenset({PORT})) == frozenset(
+        {
+            (*WORKER.laddr, *WORKER.raddr),
+            ("::", 40000, address, PORT),
+        }
+    )
+    for ports in (frozenset(), frozenset({PORT}), frozenset({PORT, 40000})):
+        assert connections_from_index(index=index, ports=ports) == non_listening_for_ports(
+            sockets=sockets, ports=ports
+        )
+    assert connections_from_index(index=index, ports=frozenset({1})) == frozenset()
+    assert non_listening_port_index(sockets=()) == {}

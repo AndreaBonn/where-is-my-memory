@@ -153,3 +153,22 @@ def non_listening_for_ports(
         and item.raddr is not None
         and matches_server(socket=item, ports=ports, addresses=addresses)
     )
+
+
+def non_listening_port_index(*, sockets: tuple[RawSocket, ...]) -> dict[int, frozenset[Quadruple]]:
+    addresses = local_server_addresses(sockets=sockets)
+    index: dict[int, set[Quadruple]] = {}
+    for item in sockets:
+        if item.status == LISTEN or item.laddr is None or item.raddr is None:
+            continue
+        quadruple = (*item.laddr, *item.raddr)
+        index.setdefault(item.laddr[1], set()).add(quadruple)
+        if normalize_address(address=item.raddr[0]) in addresses:
+            index.setdefault(item.raddr[1], set()).add(quadruple)
+    return {port: frozenset(values) for port, values in index.items()}
+
+
+def connections_from_index(
+    *, index: Mapping[int, frozenset[Quadruple]], ports: frozenset[int]
+) -> frozenset[Quadruple]:
+    return frozenset(connection for port in ports for connection in index.get(port, ()))
