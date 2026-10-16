@@ -1,0 +1,11 @@
+#!/bin/sh
+# A running instance keeps going until "Quit" or logout. Bytecode is not shipped, but a
+# run as root writes __pycache__ next to the modules: remove it so nothing is left behind.
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "upgrade" ]; then
+    find /usr/lib/python3/dist-packages/wimm -type d -name __pycache__ -prune \
+        -exec rm -rf {} + 2>/dev/null || true
+fi
+
+exit 0

@@ -1,0 +1,4 @@
+#!/usr/bin/python3
+from wimm.app import main
+
+raise SystemExit(main())

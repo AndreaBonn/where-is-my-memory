@@ -1,0 +1,13 @@
+Package: where-is-my-memory
+Version: @VERSION@
+Architecture: all
+Section: utils
+Priority: optional
+Maintainer: @MAINTAINER@
+Installed-Size: @INSTALLED_SIZE@
+Depends: python3 (>= 3.12), python3-gi, python3-psutil, python3-docker, gir1.2-gtk-4.0, gir1.2-adw-1 (>= 1.5)
+Recommends: gnome-shell-extension-appindicator, docker-ce-cli | docker.io, x11-utils
+Description: tray monitor for forgotten containers, dev servers and apps
+ Where Is My Memory watches the processes and Docker containers of the
+ current session and flags those that hold on to memory without being used.
+ It lives in the system tray and never acts without confirmation.

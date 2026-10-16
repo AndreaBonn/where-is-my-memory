@@ -1,0 +1,11 @@
+#!/bin/sh
+# Refresh icon and launcher caches. No forced start in running sessions:
+# log out and in again, or run `wimm --background`.
+set -e
+
+if [ "$1" = "configure" ]; then
+    gtk-update-icon-cache -q /usr/share/icons/hicolor || true
+    update-desktop-database -q || true
+fi
+
+exit 0

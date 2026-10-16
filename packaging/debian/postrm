@@ -1,0 +1,10 @@
+#!/bin/sh
+# Drop the removed icon and launcher from the caches postinst refreshed.
+set -e
+
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    gtk-update-icon-cache -q /usr/share/icons/hicolor || true
+    update-desktop-database -q || true
+fi
+
+exit 0

@@ -166,3 +166,43 @@ RNF-02 (200 MB). L'app imposta quindi `GSK_RENDERER=cairo` e
 `GDK_DEBUG=gl-disable,vulkan-disable` prima di caricare GTK, solo se l'utente non ha già scelto
 un valore: 126-130 MB misurati, render identico per un'interfaccia fatta di liste e testo.
 Misure in `docs/PERF.md`.
+
+## Nomi dei pacchetti e Recommends (T-2.1)
+
+`apt-cache policy` eseguito il 2026-10-16 su questa macchina (Ubuntu 24.04), versioni
+installate e candidate:
+
+```
+gir1.2-gtk-4.0:                  Installato 4.14.5+ds-0ubuntu0.10   Candidato 4.14.5+ds-0ubuntu0.10
+gir1.2-adw-1:                    Installato 1.5.0-1ubuntu2          Candidato 1.5.0-1ubuntu2
+python3-gi:                      Installato 3.48.2-1
+python3-psutil:                  Installato 5.9.8-2build2
+python3-docker:                  Installato 5.0.3-1ubuntu1.1
+gnome-shell-extension-appindicator: Installato 58-1ubuntu24.04.1
+docker-ce-cli:                   Installato 5:29.9.0-1~ubuntu.24.04~noble  Candidato 5:29.9.1-...
+docker.io:                       Installato (nessuno)  Candidato 29.1.3-0ubuntu3~24.04.2
+x11-utils:                       Installato 7.7+6build2
+gnome-shell-extension-ubuntu-appindicators: nessun output (il pacchetto non esiste)
+```
+
+- `gir1.2-gtk-4.0` è il nome giusto (premessa di §12.1 chiusa).
+- `gnome-shell-extension-ubuntu-appindicators` non esiste in apt: l'alternativa di §12.1 è
+  tolta e il `Recommends` diventa `gnome-shell-extension-appindicator, docker-ce-cli |
+  docker.io, x11-utils`.
+- §12.2 non elenca l'XML D-Bus dell'Inspector, ma `inspector_dbus.introspection_path()`
+  cade su `/usr/share/where-is-my-memory/dbus/` quando manca `data/dbus` nell'albero dei
+  sorgenti. Il pacchetto installa quindi anche
+  `/usr/share/where-is-my-memory/dbus/io.github.wimm.Inspector1.xml`.
+- `appstreamcli validate` dà un avviso `url-homepage-missing` e un'info
+  `developer-info-missing`: il progetto non ha ancora un URL pubblico, e non se ne inventa
+  uno. Nessun errore.
+- `lintian` non è installato su questa macchina: `build_deb.sh` lo salta dichiarandolo.
+
+BASIS: measured.
+
+## Script del pacchetto: `postrm` e pulizia del bytecode (T-2.2)
+
+La §12.3 prevede solo `postinst` e un `prerm` vuoto. Il pacchetto aggiunge due cose, entrambe confinate ai file installati:
+
+- `postrm` su `remove` e `purge` riesegue `gtk-update-icon-cache` e `update-desktop-database`, così l'icona e il lanciatore rimossi non restano nelle cache che `postinst` aveva aggiornato.
+- `prerm` su `remove` e `upgrade` cancella le directory `__pycache__` sotto `/usr/lib/python3/dist-packages/wimm`. Il bytecode non è nel pacchetto, ma un avvio come root lo scrive accanto ai moduli e dopo `apt remove` resterebbe un residuo (verifica di T-2.3). L'istanza in esecuzione continua come da §12.3.

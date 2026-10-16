@@ -1,0 +1,16 @@
+[Desktop Entry]
+Type=Application
+Name=Where Is My Memory
+GenericName=Memory monitor
+GenericName[it]=Monitor della memoria
+Comment=Find forgotten containers, dev servers and apps that hold on to memory
+Comment[it]=Trova container, server di sviluppo e app dimenticati che occupano memoria
+Exec=wimm
+Icon=io.github.wimm.WhereIsMyMemory
+Terminal=false
+Categories=System;Monitor;GTK;
+Keywords=memory;ram;docker;process;monitor;
+StartupNotify=true
+StartupWMClass=io.github.wimm.WhereIsMyMemory
+DBusActivatable=false
+X-GNOME-UsesNotifications=true

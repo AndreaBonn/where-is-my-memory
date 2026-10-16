@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Where Is My Memory
+Comment=Start the memory monitor in the tray at login
+Comment[it]=Avvia il monitor della memoria nella tray al login
+Exec=wimm --background
+Icon=io.github.wimm.WhereIsMyMemory
+Terminal=false
+NoDisplay=true
+X-GNOME-Autostart-enabled=true
+X-GNOME-UsesNotifications=true
