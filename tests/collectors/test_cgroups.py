@@ -97,3 +97,79 @@ def test_process_read_error_log_levels(
     assert result.error == str(error)
     assert len(caplog.records) == 1
     assert caplog.records[0].levelno == level
+
+
+def test_container_parsers() -> None:
+    from wimm.collectors.cgroups import parse_cpu_stat, parse_memory_stat, parse_net_dev
+
+    assert parse_memory_stat(text="anon 100\ninactive_file 30\n") == 30
+    assert parse_cpu_stat(text="usage_usec 123\nuser_usec 100\n") == 123
+    text = (
+        "Inter-| Receive | Transmit\n face |bytes packets\n"
+        " lo: 90 0 0 0 0 0 0 0 80 0\n eth0: 10 0 0 0 0 0 0 0 20 0\n"
+    )
+    assert parse_net_dev(text=text) == 30
+    with pytest.raises(ValueError):
+        parse_cpu_stat(text="user_usec 10")
+
+
+def test_container_location_falls_back_to_proc(tmp_path: Path) -> None:
+    from wimm.collectors.cgroups import locate_container_cgroup
+
+    (tmp_path / "42").mkdir()
+    (tmp_path / "42/cgroup").write_text("0::/user.slice/custom\n")
+    custom = tmp_path / "user.slice/custom"
+    custom.mkdir(parents=True)
+    assert locate_container_cgroup(container_id="abc", pid=42, roots=(tmp_path, tmp_path)) == custom
+    standard = tmp_path / "system.slice/docker-abc.scope"
+    standard.mkdir(parents=True)
+    assert (
+        locate_container_cgroup(container_id="abc", pid=42, roots=(tmp_path, tmp_path)) == standard
+    )
+    assert (
+        locate_container_cgroup(container_id="missing", pid=0, roots=(tmp_path, tmp_path)) is None
+    )
+
+
+def test_container_memory_clamps_and_reads_metrics(tmp_path: Path) -> None:
+    from wimm.collectors.cgroups import read_container_metrics
+
+    scope = tmp_path / "system.slice/docker-abc.scope"
+    scope.mkdir(parents=True)
+    (scope / "memory.current").write_text("20")
+    (scope / "memory.stat").write_text("inactive_file 30")
+    (scope / "cpu.stat").write_text("usage_usec 123")
+    net = tmp_path / "42/net"
+    net.mkdir(parents=True)
+    (net / "dev").write_text("eth0: 10 0 0 0 0 0 0 0 20 0")
+    assert read_container_metrics(container_id="abc", pid=42, roots=(tmp_path, tmp_path)) == (
+        0,
+        123,
+        30,
+    )
+
+
+def test_parsers_on_captured_kernel_fixtures() -> None:
+    from wimm.collectors.cgroups import parse_cpu_stat, parse_memory_stat, parse_net_dev
+
+    assert parse_memory_stat(text=(FIXTURES / "memory_stat_real.txt").read_text()) == 18616320
+    assert parse_cpu_stat(text=(FIXTURES / "cpu_stat_real.txt").read_text()) == 1314961415
+    assert parse_net_dev(text=(FIXTURES / "net_dev_real.txt").read_text()) == 0
+    text = "eth0: 10 0 0 0 0 0 0 0 20\nveth0: 30 0 0 0 0 0 0 0 40\nlo: 100 0 0 0 0 0 0 0 100"
+    assert parse_net_dev(text=text) == 100
+
+
+@pytest.mark.parametrize("filename", ["memory.current", "memory.stat", "cpu.stat"])
+def test_unreadable_container_metric_returns_unavailable(tmp_path: Path, filename: str) -> None:
+    from wimm.collectors.cgroups import read_container_metrics
+
+    scope = tmp_path / "system.slice/docker-abc.scope"
+    scope.mkdir(parents=True)
+    for name, text in {
+        "memory.current": "100",
+        "memory.stat": "inactive_file 10",
+        "cpu.stat": "usage_usec 1",
+    }.items():
+        if name != filename:
+            (scope / name).write_text(text)
+    assert read_container_metrics(container_id="abc", pid=42, roots=(tmp_path, tmp_path)) is None

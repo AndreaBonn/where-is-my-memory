@@ -74,3 +74,149 @@ def collect_process_stat(
         )
         LOGGER.log(level, "Process stat collection failed for PID %s: %s", pid, error)
         return CollectorResult(data=None, error=str(error))
+
+
+CGROUP_ROOT = Path("/sys/fs/cgroup")
+CONTAINER_ROOTS = (CGROUP_ROOT, PROC_ROOT)
+NET_TX_INDEX = 8
+
+
+def _stat_value(text: str, key: str) -> int:
+    for line in text.splitlines():
+        fields = line.split()
+        if fields and fields[0] == key:
+            return int(fields[1])
+    raise ValueError(f"Missing {key}")
+
+
+def parse_memory_stat(text: str) -> int:
+    """Read inactive file bytes.
+
+    Parameters
+    ----------
+    text : str
+        Cgroup v2 memory.stat contents.
+
+    Returns
+    -------
+    int
+        Inactive file bytes.
+    """
+    return _stat_value(text=text, key="inactive_file")
+
+
+def parse_cpu_stat(text: str) -> int:
+    """Read cumulative CPU use.
+
+    Parameters
+    ----------
+    text : str
+        Cgroup v2 cpu.stat contents.
+
+    Returns
+    -------
+    int
+        Cumulative CPU microseconds.
+    """
+    return _stat_value(text=text, key="usage_usec")
+
+
+def parse_net_dev(text: str) -> int:
+    """Sum received and transmitted bytes excluding loopback.
+
+    Parameters
+    ----------
+    text : str
+        Linux net/dev contents.
+
+    Returns
+    -------
+    int
+        Total network bytes.
+    """
+    total = 0
+    for line in text.splitlines():
+        interface, delimiter, counters = line.partition(":")
+        if delimiter and interface.strip() != "lo":
+            fields = counters.split()
+            total += int(fields[0]) + int(fields[NET_TX_INDEX])
+    return total
+
+
+def locate_container_cgroup(
+    container_id: str, pid: int, roots: tuple[Path, Path] = CONTAINER_ROOTS
+) -> Path | None:
+    """Locate a Docker cgroup, falling back to the process unified membership.
+
+    Parameters
+    ----------
+    container_id : str
+        Full container identifier.
+    pid : int
+        Container init PID.
+    roots : tuple[Path, Path]
+        Cgroup and proc filesystem roots.
+
+    Returns
+    -------
+    Path | None
+        Existing cgroup directory, if accessible.
+    """
+    cgroup_root, proc_root = roots
+    standard = cgroup_root / "system.slice" / f"docker-{container_id}.scope"
+    if standard.is_dir():
+        return standard
+    result = collect_process_cgroup(pid=pid, proc_root=proc_root)
+    if result.data is None:
+        return None
+    candidate = cgroup_root / result.data.lstrip("/")
+    return candidate if candidate.is_dir() else None
+
+
+def read_container_metrics(
+    container_id: str,
+    pid: int,
+    roots: tuple[Path, Path] = CONTAINER_ROOTS,
+    read_net: bool = True,
+) -> tuple[int, int, int | None] | None:
+    """Read container memory, CPU and network counters.
+
+    Parameters
+    ----------
+    container_id : str
+        Full container identifier.
+    pid : int
+        Container init PID.
+    roots : tuple[Path, Path]
+        Cgroup and proc filesystem roots.
+    read_net : bool
+        False for host networking, where the PID's counters are the host's.
+
+    Returns
+    -------
+    tuple[int, int, int | None] | None
+        Working set bytes, CPU microseconds and network bytes (None when not
+        measured), or None when unavailable.
+    """
+    scope = locate_container_cgroup(container_id=container_id, pid=pid, roots=roots)
+    if scope is None:
+        return None
+    return _read_container_files(scope=scope, pid=pid if read_net else None, proc_root=roots[1])
+
+
+def _read_container_files(
+    scope: Path, pid: int | None, proc_root: Path
+) -> tuple[int, int, int | None] | None:
+    try:
+        memory = int((scope / "memory.current").read_text())
+        inactive = parse_memory_stat(text=(scope / "memory.stat").read_text())
+        cpu = parse_cpu_stat(text=(scope / "cpu.stat").read_text())
+        net = (
+            None
+            if pid is None
+            else parse_net_dev(text=(proc_root / str(pid) / "net/dev").read_text())
+        )
+        return max(0, memory - inactive), cpu, net
+    except (OSError, ValueError, IndexError) as error:
+        LOGGER.debug("Container metrics unavailable at %s: %s", scope, error)
+        return None
