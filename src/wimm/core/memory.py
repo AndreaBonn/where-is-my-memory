@@ -55,9 +55,6 @@ def group_memory(members: Sequence[Member]) -> MemoryUse:
 def _category_totals(groups: Sequence[Group]) -> tuple[tuple[Category, int], ...]:
     totals: dict[Category, int] = {}
     for group in groups:
-        if group.category is not Category.PROJECT:
-            totals[group.category] = totals.get(group.category, 0) + group.memory.used
-            continue
         for member in group.members:
             category = (
                 Category.CONTAINER if isinstance(member, ContainerMember) else member.category

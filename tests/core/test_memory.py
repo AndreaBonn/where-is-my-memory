@@ -52,7 +52,8 @@ def test_summary_splits_project_members_and_counts_other_groups_once() -> None:
         actions=(),
     )
     project = group(category=Category.PROJECT, members=(member(Category.DEV_SERVER), container))
-    result = memory_summary(mem=meminfo(), groups=(project, group(category=Category.BROWSER)))
+    browser = group(category=Category.BROWSER, members=(member(Category.BROWSER),))
+    result = memory_summary(mem=meminfo(), groups=(project, browser))
     assert result.used == 700
     assert (result.total, result.available, result.swap_total, result.swap_used) == (
         1000,
@@ -123,3 +124,13 @@ def test_reclaimable_requires_idle_safe_primary_not_ignored() -> None:
     )
     assert reclaimable_now(groups=groups) == Reclaimable(ram=70, disk=0)
     assert reclaimable_now(groups=(), disk_bytes=123) == Reclaimable(ram=0, disk=123)
+
+
+def test_summary_splits_every_group_over_its_member_categories() -> None:
+    uvicorn = member(Category.DEV_SERVER)
+    claude = replace(member(Category.AI_CLI), memory=MemoryUse(used=700, reclaimable=0))
+    folder = group(category=Category.DEV_SERVER, members=(uvicorn, claude))
+
+    result = memory_summary(mem=meminfo(), groups=(folder,))
+
+    assert dict(result.breakdown.categories) == {Category.DEV_SERVER: 100, Category.AI_CLI: 700}
