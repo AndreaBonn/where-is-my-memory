@@ -47,7 +47,7 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
 python_version = "3.12"
 
 [[tool.mypy.overrides]]
-module = ["wimm.core.*", "wimm.model"]
+module = ["wimm.core.*", "wimm.model", "wimm.model.*"]
 strict = true
 
 # docker 5.0.3 ships no type information and types-docker starts at 7.x, whose API
