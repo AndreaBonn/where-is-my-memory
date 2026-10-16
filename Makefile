@@ -1,4 +1,4 @@
-.PHONY: setup test test-all perf lint run deb
+.PHONY: setup test test-all perf lint run deb test-deb
 
 # Enforce core coverage only once executable core code exists.
 CORE_HAS_CODE := $(shell test ! -d src/wimm/core || \
@@ -32,3 +32,7 @@ run:
 deb:
 	@test -f scripts/build_deb.sh || { echo 'Missing script: scripts/build_deb.sh' >&2; exit 2; }
 	scripts/build_deb.sh
+
+test-deb:
+	@test -f scripts/test_deb.sh || { echo 'Missing script: scripts/test_deb.sh' >&2; exit 2; }
+	scripts/test_deb.sh

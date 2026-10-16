@@ -83,6 +83,21 @@ write_control() {
     install -m 755 "${ROOT}/packaging/debian/postinst" "${STAGING}/DEBIAN/postinst"
     install -m 755 "${ROOT}/packaging/debian/prerm" "${STAGING}/DEBIAN/prerm"
     install -m 755 "${ROOT}/packaging/debian/postrm" "${STAGING}/DEBIAN/postrm"
+    # Debian policy 10.7.3: every file under /etc is a conffile, so admin edits survive upgrades.
+    printf '/etc/xdg/autostart/%s.desktop\n' "${APP_ID}" > "${STAGING}/DEBIAN/conffiles"
+    chmod 644 "${STAGING}/DEBIAN/conffiles"
+}
+
+# Native package: policy 12.7 wants a gzipped changelog. Generated from the version and
+# maintainer already resolved, so it cannot disagree with DEBIAN/control.
+write_changelog() {
+    local version="$1" maintainer="$2" doc="${STAGING}/usr/share/doc/${PACKAGE}"
+    {
+        printf '%s (%s) unstable; urgency=medium\n\n' "${PACKAGE}" "${version}"
+        printf '  * Release %s.\n\n' "${version}"
+        printf ' -- %s  %s\n' "${maintainer}" "$(date -R)"
+    } | gzip -9n > "${doc}/changelog.gz"
+    chmod 644 "${doc}/changelog.gz"
 }
 
 main() {
@@ -94,6 +109,7 @@ main() {
     rm -rf "${STAGING}"
     install -d -m 755 "${STAGING}" "${DIST}"
     stage_files
+    write_changelog "${version}" "${maintainer}"
     write_control "${version}" "${maintainer}"
     dpkg-deb --build --root-owner-group "${STAGING}" "${output}"
 

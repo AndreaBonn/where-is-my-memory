@@ -206,3 +206,14 @@ La §12.3 prevede solo `postinst` e un `prerm` vuoto. Il pacchetto aggiunge due 
 
 - `postrm` su `remove` e `purge` riesegue `gtk-update-icon-cache` e `update-desktop-database`, così l'icona e il lanciatore rimossi non restano nelle cache che `postinst` aveva aggiornato.
 - `prerm` su `remove` e `upgrade` cancella le directory `__pycache__` sotto `/usr/lib/python3/dist-packages/wimm`. Il bytecode non è nel pacchetto, ma un avvio come root lo scrive accanto ai moduli e dopo `apt remove` resterebbe un residuo (verifica di T-2.3). L'istanza in esecuzione continua come da §12.3.
+
+## Verifica del pacchetto in container: conffile e changelog (T-2.3)
+
+`scripts/test_deb.sh` (verbo `make test-deb`) installa il `.deb` in `ubuntu:24.04` e lancia `lintian` nel container. Al primo giro `lintian` ha dato due errori, corretti in `scripts/build_deb.sh` (nessun override):
+
+- `file-in-etc-not-marked-as-conffile` sull'autostart: aggiunto `DEBIAN/conffiles`. Conseguenza: `apt remove` lascia `/etc/xdg/autostart/io.github.wimm.WhereIsMyMemory.desktop` (stato dpkg `rc`) e solo `apt purge` lo toglie. Il test di T-2.3 verifica l'assenza di residui su `/usr` dopo `remove` e sull'autostart dopo `purge`. Il lanciatore e il codice spariscono già con `remove`.
+- `no-changelog` (pacchetto nativo): il build genera `/usr/share/doc/where-is-my-memory/changelog.gz` con versione e maintainer di `control`. §12.2 non lo elenca.
+
+Il warning `no-manual-page` su `/usr/bin/wimm` resta e viene riportato, non è un errore.
+
+BASIS: measured.
