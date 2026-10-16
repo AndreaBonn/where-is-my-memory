@@ -1,11 +1,14 @@
 import logging
+from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
+from datetime import datetime, timedelta
 from typing import ClassVar, Protocol
 
 from gi.repository import GLib, GObject
 
 from wimm.config import Config
 from wimm.model.snapshot import Snapshot
+from wimm.service.sampler import wall_clock
 
 LOGGER = logging.getLogger(__name__)
 
@@ -15,10 +18,22 @@ class CycleSampler(Protocol):
 
 
 class AppService(GObject.Object):
-    __gsignals__: ClassVar = {"snapshot-updated": (GObject.SignalFlags.RUN_LAST, None, ())}
+    __gsignals__: ClassVar = {
+        "snapshot-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
+        # Emitted after consecutive_failures was incremented.
+        "cycle-failed": (GObject.SignalFlags.RUN_LAST, None, ()),
+    }
 
-    def __init__(self, *, sampler: CycleSampler, config: Config) -> None:
+    def __init__(
+        self,
+        *,
+        sampler: CycleSampler,
+        config: Config,
+        clock: Callable[[], datetime] = wall_clock,
+    ) -> None:
         super().__init__()
+        self._clock = clock
+        self._muted_until: datetime | None = None
         self._sampler = sampler
         self._config = config
         self._snapshot: Snapshot | None = None
@@ -33,6 +48,19 @@ class AppService(GObject.Object):
 
     def config(self) -> Config:
         return self._config
+
+    @property
+    def notifications_muted_until(self) -> datetime | None:
+        """Wall-clock end of the mute, or None when not muted or already elapsed."""
+        if self._muted_until is not None and self._clock() >= self._muted_until:
+            self._muted_until = None
+        return self._muted_until
+
+    def mute_notifications(self, *, duration_s: float) -> None:
+        """Silence notifications for ``duration_s`` seconds from now."""
+        if duration_s <= 0:
+            raise ValueError(f"duration_s must be positive, got {duration_s!r}")
+        self._muted_until = self._clock() + timedelta(seconds=duration_s)
 
     def start(self) -> None:
         if self._timer or self._stopped:
@@ -59,6 +87,7 @@ class AppService(GObject.Object):
         except Exception:
             self.consecutive_failures += 1
             LOGGER.exception("Sampling failed (%d consecutive cycles)", self.consecutive_failures)
+            self.emit("cycle-failed")
         else:
             self._snapshot = snapshot
             self.consecutive_failures = 0

@@ -109,6 +109,25 @@ def _start_service(application: Any) -> None:
     application._service = AppService(sampler=sampler, config=loaded.config)
 
 
+def _start_tray(application: Any, connection: Any) -> None:
+    # Gio and GLib only: the tray must never pull GTK into the resident process.
+    from wimm.tray.tray import Tray
+
+    try:
+        tray = Tray(
+            connection=connection,
+            service=application._service,
+            on_open=lambda group_id: application._window_host.present(group_id=group_id),
+            on_quit=lambda: application.activate_action("quit", None),
+        )
+        tray.start()
+    except Exception:
+        # Monitoring, notifications and the window still work without the icon.
+        LOGGER.exception("Cannot show the tray icon")
+        return
+    application._tray = tray
+
+
 def _startup(application: Any) -> None:
     from gi.repository import Gio, GLib
 
@@ -121,6 +140,7 @@ def _startup(application: Any) -> None:
         return
     _start_service(application=application)
     application._inspector = Inspector(connection=connection, service=application._service)
+    _start_tray(application=application, connection=connection)
     application.hold()
     application._held = True
     application._signals = tuple(
@@ -130,13 +150,25 @@ def _startup(application: Any) -> None:
     application._service.start()
 
 
+def _release(release: Callable[[], None]) -> None:
+    # One failing part must not keep the others, or Gio's own shutdown, from running.
+    try:
+        release()
+    except Exception:
+        LOGGER.exception("Cannot release %s", release)
+
+
 def _shutdown(application: Any) -> None:
     from gi.repository import Gio, GLib
 
-    if application._service is not None:
-        application._service.stop()
-    if application._inspector is not None:
-        application._inspector.close()
+    service, tray, inspector = application._service, application._tray, application._inspector
+    for release in (
+        service and service.stop,
+        tray and tray.close,
+        inspector and inspector.close,
+    ):
+        if release is not None:
+            _release(release=release)
     for source in application._signals:
         GLib.source_remove(source)
     Gio.Application.do_shutdown(application)
@@ -164,6 +196,7 @@ def create_application() -> "Gio.Application":
         _held: bool = False
         _service: Any = None
         _inspector: Any = None
+        _tray: Any = None
         _signals: tuple[int, ...] = ()
         do_startup = _startup
         do_shutdown = _shutdown

@@ -239,3 +239,45 @@ def test_build_window_fails_fast_without_a_display() -> None:
     )
     assert result.returncode == SUCCESS, result.stderr
     assert result.stdout == "No graphical display available|True\n"
+
+
+def test_start_tray_failure_is_logged_and_leaves_no_tray(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    import wimm.tray.tray
+    from wimm.app import _start_tray
+
+    def broken(**_kwargs: object) -> None:
+        raise RuntimeError("no tray")
+
+    monkeypatch.setattr(target=wimm.tray.tray, name="Tray", value=broken)
+    application = SimpleNamespace(_tray=None, _service=object(), _window_host=None)
+    _start_tray(application=application, connection=object())
+    assert application._tray is None
+    assert any(message.startswith("Cannot show the tray icon") for message in caplog.messages)
+
+
+def test_shutdown_closes_everything_even_when_one_close_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from gi.repository import Gio
+
+    from wimm.app import _shutdown
+
+    closed: list[str] = []
+
+    def failing_close() -> None:
+        closed.append("tray")
+        raise RuntimeError("bus gone")
+
+    monkeypatch.setattr(
+        target=Gio.Application, name="do_shutdown", value=lambda _app: closed.append("gio")
+    )
+    application = SimpleNamespace(
+        _service=SimpleNamespace(stop=lambda: closed.append("service")),
+        _tray=SimpleNamespace(close=failing_close),
+        _inspector=SimpleNamespace(close=lambda: closed.append("inspector")),
+        _signals=(),
+    )
+    _shutdown(application=application)
+    assert closed == ["service", "tray", "inspector", "gio"]

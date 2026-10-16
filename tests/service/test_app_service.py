@@ -1,7 +1,9 @@
 import threading
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from time import monotonic
 
+import pytest
 from gi.repository import GLib
 
 from tests.core.assemble_helpers import build_input
@@ -101,3 +103,60 @@ def test_stop_discards_worker_result_already_queued_for_main_loop() -> None:
         assert successful.snapshot() == assemble_snapshot(inputs=build_input([]))
     finally:
         successful.stop()
+
+
+def test_failed_cycle_emits_cycle_failed_with_updated_counter() -> None:
+    sampler = FakeSampler()
+    sampler.proceed.set()
+    sampler.fail = True
+    service = AppService(sampler=sampler, config=Config())
+    seen: list[int] = []
+    updates: list[bool] = []
+    service.connect("cycle-failed", lambda s: seen.append(s.consecutive_failures))
+    service.connect("snapshot-updated", lambda *_: updates.append(True))
+    try:
+        service.start()
+        spin_until(predicate=lambda: bool(seen))
+        assert seen == [1]
+        assert updates == []
+        sampler.fail = False
+        service.request_cycle()
+        spin_until(predicate=lambda: bool(updates))
+        assert seen == [1]
+    finally:
+        service.stop()
+
+
+class FixedClock:
+    def __init__(self, now: datetime) -> None:
+        self.now = now
+
+    def __call__(self) -> datetime:
+        return self.now
+
+
+def test_mute_notifications_sets_expiry_that_lapses_with_the_clock() -> None:
+    start = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
+    clock = FixedClock(start)
+    service = AppService(sampler=FakeSampler(), config=Config(), clock=clock)
+    try:
+        assert service.notifications_muted_until is None
+        service.mute_notifications(duration_s=3600)
+        assert service.notifications_muted_until == start + timedelta(hours=1)
+        clock.now = start + timedelta(minutes=59)
+        assert service.notifications_muted_until == start + timedelta(hours=1)
+        clock.now = start + timedelta(hours=1)
+        assert service.notifications_muted_until is None
+    finally:
+        service.stop()
+
+
+def test_mute_notifications_rejects_non_positive_duration() -> None:
+    service = AppService(sampler=FakeSampler(), config=Config())
+    try:
+        with pytest.raises(ValueError, match="duration_s"):
+            service.mute_notifications(duration_s=0)
+        service.mute_notifications(duration_s=1)
+        assert service.notifications_muted_until is not None
+    finally:
+        service.stop()

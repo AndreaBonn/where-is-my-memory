@@ -25,6 +25,7 @@ def updated(service):
     if len(updates) == 1:
         service.request_cycle()
     else:
+        assert service is application._service and application._tray is not None
         # No activate() here: activation opens the window and loads GTK by design (6.2).
         observations.append((
             'gi.repository.Gtk' in sys.modules, 'gi.repository.Adw' in sys.modules
