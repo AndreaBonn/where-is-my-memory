@@ -1,3 +1,4 @@
+import time
 from collections.abc import Callable, Iterator
 from dataclasses import replace
 from datetime import datetime
@@ -180,3 +181,13 @@ def window_factory(
     for window in windows:
         window.destroy()
     main_context_iterate()
+
+
+@pytest.fixture(autouse=True)
+def rome_system_time(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Clock texts follow the system time zone; pin it so they do not depend on the host."""
+    monkeypatch.setenv("TZ", "Europe/Rome")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()

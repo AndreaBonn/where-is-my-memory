@@ -103,9 +103,12 @@ def fold_text(*, text: str) -> str:
 
 
 def format_clock(*, value: datetime, now: datetime) -> str:
-    """Format a local time: ``HH:MM`` on the day of ``now``, else ``DD/MM HH:MM``."""
-    local = value.astimezone(now.tzinfo)
-    pattern = "%H:%M" if local.date() == now.date() else "%d/%m %H:%M"
+    """Format a time in the system time zone: ``HH:MM`` on today's date, else ``DD/MM HH:MM``.
+
+    The service clock is UTC, so the zone of ``now`` says nothing about the user's.
+    """
+    local = value.astimezone()
+    pattern = "%H:%M" if local.date() == now.astimezone().date() else "%d/%m %H:%M"
     return local.strftime(pattern)
 
 

@@ -124,11 +124,6 @@ def test_format_clock_other_day_adds_date() -> None:
     assert format_clock(value=datetime(2026, 10, 15, 23, 5, tzinfo=ROME), now=now) == "15/10 23:05"
 
 
-def test_format_clock_converts_to_the_timezone_of_now() -> None:
-    now = datetime(2026, 10, 16, 10, 30, tzinfo=ROME)
-    assert format_clock(value=datetime(2026, 10, 16, 3, 12, tzinfo=UTC), now=now) == "05:12"
-
-
 def test_activity_text_active_and_idle() -> None:
     assert activity_text(state=ActivityState.ACTIVE, reason="x", elapsed_s=10) == "in uso"
     idle = activity_text(state=ActivityState.IDLE, reason="x", elapsed_s=5 * 3600 + 60)
@@ -171,3 +166,17 @@ def test_labels_match_spec_wording() -> None:
     assert [RISK_STYLE[r] for r in Risk] == ["success", "warning", "error"]
     assert CATEGORY_LABELS[Category.PROJECT] == "Progetto"
     assert CATEGORY_LABELS[Category.DEV_PROCESS] == "Processo di sviluppo"
+
+
+def test_format_clock_shows_utc_values_in_the_system_time_zone() -> None:
+    # The service clock is UTC: 03:58 UTC is 05:58 in Rome in October (CEST).
+    now = datetime(2026, 10, 17, 4, 0, tzinfo=UTC)
+    assert format_clock(value=datetime(2026, 10, 17, 3, 58, tzinfo=UTC), now=now) == "05:58"
+
+
+def test_format_clock_compares_days_in_the_system_time_zone() -> None:
+    # 23:30 UTC on the 16th is 01:30 on the 17th in Rome: same local day as now.
+    now = datetime(2026, 10, 17, 6, 0, tzinfo=UTC)
+    value = datetime(2026, 10, 16, 23, 30, tzinfo=UTC)
+    assert format_clock(value=value, now=now) == "01:30"
+    assert format_clock(value=value - timedelta(hours=2), now=now) == "16/10 23:30"
