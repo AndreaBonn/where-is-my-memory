@@ -21,8 +21,9 @@ perf:
 	GSK_RENDERER=cairo GDK_DEBUG=gl-disable,vulkan-disable xvfb-run -a uv run pytest -m perf -s
 
 lint:
-	uv run ruff check .
-	uv run ruff format --check .
+	# No cache: a stale .ruff_cache once hid an import-order error that a clean clone caught.
+	uv run ruff check --no-cache .
+	uv run ruff format --no-cache --check .
 	uv run mypy src tests
 
 run:

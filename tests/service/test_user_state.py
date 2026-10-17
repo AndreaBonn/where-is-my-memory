@@ -3,11 +3,11 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
-from wimm.service.user_state import UserStateKeeper
 
 from tests.service.service_helpers import FixedClock
 from wimm.model.enums import GroupId
 from wimm.service.state_store import PersistedState
+from wimm.service.user_state import UserStateKeeper
 
 NOW = datetime(2026, 10, 17, 12, 0, tzinfo=UTC)
 GROUP = GroupId("g_1")
