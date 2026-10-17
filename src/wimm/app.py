@@ -134,6 +134,7 @@ def _start_service(application: Any) -> None:
     from wimm.logging_setup import setup_logging
     from wimm.paths import default_user_paths
     from wimm.service.app_service import AppService
+    from wimm.service.notifications import attach_notifications
     from wimm.service.sampler import Sampler, default_collectors, default_environment, wall_clock
     from wimm.service.state_store import StateSaver, load_state
 
@@ -154,6 +155,9 @@ def _start_service(application: Any) -> None:
     saver = StateSaver(paths=paths, state=state, last_active=sampler.export_last_active)
     service.attach_state_saver(saver=saver)
     application._service = service
+    application._notifications = attach_notifications(
+        service=service, sink=application, saver=saver, state=state
+    )
 
 
 def _tray_missing(application: Any, missing: bool) -> None:
@@ -249,6 +253,7 @@ def create_application() -> "Gio.Application":
         _window_host: WindowHost
         _held: bool = False
         _service: Any = None
+        _notifications: Any = None
         _inspector: Any = None
         _tray: Any = None
         _signals: tuple[int, ...] = ()
@@ -269,6 +274,8 @@ def create_application() -> "Gio.Application":
 def _configure_options(application: "Gio.Application") -> None:
     from gi.repository import Gio, GLib
 
+    from wimm.service.group_actions import register_group_actions
+
     for name, kind, description, argument in (
         ("background", GLib.OptionArg.NONE, "Avvia senza aprire la finestra", None),
         ("group", GLib.OptionArg.STRING, "Mostra un gruppo", "ID"),
@@ -278,6 +285,7 @@ def _configure_options(application: "Gio.Application") -> None:
     action = Gio.SimpleAction.new(name="quit", parameter_type=None)
     action.connect("activate", lambda *_: _quit(application=application))
     application.add_action(action=action)
+    register_group_actions(application=application)
 
 
 def main(argv: list[str] | None = None) -> int:

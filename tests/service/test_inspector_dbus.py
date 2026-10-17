@@ -190,7 +190,7 @@ def test_inspector_exports_only_read_only_members(private_connections: Any) -> N
 
 
 @pytest.mark.dbus
-def test_application_exports_only_quit_and_handles_remote_group(
+def test_application_exports_only_its_three_actions_and_handles_remote_group(
     private_bus_address: str,
     private_connections: tuple[Gio.DBusConnection, Gio.DBusConnection],
     tmp_path: Path,
@@ -218,7 +218,7 @@ def test_application_exports_only_quit_and_handles_remote_group(
         try:
             client = private_connections[1]
             actions = wait_for_actions(connection=client)
-            assert set(actions) == {"quit"}
+            assert set(actions) == {"quit", "open-group", "snooze-group"}
             remote = subprocess.run(
                 args=[sys.executable, "-m", "wimm", "--group", "example"],
                 env=environment,
