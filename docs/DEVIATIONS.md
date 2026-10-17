@@ -462,3 +462,36 @@ dell'utente l'interfaccia è diventata bilingue; il piano è in `specs/i18n/plan
   inglese.
 - **Effetto anche sull'italiano.** I plurali passano da `ngettext`, quindi "1 giorni" e
   "1 volte" diventano "1 giorno" e "1 volta".
+
+## Lingua predefinita e cartelle dei progetti rilevate (001-product-gaps, decisione dell'utente del 2026-10-18)
+
+Task T008, requisiti R1 e R3 di `specs/001-product-gaps/spec.md`.
+
+**Lingua.** Senza una scelta salvata vince la prima voce supportata delle variabili di locale: `LANGUAGE` voce per voce, poi `LC_ALL`, `LC_MESSAGES` e `LANG`. Se nessuna è italiana o inglese, l'app è in inglese, compresi i casi `C` e `POSIX`. Questa regola supera la decisione A1 di `specs/i18n/plan.md`, che con una locale `C` o tedesca dava l'italiano. Motivo: l'app deve servire anche chi non parla italiano.
+
+**Cartelle.** La §7.6 fissava la radice `~/Documenti/00_Lavoro`, cioè la cartella dell'autore. Senza una scelta salvata le radici sono ora le cartelle candidate che contengono un repository `.git` entro 2 livelli: `~/code`, `~/projects`, `~/src`, `~/dev`, `~/git`, `~/workspace`, `~/Documents`, `~/Documenti` e la cartella documenti indicata in `~/.config/user-dirs.dirs`. I mount di rete, FUSE e autofs si saltano. Le radici rilevate non si scrivono su disco, quindi salvare un'altra preferenza non le congela. Una radice salvata che non esiste più resta in configurazione e viene segnalata, invece di invalidare le altre.
+
+Le radici rilevate valgono anche per l'esecutore, perché vengono da un elenco fisso di candidate (rilievo di sicurezza S16, deciso così). Limite noto: una home interamente su NFS non produce candidate.
+
+## Cartelle di dipendenze e progetti per più ecosistemi (001-product-gaps)
+
+Task T018, requisiti R4, R5 e R6 di `specs/001-product-gaps/spec.md`.
+
+Oltre a `node_modules` e `.venv` (§7.6) la scansione trova altre cartelle ricostruibili, ciascuna riconosciuta da un marker nel progetto che la contiene:
+
+- `venv`, solo con `pyvenv.cfg` dentro; la stessa condizione vale ora anche per `.venv`.
+- `target`, con `Cargo.toml` o `pom.xml` accanto.
+- `.gradle` e `build`, con `build.gradle`, `build.gradle.kts`, `settings.gradle` o `settings.gradle.kts`.
+- `.next` e `.nuxt`, con `package.json`.
+- `.tox`, con `tox.ini`, `pyproject.toml` o `setup.cfg`.
+- `vendor`, solo con `composer.json`.
+
+Per `target`, `vendor`, `build`, `.next`, `.nuxt` e `.gradle` il marker non basta: serve un secondo segnale, cioè `CACHEDIR.TAG` dentro la cartella oppure il nome nel `.gitignore` del progetto. Il `.gitignore` si legge come testo, senza mai eseguire git. Un progetto che sta direttamente nella home è sempre escluso, perché `~/.gradle` contiene credenziali.
+
+Restano fuori di proposito il `vendor` di Go, che spesso è versionato, e `dist`, un nome troppo generico.
+
+L'esecutore riapplica la stessa regola alla cartella padre reale prima di cancellare: se il marker o il secondo segnale sono spariti dopo il piano, la cartella resta intatta. Le cartelle trovate non contano per l'età del progetto. La conferma riporta il comando per ricostruirle: `npm install`, `uv sync`, `cargo build`, `mvn package`, `gradle build`, `npm run build`, `composer install`.
+
+I marker di progetto della §5.5 si estendono a `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle` e `build.gradle.kts`.
+
+Misura: la scansione di `~/Documenti` passa da 76 a 88 cartelle, con +3% di durata (`docs/PERF.md`). BASIS: measured.
