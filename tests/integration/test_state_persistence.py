@@ -58,4 +58,7 @@ def test_existing_state_reaches_the_sampler_and_is_saved_on_exit(
     target = state_dir / "state.json"
     assert stat.S_IMODE(target.stat().st_mode) == 0o600
     saved = json.loads(target.read_text())
-    assert [item["container"] for item in saved["last_active"]] == ["seeded-container"]
+    # The real app also records processes it saw active (e.g. the foreground app since
+    # T-5.5b), saved as {"process": [...]}: only the container entries are checked here.
+    containers = [item["container"] for item in saved["last_active"] if "container" in item]
+    assert containers == ["seeded-container"]
