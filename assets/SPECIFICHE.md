@@ -567,7 +567,7 @@ Ogni azione eseguita si registra con un log `INFO` strutturato: azione, bersagli
 
 ### 10.1 Icona nella barra (`tray/`)
 
-- StatusNotifierItem portato da `sysbar` (6.3), registrato su `org.kde.StatusNotifierWatcher`, con `Id = "io.github.wimm.WhereIsMyMemory"` e `Category = "SystemServices"`. Icone simboliche installate in `/usr/share/icons/hicolor/scalable/status/`: `wimm-normal-symbolic`, `wimm-warning-symbolic`, `wimm-critical-symbolic` (RF-41), cambiate con il segnale `NewIcon`.
+- StatusNotifierItem portato da `sysbar` (6.3), registrato su `org.kde.StatusNotifierWatcher`, con `Id = "io.github.wimm.WhereIsMyMemory"` e `Category = "SystemServices"`. Icone a colori installate in `/usr/share/icons/hicolor/scalable/status/`: `wimm-normal` (il logo dell'app), `wimm-warning` e `wimm-critical` (il logo con un badge "!" giallo o rosso) (RF-41). Decisione dell'utente (2026-10-17): ovunque compaia un'icona dell'app, tray compresa, si mostra il logo di `assets/logo/wimm-logo.png`; tutte le icone si rigenerano da quel file con `uv run python scripts/build_icons.py`, cambiate con il segnale `NewIcon`.
 - Etichetta (RF-40) nella proprietà `XAyatanaLabel`, aggiornata con `XAyatanaNewLabel`; `XAyatanaLabelGuide` contiene la stringa più lunga prevista ("88,8 GB inattivi") per evitare che la barra cambi larghezza. Il tooltip ripete il riepilogo ("RAM 30,1/38,9 GB, disco 93%").
 - `Activate` (clic sinistro) mostra la finestra e la porta in primo piano; se è già in primo piano non la nasconde. `SecondaryActivate` (clic centrale) fa lo stesso.
 - Il menu del clic destro (RF-42) è servito con `com.canonical.dbusmenu`. Il modello delle voci è una funzione pura `build_menu(snapshot) -> list[MenuItem]` in `tray/menu_model.py`; il layout si ripubblica (`LayoutUpdated`) solo se l'hash delle voci è cambiato, per evitare flicker.
@@ -676,9 +676,8 @@ Valori di default (in `core/constants.py`):
 /usr/bin/wimm                                                       entry point (#!/usr/bin/python3, from wimm.app import main)
 /etc/xdg/autostart/io.github.wimm.WhereIsMyMemory.desktop           avvio al login (Exec=wimm --background)
 /usr/share/applications/io.github.wimm.WhereIsMyMemory.desktop      lanciatore (Exec=wimm)
-/usr/share/icons/hicolor/scalable/apps/io.github.wimm.WhereIsMyMemory.svg
-/usr/share/icons/hicolor/symbolic/apps/io.github.wimm.WhereIsMyMemory-symbolic.svg
-/usr/share/icons/hicolor/scalable/status/wimm-{normal,warning,critical}-symbolic.svg
+/usr/share/icons/hicolor/{16,24,32,48,64,128,256,512}x…/apps/io.github.wimm.WhereIsMyMemory.png
+/usr/share/icons/hicolor/scalable/status/wimm-{normal,warning,critical}.svg
 /usr/share/metainfo/io.github.wimm.WhereIsMyMemory.metainfo.xml
 /usr/share/doc/where-is-my-memory/copyright
 ```

@@ -30,6 +30,8 @@ Test-first sul core. Nessuna azione distruttiva reale nei test (§0.5).
 Usare fake o bersagli creati dal test; HOME e directory XDG sono isolate.
 Commit atomici Conventional Commits su main; mai push automatico.
 psutil, Docker e PyGObject arrivano da apt, non dalle dipendenze PyPI.
+Pillow (`python3-pil`, solo sviluppo) serve a `scripts/build_icons.py` e ai suoi test.
+Le icone in `data/icons` derivano da `assets/logo/wimm-logo.png`: mai modificarle a mano.
 
 ## Stato
 

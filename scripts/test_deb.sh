@@ -45,11 +45,12 @@ files="
 /usr/bin/wimm
 /etc/xdg/autostart/${app_id}.desktop
 /usr/share/applications/${app_id}.desktop
-/usr/share/icons/hicolor/scalable/apps/${app_id}.svg
-/usr/share/icons/hicolor/symbolic/apps/${app_id}-symbolic.svg
-/usr/share/icons/hicolor/scalable/status/wimm-normal-symbolic.svg
-/usr/share/icons/hicolor/scalable/status/wimm-warning-symbolic.svg
-/usr/share/icons/hicolor/scalable/status/wimm-critical-symbolic.svg
+/usr/share/icons/hicolor/16x16/apps/${app_id}.png
+/usr/share/icons/hicolor/48x48/apps/${app_id}.png
+/usr/share/icons/hicolor/512x512/apps/${app_id}.png
+/usr/share/icons/hicolor/scalable/status/wimm-normal.svg
+/usr/share/icons/hicolor/scalable/status/wimm-warning.svg
+/usr/share/icons/hicolor/scalable/status/wimm-critical.svg
 /usr/share/metainfo/${app_id}.metainfo.xml
 /usr/share/doc/${pkg}/copyright
 "

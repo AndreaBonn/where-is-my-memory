@@ -45,7 +45,7 @@ def get(bus: Bus, name: str) -> object:
 def test_icon_theme_path_points_at_source_tree_icons_in_development() -> None:
     path = Path(icon_theme_path())
     assert path.name == "icons"
-    assert (path / "hicolor" / "scalable" / "status" / "wimm-normal-symbolic.svg").is_file()
+    assert (path / "hicolor" / "scalable" / "status" / "wimm-normal.svg").is_file()
     assert path != INSTALLED_ICON_DIRECTORY
 
 
@@ -99,12 +99,12 @@ def test_changing_the_icon_emits_new_icon_once_and_same_value_nothing(bus: Bus) 
     new_icon = bus.subscribe(path=SNI_OBJECT_PATH, interface=SNI_IFACE, member="NewIcon")
     item = make_item(bus, [])
     try:
-        item.icon_name = "wimm-warning-symbolic"
-        item.icon_name = "wimm-warning-symbolic"
-        assert get(bus, "IconName") == "wimm-warning-symbolic"
+        item.icon_name = "wimm-warning"
+        item.icon_name = "wimm-warning"
+        assert get(bus, "IconName") == "wimm-warning"
         assert new_icon == [()]
-        item.icon_name = "wimm-critical-symbolic"
-        assert get(bus, "IconName") == "wimm-critical-symbolic"
+        item.icon_name = "wimm-critical"
+        assert get(bus, "IconName") == "wimm-critical"
         assert len(new_icon) == 2
     finally:
         item.close()

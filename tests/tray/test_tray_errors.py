@@ -133,7 +133,7 @@ def test_closed_objects_emit_nothing(bus: Bus) -> None:
     layouts = bus.subscribe(path=MENU_OBJECT_PATH, interface=DBUSMENU_IFACE, member="LayoutUpdated")
     item.close()
     menu.close()
-    item.icon_name = "wimm-critical-symbolic"
+    item.icon_name = "wimm-critical"
     menu.set_items([OPEN])
     # Positive pair: a live item on the same bus does emit, so the empty lists can fail.
     live = StatusNotifierItem(
@@ -143,7 +143,7 @@ def test_closed_objects_emit_nothing(bus: Bus) -> None:
         title="wimm",
     )
     try:
-        live.icon_name = "wimm-warning-symbolic"
+        live.icon_name = "wimm-warning"
         spin_until(predicate=lambda: bool(icons))
         assert icons == [()]
         assert layouts == []

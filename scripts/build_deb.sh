@@ -49,14 +49,15 @@ stage_files() {
         "${STAGING}/etc/xdg/autostart/${APP_ID}.desktop"
     install -D -m 644 "${ROOT}/data/desktop/${APP_ID}.desktop" \
         "${STAGING}/usr/share/applications/${APP_ID}.desktop"
-    install -D -m 644 "${ROOT}/data/icons/hicolor/scalable/apps/${APP_ID}.svg" \
-        "${STAGING}/usr/share/icons/hicolor/scalable/apps/${APP_ID}.svg"
-    install -D -m 644 "${ROOT}/data/icons/hicolor/symbolic/apps/${APP_ID}-symbolic.svg" \
-        "${STAGING}/usr/share/icons/hicolor/symbolic/apps/${APP_ID}-symbolic.svg"
-    local state
+    # Rendered from assets/logo by scripts/build_icons.py; keep both size lists in sync.
+    local size state
+    for size in 16 24 32 48 64 128 256 512; do
+        install -D -m 644 "${ROOT}/data/icons/hicolor/${size}x${size}/apps/${APP_ID}.png" \
+            "${STAGING}/usr/share/icons/hicolor/${size}x${size}/apps/${APP_ID}.png"
+    done
     for state in normal warning critical; do
-        install -D -m 644 "${ROOT}/data/icons/hicolor/scalable/status/wimm-${state}-symbolic.svg" \
-            "${STAGING}/usr/share/icons/hicolor/scalable/status/wimm-${state}-symbolic.svg"
+        install -D -m 644 "${ROOT}/data/icons/hicolor/scalable/status/wimm-${state}.svg" \
+            "${STAGING}/usr/share/icons/hicolor/scalable/status/wimm-${state}.svg"
     done
     install -D -m 644 "${ROOT}/data/metainfo/${APP_ID}.metainfo.xml" \
         "${STAGING}/usr/share/metainfo/${APP_ID}.metainfo.xml"

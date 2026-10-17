@@ -6,8 +6,8 @@ from wimm.tray.dbus_menu import MenuItem
 from wimm.tray.status_notifier import ICON_NORMAL as ICON_NORMAL
 from wimm.ui.format import format_size
 
-ICON_WARNING = "wimm-warning-symbolic"
-ICON_CRITICAL = "wimm-critical-symbolic"
+ICON_WARNING = "wimm-warning"
+ICON_CRITICAL = "wimm-critical"
 
 CALLBACK_OPEN = "open"
 CALLBACK_MUTE = "mute"
