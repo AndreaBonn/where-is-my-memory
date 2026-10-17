@@ -28,15 +28,16 @@ _state: tuple[str, gettext.NullTranslations] = (ITALIAN, gettext.NullTranslation
 def resolve_default(*, environ: Mapping[str, str]) -> str:
     """Return the language to use when the user has not chosen one.
 
-    An English system locale gives English; every other locale, ``C`` included, keeps
-    Italian, the language the app was written in.
+    The first supported entry wins (``LANGUAGE`` entry by entry, then ``LC_ALL``,
+    ``LC_MESSAGES``, ``LANG``). A locale with no supported entry, ``C`` and ``POSIX``
+    included, gives English.
     """
     value = next((environ[name] for name in LOCALE_VARIABLES if environ.get(name)), "")
     # Like gettext.find(), every entry of ``LANGUAGE=de:en`` is tried in order.
     for entry in value.lower().split(":"):
         if entry.startswith(LANGUAGES):
             return entry[: len(ENGLISH)]
-    return ITALIAN
+    return ENGLISH
 
 
 def set_language(*, language: str, locale_dir: Path | None = None) -> None:
