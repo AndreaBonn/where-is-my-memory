@@ -346,3 +346,19 @@ c'è il punto della specifica, cosa cambia e perché.
 - **T1, menu dell'icona (RF-42).** Nuova prima voce "Apri Where Is My Memory" (id fisso 6),
   omessa quando c'è già la voce di errore che apre il pannello, e intestazione "Da liberare:"
   (id fisso 7). Gli id esistenti non si spostano.
+- **P6, filtro iniziale (§10.3).** La Panoramica si apre su "Da liberare" invece che su
+  tutti i gruppi; "Tutto" mostra il resto. Senza alcun gruppo azionabile la lista dice
+  "Tutto in ordine" (P13), quindi resta vero che non compare mai vuota senza spiegazione.
+- **P9, ordine (RF-03).** Prima i gruppi inattivi, poi gli altri, ciascuna parte per
+  memoria recuperabile decrescente, con un titolo dove comincia ciascuna parte.
+- **Y1, scheda Sistema (§10.2, RF-07).** Le schede sono due: l'elenco in sola lettura dei
+  processi protetti sta in fondo alla Panoramica, in un riquadro chiuso con il totale.
+- **P10, menu del gruppo (§10.2).** La riga del gruppo non ha più il menu ⋮ né il clic
+  destro: "Copia comando", "Copia PID" e "Apri cartella" restano sui membri, dove stanno i
+  dati. I dettagli tecnici dei membri (PID, comando, cartella, mount) si aprono con
+  "Dettagli tecnici".
+- **P12, silenzio e ignora (RF-27).** Stesse durate e stesso effetto, con altri nomi:
+  "Non avvisarmi per" 1 ora, 1 giorno, 7 giorni, "Mai più" (ignora), "Riattiva gli avvisi".
+- **P4, "Ferma tutti gli inattivi sicuri" (RF-24).** Il pulsante dice quanto libera e
+  chi ferma ("Libera 4,2 GB senza rischi"), ed è spento quando non c'è niente di sicuro da
+  fermare; la conferma si intitola "Fermare i programmi che non usi?".
