@@ -130,7 +130,8 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:34
+#: src/wimm/core/planning_disk.py:34 src/wimm/ui/disk_view.py:21
+#: src/wimm/ui/disk_view.py:95
 msgid "Cestino"
 msgstr "Trash"
 
@@ -304,7 +305,7 @@ msgstr "no connection"
 msgid "{prefix} da {duration}"
 msgstr "{prefix} for {duration}"
 
-#: src/wimm/core/text.py:90
+#: src/wimm/core/text.py:90 src/wimm/ui/format.py:149
 msgid "attività non misurabile"
 msgstr "activity cannot be measured"
 
@@ -591,7 +592,7 @@ msgstr "Terminal programs: with the same command as before."
 msgid "Le applicazioni: dal menu delle applicazioni, come al solito."
 msgstr "Applications: from the applications menu, as usual."
 
-#: src/wimm/ui/dialogs/facts.py:29
+#: src/wimm/ui/dialogs/facts.py:29 src/wimm/ui/disk_view_docker.py:145
 msgid "Cache di build Docker"
 msgstr "Docker build cache"
 
@@ -1094,6 +1095,307 @@ msgstr ""
 "• I never close anything by myself: you decide, and you see what will happen first.\n"
 "• You can usually find me at the top right, in my icon."
 
+#: src/wimm/ui/disk_model.py:10
+msgid "dimensione sconosciuta"
+msgstr "unknown size"
+
+#: src/wimm/ui/disk_model.py:54
+#, python-brace-format
+msgid "e altre {count}"
+msgstr "and {count} more"
+
+#: src/wimm/ui/disk_texts.py:13
+msgid "Niente da liberare sul disco"
+msgstr "Nothing to free on the disk"
+
+#: src/wimm/ui/disk_texts.py:14
+msgid "Ogni bottone ti mostra prima cosa succede e chiede conferma."
+msgstr "Every button first shows you what will happen and asks for confirmation."
+
+#: src/wimm/ui/disk_texts.py:17
+msgid "Docker serve a far girare programmi in contenitori separati."
+msgstr "Docker runs programs in separate containers."
+
+#: src/wimm/ui/disk_texts.py:18
+msgid "Copie scaricate per avviare i contenitori. Se servono di nuovo, si riscaricano."
+msgstr "Copies downloaded to start containers. If they are needed again, they are downloaded again."
+
+#: src/wimm/ui/disk_texts.py:19
+msgid "Contenitori spenti che occupano ancora un po' di spazio."
+msgstr "Stopped containers that still take up some space."
+
+#: src/wimm/ui/disk_texts.py:20
+msgid "Dati salvati dai contenitori, per esempio un database."
+msgstr "Data saved by containers, for example a database."
+
+#: src/wimm/ui/disk_texts.py:21
+msgid "Pezzi salvati per costruire i contenitori più in fretta: si ricreano."
+msgstr "Data saved to build containers faster: it is recreated."
+
+#: src/wimm/ui/disk_texts.py:22
+msgid "File temporanei dei programmi di sviluppo: si ricreano da soli."
+msgstr "Temporary files of development tools: they recreate themselves."
+
+#: src/wimm/ui/disk_texts.py:23
+msgid "Librerie scaricate per progetti vecchi: si reinstallano se riapri il progetto."
+msgstr "Libraries downloaded for old projects: they are reinstalled if you reopen the project."
+
+#: src/wimm/ui/disk_texts.py:24
+msgid "File che hai già cancellato: svuotandolo spariscono per sempre."
+msgstr "Files you have already deleted: emptying it removes them for good."
+
+#: src/wimm/ui/disk_texts.py:30
+msgid "Si libera senza pensarci"
+msgstr "Free it without a second thought"
+
+#: src/wimm/ui/disk_texts.py:31
+msgid "Da guardare prima"
+msgstr "Take a look first"
+
+#: src/wimm/ui/disk_texts.py:32
+msgid "Attenzione: cancella dati"
+msgstr "Caution: deletes data"
+
+#: src/wimm/ui/disk_texts.py:35
+msgid "Si ricrea da solo quando serve."
+msgstr "It recreates itself when needed."
+
+#: src/wimm/ui/disk_texts.py:36
+msgid "Si può riscaricare o ricreare, ma con un po' di lavoro."
+msgstr "It can be downloaded or recreated again, but it takes some work."
+
+#: src/wimm/ui/disk_texts.py:37
+msgid "Dentro possono esserci database o file che non si recuperano."
+msgstr "It may hold databases or files that cannot be recovered."
+
+#: src/wimm/ui/disk_texts.py:49
+msgid "Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano."
+msgstr "Only cleans what recreates itself: the trash and your data stay."
+
+#: src/wimm/ui/disk_texts.py:60 src/wimm/ui/summary_status.py:106
+#, python-brace-format
+msgid "Libera {size} senza rischi"
+msgstr "Free {size} with no risk"
+
+#: src/wimm/ui/disk_texts.py:80
+#, python-brace-format
+msgid "Puoi liberare fino a {size}"
+msgstr "You can free up to {size}"
+
+#: src/wimm/ui/disk_view.py:15
+msgid "Nessun controllo ancora"
+msgstr "No check yet"
+
+#: src/wimm/ui/disk_view.py:20
+msgid "Miniature"
+msgstr "Thumbnails"
+
+#: src/wimm/ui/disk_view.py:31
+#, python-brace-format
+msgid "Ultimo controllo alle {time}"
+msgstr "Last check at {time}"
+
+#: src/wimm/ui/disk_view.py:32
+#, python-brace-format
+msgid "Ultimo controllo il {date} alle {time}"
+msgstr "Last check on {date} at {time}"
+
+#: src/wimm/ui/disk_view.py:55
+#, python-brace-format
+msgid "progetto fermo da {days} giorno"
+msgid_plural "progetto fermo da {days} giorni"
+msgstr[0] "project idle for {days} day"
+msgstr[1] "project idle for {days} days"
+
+#: src/wimm/ui/disk_view.py:76
+#, python-brace-format
+msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
+msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
+msgstr[0] "No dependency folder older than {days} day in the configured roots"
+msgstr[1] "No dependency folder older than {days} days in the configured roots"
+
+#: src/wimm/ui/disk_view.py:82
+msgid "Cartelle di dipendenze"
+msgstr "Dependency folders"
+
+#: src/wimm/ui/disk_view.py:93
+msgid "Cache"
+msgstr "Cache"
+
+#: src/wimm/ui/disk_view.py:93
+msgid "Nessuna cache trovata"
+msgstr "No cache found"
+
+#: src/wimm/ui/disk_view.py:95
+msgid "Cestino non rilevato"
+msgstr "Trash not detected"
+
+#: src/wimm/ui/disk_view_docker.py:19
+msgid "Immagine senza nome"
+msgstr "Unnamed image"
+
+#: src/wimm/ui/disk_view_docker.py:25 src/wimm/ui/disk_view_docker.py:60
+msgid "in uso da un container"
+msgstr "used by a container"
+
+#: src/wimm/ui/disk_view_docker.py:25
+msgid "non in uso"
+msgstr "not in use"
+
+#: src/wimm/ui/disk_view_docker.py:27
+msgid "senza nome"
+msgstr "unnamed"
+
+#: src/wimm/ui/disk_view_docker.py:29
+msgid "costruita in locale"
+msgstr "built locally"
+
+#: src/wimm/ui/disk_view_docker.py:49
+msgid "fermo"
+msgstr "stopped"
+
+#: src/wimm/ui/disk_view_docker.py:58
+msgid "non sappiamo se un contenitore lo usa"
+msgstr "we don't know if a container uses it"
+
+#: src/wimm/ui/disk_view_docker.py:62
+msgid "non rimovibile: data di creazione non nota"
+msgstr "cannot be removed: creation date unknown"
+
+#: src/wimm/ui/disk_view_docker.py:63
+msgid "non usato"
+msgstr "unused"
+
+#: src/wimm/ui/disk_view_docker.py:81
+msgid "Cache di build"
+msgstr "Build cache"
+
+#: src/wimm/ui/disk_view_docker.py:82
+#, python-brace-format
+msgid "liberabili {size}"
+msgstr "{size} can be freed"
+
+#: src/wimm/ui/disk_view_docker.py:121
+#, python-brace-format
+msgid "Docker non disponibile: {error}"
+msgstr "Docker not available: {error}"
+
+#: src/wimm/ui/disk_view_docker.py:122
+msgid "Docker"
+msgstr "Docker"
+
+#: src/wimm/ui/disk_view_docker.py:129
+msgid "Immagini Docker"
+msgstr "Docker images"
+
+#: src/wimm/ui/disk_view_docker.py:136
+msgid "Container fermi"
+msgstr "Stopped containers"
+
+#: src/wimm/ui/disk_view_docker.py:142
+msgid "Volumi Docker"
+msgstr "Docker volumes"
+
+#: src/wimm/ui/format.py:19
+msgid "Sistema"
+msgstr "System"
+
+#: src/wimm/ui/format.py:20
+msgid "Contenitore Docker"
+msgstr "Docker container"
+
+#: src/wimm/ui/format.py:21
+msgid "Server di sviluppo"
+msgstr "Development server"
+
+#: src/wimm/ui/format.py:22
+msgid "Strumento di sviluppo"
+msgstr "Development tool"
+
+#: src/wimm/ui/format.py:23
+msgid "Assistente AI"
+msgstr "AI assistant"
+
+#: src/wimm/ui/format.py:24
+msgid "Browser"
+msgstr "Browser"
+
+#: src/wimm/ui/format.py:25
+msgid "App"
+msgstr "App"
+
+#: src/wimm/ui/format.py:26
+msgid "Terminale"
+msgstr "Terminal"
+
+#: src/wimm/ui/format.py:27
+msgid "Sessione"
+msgstr "Session"
+
+#: src/wimm/ui/format.py:28
+msgid "Monitor"
+msgstr "Monitor"
+
+#: src/wimm/ui/format.py:29 src/wimm/ui/summary.py:18
+msgid "Altro"
+msgstr "Other"
+
+#: src/wimm/ui/format.py:30
+msgid "Progetto"
+msgstr "Project"
+
+#: src/wimm/ui/format.py:34
+msgid "Attenzione"
+msgstr "Caution"
+
+#: src/wimm/ui/format.py:34
+msgid "Pericolo"
+msgstr "Danger"
+
+#: src/wimm/ui/format.py:34
+msgid "Sicuro"
+msgstr "Safe"
+
+#: src/wimm/ui/format.py:39
+msgid "Sicuro: non perdi nulla"
+msgstr "Safe: you lose nothing"
+
+#: src/wimm/ui/format.py:40
+msgid "Attenzione: puoi perdere lavoro"
+msgstr "Caution: you may lose work"
+
+#: src/wimm/ui/format.py:41 src/wimm/ui/format.py:50
+msgid "Pericolo: cancella dati"
+msgstr "Danger: deletes data"
+
+#: src/wimm/ui/format.py:48
+msgid "Sicuro: si ricrea quando serve"
+msgstr "Safe: it recreates itself when needed"
+
+#: src/wimm/ui/format.py:49
+msgid "Attenzione: leggi prima cosa si perde"
+msgstr "Caution: read first what you lose"
+
+#: src/wimm/ui/format.py:59
+msgid "memoria quasi piena"
+msgstr "memory almost full"
+
+#: src/wimm/ui/format.py:60
+msgid "memoria quasi finita"
+msgstr "memory almost out"
+
+#: src/wimm/ui/format.py:64
+msgid "Alta"
+msgstr "High"
+
+#: src/wimm/ui/format.py:64
+msgid "Critica"
+msgstr "Critical"
+
+#: src/wimm/ui/format.py:64
+msgid "Normale"
+msgstr "Normal"
+
 #: src/wimm/ui/format.py:68
 msgid "Termina"
 msgstr "End"
@@ -1162,6 +1464,37 @@ msgstr "Free up space"
 msgid "Riaccendi"
 msgstr "Start again"
 
+#: src/wimm/ui/format.py:99
+#, python-brace-format
+msgid "da {count} s"
+msgstr "for {count} s"
+
+#: src/wimm/ui/format.py:101
+#, python-brace-format
+msgid "da {count} min"
+msgstr "for {count} min"
+
+#: src/wimm/ui/format.py:103
+#, python-brace-format
+msgid "da {count} h"
+msgstr "for {count} h"
+
+#: src/wimm/ui/format.py:105
+#, python-brace-format
+msgid "da {count} giorno"
+msgid_plural "da {count} giorni"
+msgstr[0] "for {count} day"
+msgstr[1] "for {count} days"
+
+#: src/wimm/ui/format.py:143
+msgid "in uso"
+msgstr "in use"
+
+#: src/wimm/ui/format.py:145
+#, python-brace-format
+msgid "non in uso {elapsed}"
+msgstr "not in use {elapsed}"
+
 #: src/wimm/ui/outcome.py:14
 msgid "Fatto"
 msgstr "Done"
@@ -1217,3 +1550,218 @@ msgstr "Freed {ram} of RAM and {disk} of disk"
 #, python-brace-format
 msgid "Liberati {size} di RAM"
 msgstr "Freed {size} of RAM"
+
+#: src/wimm/ui/plain.py:10
+msgid "Lo stai usando adesso."
+msgstr "You're using it right now."
+
+#: src/wimm/ui/plain.py:11
+msgid "Lo stiamo osservando: tra poco sappiamo se lo usi."
+msgstr "We're watching it: we'll soon know whether you use it."
+
+#: src/wimm/ui/plain.py:12
+msgid "Non sappiamo se lo stai usando: decidi tu se chiuderlo."
+msgstr "We don't know if you're using it: you decide whether to close it."
+
+#: src/wimm/ui/plain.py:13
+msgid ": nessuno ci si collega."
+msgstr ": nobody connects to it."
+
+#: src/wimm/ui/plain.py:17
+msgid "Accesso utenti"
+msgstr "User sign-in"
+
+#: src/wimm/ui/plain.py:18 src/wimm/ui/plain.py:19 src/wimm/ui/plain.py:20
+#: src/wimm/ui/plain.py:21 src/wimm/ui/plain.py:22 src/wimm/ui/plain.py:23
+msgid "Database"
+msgstr "Database"
+
+#: src/wimm/ui/plain.py:24 src/wimm/ui/plain.py:25
+msgid "Memoria veloce (cache)"
+msgstr "Fast memory (cache)"
+
+#: src/wimm/ui/plain.py:26 src/wimm/ui/plain.py:38 src/wimm/ui/plain.py:39
+#: src/wimm/ui/plain.py:40
+msgid "Server web"
+msgstr "Web server"
+
+#: src/wimm/ui/plain.py:27
+msgid "Instradamento web"
+msgstr "Web routing"
+
+#: src/wimm/ui/plain.py:28 src/wimm/ui/plain.py:29
+msgid "Coda di messaggi"
+msgstr "Message queue"
+
+#: src/wimm/ui/plain.py:30
+msgid "Archivio file"
+msgstr "File storage"
+
+#: src/wimm/ui/plain.py:31 src/wimm/ui/plain.py:32
+msgid "Motore di ricerca"
+msgstr "Search engine"
+
+#: src/wimm/ui/plain.py:33 src/wimm/ui/plain.py:45
+msgid "Modelli AI locali"
+msgstr "Local AI models"
+
+#: src/wimm/ui/plain.py:34
+msgid "Cruscotti"
+msgstr "Dashboards"
+
+#: src/wimm/ui/plain.py:35
+msgid "Raccolta metriche"
+msgstr "Metrics collection"
+
+#: src/wimm/ui/plain.py:41 src/wimm/ui/plain.py:42
+msgid "Server dell'interfaccia"
+msgstr "Interface server"
+
+#: src/wimm/ui/plain.py:43
+msgid "Quaderni Jupyter"
+msgstr "Jupyter notebooks"
+
+#: src/wimm/ui/plain.py:44
+msgid "Lavori in background"
+msgstr "Background jobs"
+
+#: src/wimm/ui/plain.py:46
+msgid "Collegamento a Kubernetes"
+msgstr "Kubernetes connection"
+
+#: src/wimm/ui/plain.py:65
+#, python-brace-format
+msgid "Non lo usi da almeno {span}{tail}"
+msgstr "You haven't used it for at least {span}{tail}"
+
+#: src/wimm/ui/plain.py:66
+#, python-brace-format
+msgid "Non lo usi da {span}{tail}"
+msgstr "You haven't used it for {span}{tail}"
+
+#: src/wimm/ui/summary.py:16
+msgid "La memoria di appoggio del sistema si libera da sola quando serve."
+msgstr "The system's spare memory frees itself when needed."
+
+#: src/wimm/ui/summary.py:17
+msgid "Memoria di appoggio del sistema"
+msgstr "System cache memory"
+
+#: src/wimm/ui/summary.py:22
+msgid "Non attribuita"
+msgstr "Unattributed"
+
+#: src/wimm/ui/summary.py:23
+msgid "Libera"
+msgstr "Free"
+
+#: src/wimm/ui/summary.py:91
+#, python-brace-format
+msgid "{used} usati su {total}"
+msgstr "{used} used of {total}"
+
+#: src/wimm/ui/summary.py:96
+#, python-brace-format
+msgid "disponibili {available} · swap {used} su {total}"
+msgstr "{available} available · swap {used} of {total}"
+
+#: src/wimm/ui/summary.py:104
+#, python-brace-format
+msgid "{free} liberi su {total}"
+msgstr "{free} free of {total}"
+
+#: src/wimm/ui/summary_status.py:13 src/wimm/ui/summary_status.py:26
+msgid "Il computer sta bene"
+msgstr "Your computer is doing fine"
+
+#: src/wimm/ui/summary_status.py:14
+msgid "La memoria si sta riempiendo"
+msgstr "Memory is filling up"
+
+#: src/wimm/ui/summary_status.py:15
+msgid "La memoria è quasi finita"
+msgstr "Memory is almost out"
+
+#: src/wimm/ui/summary_status.py:27
+msgid "Il disco si sta riempiendo"
+msgstr "The disk is filling up"
+
+#: src/wimm/ui/summary_status.py:28
+msgid "Il disco è quasi pieno"
+msgstr "The disk is almost full"
+
+#: src/wimm/ui/summary_status.py:31
+msgid "Fai spazio dalla scheda Disco: lì trovi cosa si può cancellare."
+msgstr "Make room from the Disk tab: you'll find what can be deleted there."
+
+#: src/wimm/ui/summary_status.py:32
+msgid "Non c'è niente da chiudere senza rischi."
+msgstr "There is nothing to close without risk."
+
+#: src/wimm/ui/summary_status.py:33
+msgid "Niente da liberare senza rischi"
+msgstr "Nothing to free without risk"
+
+#: src/wimm/ui/summary_status.py:54
+#, python-brace-format
+msgid "{names} e un altro"
+msgstr "{names} and one more"
+
+#: src/wimm/ui/summary_status.py:56
+#, python-brace-format
+msgid "{names} e altri {count}"
+msgstr "{names} and {count} more"
+
+#: src/wimm/ui/summary_status.py:59
+#, python-brace-format
+msgid "{others} e {last}"
+msgstr "{others} and {last}"
+
+#: src/wimm/ui/summary_status.py:80
+#, python-brace-format
+msgid "Puoi liberare {size} chiudendo programmi che non usi. Niente si chiude senza il tuo consenso."
+msgstr "You can free {size} by closing programs you don't use. Nothing closes without your consent."
+
+#: src/wimm/ui/summary_status.py:101
+#, python-brace-format
+msgid "Ferma {names}: non lo usi e non perdi nulla."
+msgid_plural "Ferma {names}: non li usi e non perdi nulla."
+msgstr[0] "Stop {names}: you're not using it and you lose nothing."
+msgstr[1] "Stop {names}: you're not using them and you lose nothing."
+
+#: src/wimm/ui/viewmodel.py:38
+msgid "Nessuna azione"
+msgstr "No action"
+
+#: src/wimm/ui/viewmodel.py:39
+msgid "Niente da liberare: il resto è in uso o ancora in osservazione."
+msgstr "Nothing to free: the rest is in use or still being watched."
+
+#: src/wimm/ui/viewmodel.py:40
+msgid "Nessun programma corrisponde ai filtri."
+msgstr "No program matches the filters."
+
+#: src/wimm/ui/viewmodel.py:41
+msgid "Tutto in ordine"
+msgstr "All clear"
+
+#: src/wimm/ui/viewmodel.py:43
+msgid "Non c'è niente acceso che si possa chiudere. Ti avvisiamo noi se qualcosa resta acceso senza motivo."
+msgstr "Nothing is running that can be closed. We'll tell you if something stays on for no reason."
+
+#: src/wimm/ui/viewmodel.py:137
+#, python-brace-format
+msgid "porta {ports}"
+msgid_plural "porte {ports}"
+msgstr[0] "port {ports}"
+msgstr[1] "ports {ports}"
+
+#: src/wimm/ui/viewmodel.py:148
+#, python-brace-format
+msgid "avvisi in pausa fino alle {time}"
+msgstr "alerts paused until {time}"
+
+#: src/wimm/ui/viewmodel.py:150
+#, python-brace-format
+msgid "avvisi in pausa fino al {date} alle {time}"
+msgstr "alerts paused until {date} at {time}"

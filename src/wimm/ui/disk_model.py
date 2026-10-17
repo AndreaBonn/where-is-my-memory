@@ -3,10 +3,11 @@
 from dataclasses import dataclass
 
 from wimm.core.risk import RiskTarget, assess_risk
+from wimm.i18n import N_, _, decimal_separator
 from wimm.model.enums import ActionKind, Risk
 from wimm.ui.format import DISK_RISK_CONSEQUENCE, RISK_STYLE, format_size
 
-UNKNOWN_SIZE_TEXT = "dimensione sconosciuta"
+UNKNOWN_SIZE_TEXT = N_("dimensione sconosciuta")
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +49,9 @@ def more_text(*, count: int) -> str | None:
     """The "e altre N" counter for rows a cap hid; None when nothing is hidden."""
     if count <= 0:
         return None
-    return "e altre " + f"{count:,}".replace(",", ".")
+    # The thousands separator is the opposite of the decimal one in both languages.
+    thousands = "." if decimal_separator() == "," else ","
+    return _("e altre {count}").format(count=f"{count:,}".replace(",", thousands))
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +67,7 @@ def make_row(
     *, title: str, subtitle: str, size: int | None, action: ActionSpec | None
 ) -> DiskRowView:
     """Build a row; the badge comes from the planner's own assessment, no action = no badge."""
-    size_text = UNKNOWN_SIZE_TEXT if size is None else format_size(size=size)
+    size_text = _(UNKNOWN_SIZE_TEXT) if size is None else format_size(size=size)
     if action is None:
         return DiskRowView(
             title=title, subtitle=subtitle, size_text=size_text, size_bytes=size or 0
@@ -75,7 +78,7 @@ def make_row(
         subtitle=subtitle,
         size_text=size_text,
         risk=level,
-        risk_text=DISK_RISK_CONSEQUENCE[level],
+        risk_text=_(DISK_RISK_CONSEQUENCE[level]),
         risk_style=RISK_STYLE[level],
         action_kind=action.kind,
         target_id=action.target_id,

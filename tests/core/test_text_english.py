@@ -8,7 +8,7 @@ from wimm.i18n import _
 from wimm.model.enums import ActivityState, Category
 from wimm.model.snapshot import ActivityAssessment
 from wimm.ui.format import activity_text
-from wimm.ui.plain import NOBODY_CONNECTS, OBSERVING_TEXT, UNKNOWN_TEXT, plain_reason
+from wimm.ui.plain import plain_reason
 
 pytestmark = pytest.mark.usefixtures("english")
 
@@ -133,8 +133,8 @@ def _idle_assessment(*, watches_connections: bool, from_monitor_start: bool) -> 
 def test_plain_reason_reads_the_english_connection_mark() -> None:
     server = _idle_assessment(watches_connections=True, from_monitor_start=False)
     tool = _idle_assessment(watches_connections=False, from_monitor_start=False)
-    assert plain_reason(activity=server, now=NOW).endswith(NOBODY_CONNECTS)
-    assert not plain_reason(activity=tool, now=NOW).endswith(NOBODY_CONNECTS)
+    assert plain_reason(activity=server, now=NOW).endswith(": nobody connects to it.")
+    assert not plain_reason(activity=tool, now=NOW).endswith(": nobody connects to it.")
 
 
 def test_plain_reason_reads_the_english_at_least_mark() -> None:
@@ -154,8 +154,12 @@ def test_ui_readers_tell_observing_from_other_unknown_reasons() -> None:
     assert activity_text(state=unknown, reason=unavailable, elapsed_s=None) != "observing"
     observed = ActivityAssessment(state=unknown, since=None, reason=observing)
     unmeasured = ActivityAssessment(state=unknown, since=None, reason=unavailable)
-    assert plain_reason(activity=observed, now=NOW) == OBSERVING_TEXT
-    assert plain_reason(activity=unmeasured, now=NOW) == UNKNOWN_TEXT
+    assert plain_reason(activity=observed, now=NOW) == (
+        "We're watching it: we'll soon know whether you use it."
+    )
+    assert plain_reason(activity=unmeasured, now=NOW) == (
+        "We don't know if you're using it: you decide whether to close it."
+    )
 
 
 def _facts(**changes: object) -> GroupFacts:

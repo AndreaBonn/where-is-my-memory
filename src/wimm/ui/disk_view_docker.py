@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 from wimm.core.risk import RiskTarget
+from wimm.i18n import N_, _
 from wimm.model.disk import DiskReport, DockerDisk, DockerImage, DockerVolume, StoppedContainer
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import (
@@ -15,17 +16,17 @@ from wimm.ui.disk_model import (
 )
 from wimm.ui.format import button_label, format_size
 
-UNNAMED_IMAGE_TEXT = "Immagine senza nome"
+UNNAMED_IMAGE_TEXT = N_("Immagine senza nome")
 SHORT_ID_CHARS = 12
 DOCKER_KEY = "docker"
 
 
 def _image_row(*, image: DockerImage) -> DiskRowView:
-    states = ["in uso da un container" if image.in_use else "non in uso"]
+    states = [_("in uso da un container") if image.in_use else _("non in uso")]
     if image.dangling:
-        states.append("senza nome")
+        states.append(_("senza nome"))
     if image.local_build:
-        states.append("costruita in locale")
+        states.append(_("costruita in locale"))
     if not image.tags:
         # D5: nobody says a digest out loud; it stays at the end for who needs it.
         states.append("id " + image.id.removeprefix("sha256:")[:SHORT_ID_CHARS])
@@ -34,7 +35,7 @@ def _image_row(*, image: DockerImage) -> DiskRowView:
     )
     action = None if image.in_use else ActionSpec(ActionKind.IMAGE_REMOVE, target, image.id)
     return make_row(
-        title=image.tags[0] if image.tags else UNNAMED_IMAGE_TEXT,
+        title=image.tags[0] if image.tags else _(UNNAMED_IMAGE_TEXT),
         subtitle=" · ".join(states),
         size=image.unique_size,
         action=action,
@@ -45,7 +46,7 @@ def _container_row(*, container: StoppedContainer) -> DiskRowView:
     target = RiskTarget(kind="container", is_running=False)
     return make_row(
         title=container.name,
-        subtitle="fermo",
+        subtitle=_("fermo"),
         size=container.size,
         action=ActionSpec(ActionKind.CONTAINER_REMOVE, target, container.id),
     )
@@ -54,12 +55,12 @@ def _container_row(*, container: StoppedContainer) -> DiskRowView:
 def _volume_state(*, volume: DockerVolume) -> tuple[str, bool]:
     """The state text and whether the volume can be removed from here."""
     if volume.ref_count is None:
-        return "non sappiamo se un contenitore lo usa", False
+        return _("non sappiamo se un contenitore lo usa"), False
     if not volume.orphan:
-        return "in uso da un container", False
+        return _("in uso da un container"), False
     if not volume.created_at:
-        return "non rimovibile: data di creazione non nota", False
-    return "non usato", True
+        return _("non rimovibile: data di creazione non nota"), False
+    return _("non usato"), True
 
 
 def _volume_row(*, volume: DockerVolume) -> DiskRowView:
@@ -77,8 +78,8 @@ def _build_cache_row(*, docker: DockerDisk) -> DiskRowView:
     reclaimable = docker.build_cache_reclaimable
     action = ActionSpec(ActionKind.BUILDER_PRUNE, RiskTarget(kind="build_cache"), None)
     row = make_row(
-        title="Cache di build",
-        subtitle=f"liberabili {format_size(size=reclaimable)}",
+        title=_("Cache di build"),
+        subtitle=_("liberabili {size}").format(size=format_size(size=reclaimable)),
         size=docker.build_cache_size,
         action=action if reclaimable else None,
     )
@@ -117,28 +118,30 @@ def _container_actions(*, docker: DockerDisk) -> tuple[SectionActionView, ...]:
 def docker_sections(*, report: DiskReport) -> tuple[DiskSectionView, ...]:
     docker = report.docker
     if not docker.status.available:
-        message = f"Docker non disponibile: {docker.status.error}"
-        return (DiskSectionView(key=DOCKER_KEY, title="Docker", message=message),)
+        message = _("Docker non disponibile: {error}").format(error=docker.status.error)
+        return (DiskSectionView(key=DOCKER_KEY, title=_("Docker"), message=message),)
     images = tuple(_image_row(image=i) for i in docker.images)
     containers = tuple(_container_row(container=c) for c in docker.stopped_containers)
     volumes = tuple(_volume_row(volume=v) for v in docker.volumes)
     return (
         DiskSectionView(
             "images",
-            "Immagini Docker",
+            _("Immagini Docker"),
             images,
             more_text(count=docker.images_truncated),
             actions=_image_actions(images=docker.images),
         ),
         DiskSectionView(
             "containers",
-            "Container fermi",
+            _("Container fermi"),
             containers,
             more_text(count=docker.containers_truncated),
             actions=_container_actions(docker=docker),
         ),
         DiskSectionView(
-            "volumes", "Volumi Docker", volumes, more_text(count=docker.volumes_truncated)
+            "volumes", _("Volumi Docker"), volumes, more_text(count=docker.volumes_truncated)
         ),
-        DiskSectionView("build_cache", "Cache di build Docker", (_build_cache_row(docker=docker),)),
+        DiskSectionView(
+            "build_cache", _("Cache di build Docker"), (_build_cache_row(docker=docker),)
+        ),
     )

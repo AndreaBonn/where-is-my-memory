@@ -1,6 +1,7 @@
 import shlex
 from datetime import datetime
 
+from wimm.i18n import N_, _, ngettext
 from wimm.model.enums import ActivityState, Protection, Risk
 from wimm.model.snapshot import (
     ActionOffer,
@@ -34,11 +35,11 @@ from .views import (
 )
 
 NEUTRAL_STYLE = "dim-label"
-NO_ACTION_BADGE = "Nessuna azione"
-NOTHING_IDLE_MESSAGE = "Niente da liberare: il resto è in uso o ancora in osservazione."
-NO_RESULTS_MESSAGE = "Nessun programma corrisponde ai filtri."
-ALL_CLEAR_MESSAGE = "Tutto in ordine"
-ALL_CLEAR_DESCRIPTION = (
+NO_ACTION_BADGE = N_("Nessuna azione")
+NOTHING_IDLE_MESSAGE = N_("Niente da liberare: il resto è in uso o ancora in osservazione.")
+NO_RESULTS_MESSAGE = N_("Nessun programma corrisponde ai filtri.")
+ALL_CLEAR_MESSAGE = N_("Tutto in ordine")
+ALL_CLEAR_DESCRIPTION = N_(
     "Non c'è niente acceso che si possa chiudere. "
     "Ti avvisiamo noi se qualcosa resta acceso senza motivo."
 )
@@ -126,15 +127,15 @@ def _row_risk(*, group: Group) -> Risk | None:
 
 def _badge(*, risk: Risk | None) -> tuple[str, str]:
     if risk is None:
-        return NO_ACTION_BADGE, NEUTRAL_STYLE
-    return RISK_CONSEQUENCE[risk], RISK_STYLE[risk]
+        return _(NO_ACTION_BADGE), NEUTRAL_STYLE
+    return _(RISK_CONSEQUENCE[risk]), RISK_STYLE[risk]
 
 
 def _detail(*, group: Group) -> str:
     parts = [group.activity.reason]
     if group.ports:
-        noun = "porta" if len(group.ports) == 1 else "porte"
-        parts.append(f"{noun} {ports_text(ports=group.ports)}")
+        ports = ngettext("porta {ports}", "porte {ports}", len(group.ports))
+        parts.append(ports.format(ports=ports_text(ports=group.ports)))
     return DETAIL_SEPARATOR.join(parts)
 
 
@@ -144,10 +145,17 @@ def _snooze(*, group: Group, now: datetime) -> tuple[datetime | None, str | None
         return None, None
     local = until.astimezone(now.tzinfo)
     if local.date() == now.date():
-        text = f"avvisi in pausa fino alle {local:%H:%M}"
+        text = _("avvisi in pausa fino alle {time}").format(time=f"{local:%H:%M}")
     else:
-        text = f"avvisi in pausa fino al {local:%d/%m} alle {local:%H:%M}"
+        text = _("avvisi in pausa fino al {date} alle {time}").format(
+            date=f"{local:%d/%m}", time=f"{local:%H:%M}"
+        )
     return until, text
+
+
+def _group_subtitle(*, group: Group, now: datetime) -> str:
+    category = _(CATEGORY_LABELS[group.category])
+    return f"{category} · {_activity(member_or_group=group, now=now)}"
 
 
 def _group_row(*, group: Group, now: datetime) -> GroupRow:
@@ -158,7 +166,7 @@ def _group_row(*, group: Group, now: datetime) -> GroupRow:
     return GroupRow(
         id=group.id,
         title=group.name,
-        subtitle=f"{CATEGORY_LABELS[group.category]} · {_activity(member_or_group=group, now=now)}",
+        subtitle=_group_subtitle(group=group, now=now),
         detail=plain_reason(activity=group.activity, now=now),
         technical=_detail(group=group),
         is_idle=group.activity.state is ActivityState.IDLE,
@@ -263,11 +271,13 @@ def empty_state(*, snapshot: Snapshot, filters: RowFilters) -> EmptyStateView | 
     if _select_groups(snapshot=snapshot, filters=filters):
         return None
     if filters.categories or filters.risks or filters.query.strip():
-        return EmptyStateView(kind=EmptyKind.NO_RESULTS, message=NO_RESULTS_MESSAGE)
+        return EmptyStateView(kind=EmptyKind.NO_RESULTS, message=_(NO_RESULTS_MESSAGE))
     if not _select_groups(snapshot=snapshot, filters=RowFilters()):
         return EmptyStateView(
-            kind=EmptyKind.ALL_CLEAR, message=ALL_CLEAR_MESSAGE, description=ALL_CLEAR_DESCRIPTION
+            kind=EmptyKind.ALL_CLEAR,
+            message=_(ALL_CLEAR_MESSAGE),
+            description=_(ALL_CLEAR_DESCRIPTION),
         )
     if filters.only_idle:
-        return EmptyStateView(kind=EmptyKind.NOTHING_IDLE, message=NOTHING_IDLE_MESSAGE)
+        return EmptyStateView(kind=EmptyKind.NOTHING_IDLE, message=_(NOTHING_IDLE_MESSAGE))
     return None

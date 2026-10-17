@@ -4,36 +4,37 @@ from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from wimm.core.sizes import format_size
+from wimm.i18n import N_, _
 from wimm.model.enums import Risk
 
 if TYPE_CHECKING:
     from wimm.ui.disk_model import DiskSectionView
 
-NOTHING_TO_FREE_TEXT = "Niente da liberare sul disco"
-ACTIONS_NOTE = "Ogni bottone ti mostra prima cosa succede e chiede conferma."
+NOTHING_TO_FREE_TEXT = N_("Niente da liberare sul disco")
+ACTIONS_NOTE = N_("Ogni bottone ti mostra prima cosa succede e chiede conferma.")
 # D4: one sentence per section, for someone who has never heard of Docker or caches.
 SECTION_DESCRIPTIONS = {
-    "docker": "Docker serve a far girare programmi in contenitori separati.",
-    "images": "Copie scaricate per avviare i contenitori. Se servono di nuovo, si riscaricano.",
-    "containers": "Contenitori spenti che occupano ancora un po' di spazio.",
-    "volumes": "Dati salvati dai contenitori, per esempio un database.",
-    "build_cache": "Pezzi salvati per costruire i contenitori più in fretta: si ricreano.",
-    "caches": "File temporanei dei programmi di sviluppo: si ricreano da soli.",
-    "devdirs": "Librerie scaricate per progetti vecchi: si reinstallano se riapri il progetto.",
-    "trash": "File che hai già cancellato: svuotandolo spariscono per sempre.",
+    "docker": N_("Docker serve a far girare programmi in contenitori separati."),
+    "images": N_("Copie scaricate per avviare i contenitori. Se servono di nuovo, si riscaricano."),
+    "containers": N_("Contenitori spenti che occupano ancora un po' di spazio."),
+    "volumes": N_("Dati salvati dai contenitori, per esempio un database."),
+    "build_cache": N_("Pezzi salvati per costruire i contenitori più in fretta: si ricreano."),
+    "caches": N_("File temporanei dei programmi di sviluppo: si ricreano da soli."),
+    "devdirs": N_("Librerie scaricate per progetti vecchi: si reinstallano se riapri il progetto."),
+    "trash": N_("File che hai già cancellato: svuotandolo spariscono per sempre."),
 }
 
 
 # D3: sections grouped by what freeing them costs, cheapest first.
 TIER_TITLES = {
-    "safe": "Si libera senza pensarci",
-    "review": "Da guardare prima",
-    "data": "Attenzione: cancella dati",
+    "safe": N_("Si libera senza pensarci"),
+    "review": N_("Da guardare prima"),
+    "data": N_("Attenzione: cancella dati"),
 }
 TIER_DESCRIPTIONS = {
-    "safe": "Si ricrea da solo quando serve.",
-    "review": "Si può riscaricare o ricreare, ma con un po' di lavoro.",
-    "data": "Dentro possono esserci database o file che non si recuperano.",
+    "safe": N_("Si ricrea da solo quando serve."),
+    "review": N_("Si può riscaricare o ricreare, ma con un po' di lavoro."),
+    "data": N_("Dentro possono esserci database o file che non si recuperano."),
 }
 SECTION_TIERS = {
     "caches": "safe",
@@ -45,7 +46,7 @@ SECTION_TIERS = {
     "volumes": "data",
     "trash": "data",
 }
-SAFE_CAPTION = "Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano."
+SAFE_CAPTION = N_("Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano.")
 
 
 def safe_label(*, sections: Iterable["DiskSectionView"]) -> str:
@@ -56,7 +57,7 @@ def safe_label(*, sections: Iterable["DiskSectionView"]) -> str:
         for row in section.rows
         if row.action_kind and row.risk is Risk.SAFE
     )
-    return f"Libera {format_size(size=total)} senza rischi" if total > 0 else ""
+    return _("Libera {size} senza rischi").format(size=format_size(size=total)) if total > 0 else ""
 
 
 def disk_headline(*, sections: Iterable["DiskSectionView"]) -> str:
@@ -75,5 +76,5 @@ def disk_headline(*, sections: Iterable["DiskSectionView"]) -> str:
         if row.action_kind and row.risk is not Risk.DANGER
     )
     if total <= 0:
-        return NOTHING_TO_FREE_TEXT
-    return f"Puoi liberare fino a {format_size(size=total)}"
+        return _(NOTHING_TO_FREE_TEXT)
+    return _("Puoi liberare fino a {size}").format(size=format_size(size=total))

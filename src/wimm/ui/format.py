@@ -5,7 +5,7 @@ from types import MappingProxyType
 
 from wimm.core.sizes import format_size as format_size
 from wimm.core.text import OBSERVING_PREFIX
-from wimm.i18n import N_, _
+from wimm.i18n import N_, _, ngettext
 from wimm.model.enums import ActionKind, ActivityState, Category, Pressure, Risk
 
 SECONDS_PER_MINUTE = 60
@@ -16,38 +16,38 @@ BYTES_PER_GB = 1_000_000_000
 
 CATEGORY_LABELS = MappingProxyType(
     {
-        Category.SYSTEM: "Sistema",
-        Category.CONTAINER: "Contenitore Docker",
-        Category.DEV_SERVER: "Server di sviluppo",
-        Category.DEV_PROCESS: "Strumento di sviluppo",
-        Category.AI_CLI: "Assistente AI",
-        Category.BROWSER: "Browser",
-        Category.DESKTOP_APP: "App",
-        Category.TERMINAL: "Terminale",
-        Category.SESSION: "Sessione",
-        Category.SELF: "Monitor",
-        Category.OTHER: "Altro",
-        Category.PROJECT: "Progetto",
+        Category.SYSTEM: N_("Sistema"),
+        Category.CONTAINER: N_("Contenitore Docker"),
+        Category.DEV_SERVER: N_("Server di sviluppo"),
+        Category.DEV_PROCESS: N_("Strumento di sviluppo"),
+        Category.AI_CLI: N_("Assistente AI"),
+        Category.BROWSER: N_("Browser"),
+        Category.DESKTOP_APP: N_("App"),
+        Category.TERMINAL: N_("Terminale"),
+        Category.SESSION: N_("Sessione"),
+        Category.SELF: N_("Monitor"),
+        Category.OTHER: N_("Altro"),
+        Category.PROJECT: N_("Progetto"),
     }
 )
 RISK_TEXT = MappingProxyType(
-    {Risk.SAFE: "Sicuro", Risk.CAUTION: "Attenzione", Risk.DANGER: "Pericolo"}
+    {Risk.SAFE: N_("Sicuro"), Risk.CAUTION: N_("Attenzione"), Risk.DANGER: N_("Pericolo")}
 )
 # The badge says the risk and what closing costs (P8); RISK_TEXT stays the short filter label.
 RISK_CONSEQUENCE = MappingProxyType(
     {
-        Risk.SAFE: "Sicuro: non perdi nulla",
-        Risk.CAUTION: "Attenzione: puoi perdere lavoro",
-        Risk.DANGER: "Pericolo: cancella dati",
+        Risk.SAFE: N_("Sicuro: non perdi nulla"),
+        Risk.CAUTION: N_("Attenzione: puoi perdere lavoro"),
+        Risk.DANGER: N_("Pericolo: cancella dati"),
     }
 )
 # On the disk the cost depends on the item: "caution" sends the user to the confirmation,
 # which lists what is lost (a stopped container loses its own files for good).
 DISK_RISK_CONSEQUENCE = MappingProxyType(
     {
-        Risk.SAFE: "Sicuro: si ricrea quando serve",
-        Risk.CAUTION: "Attenzione: leggi prima cosa si perde",
-        Risk.DANGER: "Pericolo: cancella dati",
+        Risk.SAFE: N_("Sicuro: si ricrea quando serve"),
+        Risk.CAUTION: N_("Attenzione: leggi prima cosa si perde"),
+        Risk.DANGER: N_("Pericolo: cancella dati"),
     }
 )
 # libadwaita style classes (spec 10.4).
@@ -56,12 +56,12 @@ RISK_STYLE = MappingProxyType({Risk.SAFE: "success", Risk.CAUTION: "warning", Ri
 PRESSURE_PLAIN = MappingProxyType(
     {
         Pressure.OK: "",
-        Pressure.WARNING: "memoria quasi piena",
-        Pressure.CRITICAL: "memoria quasi finita",
+        Pressure.WARNING: N_("memoria quasi piena"),
+        Pressure.CRITICAL: N_("memoria quasi finita"),
     }
 )
 PRESSURE_TEXT = MappingProxyType(
-    {Pressure.OK: "Normale", Pressure.WARNING: "Alta", Pressure.CRITICAL: "Critica"}
+    {Pressure.OK: N_("Normale"), Pressure.WARNING: N_("Alta"), Pressure.CRITICAL: N_("Critica")}
 )
 ACTION_LABELS = MappingProxyType(
     {
@@ -96,13 +96,13 @@ def format_elapsed(*, seconds: float) -> str:
         raise ValueError(f"seconds must be finite and non-negative, got {seconds!r}")
     whole = int(seconds)
     if whole < SECONDS_PER_MINUTE:
-        return f"da {whole} s"
+        return _("da {count} s").format(count=whole)
     if whole < SECONDS_PER_HOUR:
-        return f"da {whole // SECONDS_PER_MINUTE} min"
+        return _("da {count} min").format(count=whole // SECONDS_PER_MINUTE)
     if whole < SECONDS_PER_DAY:
-        return f"da {whole // SECONDS_PER_HOUR} h"
+        return _("da {count} h").format(count=whole // SECONDS_PER_HOUR)
     days = whole // SECONDS_PER_DAY
-    return f"da {days} {'giorno' if days == 1 else 'giorni'}"
+    return ngettext("da {count} giorno", "da {count} giorni", days).format(count=days)
 
 
 def allocate_percents(*, sizes: tuple[int, ...]) -> tuple[int, ...]:
@@ -140,11 +140,13 @@ def format_clock(*, value: datetime, now: datetime) -> str:
 def activity_text(*, state: ActivityState, reason: str, elapsed_s: float | None) -> str:
     """Describe an activity state in plain Italian, with the duration for idle ones."""
     if state is ActivityState.ACTIVE:
-        return "in uso"
+        return _("in uso")
     if state is ActivityState.IDLE:
-        return f"non in uso {format_elapsed(seconds=elapsed_s or 0)}"
+        return _("non in uso {elapsed}").format(elapsed=format_elapsed(seconds=elapsed_s or 0))
     return (
-        _(OBSERVING_PREFIX) if reason.startswith(_(OBSERVING_PREFIX)) else "attività non misurabile"
+        _(OBSERVING_PREFIX)
+        if reason.startswith(_(OBSERVING_PREFIX))
+        else _("attività non misurabile")
     )
 
 

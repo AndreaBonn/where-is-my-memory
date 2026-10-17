@@ -5,30 +5,33 @@ from datetime import datetime
 
 from wimm.core.constants import DISK_SECTION_CAP
 from wimm.core.risk import RiskTarget
+from wimm.i18n import N_, _, ngettext
 from wimm.model.disk import CacheEntry, CacheKind, DevDir, DiskReport
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import ActionSpec, DiskRowView, DiskSectionView, make_row, more_text
 from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, SECTION_TIERS
 from wimm.ui.disk_view_docker import docker_sections
 
-NO_SCAN_TEXT = "Nessun controllo ancora"
+NO_SCAN_TEXT = N_("Nessun controllo ancora")
 CACHE_TITLES = {
     CacheKind.UV: "uv",
     CacheKind.NPM: "npm",
     CacheKind.PIP: "pip",
-    CacheKind.THUMBNAILS: "Miniature",
-    CacheKind.TRASH: "Cestino",
+    CacheKind.THUMBNAILS: N_("Miniature"),
+    CacheKind.TRASH: N_("Cestino"),
 }
 
 
 def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:
     """The header line: local time of the last scan, or the no-scan text."""
     if report is None:
-        return NO_SCAN_TEXT
+        return _(NO_SCAN_TEXT)
     local = report.scanned_at.astimezone()
     if local.date() == now.astimezone().date():
-        return f"Ultimo controllo alle {local:%H:%M}"
-    return f"Ultimo controllo il {local:%d/%m} alle {local:%H:%M}"
+        return _("Ultimo controllo alle {time}").format(time=f"{local:%H:%M}")
+    return _("Ultimo controllo il {date} alle {time}").format(
+        date=f"{local:%d/%m}", time=f"{local:%H:%M}"
+    )
 
 
 def _cache_row(*, entry: CacheEntry) -> DiskRowView:
@@ -40,7 +43,7 @@ def _cache_row(*, entry: CacheEntry) -> DiskRowView:
         target_id=None if trash else entry.kind.value,
     )
     return make_row(
-        title=CACHE_TITLES[entry.kind], subtitle=entry.path, size=entry.size, action=action
+        title=_(CACHE_TITLES[entry.kind]), subtitle=entry.path, size=entry.size, action=action
     )
 
 
@@ -48,7 +51,9 @@ def _devdir_row(*, item: DevDir) -> DiskRowView:
     action = ActionSpec(ActionKind.DEVDIR_DELETE, RiskTarget(kind="devdir"), item.path)
     return make_row(
         title=item.path,
-        subtitle=f"progetto fermo da {item.age_days} giorni",
+        subtitle=ngettext(
+            "progetto fermo da {days} giorno", "progetto fermo da {days} giorni", item.age_days
+        ).format(days=item.age_days),
         size=item.size,
         action=action,
     )
@@ -67,13 +72,14 @@ def _devdirs_section(*, report: DiskReport, min_age_days: int) -> DiskSectionVie
     largest_first = sorted(report.devdirs, key=lambda d: -d.size)
     dirs = tuple(_devdir_row(item=d) for d in largest_first)
     shown, hidden = _capped(rows=dirs, hidden=report.devdirs_truncated)
-    empty = (
-        f"Nessuna cartella di dipendenze più vecchia di {min_age_days} giorni "
-        "nelle radici configurate"
-    )
+    empty = ngettext(
+        "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate",
+        "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate",
+        min_age_days,
+    ).format(days=min_age_days)
     return DiskSectionView(
         "devdirs",
-        "Cartelle di dipendenze",
+        _("Cartelle di dipendenze"),
         shown,
         more_text(count=hidden),
         None if shown else empty,
@@ -84,9 +90,9 @@ def _local_sections(*, report: DiskReport, min_age_days: int) -> tuple[DiskSecti
     caches = tuple(_cache_row(entry=e) for e in report.caches if e.kind is not CacheKind.TRASH)
     trash = tuple(_cache_row(entry=e) for e in report.caches if e.kind is CacheKind.TRASH)
     return (
-        _listed(key="caches", title="Cache", rows=caches, empty="Nessuna cache trovata"),
+        _listed(key="caches", title=_("Cache"), rows=caches, empty=_("Nessuna cache trovata")),
         _devdirs_section(report=report, min_age_days=min_age_days),
-        _listed(key="trash", title="Cestino", rows=trash, empty="Cestino non rilevato"),
+        _listed(key="trash", title=_("Cestino"), rows=trash, empty=_("Cestino non rilevato")),
     )
 
 
@@ -102,7 +108,7 @@ def build_disk_sections(
     # SECTION_TIERS lists the keys tier by tier: its order is the page order.
     order = list(SECTION_TIERS)
     described = (
-        replace(s, description=SECTION_DESCRIPTIONS[s.key], tier=SECTION_TIERS[s.key])
+        replace(s, description=_(SECTION_DESCRIPTIONS[s.key]), tier=SECTION_TIERS[s.key])
         for s in sections
     )
     return tuple(sorted(described, key=lambda s: order.index(s.key)))

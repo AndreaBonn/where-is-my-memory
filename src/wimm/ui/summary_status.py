@@ -2,6 +2,7 @@
 
 from types import MappingProxyType
 
+from wimm.i18n import N_, _, ngettext
 from wimm.model.enums import ActivityState, Pressure, Risk
 from wimm.model.snapshot import Group, Snapshot
 
@@ -9,9 +10,9 @@ from .format import format_size
 
 STATUS_TITLES = MappingProxyType(
     {
-        Pressure.OK: "Il computer sta bene",
-        Pressure.WARNING: "La memoria si sta riempiendo",
-        Pressure.CRITICAL: "La memoria è quasi finita",
+        Pressure.OK: N_("Il computer sta bene"),
+        Pressure.WARNING: N_("La memoria si sta riempiendo"),
+        Pressure.CRITICAL: N_("La memoria è quasi finita"),
     }
 )
 # libadwaita style classes, the same the risk badges use.
@@ -22,14 +23,14 @@ STATUS_LEVELS = MappingProxyType(
 # the one that drives it, or a full disk would read as a memory problem.
 DISK_TITLES = MappingProxyType(
     {
-        Pressure.OK: "Il computer sta bene",
-        Pressure.WARNING: "Il disco si sta riempiendo",
-        Pressure.CRITICAL: "Il disco è quasi pieno",
+        Pressure.OK: N_("Il computer sta bene"),
+        Pressure.WARNING: N_("Il disco si sta riempiendo"),
+        Pressure.CRITICAL: N_("Il disco è quasi pieno"),
     }
 )
-DISK_TEXT = "Fai spazio dalla scheda Disco: lì trovi cosa si può cancellare."
-NOTHING_SAFE_TEXT = "Non c'è niente da chiudere senza rischi."
-NOTHING_SAFE_LABEL = "Niente da liberare senza rischi"
+DISK_TEXT = N_("Fai spazio dalla scheda Disco: lì trovi cosa si può cancellare.")
+NOTHING_SAFE_TEXT = N_("Non c'è niente da chiudere senza rischi.")
+NOTHING_SAFE_LABEL = N_("Niente da liberare senza rischi")
 NAMED_GROUPS = 3
 
 
@@ -50,12 +51,12 @@ def _names(*, groups: list[Group]) -> str:
     names = [g.name for g in groups[:NAMED_GROUPS]]
     extra = len(groups) - len(names)
     if extra == 1:
-        return f"{', '.join(names)} e un altro"
+        return _("{names} e un altro").format(names=", ".join(names))
     if extra > 1:
-        return f"{', '.join(names)} e altri {extra}"
+        return _("{names} e altri {count}").format(names=", ".join(names), count=extra)
     if len(names) == 1:
         return names[0]
-    return f"{', '.join(names[:-1])} e {names[-1]}"
+    return _("{others} e {last}").format(others=", ".join(names[:-1]), last=names[-1])
 
 
 def ram_drives_pressure(*, snapshot: Snapshot) -> bool:
@@ -70,18 +71,20 @@ def status_fields(*, snapshot: Snapshot) -> dict[str, str]:
     """Title, sentence and style of the status line; the amount is the safe one only."""
     level = STATUS_LEVELS[snapshot.pressure]
     if snapshot.pressure is not Pressure.OK and not ram_drives_pressure(snapshot=snapshot):
-        title = DISK_TITLES[snapshot.pressure]
-        return {"status_title": title, "status_text": DISK_TEXT, "status_level": level}
+        title = _(DISK_TITLES[snapshot.pressure])
+        return {"status_title": title, "status_text": _(DISK_TEXT), "status_level": level}
     ram = snapshot.reclaimable_now.ram
     # Same condition as the button: the sentence never offers what the button cannot do.
     text = (
-        f"Puoi liberare {format_size(size=ram)} chiudendo programmi che non usi. "
-        "Niente si chiude senza il tuo consenso."
+        _(
+            "Puoi liberare {size} chiudendo programmi che non usi. "
+            "Niente si chiude senza il tuo consenso."
+        ).format(size=format_size(size=ram))
         if ram > 0 and _safe_idle_groups(snapshot=snapshot)
-        else NOTHING_SAFE_TEXT
+        else _(NOTHING_SAFE_TEXT)
     )
     return {
-        "status_title": STATUS_TITLES[snapshot.pressure],
+        "status_title": _(STATUS_TITLES[snapshot.pressure]),
         "status_text": text,
         "status_level": level,
     }
@@ -92,9 +95,14 @@ def safe_fields(*, snapshot: Snapshot) -> dict[str, str]:
     ram = snapshot.reclaimable_now.ram
     groups = _safe_idle_groups(snapshot=snapshot)
     if ram <= 0 or not groups:
-        return {"safe_label": NOTHING_SAFE_LABEL, "safe_text": ""}
-    verb = "lo usi" if len(groups) == 1 else "li usi"
+        return {"safe_label": _(NOTHING_SAFE_LABEL), "safe_text": ""}
+    # "lo usi" / "li usi": the singular and the plural form of the whole sentence.
+    text = ngettext(
+        "Ferma {names}: non lo usi e non perdi nulla.",
+        "Ferma {names}: non li usi e non perdi nulla.",
+        len(groups),
+    )
     return {
-        "safe_label": f"Libera {format_size(size=ram)} senza rischi",
-        "safe_text": f"Ferma {_names(groups=groups)}: non {verb} e non perdi nulla.",
+        "safe_label": _("Libera {size} senza rischi").format(size=format_size(size=ram)),
+        "safe_text": text.format(names=_names(groups=groups)),
     }

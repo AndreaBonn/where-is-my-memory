@@ -3,47 +3,47 @@
 from datetime import datetime
 
 from wimm.core.text import AT_LEAST_MARK, NO_CONNECTIONS_MARK, OBSERVING_PREFIX, spoken_duration
-from wimm.i18n import _
+from wimm.i18n import N_, _
 from wimm.model.enums import ActivityState
 from wimm.model.snapshot import ActivityAssessment
 
-ACTIVE_TEXT = "Lo stai usando adesso."
-OBSERVING_TEXT = "Lo stiamo osservando: tra poco sappiamo se lo usi."
-UNKNOWN_TEXT = "Non sappiamo se lo stai usando: decidi tu se chiuderlo."
-NOBODY_CONNECTS = ": nessuno ci si collega."
+ACTIVE_TEXT = N_("Lo stai usando adesso.")
+OBSERVING_TEXT = N_("Lo stiamo osservando: tra poco sappiamo se lo usi.")
+UNKNOWN_TEXT = N_("Non sappiamo se lo stai usando: decidi tu se chiuderlo.")
+NOBODY_CONNECTS = N_(": nessuno ci si collega.")
 # P11: names of use for common images and servers. Generic runtimes (node, python) are
 # absent on purpose: the name would say nothing about what the program does.
 IMAGE_NAMES = (
-    ("keycloak", "Accesso utenti"),
-    ("postgres", "Database"),
-    ("postgresql", "Database"),
-    ("mysql", "Database"),
-    ("mariadb", "Database"),
-    ("mongo", "Database"),
-    ("mongodb", "Database"),
-    ("redis", "Memoria veloce (cache)"),
-    ("valkey", "Memoria veloce (cache)"),
-    ("nginx", "Server web"),
-    ("traefik", "Instradamento web"),
-    ("rabbitmq", "Coda di messaggi"),
-    ("kafka", "Coda di messaggi"),
-    ("minio", "Archivio file"),
-    ("elasticsearch", "Motore di ricerca"),
-    ("opensearch", "Motore di ricerca"),
-    ("ollama", "Modelli AI locali"),
-    ("grafana", "Cruscotti"),
-    ("prometheus", "Raccolta metriche"),
+    ("keycloak", N_("Accesso utenti")),
+    ("postgres", N_("Database")),
+    ("postgresql", N_("Database")),
+    ("mysql", N_("Database")),
+    ("mariadb", N_("Database")),
+    ("mongo", N_("Database")),
+    ("mongodb", N_("Database")),
+    ("redis", N_("Memoria veloce (cache)")),
+    ("valkey", N_("Memoria veloce (cache)")),
+    ("nginx", N_("Server web")),
+    ("traefik", N_("Instradamento web")),
+    ("rabbitmq", N_("Coda di messaggi")),
+    ("kafka", N_("Coda di messaggi")),
+    ("minio", N_("Archivio file")),
+    ("elasticsearch", N_("Motore di ricerca")),
+    ("opensearch", N_("Motore di ricerca")),
+    ("ollama", N_("Modelli AI locali")),
+    ("grafana", N_("Cruscotti")),
+    ("prometheus", N_("Raccolta metriche")),
 )
 PROCESS_NAMES = (
-    ("uvicorn", "Server web"),
-    ("gunicorn", "Server web"),
-    ("flask", "Server web"),
-    ("vite", "Server dell'interfaccia"),
-    ("webpack", "Server dell'interfaccia"),
-    ("jupyter", "Quaderni Jupyter"),
-    ("celery", "Lavori in background"),
-    ("ollama", "Modelli AI locali"),
-    ("kubectl", "Collegamento a Kubernetes"),
+    ("uvicorn", N_("Server web")),
+    ("gunicorn", N_("Server web")),
+    ("flask", N_("Server web")),
+    ("vite", N_("Server dell'interfaccia")),
+    ("webpack", N_("Server dell'interfaccia")),
+    ("jupyter", N_("Quaderni Jupyter")),
+    ("celery", N_("Lavori in background")),
+    ("ollama", N_("Modelli AI locali")),
+    ("kubectl", N_("Collegamento a Kubernetes")),
 )
 NAME_SEPARATORS = "-_."
 
@@ -51,17 +51,19 @@ NAME_SEPARATORS = "-_."
 def plain_reason(*, activity: ActivityAssessment, now: datetime) -> str:
     """P7: one sentence on why a program counts as unused, in use or unknown."""
     if activity.state is ActivityState.ACTIVE:
-        return ACTIVE_TEXT
+        return _(ACTIVE_TEXT)
     if activity.state is not ActivityState.IDLE:
-        return OBSERVING_TEXT if activity.reason.startswith(_(OBSERVING_PREFIX)) else UNKNOWN_TEXT
+        observing = activity.reason.startswith(_(OBSERVING_PREFIX))
+        return _(OBSERVING_TEXT) if observing else _(UNKNOWN_TEXT)
     # An idle assessment always carries its start (ActivityAssessment validates it).
     since = activity.since or now
     span = spoken_duration(seconds=(now - since).total_seconds())
     # Only when the core judged connections (a server) does "nobody connects" hold.
-    tail = NOBODY_CONNECTS if _(NO_CONNECTIONS_MARK) in activity.reason else "."
+    tail = _(NOBODY_CONNECTS) if _(NO_CONNECTIONS_MARK) in activity.reason else "."
     # Idle since the monitor started is a lower bound, and the sentence says so.
-    at_least = "almeno " if _(AT_LEAST_MARK) in activity.reason else ""
-    return f"Non lo usi da {at_least}{span}{tail}"
+    if _(AT_LEAST_MARK) in activity.reason:
+        return _("Non lo usi da almeno {span}{tail}").format(span=span, tail=tail)
+    return _("Non lo usi da {span}{tail}").format(span=span, tail=tail)
 
 
 def titled_name(*, name: str, friendly: str | None) -> str:
@@ -77,7 +79,7 @@ def friendly_container_name(*, image: str) -> str | None:
     """
     last = image.lower().rsplit("/", 1)[-1]
     repository = last.split(":", 1)[0]
-    return next((name for key, name in IMAGE_NAMES if key == repository), None)
+    return next((_(name) for key, name in IMAGE_NAMES if key == repository), None)
 
 
 def friendly_process_name(*, name: str) -> str | None:
@@ -85,4 +87,4 @@ def friendly_process_name(*, name: str) -> str | None:
     head = name.lower()
     for separator in NAME_SEPARATORS:
         head = head.split(separator, 1)[0]
-    return next((label for key, label in PROCESS_NAMES if head == key), None)
+    return next((_(label) for key, label in PROCESS_NAMES if head == key), None)
