@@ -26,11 +26,16 @@ def _require_optional_bytes(value: int | None, field: str) -> None:
 
 @dataclass(frozen=True, slots=True)
 class DockerImage(ImmutableModel):
-    """One image of `docker system df`; the three flags are independent."""
+    """One image of `docker system df`; the three flags are independent.
+
+    `size` is the whole image (the SIZE column); `unique_size` the part no other image
+    shares, which is what removing it frees (the RECLAIMABLE column).
+    """
 
     id: str
     tags: tuple[str, ...]
     size: int
+    unique_size: int
     in_use: bool
     dangling: bool
     local_build: bool
@@ -39,6 +44,9 @@ class DockerImage(ImmutableModel):
         ImmutableModel.__post_init__(self)
         _require_text(value=self.id, field="id")
         require_bytes(value=self.size, field="size")
+        require_bytes(value=self.unique_size, field="unique_size")
+        if self.unique_size > self.size:
+            raise ValueError("unique_size must not exceed size")
         if self.dangling != (not self.tags):
             raise ValueError("dangling must match the absence of tags")
 
@@ -78,13 +86,18 @@ class StoppedContainer(ImmutableModel):
 
 @dataclass(frozen=True, slots=True)
 class DockerDisk(ImmutableModel):
-    """Docker part of the report; the `*_truncated` counters say how many entries the cap hid."""
+    """Docker part of the report; the `*_truncated` counters say how many entries the cap hid.
+
+    `build_cache_reclaimable` is the part of `build_cache_size` a prune frees: the records
+    neither in use nor shared.
+    """
 
     status: DockerStatus
     images: tuple[DockerImage, ...]
     volumes: tuple[DockerVolume, ...]
     stopped_containers: tuple[StoppedContainer, ...]
     build_cache_size: int
+    build_cache_reclaimable: int
     images_truncated: int = 0
     volumes_truncated: int = 0
     containers_truncated: int = 0
@@ -92,6 +105,9 @@ class DockerDisk(ImmutableModel):
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
         require_bytes(value=self.build_cache_size, field="build_cache_size")
+        require_bytes(value=self.build_cache_reclaimable, field="build_cache_reclaimable")
+        if self.build_cache_reclaimable > self.build_cache_size:
+            raise ValueError("build_cache_reclaimable must not exceed build_cache_size")
         for name in ("images_truncated", "volumes_truncated", "containers_truncated"):
             require_nonnegative(value=getattr(self, name), field=name)
         for name, ids in (
@@ -102,7 +118,9 @@ class DockerDisk(ImmutableModel):
             if len(ids) != len(set(ids)):
                 raise ValueError(f"{name} must have unique ids")
         has_data = bool(self.images or self.volumes or self.stopped_containers)
-        if not self.status.available and (has_data or self.build_cache_size):
+        if not self.status.available and (
+            has_data or self.build_cache_size or self.build_cache_reclaimable
+        ):
             raise ValueError("unavailable Docker must carry no data")
 
 

@@ -24,6 +24,8 @@ def test_sample_decodes_to_the_model_and_reencodes_to_the_same_json(
     decoded = disk_report_from_json(text=SAMPLE.read_text(encoding="utf-8"))
 
     assert decoded.docker.images[1].dangling is True
+    assert decoded.docker.images[1].unique_size == 120_000_000
+    assert decoded.docker.build_cache_reclaimable == 70_000_000
     assert decoded.docker.volumes[1].size is None
     assert decoded.caches[1].kind is CacheKind.TRASH
     assert decoded.devdirs_truncated == 3
@@ -52,6 +54,8 @@ def _mutated(document: dict[str, Any], path: tuple[str | int, ...], value: objec
         (("surprise",), 1, "surprise"),
         (("docker", "images", 0, "extra"), 1, "extra"),
         (("schema",), 2, "schema"),
+        (("docker", "images", 0, "unique_size"), 450_000_001, "unique_size"),
+        (("docker", "build_cache_reclaimable"), 100_000_001, "build_cache_reclaimable"),
         (("caches", 0, "kind"), "docs", "CacheKind"),
         (("devdirs", 0, "size"), -1, "size"),
         (("devdirs", 0, "age_days"), True, "age_days"),

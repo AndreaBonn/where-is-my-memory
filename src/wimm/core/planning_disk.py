@@ -55,7 +55,7 @@ def _image_draft(*, image: DockerImage) -> Draft:
         fingerprint=ImageFingerprint(id=image.id),
         assessed=assess_draft(target=target, kind=ActionKind.IMAGE_REMOVE),
         reclaim_ram=0,
-        reclaim_disk=image.size,
+        reclaim_disk=image.unique_size,
     )
 
 
@@ -127,9 +127,9 @@ def _plan_prune_containers(*, request: ActionRequest, report: DiskReport | None)
 
 
 def _plan_builder_prune(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
-    size = _docker(report=report).build_cache_size
+    size = _docker(report=report).build_cache_reclaimable
     if size == 0:
-        raise InvalidRequest("Build cache is empty")
+        raise InvalidRequest("Build cache has nothing to reclaim")
     return [
         Draft(
             owner_ids=frozenset({BUILD_CACHE_ID}),

@@ -5,10 +5,10 @@
     "status": {"available": true, "error": null},
     "images": [
       {"id": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-       "tags": ["myapp:dev"], "size": 450000000, "in_use": false, "dangling": false,
+       "tags": ["myapp:dev"], "size": 450000000, "unique_size": 450000000, "in_use": false, "dangling": false,
        "local_build": true},
       {"id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-       "tags": [], "size": 300000000, "in_use": false, "dangling": true, "local_build": true}
+       "tags": [], "size": 300000000, "unique_size": 120000000, "in_use": false, "dangling": true, "local_build": true}
     ],
     "volumes": [
       {"name": "scratch", "size": 120000000, "ref_count": 0},
@@ -19,6 +19,7 @@
        "name": "old-job", "state": "exited", "size": 2048}
     ],
     "build_cache_size": 100000000,
+    "build_cache_reclaimable": 70000000,
     "images_truncated": 0,
     "volumes_truncated": 0,
     "containers_truncated": 0

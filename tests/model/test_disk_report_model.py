@@ -21,6 +21,24 @@ def test_image_size_must_be_a_nonnegative_integer(size: object) -> None:
         replace(image(char="a"), size=invalid_model_value(size))
 
 
+def test_image_unique_size_is_bounded_by_size() -> None:
+    assert replace(image(char="a", size=10), unique_size=10).unique_size == 10
+    assert replace(image(char="a", size=10), unique_size=0).unique_size == 0
+    with pytest.raises(ValueError, match="unique_size"):
+        replace(image(char="a", size=10), unique_size=11)
+    with pytest.raises(ValueError, match="unique_size"):
+        replace(image(char="a", size=10), unique_size=-1)
+
+
+def test_build_cache_reclaimable_is_bounded_by_the_total() -> None:
+    assert docker_disk(build_cache_size=10, build_cache_reclaimable=10)
+    assert docker_disk(build_cache_size=10, build_cache_reclaimable=0)
+    with pytest.raises(ValueError, match="build_cache_reclaimable"):
+        docker_disk(build_cache_size=10, build_cache_reclaimable=11)
+    with pytest.raises(ValueError, match="build_cache_reclaimable"):
+        docker_disk(build_cache_size=10, build_cache_reclaimable=-1)
+
+
 def test_image_tags_must_be_a_tuple() -> None:
     with pytest.raises(ValueError, match="tags"):
         replace(image(char="a"), tags=invalid_model_value(["x:1"]))
@@ -28,7 +46,9 @@ def test_image_tags_must_be_a_tuple() -> None:
 
 def test_image_id_must_not_be_blank() -> None:
     with pytest.raises(ValueError, match="id"):
-        DockerImage(id=" ", tags=(), size=0, in_use=False, dangling=True, local_build=True)
+        DockerImage(
+            id=" ", tags=(), size=0, unique_size=0, in_use=False, dangling=True, local_build=True
+        )
 
 
 def test_volume_size_none_allowed_but_negative_rejected() -> None:
@@ -41,7 +61,13 @@ def test_volume_size_none_allowed_but_negative_rejected() -> None:
 def test_image_dangling_flag_must_match_the_tags(tags: tuple[str, ...], dangling: bool) -> None:
     with pytest.raises(ValueError, match="dangling"):
         DockerImage(
-            id="sha256:a", tags=tags, size=0, in_use=False, dangling=dangling, local_build=False
+            id="sha256:a",
+            tags=tags,
+            size=0,
+            unique_size=0,
+            in_use=False,
+            dangling=dangling,
+            local_build=False,
         )
 
 
@@ -53,7 +79,12 @@ def test_docker_images_must_have_unique_ids() -> None:
 def test_unavailable_docker_must_be_empty() -> None:
     status = DockerStatus(available=False, error="down")
     assert DockerDisk(
-        status=status, images=(), volumes=(), stopped_containers=(), build_cache_size=0
+        status=status,
+        images=(),
+        volumes=(),
+        stopped_containers=(),
+        build_cache_size=0,
+        build_cache_reclaimable=0,
     )
     with pytest.raises(ValueError, match="unavailable"):
         DockerDisk(
@@ -62,6 +93,7 @@ def test_unavailable_docker_must_be_empty() -> None:
             volumes=(),
             stopped_containers=(),
             build_cache_size=0,
+            build_cache_reclaimable=0,
         )
 
 

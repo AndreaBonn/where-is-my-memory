@@ -238,6 +238,35 @@ def test_builder_prune_is_a_single_step_without_fingerprint() -> None:
     assert plan.estimated_reclaim_disk == 100 * MB
 
 
+def test_builder_prune_reclaims_only_the_unshared_unused_part() -> None:
+    disk = report(docker=docker_disk(build_cache_size=100 * MB, build_cache_reclaimable=30 * MB))
+
+    plan = _plan(kind=ActionKind.BUILDER_PRUNE, disk=disk)
+
+    assert plan.estimated_reclaim_disk == 30 * MB
+
+
+def test_builder_prune_with_nothing_reclaimable_is_refused() -> None:
+    disk = report(docker=docker_disk(build_cache_size=100 * MB, build_cache_reclaimable=0))
+
+    with pytest.raises(InvalidRequest):
+        _plan(kind=ActionKind.BUILDER_PRUNE, disk=disk)
+
+
+def test_image_remove_and_prune_reclaim_the_unique_size() -> None:
+    shared = image(char="a", size=10 * MB, unique_size=4 * MB)
+    dangling = image(char="b", tags=(), size=6 * MB, unique_size=6 * MB, dangling=True)
+    disk = report(docker=docker_disk(images=(shared, dangling)))
+
+    single = _plan(kind=ActionKind.IMAGE_REMOVE, disk=disk, target=shared.id)
+    unused = _plan(kind=ActionKind.IMAGES_PRUNE_UNUSED, disk=disk)
+    only_dangling = _plan(kind=ActionKind.IMAGES_PRUNE_DANGLING, disk=disk)
+
+    assert single.estimated_reclaim_disk == 4 * MB
+    assert unused.estimated_reclaim_disk == 10 * MB
+    assert only_dangling.estimated_reclaim_disk == 6 * MB
+
+
 def test_builder_prune_with_empty_cache_is_refused() -> None:
     with pytest.raises(InvalidRequest):
         _plan(kind=ActionKind.BUILDER_PRUNE, disk=report())

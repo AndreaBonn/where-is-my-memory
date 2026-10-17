@@ -11,7 +11,8 @@ def test_safe_reclaimable_bytes_without_a_report_is_zero() -> None:
 def test_safe_reclaimable_bytes_sums_safe_items_across_sections() -> None:
     docker = docker_disk(
         images=(image(char="a", size=5 * MB), image(char="b", tags=(), size=3 * MB, dangling=True)),
-        build_cache_size=7 * MB,
+        build_cache_size=9 * MB,
+        build_cache_reclaimable=7 * MB,
     )
     data = report(docker=docker, caches=(cache(kind=CacheKind.UV, size=2 * MB),))
 
@@ -50,3 +51,13 @@ def test_safe_reclaimable_bytes_ignores_an_unavailable_docker() -> None:
     )
 
     assert safe_reclaimable_bytes(report=data) == MB
+
+
+def test_safe_reclaimable_bytes_uses_unique_image_size_and_reclaimable_build_cache() -> None:
+    docker = docker_disk(
+        images=(image(char="a", size=10 * MB, unique_size=4 * MB),),
+        build_cache_size=20 * MB,
+        build_cache_reclaimable=5 * MB,
+    )
+
+    assert safe_reclaimable_bytes(report=report(docker=docker)) == 9 * MB

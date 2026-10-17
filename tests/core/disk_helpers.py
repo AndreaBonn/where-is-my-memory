@@ -33,6 +33,7 @@ def image(
     char: str,
     tags: tuple[str, ...] = ("app:1",),
     size: int = 10 * MB,
+    unique_size: int | None = None,
     in_use: bool = False,
     dangling: bool = False,
     local_build: bool = False,
@@ -41,6 +42,7 @@ def image(
         id=sha(char),
         tags=tags,
         size=size,
+        unique_size=size if unique_size is None else unique_size,
         in_use=in_use,
         dangling=dangling,
         local_build=local_build,
@@ -61,6 +63,7 @@ def docker_disk(
     volumes: tuple[DockerVolume, ...] = (),
     containers: tuple[StoppedContainer, ...] = (),
     build_cache_size: int = 0,
+    build_cache_reclaimable: int | None = None,
     images_truncated: int = 0,
     containers_truncated: int = 0,
 ) -> DockerDisk:
@@ -70,6 +73,9 @@ def docker_disk(
         volumes=volumes,
         stopped_containers=containers,
         build_cache_size=build_cache_size,
+        build_cache_reclaimable=(
+            build_cache_size if build_cache_reclaimable is None else build_cache_reclaimable
+        ),
         images_truncated=images_truncated,
         containers_truncated=containers_truncated,
     )

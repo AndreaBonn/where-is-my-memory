@@ -58,6 +58,24 @@ def _top[T](
     return tuple(ordered[:DISK_SECTION_CAP]), max(len(ordered) - DISK_SECTION_CAP, 0)
 
 
+def _unique_size(*, raw: Raw, size: int) -> int:
+    """Size minus SharedSize; the whole size when the daemon did not compute the shared part."""
+    shared = raw.get("SharedSize")
+    if type(shared) is not int or shared < 0:
+        return size
+    return max(size - shared, 0)
+
+
+def _build_cache_reclaimable(*, df: Raw) -> int:
+    """Records neither in use nor shared, as `docker system df` counts them.
+
+    A non-bool flag counts as in use: the estimate errs low, never high. The prune must
+    remove all unused records (`--all`) to free this much.
+    """
+    records = _entries(df=df, key="BuildCache")
+    return sum(_size(r.get("Size")) for r in records if not (r.get("InUse") or r.get("Shared")))
+
+
 def _image(*, raw: Raw, used_ids: frozenset[str]) -> DockerImage:
     image_id = str(raw["Id"])
     tags = tuple(tag for tag in raw.get("RepoTags") or [] if tag != NONE_TAG)
@@ -65,10 +83,12 @@ def _image(*, raw: Raw, used_ids: frozenset[str]) -> DockerImage:
     # `Containers` is -1 when the daemon did not count; the containers list decides then.
     counted = raw.get("Containers")
     in_use = (type(counted) is int and counted > 0) or image_id in used_ids
+    size = _size(raw.get("Size"))
     return DockerImage(
         id=image_id,
         tags=tags,
-        size=_size(raw.get("Size")),
+        size=size,
+        unique_size=_unique_size(raw=raw, size=size),
         in_use=in_use,
         dangling=not tags,
         local_build=not digests,
@@ -120,8 +140,11 @@ def parse_docker_df(*, df: Raw) -> DockerDisk:
     `RepoDigests`. A volume is an orphan when `UsageData.RefCount == 0`. Stopped
     containers are those exited, created or dead. Every section is sorted by size,
     descending, and capped at `DISK_SECTION_CAP` with a counter of the hidden ones.
-    Image and volume sizes are upper bounds: layers shared with other images are counted
-    in full.
+    Volume sizes are upper bounds. An image keeps its whole `size` and gets `unique_size`,
+    `Size - SharedSize`, the figure Docker itself calls reclaimable (the whole size when
+    `SharedSize` is missing or -1, an upper bound). Summed over several images that
+    share a layer it is a lower bound, as in `docker system df`. The build cache keeps its total and
+    gets `build_cache_reclaimable`, the records neither in use nor shared.
     """
     containers = _entries(df=df, key="Containers")
     images, images_cut = _capped_images(df=df, containers=containers)
@@ -133,6 +156,7 @@ def parse_docker_df(*, df: Raw) -> DockerDisk:
         volumes=volumes,
         stopped_containers=stopped,
         build_cache_size=sum(_size(r.get("Size")) for r in _entries(df=df, key="BuildCache")),
+        build_cache_reclaimable=_build_cache_reclaimable(df=df),
         images_truncated=images_cut,
         volumes_truncated=volumes_cut,
         containers_truncated=stopped_cut,
@@ -147,6 +171,7 @@ def unavailable_docker(*, error: str) -> DockerDisk:
         volumes=(),
         stopped_containers=(),
         build_cache_size=0,
+        build_cache_reclaimable=0,
     )
 
 
@@ -185,7 +210,7 @@ def _safe_image_bytes(*, docker: DockerDisk) -> int:
             kind="image", has_repo_digests=not item.local_build, dangling=item.dangling
         )
         if not item.in_use and _is_safe(target=target, action=ActionKind.IMAGE_REMOVE):
-            total += item.size
+            total += item.unique_size
     return total
 
 
@@ -209,5 +234,5 @@ def safe_reclaimable_bytes(*, report: DiskReport | None) -> int:
     return (
         total
         + _safe_image_bytes(docker=report.docker)
-        + (report.docker.build_cache_size if build_ok else 0)
+        + (report.docker.build_cache_reclaimable if build_ok else 0)
     )
