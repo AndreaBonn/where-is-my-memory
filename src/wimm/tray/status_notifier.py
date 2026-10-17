@@ -21,7 +21,7 @@ ITEM_ID = "io.github.wimm.WhereIsMyMemory"
 CATEGORY = "SystemServices"
 STATUS_ACTIVE = "Active"
 ICON_NORMAL = "wimm-normal"
-LABEL_GUIDE = "88,8 GB inattivi"
+LABEL_GUIDE = "88,8 GB da liberare"
 INSTALLED_ICON_DIRECTORY = Path("/usr/share/icons")
 WATCHER_TIMEOUT_MS = 2000
 

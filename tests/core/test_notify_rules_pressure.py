@@ -18,9 +18,10 @@ def test_ram_pressure_lists_top_three_groups_by_reclaimable() -> None:
 
     pressure = [item for item in result.intents if item.id == "pressure-ram"]
     (intent,) = pressure
-    assert intent.title == "RAM quasi esaurita (7% libera)"
+    assert intent.title == "Memoria quasi piena (7% libera)"
     assert (
-        intent.body == "Liberabile subito: whitebox 1,1 GB, vite (frontend) 640 MB, jupyter 410 MB."
+        intent.body
+        == "Puoi liberare subito: whitebox 1,1 GB, vite (frontend) 640 MB, jupyter 410 MB."
     )
 
 
@@ -86,7 +87,7 @@ def test_disk_pressure_body_reports_reclaimable_disk() -> None:
 
     (intent,) = evaluate_notifications(request=request(snapshot)).intents
 
-    assert intent.body == "Liberabile subito: 3,2 GB su disco."
+    assert intent.body == "Puoi liberare subito 3,2 GB sul disco."
 
 
 def test_pressure_excludes_ignored_groups_from_top_list() -> None:
@@ -99,7 +100,7 @@ def test_pressure_excludes_ignored_groups_from_top_list() -> None:
         request=request(make_snapshot(groups, ram_free_pct=5))
     ).intents
 
-    assert intent.body == "Liberabile subito: visibile 1,0 GB."
+    assert intent.body == "Puoi liberare subito: visibile 1,0 GB."
 
 
 def test_pressure_counts_toward_hourly_limit_for_idle() -> None:
@@ -153,7 +154,7 @@ def test_pressure_never_lists_a_protected_group_as_freeable() -> None:
         request=request(make_snapshot(groups, ram_free_pct=5))
     ).intents
 
-    assert intent.body == "Liberabile subito: visibile 1,0 GB."
+    assert intent.body == "Puoi liberare subito: visibile 1,0 GB."
 
 
 def test_a_clock_moved_back_does_not_silence_pressure_for_hours() -> None:

@@ -56,7 +56,7 @@ def test_static_properties_follow_the_specification(bus: Bus) -> None:
         assert get(bus, "ItemIsMenu") is False
         assert get(bus, "Category") == CATEGORY == "SystemServices"
         assert get(bus, "Id") == ITEM_ID == "io.github.wimm.WhereIsMyMemory"
-        assert get(bus, "XAyatanaLabelGuide") == LABEL_GUIDE == "88,8 GB inattivi"
+        assert get(bus, "XAyatanaLabelGuide") == LABEL_GUIDE == "88,8 GB da liberare"
         assert get(bus, "IconName") == ICON_NORMAL
         assert get(bus, "Menu") == "/MenuBar"
         assert get(bus, "IconThemePath") == icon_theme_path()

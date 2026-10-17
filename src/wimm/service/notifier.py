@@ -17,8 +17,8 @@ ACTION_SNOOZE_GROUP = f"{APP_ACTION_PREFIX}snooze-group"
 # notifier only names the actions: registering them is the application's job.
 NO_GROUP_TARGET = ""
 PRESSURE_ID_PREFIX = "pressure-"
-OPEN_LABEL = "Apri"
-SNOOZE_LABEL = "Silenzia 24 h"
+OPEN_LABEL = "Vedi e decidi"
+SNOOZE_LABEL = "Non ora (24 h)"
 
 
 class NotifierPriority(Enum):

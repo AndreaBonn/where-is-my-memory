@@ -106,7 +106,7 @@ def harness(bus: Bus) -> Iterator[Harness]:
 
 @pytest.mark.dbus
 def test_tray_before_first_cycle_has_fixed_entries_and_no_label(harness: Harness) -> None:
-    assert harness.labels() == ["Silenzia notifiche per 1 h", "Esci"]
+    assert harness.labels() == ["Apri Where Is My Memory", "Silenzia notifiche per 1 h", "Esci"]
     assert harness.prop("XAyatanaLabel") == ""
     assert harness.prop("IconName") == ICON_NORMAL
 
@@ -114,12 +114,14 @@ def test_tray_before_first_cycle_has_fixed_entries_and_no_label(harness: Harness
 @pytest.mark.dbus
 def test_snapshot_update_refreshes_label_tooltip_icon_and_menu(harness: Harness) -> None:
     harness.service.publish(base_snapshot())
-    assert harness.prop("XAyatanaLabel") == "4,2 GB inattivi"
-    assert harness.prop("ToolTip")[2] == "RAM 32,9/41,7 GB, disco 88%"
+    assert harness.prop("XAyatanaLabel") == "4,2 GB da liberare"
+    assert harness.prop("ToolTip")[2] == "Memoria usata 79%, disco: 28 GB liberi"
     assert harness.prop("IconName") == ICON_WARNING
     assert harness.labels() == [
-        "RAM 32,9/41,7 GB",
-        "Disco 88% occupato",
+        "Apri Where Is My Memory",
+        "Memoria usata: 79%",
+        "Disco: 28 GB liberi",
+        "Da liberare:",
         "whitebox (1,1 GB)",
         "Silenzia notifiche per 1 h",
         "Esci",
@@ -175,7 +177,9 @@ def test_mute_entry_mutes_for_one_hour_and_menu_shows_the_real_state(harness: Ha
     spin_until(predicate=lambda: bool(harness.service.snooze_all_calls))
     assert harness.service.snooze_all_calls == [MUTE_DURATION_S] and MUTE_DURATION_S == 3600
     spin_until(predicate=lambda: "Silenzia notifiche per 1 h" not in harness.labels())
-    assert str(harness.labels()[0]).startswith("Notifiche silenziate fino alle")
+    assert any(
+        str(label).startswith("Notifiche silenziate fino alle") for label in harness.labels()
+    )
 
 
 @pytest.mark.dbus

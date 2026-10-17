@@ -51,6 +51,21 @@ def format_duration(*, seconds: float) -> str:
     return f"{int(seconds // SECONDS_PER_DAY)} giorni"
 
 
+def _counted(*, count: int, one: str, many: str) -> str:
+    return f"{count} {one if count == 1 else many}"
+
+
+def spoken_duration(*, seconds: float) -> str:
+    """Format a duration in whole words, ``40 minuti``, ``1 ora``, ``2 giorni`` (floored)."""
+    if seconds < SECONDS_PER_MINUTE:
+        return "meno di 1 minuto"
+    if seconds < SECONDS_PER_HOUR:
+        return _counted(count=int(seconds // SECONDS_PER_MINUTE), one="minuto", many="minuti")
+    if seconds < SECONDS_PER_DAY:
+        return _counted(count=int(seconds // SECONDS_PER_HOUR), one="ora", many="ore")
+    return _counted(count=int(seconds // SECONDS_PER_DAY), one="giorno", many="giorni")
+
+
 def reason_observing(*, elapsed_s: float) -> str:
     return f"in osservazione da {format_duration(seconds=elapsed_s)}"
 

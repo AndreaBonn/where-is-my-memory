@@ -234,3 +234,19 @@ def test_explain_group_dev_process_keeps_launched_from_terminal() -> None:
     assert text.explain_group(facts=facts) == (
         "un processo make lanciato dal terminale, in ascolto sulla porta 80"
     )
+
+
+@pytest.mark.parametrize(
+    ("seconds", "expected"),
+    [
+        (30, "meno di 1 minuto"),
+        (60, "1 minuto"),
+        (40 * 60, "40 minuti"),
+        (3600, "1 ora"),
+        (3 * 3600 + 59, "3 ore"),
+        (86400, "1 giorno"),
+        (2 * 86400 + 5, "2 giorni"),
+    ],
+)
+def test_spoken_duration_uses_whole_words(seconds: float, expected: str) -> None:
+    assert text.spoken_duration(seconds=seconds) == expected

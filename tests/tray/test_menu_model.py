@@ -24,12 +24,12 @@ def with_reclaimable(ram: int) -> Snapshot:
 
 
 def test_label_shows_reclaimable_ram() -> None:
-    assert mm.tray_label(snapshot=with_reclaimable(ram=4_200_000_000)) == "4,2 GB inattivi"
+    assert mm.tray_label(snapshot=with_reclaimable(ram=4_200_000_000)) == "4,2 GB da liberare"
 
 
 def test_label_is_empty_below_100_mb_and_shown_at_100_mb() -> None:
     assert mm.tray_label(snapshot=with_reclaimable(ram=100 * MB - 1)) == ""
-    assert mm.tray_label(snapshot=with_reclaimable(ram=100 * MB)) == "100 MB inattivi"
+    assert mm.tray_label(snapshot=with_reclaimable(ram=100 * MB)) == "100 MB da liberare"
 
 
 def test_label_is_empty_without_snapshot() -> None:
@@ -37,7 +37,7 @@ def test_label_is_empty_without_snapshot() -> None:
 
 
 def test_tooltip_summarises_ram_and_disk() -> None:
-    assert mm.tray_tooltip(snapshot=base_snapshot()) == "RAM 32,9/41,7 GB, disco 88%"
+    assert mm.tray_tooltip(snapshot=base_snapshot()) == "Memoria usata 79%, disco: 28 GB liberi"
 
 
 def test_tooltip_is_empty_without_snapshot() -> None:
@@ -67,8 +67,13 @@ def test_icon_without_snapshot_depends_only_on_errors() -> None:
 
 def test_menu_without_snapshot_has_only_fixed_entries() -> None:
     items = mm.build_menu(snapshot=None, consecutive_failures=0)
-    assert labels(items) == ["Silenzia notifiche per 1 h", "Esci"]
-    assert [item.callback_id for item in items] == [mm.CALLBACK_MUTE, mm.CALLBACK_QUIT]
+    assert labels(items) == ["Apri Where Is My Memory", "Silenzia notifiche per 1 h", "Esci"]
+    assert items[0].enabled and items[0].callback_id == mm.CALLBACK_OPEN
+    assert [item.callback_id for item in items] == [
+        mm.CALLBACK_OPEN,
+        mm.CALLBACK_MUTE,
+        mm.CALLBACK_QUIT,
+    ]
 
 
 def test_menu_lists_summary_groups_by_reclaimable_then_fixed_entries() -> None:
@@ -78,14 +83,17 @@ def test_menu_lists_summary_groups_by_reclaimable_then_fixed_entries() -> None:
     )
     items = mm.build_menu(snapshot=snapshot, consecutive_failures=0)
     assert labels(items) == [
-        "RAM 32,9/41,7 GB",
-        "Disco 88% occupato",
+        "Apri Where Is My Memory",
+        "Memoria usata: 79%",
+        "Disco: 28 GB liberi",
+        "Da liberare:",
         "big (3,0 GB)",
         "small (200 MB)",
         "Silenzia notifiche per 1 h",
         "Esci",
     ]
-    assert not items[0].enabled and not items[1].enabled
+    assert items[0].enabled
+    assert not items[1].enabled and not items[2].enabled and not items[3].enabled
     big = next(item for item in items if item.label.startswith("big"))
     assert big.enabled and big.callback_id == "group:id-big"
 
@@ -125,7 +133,8 @@ def test_menu_shows_error_entry_first_from_three_failures() -> None:
     assert message not in labels(quiet)
     assert labels(failing)[0] == message
     assert failing[0].enabled and failing[0].callback_id == mm.CALLBACK_OPEN
-    assert labels(failing[1:]) == labels(quiet)
+    assert labels(failing[1:]) == labels(quiet[1:])
+    assert mm.OPEN_TEXT not in labels(failing)
 
 
 def test_error_entry_also_without_snapshot() -> None:
@@ -138,8 +147,12 @@ def test_muted_menu_replaces_the_mute_entry_with_its_state(monkeypatch: pytest.M
     time.tzset()
     until = datetime(2026, 10, 16, 12, 30, tzinfo=UTC)
     items = mm.build_menu(snapshot=None, consecutive_failures=0, muted_until=until)
-    assert labels(items) == ["Notifiche silenziate fino alle 14:30", "Esci"]
-    assert not items[0].enabled
+    assert labels(items) == [
+        "Apri Where Is My Memory",
+        "Notifiche silenziate fino alle 14:30",
+        "Esci",
+    ]
+    assert not items[1].enabled
 
 
 def test_parse_group_callback() -> None:
@@ -162,6 +175,7 @@ def test_fixed_entries_keep_their_id_when_the_menu_content_changes() -> None:
         )
     )
     assert bare["mute"] == full["mute"] and bare["quit"] == full["quit"]
-    assert full["open"] not in bare.values()
+    assert bare["open"] == mm.OPEN_ID and full["open"] == mm.ERROR_ID
+    assert mm.ERROR_ID not in bare.values()
     group_ids = {value for key, value in full.items() if key.startswith("group:")}
     assert len(group_ids) == 2 and not group_ids & set(bare.values())

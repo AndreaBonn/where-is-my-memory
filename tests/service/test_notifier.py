@@ -46,8 +46,8 @@ def test_idle_spec_has_open_default_and_two_buttons_with_group_id() -> None:
     assert spec.default_action == ACTION_OPEN_GROUP == "app.open-group"
     assert spec.default_target == "whitebox"
     assert [(b.label, b.action, b.target) for b in spec.buttons] == [
-        ("Apri", "app.open-group", "whitebox"),
-        ("Silenzia 24 h", "app.snooze-group", "whitebox"),
+        ("Vedi e decidi", "app.open-group", "whitebox"),
+        ("Non ora (24 h)", "app.snooze-group", "whitebox"),
     ]
     assert spec.priority is NotifierPriority.NORMAL
 

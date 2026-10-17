@@ -26,8 +26,8 @@ def test_idle_group_over_threshold_notifies_with_stable_id_and_italian_text() ->
     (intent,) = result.intents
     assert intent.id == "idle-g_1"
     assert intent.group_id == "g_1"
-    assert intent.title == "whitebox è inattivo da 3 h"
-    assert intent.body == "1,1 GB di RAM recuperabile."
+    assert intent.title == "whitebox è acceso ma non lo usi da 3 ore"
+    assert intent.body == "Chiudendolo liberi 1,1 GB di memoria. Decidi tu: non si chiude da solo."
 
 
 def test_idle_body_counts_members_by_kind() -> None:
@@ -46,7 +46,10 @@ def test_idle_body_counts_members_by_kind() -> None:
 
     (intent,) = evaluate_notifications(request=request(make_snapshot((snapshot,)))).intents
 
-    assert intent.body == "2 container, 1 server e 1 processo, 1,0 GB di RAM recuperabile."
+    assert intent.body == (
+        "Chiudendolo liberi 1,0 GB di memoria. Decidi tu: non si chiude da solo. "
+        "Dentro: 2 container, 1 server e 1 processo."
+    )
 
 
 def test_same_episode_over_two_cycles_notifies_once() -> None:
@@ -88,8 +91,8 @@ def test_idle_five_groups_gives_three_plus_one_aggregate() -> None:
         "idle-aggregate",
     ]
     aggregate = result.intents[-1]
-    assert aggregate.title == "2 gruppi inattivi"
-    assert aggregate.body == "3,0 GB di RAM recuperabile. Apri il pannello per vederli."
+    assert aggregate.title == "2 programmi accesi che non usi"
+    assert aggregate.body == "Chiudendoli liberi 3,0 GB di memoria. Apri il pannello per vederli."
     assert aggregate.group_id is None
 
 

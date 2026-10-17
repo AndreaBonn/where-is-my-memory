@@ -6,7 +6,7 @@ from types import MappingProxyType
 from wimm.config import Config
 from wimm.core import constants as c
 from wimm.core.sizes import format_size
-from wimm.core.text import format_duration
+from wimm.core.text import spoken_duration
 from wimm.model.enums import ActivityState, Category, GroupId, Protection
 from wimm.model.snapshot import ContainerMember, Group, ProcessMember, Snapshot
 
@@ -101,13 +101,16 @@ def _member_summary(*, group: Group) -> str:
 
 def _idle_intent(*, group: Group, now: datetime) -> NotificationIntent:
     since = group.activity.since
-    elapsed = format_duration(seconds=(now - since).total_seconds()) if since else ""
-    size = f"{format_size(size=group.memory.reclaimable)} di RAM recuperabile."
+    elapsed = spoken_duration(seconds=(now - since).total_seconds()) if since else ""
+    body = (
+        f"Chiudendolo liberi {format_size(size=group.memory.reclaimable)} di memoria. "
+        "Decidi tu: non si chiude da solo."
+    )
     members = _member_summary(group=group)
     return NotificationIntent(
         id=f"idle-{group.id}",
-        title=f"{group.name} è inattivo da {elapsed}",
-        body=f"{members}, {size}" if members else size,
+        title=f"{group.name} è acceso ma non lo usi da {elapsed}",
+        body=f"{body} Dentro: {members}." if members else body,
         group_id=group.id,
     )
 
@@ -115,12 +118,14 @@ def _idle_intent(*, group: Group, now: datetime) -> NotificationIntent:
 def _aggregate_intent(*, groups: list[Group]) -> NotificationIntent:
     count = len(groups)
     size = format_size(size=sum(g.memory.reclaimable for g in groups))
-    title = "1 gruppo inattivo" if count == 1 else f"{count} gruppi inattivi"
-    pronoun = "vederlo" if count == 1 else "vederli"
+    if count == 1:
+        title, verb, pronoun = "1 programma acceso che non usi", "Chiudendolo", "vederlo"
+    else:
+        title, verb, pronoun = f"{count} programmi accesi che non usi", "Chiudendoli", "vederli"
     return NotificationIntent(
         id=AGGREGATE_ID,
         title=title,
-        body=f"{size} di RAM recuperabile. Apri il pannello per {pronoun}.",
+        body=f"{verb} liberi {size} di memoria. Apri il pannello per {pronoun}.",
         group_id=None,
     )
 
@@ -139,8 +144,10 @@ def _ram_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
     listed = ", ".join(f"{g.name} {format_size(size=g.memory.reclaimable)}" for g in top)
     return NotificationIntent(
         id="pressure-ram",
-        title=f"RAM quasi esaurita ({pct}% libera)",
-        body=f"Liberabile subito: {listed}." if top else "Apri il pannello per vedere i gruppi.",
+        title=f"Memoria quasi piena ({pct}% libera)",
+        body=f"Puoi liberare subito: {listed}."
+        if top
+        else "Apri il pannello per vedere cosa chiudere.",
         group_id=None,
     )
 
@@ -148,7 +155,7 @@ def _ram_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
 def _disk_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
     size = snapshot.reclaimable_now.disk
     body = (
-        f"Liberabile subito: {format_size(size=size)} su disco."
+        f"Puoi liberare subito {format_size(size=size)} sul disco."
         if size > 0
         else "Apri il pannello per vedere cosa occupa spazio."
     )
