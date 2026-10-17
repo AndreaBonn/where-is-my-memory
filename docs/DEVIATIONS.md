@@ -419,3 +419,12 @@ c'è il punto della specifica, cosa cambia e perché.
 - **A3, icona mancante.** Il banner ha il pulsante "Come si attiva", che apre i passi per
   Ubuntu 24.04 (app "Estensioni", estensione "Ubuntu AppIndicators") e il comando
   `gnome-extensions enable ubuntu-appindicators@ubuntu.com`.
+- **S1, spiegazioni "?" (§10.2).** Accanto a "Memoria (RAM)" e "Spazio sul disco" un "?"
+  apre due righe in parole semplici. Nel Disco le sezioni hanno già la spiegazione sotto il
+  titolo (D4), quindi lì il "?" non c'è.
+- **S2, testi secondari (§10.4).** Le righe che spiegano una decisione (sottotitoli dei
+  gruppi, didascalie del riepilogo) sono a 10 pt, che segue "Testo grande", e più scure
+  (opacità 0,75 invece di 0,55) solo fuori dall'alto contrasto di sistema, che resta a 0,9.
+- **S3, pulsante principale.** Il pulsante di riga è blu (`suggested-action`) solo quando
+  l'azione è `safe`; con `caution` o `danger` resta grigio, per non invitare al clic su ciò
+  che può far perdere qualcosa.
