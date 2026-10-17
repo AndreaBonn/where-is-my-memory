@@ -41,6 +41,12 @@ stage_files() {
     install -d -m 755 "${pydir}"
     cp -r "${ROOT}/src/wimm" "${pydir}/wimm"
     find "${pydir}/wimm" -name '__pycache__' -type d -prune -exec rm -rf {} +
+    command -v msgfmt >/dev/null || die "msgfmt not found: install the gettext package"
+    # Compiled from po/, never copied: a working-tree catalog may be stale or missing.
+    rm -rf "${pydir}/wimm/locale"
+    install -d "${pydir}/wimm/locale/en/LC_MESSAGES"
+    msgfmt --check-format --check-domain -o "${pydir}/wimm/locale/en/LC_MESSAGES/wimm.mo" \
+        "${ROOT}/po/en.po"
     find "${pydir}/wimm" -type d -exec chmod 755 {} +
     find "${pydir}/wimm" -type f -exec chmod 644 {} +
 

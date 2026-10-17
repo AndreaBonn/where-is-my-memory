@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from wimm.config import Config, config_to_raw
 from wimm.core.text import spoken_duration
-from wimm.ui.dialogs.preferences_model import BYTES_PER_MIB, LIST_KEYS
+from wimm.ui.dialogs.preferences_model import BYTES_PER_MIB, IMMEDIATE_KEYS, LIST_KEYS
 
 AFTER_KEY = "notify_after_s"
 MIN_BYTES_KEY = "notify_min_bytes"
@@ -68,4 +68,5 @@ def preset_sentence(*, preset: Preset | None) -> str:
 
 def recommended_values() -> dict[str, object]:
     """R4: the factory values of every setting except the user's names and folders."""
-    return {k: v for k, v in config_to_raw(config=Config()).items() if k not in LIST_KEYS}
+    kept = {*LIST_KEYS, *IMMEDIATE_KEYS}
+    return {k: v for k, v in config_to_raw(config=Config()).items() if k not in kept}

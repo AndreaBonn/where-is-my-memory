@@ -31,7 +31,7 @@ jobs:
       - name: Install system runtime
         run: >-
           sudo apt-get update && sudo apt-get install -y
-          python3-gi python3-psutil python3-docker python3-pil
+          python3-gi python3-psutil python3-docker python3-pil gettext
           gir1.2-gtk-4.0 gir1.2-adw-1
       - run: make setup
       - run: make lint

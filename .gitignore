@@ -11,3 +11,4 @@ build/
 staging/
 .env
 *.log
+src/wimm/locale/

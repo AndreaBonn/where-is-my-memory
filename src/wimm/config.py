@@ -8,6 +8,7 @@ from types import MappingProxyType
 from typing import Any
 
 from wimm.core import constants as c
+from wimm.i18n import LANGUAGES
 from wimm.model import Category, Protection, protection_of
 from wimm.paths import UserPaths, ensure_private_dir, write_private_atomic
 
@@ -70,6 +71,8 @@ class Config:
     disk_scan_interval_s: int = c.DISK_SCAN_INTERVAL_S
     extra_protected_names: tuple[str, ...] = c.EXTRA_PROTECTED_NAMES
     foreground_tracking: bool = c.FOREGROUND_TRACKING
+    # None follows the system locale (wimm.i18n.resolve_default).
+    language: str | None = None
 
     def __post_init__(self) -> None:
         for name in RANGES:
@@ -77,6 +80,8 @@ class Config:
         _validate_collections(config=self)
         if type(self.foreground_tracking) is not bool:
             raise ValueError("foreground_tracking must be a boolean")
+        if self.language is not None and self.language not in LANGUAGES:
+            raise ValueError("language must be a supported language code")
         if self.pressure_critical_pct >= self.pressure_warning_pct:
             raise ValueError("pressure_critical_pct must be below pressure_warning_pct")
 
@@ -134,6 +139,10 @@ def _decode_field(name: str, value: object, home: Path) -> Any:
         if type(value) is not bool:
             raise ValueError("Expected boolean")
         return value
+    if name == "language":
+        if value is not None and value not in LANGUAGES:
+            raise ValueError("Expected a supported language code")
+        return value
     if not isinstance(value, list) or any(type(item) is not str for item in value):
         raise ValueError("Expected a list of strings")
     if name == "notify_categories":
@@ -166,6 +175,7 @@ def _field_error(name: str) -> str:
         "devdirs_roots": "Indica directory esistenti all'interno della home",
         "extra_protected_names": "Indica una lista di nomi di processo",
         "foreground_tracking": "Deve essere un valore booleano",
+        "language": "Scegli una lingua disponibile",
     }[name]
 
 

@@ -90,6 +90,15 @@ def _log_field_errors(*, errors: Mapping[str, Any]) -> None:
         LOGGER.warning("Invalid configuration field %s: %s", name, error)
 
 
+def _apply_config(*, loaded: Any) -> None:
+    """Log invalid fields and switch to the saved language, or the system one."""
+    from wimm import i18n
+
+    _log_field_errors(errors=loaded.field_errors)
+    language = loaded.config.language or i18n.resolve_default(environ=os.environ)
+    i18n.set_language(language=language)
+
+
 def _build_sampler(*, environment: Any, config: Any) -> Any:
     from wimm.service.sampler import Sampler, default_collectors
 
@@ -113,7 +122,7 @@ def _start_service(application: Any) -> None:
     state = load_state(paths=paths, now=wall_clock())
     environment = replace(default_environment(paths=paths), persisted_last_active=state.last_active)
     loaded = load_config(paths=paths, home=environment.home)
-    _log_field_errors(errors=loaded.field_errors)
+    _apply_config(loaded=loaded)
     sampler = _build_sampler(environment=environment, config=loaded.config)
     actions = build_actions(config=loaded.config, owner_uid=environment.uid)
     service = AppService(sampler=sampler, config=loaded.config, actions=actions)

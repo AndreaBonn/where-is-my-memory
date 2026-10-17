@@ -6,6 +6,7 @@ from wimm.config import RANGES, Config, config_to_raw
 from wimm.model.enums import Category
 from wimm.ui.dialogs.preferences_model import (
     GROUPS,
+    IMMEDIATE_KEYS,
     NUMBER_FIELDS,
     actionable_categories,
     collect_changes,
@@ -48,7 +49,7 @@ def test_every_number_field_bounds_match_the_config_ranges() -> None:
 
 def test_groups_cover_every_config_field_but_nothing_unknown() -> None:
     keys = [key for group in GROUPS for key in group.keys]
-    assert sorted(keys) == sorted(config_to_raw(config=Config()))
+    assert sorted([*keys, *IMMEDIATE_KEYS]) == sorted(config_to_raw(config=Config()))
     assert len(keys) == len(set(keys))
 
 

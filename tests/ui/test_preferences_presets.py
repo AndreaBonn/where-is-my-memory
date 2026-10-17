@@ -68,3 +68,4 @@ def test_recommended_values_reset_numbers_and_choices_but_keep_names_and_folders
     assert values["sample_interval_s"] == Config().sample_interval_s
     assert values[CATEGORIES_KEY] == config_to_raw(config=Config())[CATEGORIES_KEY]
     assert not set(LIST_KEYS) & set(values)
+    assert "language" not in values

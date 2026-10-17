@@ -16,6 +16,8 @@ LIST_SEPARATOR = ","
 LIST_KEYS = ("devdirs_roots", "extra_protected_names")
 CATEGORIES_KEY = "notify_categories"
 BOOLEAN_KEYS = ("foreground_tracking",)
+# Applied by their own row as soon as they change: never part of "Applica" or of a reset.
+IMMEDIATE_KEYS = ("language",)
 
 
 @dataclass(frozen=True)

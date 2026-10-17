@@ -1,3 +1,5 @@
+import shutil
+import subprocess
 from collections.abc import Callable, Iterator
 from pathlib import Path
 from typing import Any
@@ -12,6 +14,7 @@ ISOLATED_DIRECTORIES = {
     "XDG_CACHE_HOME": "cache",
 }
 REMOVAL_ENTRY_POINTS = ("empty_directory", "remove_directory")
+EN_CATALOG = Path(__file__).resolve().parents[1] / "po" / "en.po"
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +24,35 @@ def isolate_user_directories(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         target.mkdir()
         monkeypatch.setenv(name=variable, value=str(target))
     monkeypatch.setenv(name="WIMM_TEST", value="1")
+
+
+@pytest.fixture(autouse=True)
+def italian_language() -> Iterator[None]:
+    """Run every test in the source language and leave it there for the next one."""
+    from wimm import i18n
+
+    i18n.set_language(language=i18n.ITALIAN)
+    yield
+    i18n.set_language(language=i18n.ITALIAN)
+
+
+@pytest.fixture
+def english(tmp_path: Path) -> Iterator[None]:
+    """Switch to English, compiling the real po/en.po so tests see the shipped catalog."""
+    from wimm import i18n
+
+    msgfmt = shutil.which("msgfmt")
+    if msgfmt is None:
+        pytest.skip("msgfmt not installed (apt package gettext)")
+    target = tmp_path / "locale" / i18n.ENGLISH / "LC_MESSAGES"
+    target.mkdir(parents=True)
+    subprocess.run(  # noqa: S603 - fixed argv, paths created by this fixture
+        [msgfmt, "--check-format", "-o", str(target / f"{i18n.DOMAIN}.mo"), str(EN_CATALOG)],
+        check=True,
+    )
+    i18n.set_language(language=i18n.ENGLISH, locale_dir=tmp_path / "locale")
+    yield
+    i18n.set_language(language=i18n.ITALIAN)
 
 
 @pytest.fixture(autouse=True)
