@@ -51,7 +51,13 @@ def test_request_target_shapes_and_exclusions(kind: ActionKind) -> None:
     if shape is not TargetShape.NONE:
         with pytest.raises(ValueError, match=r"target|group|shape"):
             ActionRequest(kind=kind)
-    if kind in {ActionKind.STOP_ALL_IDLE_SAFE, ActionKind.GROUP_STOP}:
+    if kind in {
+        ActionKind.STOP_ALL_IDLE_SAFE,
+        ActionKind.GROUP_STOP,
+        ActionKind.IMAGES_PRUNE_DANGLING,
+        ActionKind.IMAGES_PRUNE_UNUSED,
+        ActionKind.CONTAINERS_PRUNE_STOPPED,
+    }:
         assert replace(request, excluded_ids=frozenset({"x"})).excluded_ids == {"x"}
     else:
         with pytest.raises(ValueError, match="excluded_ids"):

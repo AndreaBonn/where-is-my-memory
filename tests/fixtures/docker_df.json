@@ -1,0 +1,270 @@
+{
+  "LayersSize": 1150000000,
+  "Images": [
+    {
+      "Containers": 1,
+      "Created": 1760000000,
+      "Id": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Labels": {},
+      "ParentId": "",
+      "RepoDigests": [
+        "nginx@sha256:1111111111111111111111111111111111111111111111111111111111111111"
+      ],
+      "RepoTags": [
+        "nginx:1.27"
+      ],
+      "SharedSize": 0,
+      "Size": 190000000
+    },
+    {
+      "Containers": 0,
+      "Created": 1760000000,
+      "Id": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "Labels": {},
+      "ParentId": "",
+      "RepoDigests": [
+        "python@sha256:2222222222222222222222222222222222222222222222222222222222222222"
+      ],
+      "RepoTags": [
+        "python:3.12-slim"
+      ],
+      "SharedSize": 0,
+      "Size": 130000000
+    },
+    {
+      "Containers": 0,
+      "Created": 1760000000,
+      "Id": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "Labels": {},
+      "ParentId": "",
+      "RepoDigests": [],
+      "RepoTags": [
+        "myapp:dev"
+      ],
+      "SharedSize": 0,
+      "Size": 450000000
+    },
+    {
+      "Containers": 0,
+      "Created": 1760000000,
+      "Id": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "Labels": {},
+      "ParentId": "",
+      "RepoDigests": [],
+      "RepoTags": [],
+      "SharedSize": 0,
+      "Size": 300000000
+    },
+    {
+      "Containers": -1,
+      "Created": 1760000000,
+      "Id": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "Labels": {},
+      "ParentId": "",
+      "RepoDigests": [
+        "<none>@<none>"
+      ],
+      "RepoTags": [
+        "<none>:<none>"
+      ],
+      "SharedSize": 0,
+      "Size": 80000000
+    }
+  ],
+  "Containers": [
+    {
+      "Id": "c100000000000000000000000000000000000000000000000000000000000000",
+      "Names": [
+        "/web"
+      ],
+      "Image": "x",
+      "ImageID": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Command": "run",
+      "Created": 1760000000,
+      "Ports": [],
+      "SizeRw": 4096,
+      "SizeRootFs": 40960,
+      "Labels": {},
+      "State": "running",
+      "Status": "Up 2 hours",
+      "HostConfig": {
+        "NetworkMode": "bridge"
+      },
+      "NetworkSettings": {
+        "Networks": {}
+      },
+      "Mounts": []
+    },
+    {
+      "Id": "c200000000000000000000000000000000000000000000000000000000000000",
+      "Names": [
+        "/old-job"
+      ],
+      "Image": "x",
+      "ImageID": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "Command": "run",
+      "Created": 1760000000,
+      "Ports": [],
+      "SizeRw": 2048,
+      "SizeRootFs": 20480,
+      "Labels": {},
+      "State": "exited",
+      "Status": "Exited (0) 2 days ago",
+      "HostConfig": {
+        "NetworkMode": "bridge"
+      },
+      "NetworkSettings": {
+        "Networks": {}
+      },
+      "Mounts": []
+    },
+    {
+      "Id": "c300000000000000000000000000000000000000000000000000000000000000",
+      "Names": [
+        "/never-started"
+      ],
+      "Image": "x",
+      "ImageID": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Command": "run",
+      "Created": 1760000000,
+      "Ports": [],
+      "SizeRw": 0,
+      "SizeRootFs": 0,
+      "Labels": {},
+      "State": "created",
+      "Status": "Created",
+      "HostConfig": {
+        "NetworkMode": "bridge"
+      },
+      "NetworkSettings": {
+        "Networks": {}
+      },
+      "Mounts": []
+    },
+    {
+      "Id": "c400000000000000000000000000000000000000000000000000000000000000",
+      "Names": [
+        "/frozen"
+      ],
+      "Image": "x",
+      "ImageID": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "Command": "run",
+      "Created": 1760000000,
+      "Ports": [],
+      "SizeRw": 512,
+      "SizeRootFs": 5120,
+      "Labels": {},
+      "State": "paused",
+      "Status": "Up 1 hour (Paused)",
+      "HostConfig": {
+        "NetworkMode": "bridge"
+      },
+      "NetworkSettings": {
+        "Networks": {}
+      },
+      "Mounts": []
+    }
+  ],
+  "Volumes": [
+    {
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "Driver": "local",
+      "Labels": {},
+      "Mountpoint": "/var/lib/docker/volumes/pgdata/_data",
+      "Name": "pgdata",
+      "Options": null,
+      "Scope": "local",
+      "UsageData": {
+        "RefCount": 1,
+        "Size": 900000000
+      }
+    },
+    {
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "Driver": "local",
+      "Labels": {},
+      "Mountpoint": "/var/lib/docker/volumes/scratch/_data",
+      "Name": "scratch",
+      "Options": null,
+      "Scope": "local",
+      "UsageData": {
+        "RefCount": 0,
+        "Size": 120000000
+      }
+    },
+    {
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "Driver": "local",
+      "Labels": {},
+      "Mountpoint": "/var/lib/docker/volumes/orphan_small/_data",
+      "Name": "orphan_small",
+      "Options": null,
+      "Scope": "local",
+      "UsageData": {
+        "RefCount": 0,
+        "Size": 5000000
+      }
+    },
+    {
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "Driver": "local",
+      "Labels": {},
+      "Mountpoint": "/var/lib/docker/volumes/nosize/_data",
+      "Name": "nosize",
+      "Options": null,
+      "Scope": "local",
+      "UsageData": {
+        "RefCount": 0,
+        "Size": -1
+      }
+    },
+    {
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "Driver": "local",
+      "Labels": {},
+      "Mountpoint": "/var/lib/docker/volumes/legacy/_data",
+      "Name": "legacy",
+      "Options": null,
+      "Scope": "local",
+      "UsageData": null
+    }
+  ],
+  "BuildCache": [
+    {
+      "ID": "bc1",
+      "Parents": [],
+      "Type": "regular",
+      "Description": "RUN make",
+      "InUse": false,
+      "Shared": false,
+      "Size": 50000000,
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "LastUsedAt": "2026-10-02T10:00:00Z",
+      "UsageCount": 1
+    },
+    {
+      "ID": "bc2",
+      "Parents": [],
+      "Type": "regular",
+      "Description": "RUN make",
+      "InUse": true,
+      "Shared": false,
+      "Size": 30000000,
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "LastUsedAt": "2026-10-02T10:00:00Z",
+      "UsageCount": 1
+    },
+    {
+      "ID": "bc3",
+      "Parents": [],
+      "Type": "regular",
+      "Description": "RUN make",
+      "InUse": false,
+      "Shared": false,
+      "Size": 20000000,
+      "CreatedAt": "2026-10-01T10:00:00Z",
+      "LastUsedAt": "2026-10-02T10:00:00Z",
+      "UsageCount": 1
+    }
+  ]
+}

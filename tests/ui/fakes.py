@@ -14,6 +14,7 @@ from gi.repository import GObject
 from wimm.config import Config, ConfigParseResult, update_config
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.model.actions import ActionRequest, Plan
+from wimm.model.disk import DiskReport
 from wimm.model.enums import GroupId, PlanId
 from wimm.model.errors import WimmError
 from wimm.model.snapshot import (
@@ -81,6 +82,7 @@ class FakeActionService(GObject.Object):
         self.planned: list[ActionRequest] = []
         self.executed: list[tuple[PlanId, str | None]] = []
         self.last_plan: Plan | None = None
+        self.disk_report: DiskReport | None = None
         self.snoozed: list[tuple[GroupId, float]] = []
         self.ignored: list[tuple[GroupId, bool]] = []
         self.snoozed_all: list[float] = []
@@ -126,7 +128,9 @@ class FakeActionService(GObject.Object):
         if self.plan_error is not None:
             raise self.plan_error
         self.last_plan = plan_action(
-            request=request, snapshot=self._snapshot, context=PlanningContext(owner_uid=1000)
+            request=request,
+            snapshot=self._snapshot,
+            context=PlanningContext(owner_uid=1000, disk_report=self.disk_report),
         )
         return self.last_plan
 

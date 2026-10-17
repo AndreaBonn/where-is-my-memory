@@ -7,12 +7,14 @@ from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
 from wimm.model.actions import ActionRequest, Plan, PlanStep
+from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind, ActivityState, PlanId, Protection, Risk
 from wimm.model.errors import InvalidRequest, ProtectedTarget
 from wimm.model.snapshot import ContainerMember, Group, Member, ProcessMember, Snapshot
 
 from .assemble_members import STOPPABLE_STATES
 from .constants import PLAN_ID_BYTES, PLAN_TTL_S
+from .planning_disk import DISK_PLANNERS
 from .planning_drafts import (
     APP_CLOSE_KINDS,
     Draft,
@@ -23,7 +25,6 @@ from .planning_drafts import (
     container_draft,
     is_actionable_process,
     process_draft,
-    volume_draft,
 )
 
 __all__ = ["PlanningContext", "cmdline_hash", "plan_action"]
@@ -35,10 +36,12 @@ class PlanningContext:
 
     `owner_uid` is the user wimm runs as: processes of other users are never planned
     (spec 8.2 requires `uid == os.getuid()` at execution). The fingerprint carries the
-    process's own uid, so the executor compares it against the live one.
+    process's own uid, so the executor compares it against the live one. `disk_report` is
+    the last disk scan, needed only by disk actions (images, volumes, caches, folders).
     """
 
     owner_uid: int
+    disk_report: DiskReport | None = None
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
     new_plan_id: Callable[[], PlanId] = lambda: PlanId(secrets.token_urlsafe(PLAN_ID_BYTES))
 
@@ -97,14 +100,6 @@ def _plan_compose(*, request: ActionRequest, snapshot: Snapshot, owner_uid: int)
     return [compose_draft(group=group, kind=request.kind)]
 
 
-def _plan_volume(*, request: ActionRequest, snapshot: Snapshot, owner_uid: int) -> list[Draft]:
-    """Plan a volume removal by name; the executor rechecks `RefCount == 0` (8.2).
-
-    The snapshot has no volumes, so nothing here can tell whether it is still in use.
-    """
-    return [volume_draft(name=str(request.target_id), kind=request.kind)]
-
-
 def _stop_drafts(*, group: Group, owner_uid: int) -> list[Draft]:
     drafts = [
         process_draft(member=member, kind=ActionKind.PROCESS_TERMINATE)
@@ -150,7 +145,6 @@ _PLANNERS: dict[ActionKind, _Planner] = {
     ActionKind.CONTAINER_REMOVE: _plan_container,
     ActionKind.COMPOSE_DOWN: _plan_compose,
     ActionKind.COMPOSE_DOWN_VOLUMES: _plan_compose,
-    ActionKind.VOLUME_REMOVE: _plan_volume,
     ActionKind.GROUP_STOP: _plan_group_stop,
     ActionKind.STOP_ALL_IDLE_SAFE: _plan_stop_all,
 }
@@ -190,7 +184,7 @@ def _build_plan(*, request: ActionRequest, drafts: list[Draft], context: Plannin
         steps=steps,
         consequences=tuple(consequences),
         estimated_reclaim_ram=sum(draft.reclaim_ram for draft in drafts),
-        estimated_reclaim_disk=0,
+        estimated_reclaim_disk=sum(draft.reclaim_disk for draft in drafts),
         confirm_phrase=_confirm_phrase(drafts=drafts),
     )
 
@@ -198,8 +192,10 @@ def _build_plan(*, request: ActionRequest, drafts: list[Draft], context: Plannin
 def plan_action(*, request: ActionRequest, snapshot: Snapshot, context: PlanningContext) -> Plan:
     """Build the confirmation plan for a request, deterministic for equal inputs.
 
-    Target ids are the pid, container id, volume name or group id; `excluded_ids`
-    holds member or group ids. With several danger steps `confirm_phrase` is the name
+    Target ids are the pid, container id, volume name, image id, cache kind, folder path
+    or group id; `excluded_ids` holds member or group ids. Disk actions read the report
+    from `context.disk_report`; image and container prunes expand to one removal step per
+    id (Q-13). With several danger steps `confirm_phrase` is the name
     of the first danger target in step order; with none it is None. A danger target
     with a blank name is refused rather than given an empty phrase.
 
@@ -212,6 +208,10 @@ def plan_action(*, request: ActionRequest, snapshot: Snapshot, context: Planning
         If the target is unknown, the action does not apply to it, the kind is not
         plannable, no step is left, or a danger target has a blank name.
     """
+    disk_planner = DISK_PLANNERS.get(request.kind)
+    if disk_planner is not None:
+        drafts = disk_planner(request=request, report=context.disk_report)
+        return _build_plan(request=request, drafts=drafts, context=context)
     planner = _PLANNERS.get(request.kind)
     if planner is None:
         raise InvalidRequest(f"Action {request.kind.value} cannot be planned")

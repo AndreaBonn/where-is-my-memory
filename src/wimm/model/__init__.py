@@ -31,6 +31,30 @@ from .actions import (
 from .actions import (
     VolumeFingerprint as VolumeFingerprint,
 )
+from .disk import (
+    CacheEntry as CacheEntry,
+)
+from .disk import (
+    CacheKind as CacheKind,
+)
+from .disk import (
+    DevDir as DevDir,
+)
+from .disk import (
+    DiskReport as DiskReport,
+)
+from .disk import (
+    DockerDisk as DockerDisk,
+)
+from .disk import (
+    DockerImage as DockerImage,
+)
+from .disk import (
+    DockerVolume as DockerVolume,
+)
+from .disk import (
+    StoppedContainer as StoppedContainer,
+)
 from .enums import (
     SCHEMA_VERSION as SCHEMA_VERSION,
 )

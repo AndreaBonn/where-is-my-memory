@@ -168,3 +168,6 @@ PLAN_ID_BYTES = 16
 STATE_SAVE_INTERVAL_S = 300
 # An unseen persisted entity is forgotten after this long without a sighting.
 LAST_ACTIVE_RETENTION_S = 30 * 24 * 3600
+
+# SPECIFICHE 10 (Disk view): sections show their largest entries up to this cap + a counter.
+DISK_SECTION_CAP = 200

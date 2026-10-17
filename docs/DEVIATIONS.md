@@ -265,3 +265,13 @@ La § 11 e la verifica di T-4.4a ("errore sul campo e default") descrivono la le
 
 - "Silenzia notifiche per 1 h" (tray e finestra) vale per la sessione: un riavvio entro l'ora riattiva le notifiche. Gli snooze per gruppo e gli ignorati invece si salvano in `state.json`. La § 11 elenca i "silenzi" fra i dati persistiti senza distinguere; il silenzio globale è una scelta del momento, mentre lo snooze di un gruppo è una decisione su quel gruppo.
 - Se l'invio di una notifica fallisce (bus non raggiungibile), l'errore va nel log e la notifica conta come inviata. Ritentarla a ogni ciclo la mostrerebbe ogni 30 secondi oltre il limite di 3 all'ora; un fallimento non blocca le altre notifiche dello stesso ciclo.
+
+## Azioni di massa su immagini e container: rimozioni per id lette al piano (T-5.3a, Q-13)
+
+La § 8.4 esegue `images.prune`, `prune_builds` e il prune dei container fermi sull'insieme presente al momento dell'esecuzione. Fra piano e conferma passano fino a 120 s: ciò che compare in quella finestra verrebbe rimosso senza essere stato mostrato. Per questo `images_prune_dangling`, `images_prune_unused` e `containers_prune_stopped` si pianificano come un passo per id, letto dal report disco: ogni passo è un `image_remove` con `ImageFingerprint` o un `container_remove` con `ContainerFingerprint`, e l'executor (T-5.3b) lo rivalida da solo (immagine non usata, container ancora nello stato visto). La richiesta mantiene il tipo originale (`images_prune_dangling`), cambiano i passi.
+
+- `builder_prune` resta un prune unico, senza impronta: la build cache non ha id elencabili con l'SDK 5.0.3.
+- Il piano copre le voci presenti nel report, che è limitato a 200 per sezione (le più grandi). Le immagini oltre il tetto non entrano in un prune: il contatore dei troncati della sezione lo dice, e una nuova scansione dopo l'esecuzione le porta in vista.
+- Una dangling usata da un container (anche fermo) non entra nel prune dangling, in linea con la definizione di "in uso" della § 7.6.
+- La frase di conferma di `trash_empty` è "Cestino": la §5.3 dice solo "nome del bersaglio" e il cestino non ha un nome proprio, quindi è una scelta di T-5.3a, non una lettura della spec.
+- Il recupero stimato somma `Size` delle immagini: è un limite superiore, perché i layer condivisi con altre immagini restano su disco.

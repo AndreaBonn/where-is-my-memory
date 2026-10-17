@@ -8,6 +8,7 @@ from wimm.model.actions import (
     EXCLUDABLE_ACTIONS,
     ActionRequest,
     ContainerFingerprint,
+    ImageFingerprint,
     Plan,
     PlanStep,
     ProcessFingerprint,
@@ -30,11 +31,11 @@ class StepEntry:
 
 
 def step_id_of(*, step: PlanStep) -> str | None:
-    """The id `excluded_ids` uses for a step: the pid or the container id."""
+    """The id `excluded_ids` uses for a step: the pid, container id or image id."""
     fingerprint = step.fingerprint
     if isinstance(fingerprint, ProcessFingerprint):
         return str(fingerprint.pid)
-    if isinstance(fingerprint, ContainerFingerprint):
+    if isinstance(fingerprint, ContainerFingerprint | ImageFingerprint):
         return fingerprint.id
     return None
 

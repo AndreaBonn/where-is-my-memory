@@ -28,7 +28,16 @@ ACTION_TARGET_SHAPES: Mapping[ActionKind, TargetShape] = MappingProxyType(
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
     }
 )
-EXCLUDABLE_ACTIONS = frozenset({ActionKind.GROUP_STOP, ActionKind.STOP_ALL_IDLE_SAFE})
+# The prunes expand to one step per image or container id (Q-13), so the user can drop single ones.
+EXCLUDABLE_ACTIONS = frozenset(
+    {
+        ActionKind.GROUP_STOP,
+        ActionKind.STOP_ALL_IDLE_SAFE,
+        ActionKind.IMAGES_PRUNE_DANGLING,
+        ActionKind.IMAGES_PRUNE_UNUSED,
+        ActionKind.CONTAINERS_PRUNE_STOPPED,
+    }
+)
 
 
 @dataclass(frozen=True, slots=True)

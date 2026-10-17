@@ -1,6 +1,7 @@
 import pytest
 from gi.repository import Adw, Gtk
 
+from tests.core.disk_helpers import docker_disk, image, report
 from tests.core.planning_helpers import container, group, proc, snapshot
 from tests.ui.conftest import FakeActionService, descendants
 from wimm.core.risk_table import CONSEQUENCES, ConsequenceKey
@@ -202,6 +203,32 @@ def test_stop_all_lists_entries_grouped_by_group_with_one_total(display: None) -
     assert service.planned[-1].kind is ActionKind.STOP_ALL_IDLE_SAFE
     assert service.planned[-1].excluded_ids == frozenset({"c"})
     assert "300 B" in dialog.get_body()
+
+
+def test_prune_dialog_offers_a_switch_per_image_and_replans_without_the_removed_one(
+    display: None,
+) -> None:
+    first = image(char="a", tags=(), dangling=True, size=5 * GB)
+    second = image(char="b", tags=(), dangling=True, size=2 * GB)
+    request = ActionRequest(kind=ActionKind.IMAGES_PRUNE_DANGLING)
+    service = FakeActionService(snapshot=snapshot())
+    service.disk_report = report(docker=docker_disk(images=(first, second)))
+    plan = service.plan(request=request)
+    session = ConfirmSession(
+        plan=plan,
+        subject=None,
+        entries=entries_for(plan=plan, snapshot=snapshot()),
+        replan=lambda new: service.plan(request=new),
+    )
+    dialog = ConfirmDialog(session=session, on_confirm=lambda *_: None)
+
+    rows = switches(dialog)
+    assert set(rows) == {first.id[:19], second.id[:19]}
+
+    rows[second.id[:19]].set_active(False)
+
+    assert service.planned[-1].excluded_ids == frozenset({second.id})
+    assert format_size(size=5 * GB) in dialog.get_body()
 
 
 def test_names_with_markup_characters_are_shown_literally(display: None) -> None:

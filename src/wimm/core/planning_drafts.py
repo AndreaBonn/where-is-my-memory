@@ -38,9 +38,10 @@ class Draft:
     kind: ActionKind
     label: str
     name: str
-    fingerprint: Fingerprint
+    fingerprint: Fingerprint | None
     assessed: RiskAssessment
     reclaim_ram: int
+    reclaim_disk: int = 0
 
     @property
     def risk(self) -> Risk:
@@ -53,7 +54,7 @@ def cmdline_hash(*, cmdline: tuple[str, ...]) -> str:
     return hashlib.sha256(joined.encode(encoding="utf-8", errors="replace")).hexdigest()
 
 
-def _assess(*, target: RiskTarget, kind: ActionKind) -> RiskAssessment:
+def assess_draft(*, target: RiskTarget, kind: ActionKind) -> RiskAssessment:
     try:
         return assess_risk(target=target, action=kind)
     except ValueError as error:
@@ -102,7 +103,7 @@ def process_draft(*, member: ProcessMember, kind: ActionKind) -> Draft:
         label=f"{member.name} (pid {member.pid})",
         name=member.name,
         fingerprint=fingerprint,
-        assessed=_assess(target=target, kind=kind),
+        assessed=assess_draft(target=target, kind=kind),
         reclaim_ram=member.memory.reclaimable,
     )
 
@@ -117,7 +118,7 @@ def container_draft(*, member: ContainerMember, kind: ActionKind) -> Draft:
         label=member.name,
         name=member.name,
         fingerprint=ContainerFingerprint(id=member.id, status=member.state),
-        assessed=_assess(target=target, kind=kind),
+        assessed=assess_draft(target=target, kind=kind),
         reclaim_ram=member.memory.reclaimable,
     )
 
@@ -156,21 +157,22 @@ def compose_draft(*, group: Group, kind: ActionKind) -> Draft:
         label=group.name,
         name=project,
         fingerprint=ComposeFingerprint(project=project, container_ids=ids),
-        assessed=_assess(target=target, kind=kind),
+        assessed=assess_draft(target=target, kind=kind),
         reclaim_ram=sum(m.memory.reclaimable for m in containers),
     )
 
 
-def volume_draft(*, name: str, kind: ActionKind) -> Draft:
-    """Draft a volume removal; the reclaim is unknown to the snapshot, hence zero."""
+def volume_draft(*, name: str, kind: ActionKind, reclaim_disk: int = 0) -> Draft:
+    """Draft a volume removal; the reclaim is zero unless the disk report knows the size."""
     return Draft(
         owner_ids=frozenset({name}),
         kind=kind,
         label=name,
         name=name,
         fingerprint=VolumeFingerprint(name=name),
-        assessed=_assess(target=RiskTarget(kind="volume"), kind=kind),
+        assessed=assess_draft(target=RiskTarget(kind="volume"), kind=kind),
         reclaim_ram=0,
+        reclaim_disk=reclaim_disk,
     )
 
 
@@ -213,6 +215,6 @@ def app_close_draft(*, group: Group, root: ProcessMember) -> Draft:
         label=f"{group.name} (pid {root.pid})",
         name=group.name,
         fingerprint=_fingerprint(member=root),
-        assessed=_assess(target=target, kind=ActionKind.APP_CLOSE),
+        assessed=assess_draft(target=target, kind=ActionKind.APP_CLOSE),
         reclaim_ram=sum(member.memory.reclaimable for member in processes),
     )
