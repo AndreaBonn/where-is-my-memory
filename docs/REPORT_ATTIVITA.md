@@ -133,3 +133,67 @@ Prima di considerare il lavoro concluso restano da fare a mano i sette controlli
 
 - **Complessità:** alta (28 modifiche in 4 fasi, 1623 test automatici)
 - **Stato:** Fasi 1-4 implementate e verificate in automatico. Restano i controlli manuali M-3, M-5, M-6, M-8, M-10, M-11, M-12. Da rimisurare in T-6.5 il ciclo di campionamento sotto carico.
+
+## 2026-10-17 | Sessione #2 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Il lavoro copre i 6 commit da `ae5afd3` a `5766a64`, tutti del 17 ottobre, e porta a termine il lotto L5-1..L5-3: misura, scansione e pulizia del disco. Le specifiche sono in `assets/SPECIFICHE.md`, il piano in `specs/where-is-my-memory/`.
+
+### Richiesta
+
+Aggiungere il lato disco dell'applicazione: misurare cartelle, cartelle di dipendenze e cache, esporre un rapporto sul bus D-Bus con lo spazio liberabile (Q-6) ed eseguire le azioni di pulizia con le stesse garanzie di quelle sui processi: piano, riverifica prima dell'esecuzione, conferma.
+
+### Azioni Eseguite
+
+**T-5.2a, dimensioni delle cartelle** (`ae5afd3`)
+- Nuovo collettore `src/wimm/collectors/dirsize.py` che misura le cartelle con una cache dei risultati, per non ripercorrere ogni volta alberi grandi.
+
+**T-5.2b, cartelle di dipendenze e cache utente** (`95539fb`)
+- `devdirs.py` trova le cartelle di dipendenze dei progetti, `caches.py` le cache dell'utente. Costanti nominate in `core/constants.py`.
+
+**T-5.2c, scansione del disco** (`083735d`)
+- La scansione gira su un worker dedicato (`service/disk_scanner.py`), separato da quello di campionamento, così un albero lento non ritarda il monitoraggio dei processi.
+- Il rapporto sul disco è esposto su D-Bus (`inspector_dbus.py`) e lo spazio liberabile entra in `reclaimable_now.disk` (Q-6), con le regole in `core/disk_rules.py`.
+
+**Correzione dello spazio Docker liberabile** (`0b9a3f9`)
+- Lo spazio Docker liberabile veniva sommato per immagine, contando anche i livelli condivisi. Ora si conta come `docker system df`: solo ciò che non è condiviso. Sul computer di prova il dato passa da 22,4 GB a circa 16 GB reali. Test di parità con il conteggio di `docker system df`.
+
+**T-5.3b, azioni Docker sul disco** (`f825063`)
+- Nuovo esecutore (`executor_disk_docker.py`) con riverifica prima di ogni passo. Il tag di un'immagine si toglie solo se punta ancora all'identificativo pianificato. L'identità di un volume include `CreatedAt`, così un volume ricreato con lo stesso nome non viene scambiato per quello pianificato. La pulizia della cache di build usa `all=true`.
+- Decisioni registrate in `docs/DEVIATIONS.md`. Il controllo manuale M-13 sulla cache di build vera resta da eseguire.
+
+**T-5.3c, cartelle di dipendenze, cache e cestino** (`5766a64`)
+- Rimozione tramite `dir_fd` e `O_NOFOLLOW` (`service/safe_tree.py`, `executor_disk_fs.py`): un collegamento simbolico messo al posto di una cartella non viene seguito. I punti di mount sono rifiutati.
+- I comandi di pulizia delle cache ricevono la cartella in modo esplicito. Dopo ogni azione sul disco parte una nuova scansione, così la finestra mostra lo stato reale.
+- Guardia di cancellazione verificata da `tests/test_removal_guard.py`.
+
+### File Modificati
+
+| File | Tipo | Descrizione |
+|---|---|---|
+| `src/wimm/collectors/` | nuovo/modifica | `dirsize.py`, `devdirs.py`, `caches.py` |
+| `src/wimm/core/` | nuovo/modifica | `disk_rules.py`, `disk_wire.py`, `planning_disk.py`, costanti |
+| `src/wimm/model/` | modifica | `disk.py`, `actions.py`: conteggio Docker come `docker system df` |
+| `src/wimm/service/` | nuovo/modifica | `disk_scanner.py`, `app_service_disk.py`, `executor_disk_docker.py`, `executor_disk_fs.py`, `safe_tree.py`, `fs_controls.py`, `controls_disk.py` |
+| `docs/DEVIATIONS.md` | modifica | decisioni sulle azioni Docker e sulle rimozioni |
+| `tests/` | nuovo/modifica | test per ogni punto sopra, tra cui `tests/integration/test_disk_docker.py` |
+
+### Punti aperti
+
+- **M-13** (manuale): eseguire a mano la pulizia reale della cache di build Docker e controllare lo spazio liberato.
+- Il comportamento con un bind mount reale non è stato provato: i test usano bersagli creati dal test.
+- Il test di confronto con `docker stats` è risultato instabile una volta in un'esecuzione parallela. Non è stato riprodotto: va osservato nelle prossime esecuzioni.
+- Codex non era disponibile (non autenticato): tutto il lavoro delegabile è stato eseguito in casa.
+
+### Note per il Cliente (linguaggio NON tecnico)
+
+L'applicazione ora guarda anche il disco. Trova le cartelle che si possono ricreare (dipendenze dei progetti e cache) e lo spazio che Docker può restituire, e dice quanto si libererebbe. Prima di cancellare mostra cosa verrà toccato e chiede conferma, come per i programmi in memoria.
+
+Il numero dello spazio Docker era troppo alto: contava due volte parti condivise. Ora coincide con quello che mostra Docker stesso, circa 16 GB invece di 22,4.
+
+Resta da provare a mano la pulizia vera dello spazio usato da Docker per costruire le immagini, sul computer reale.
+
+### Riepilogo
+
+- **Complessità:** alta (6 commit, circa 5000 righe tra codice e test)
+- **Stato:** lotto L5-1..L5-3 implementato e verificato in automatico. Resta M-13.
+- **Prossimo:** L5-4 (T-5.4a/b, vista Disco).
