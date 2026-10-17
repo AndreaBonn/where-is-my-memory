@@ -252,3 +252,7 @@ Misura del 2026-10-17 su Firefox snap 158.0: istanza separata `--headless --no-r
 Conseguenza: la sessione non si perde, quindi R8 non scatta e "Chiudi browser" resta `caution` senza frase di conferma. Il testo della §5.3 ("le schede si recuperano solo se il ripristino della sessione è attivo") non corrispondeva al comportamento osservato ed è sostituito da: "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede dal salvataggio automatico, che può essere indietro di qualche secondo."
 
 Non misurato: il comportamento con una finestra visibile invece che headless (al secondo arresto ravvicinato Firefox può mostrare la pagina di ripristino invece di ripristinare da sé), e il contenuto di moduli compilati e non inviati. L'intervallo di salvataggio di default (`browser.sessionstore.interval`, 15 s) è un valore di configurazione, non misurato qui.
+
+## Notifiche di pressione fuori dal limite orario (T-4.1)
+
+La § 9 fissa al massimo 3 notifiche in 60 minuti. Le notifiche di pressione (RAM o disco sotto `pressure_critical_pct`) partono anche a finestra piena: uno stato critico non va nascosto per un limite pensato contro il rumore delle notifiche di inattività. Contano comunque nella finestra, quindi tolgono posto alle notifiche di inattività, e ognuna ha il suo cooldown di 1 h per tipo: al massimo due in più all'ora. Le notifiche di inattività in eccesso si aggregano in una sola oltre le 3, come fissa la verifica di T-4.1 in `specs/where-is-my-memory/tasks.md` ("5 gruppi idle -> 3 + 1 aggregata").
