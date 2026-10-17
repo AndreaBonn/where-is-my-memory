@@ -407,3 +407,15 @@ c'è il punto della specifica, cosa cambia e perché.
   cui cercare, e tranne un'opzione che la sessione non può usare.
 - **R5, finestra in primo piano.** Fuori da X11 l'opzione è disattivata e lo dice ("Non
   disponibile su questo desktop"); il valore salvato non cambia.
+- **A1, primo avvio (§6.2, §11).** Al primo avvio la finestra si apre anche con
+  `--background` e mostra un benvenuto in quattro punti con "Ho capito"; chiuderlo crea il
+  file vuoto `welcomed` nella cartella di stato (nuovo, accanto a `state.json`). Se la
+  cartella non si può leggere o scrivere il benvenuto non torna a ogni login: conta come
+  già visto.
+- **A2, errore di lettura (§10.3).** La pagina si intitola "Non riesco a leggere i dati del
+  computer" e il pulsante è "Riprova adesso" invece di "Riavvia monitor": rilegge il sistema
+  subito e riparte il timer da lì. L'azione `app.restart-monitor`, che prima non esisteva,
+  è registrata; non ricrea il campionatore.
+- **A3, icona mancante.** Il banner ha il pulsante "Come si attiva", che apre i passi per
+  Ubuntu 24.04 (app "Estensioni", estensione "Ubuntu AppIndicators") e il comando
+  `gnome-extensions enable ubuntu-appindicators@ubuntu.com`.
