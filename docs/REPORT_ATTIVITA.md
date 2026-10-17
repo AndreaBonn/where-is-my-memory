@@ -314,3 +314,66 @@ L'app ora parla in modo semplice: niente sigle, spiegazioni accanto alle parole 
 - **Complessità:** alta (15 commit più i 3 di codice del primo gruppo)
 - **Stato:** 45 proposte applicate
 - **Prossimo:** decidere se aggiornare il README
+
+
+## 2026-10-17/18 | Sessione #5 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Il lavoro copre 12 commit, dal piano `812e47e` alla documentazione `9c21a3d`, e introduce l'interfaccia bilingue italiano e inglese.
+
+### Richiesta
+
+L'utente ha chiesto l'interfaccia in due lingue, italiano e inglese. Il piano `specs/i18n/plan.md` è stato approvato con queste scelte: gettext con l'italiano come msgid, selettore a bandiere nelle Preferenze, cambio lingua immediato con ricostruzione della finestra, lingua iniziale presa dal locale di sistema.
+
+### Azioni Eseguite
+
+**Piano** (`812e47e`)
+- `specs/i18n/plan.md` con le sei fasi F1-F6.
+
+**F1, infrastruttura gettext** (`fa0c1ef`)
+- Infrastruttura gettext, campo `Config.language`, target `make po` e `make mo`. Il pacchetto `.deb` compila il catalogo.
+
+**F2-F5, testi tradotti** (`30618a6`, `0873cad`, `282dfbc`, `c09f81f`, `cc13267`)
+- F2: testi ed errori del core.
+- F3: dialoghi, Preferenze e pulsanti delle azioni.
+- F4a e F4b: finestra principale, pagina Disco, widget, pagine e struttura della finestra.
+- F5: icona nella barra, notifiche, messaggi di configurazione e aiuto della riga di comando.
+
+**F6, selettore e cambio immediato** (`357b669`)
+- Selettore a bandiere nelle Preferenze e azione `win.set-language`, che ricostruisce la finestra senza riavvio. Le azioni esportate su D-Bus restano invariate.
+
+**Controlli e correzioni** (`df35c43`, `bd9b317`, `834248e`)
+- `scripts/check_i18n.py` è entrato in `make lint`: segnala testi non marcati e traduzioni mancanti.
+- In inglese le date brevi mettono il mese per primo.
+- I testi di GTK e libadwaita ora seguono la lingua scelta tramite `LANGUAGE`. Il difetto è emerso dal test che percorre l'app in inglese e controlla il testo reso a schermo.
+
+**Documentazione** (`9c21a3d`)
+- `docs/DEVIATIONS.md` e `CLAUDE.md` descrivono l'interfaccia bilingue e le sue convenzioni.
+
+**Verifica**
+- `make test-all`: da 2187 test passati (base di partenza) a 2420. Copertura del core 99,56%.
+- Circa 530 msgid in `po/en.po`, nessuno senza traduzione; `check_i18n` non segnala problemi.
+
+**Effetto collaterale sull'italiano**
+- I plurali ora passano da `ngettext`: "1 giorni" e "1 volte" sono diventati "1 giorno" e "1 volta".
+
+### Punti aperti
+
+Limiti noti, annotati anche in `docs/DEVIATIONS.md`:
+- I file `.desktop` e metainfo seguono il locale di sistema, non la lingua scelta nell'app.
+- Se un'azione è in corso durante il cambio lingua, perde il messaggio di esito.
+- Le modifiche alle Preferenze non applicate vengono scartate alla riapertura.
+- Con un locale C/POSIX i testi propri di GTK restano in inglese.
+
+Non verificato: l'app reale avviata con `make run` su uno schermo vero. Il test completo usa la finestra, le Preferenze e le azioni reali con un servizio finto.
+
+Nessun push eseguito.
+
+### Note per il Cliente (linguaggio NON tecnico)
+
+L'app si può usare in italiano o in inglese. La lingua si sceglie dalle Preferenze toccando la bandiera e cambia subito, senza riavviare. Alla prima apertura l'app usa la lingua del computer. In italiano è stato corretto anche un dettaglio: ora si legge "1 giorno" e non più "1 giorni". Alcuni testi del sistema, come il nome mostrato nel menu delle applicazioni, seguono ancora la lingua del computer e non quella scelta nell'app. Non abbiamo ancora provato l'app aperta su uno schermo reale, solo con prove automatiche.
+
+### Riepilogo
+
+- **Complessità:** alta (12 commit)
+- **Stato:** interfaccia bilingue completata e verificata con test automatici; avvio reale con `make run` non verificato.
+- **Prossimo:** provare l'app con `make run` su uno schermo reale.
