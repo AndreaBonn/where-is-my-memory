@@ -8,9 +8,10 @@ from wimm.ui.widgets.state_views import LoadingView
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
 INTRO_TEXT = (
-    "Questi processi servono al sistema o al desktop e restano fuori dalla Panoramica: "
-    "qui sono solo elencati, senza azioni."
+    "Questi programmi fanno funzionare il computer. "
+    "Da qui non si possono chiudere, quindi non puoi rompere niente."
 )
+LOCK_ICON = "changes-prevent-symbolic"
 EMPTY_TITLE = "Nessun processo protetto"
 STATE_LOADING = "loading"
 STATE_LIST = "list"
@@ -24,6 +25,9 @@ def _row_widget(*, row: SystemRow) -> Adw.ActionRow:
         use_markup=False,
         title_lines=1,
         subtitle_lines=0,
+    )
+    widget.add_prefix(
+        Gtk.Image(icon_name=LOCK_ICON, accessible_role=Gtk.AccessibleRole.PRESENTATION)
     )
     memory = Gtk.Label(label=row.memory, valign=Gtk.Align.CENTER)
     memory.add_css_class("wimm-reclaim")

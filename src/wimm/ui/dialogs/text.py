@@ -33,6 +33,10 @@ NO_ESTIMATE_TEXT = "Recupero non stimabile."
 TOTAL_PREFIX = "Totale stimato"
 SINGLE_TOTAL = "Recupero stimato"
 MIXED_NAME = "questi elementi"
+PHRASE_HINT = (
+    "Ti chiediamo di scrivere il nome perché questa azione cancella dati in modo "
+    "definitivo: serve a evitare un clic per sbaglio."
+)
 
 
 def dialog_title(*, kind: ActionKind, subject: str | None) -> str:

@@ -12,6 +12,7 @@ from wimm.ui.dialogs.session import ConfirmSession, StepEntry
 from wimm.ui.dialogs.text import (
     CANCEL_LABEL,
     EMPTY_TEXT,
+    PHRASE_HINT,
     confirm_label,
     dialog_title,
     entry_title,
@@ -56,6 +57,8 @@ class ConfirmDialog(Adw.AlertDialog):
         self._phrase_box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._phrase_box.add_css_class("boxed-list")
         self._phrase_box.append(self._phrase)
+        self._phrase_hint = Gtk.Label(label=PHRASE_HINT, xalign=0, wrap=True)
+        self._phrase_hint.add_css_class("dim-label")
         self.set_heading(dialog_title(kind=session.kind, subject=session.subject))
         self.add_response(CANCEL_RESPONSE, CANCEL_LABEL)
         self.add_response(CONFIRM_RESPONSE, confirm_label(kind=session.kind))
@@ -74,7 +77,7 @@ class ConfirmDialog(Adw.AlertDialog):
             max_content_height=LIST_MAX_HEIGHT,
         )
         scroller.set_child(self._build_targets())
-        for child in (scroller, self._warning, self._phrase_box):
+        for child in (scroller, self._warning, self._phrase_hint, self._phrase_box):
             content.append(child)
         return content
 
@@ -114,7 +117,9 @@ class ConfirmDialog(Adw.AlertDialog):
             )
             self._phrase.set_title(entry_title(phrase=plan.confirm_phrase or ""))
         self._show_consequences(plan=plan)
-        self._phrase_box.set_visible(plan is not None and plan.confirm_phrase is not None)
+        typed = plan is not None and plan.confirm_phrase is not None
+        self._phrase_box.set_visible(typed)
+        self._phrase_hint.set_visible(typed)
         self._update_confirm()
 
     def _body_text(self, *, plan: Plan | None) -> str:

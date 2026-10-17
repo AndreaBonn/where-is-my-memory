@@ -130,6 +130,18 @@ def test_danger_dialog_enables_the_button_only_for_the_exact_phrase(display: Non
     assert [(plan.confirm_phrase, typed) for plan, typed in confirmed] == [("pgdata", "pgdata")]
 
 
+def test_typed_confirmation_says_why_it_is_asked_and_safe_dialogs_do_not(display: None) -> None:
+    request = ActionRequest(kind=ActionKind.VOLUME_REMOVE, target_id=TargetId("pgdata"))
+    orphan = report(docker=docker_disk(volumes=(volume(name="pgdata"),)))
+    danger, _, _ = open_dialog(snap=snapshot(), request=request, subject="pgdata", disk=orphan)
+    snap = snapshot(group(gid="p", name="whitebox", members=(proc(pid=1, reclaimable=GB),)))
+    safe, _, _ = open_dialog(snap=snap, request=stop("p"), subject="whitebox")
+
+    hint = "Ti chiediamo di scrivere il nome perché questa azione cancella dati"
+    assert any(text.startswith(hint) for text in labels(danger))
+    assert not any(text.startswith(hint) for text in labels(safe))
+
+
 def test_confirming_a_non_danger_plan_passes_no_typed_text(display: None) -> None:
     snap = snapshot(group(gid="p", members=(proc(pid=1),)))
     dialog, _, confirmed = open_dialog(snap=snap, request=stop("p"), subject="p")
