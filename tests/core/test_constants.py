@@ -9,7 +9,7 @@ def test_configuration_defaults() -> None:
         c.NET_ACTIVE_THRESHOLD_BPS,
         c.NOTIFY_AFTER_S,
         c.NOTIFY_MIN_BYTES,
-    ) == (30, 1800, 1.0, 700, 7200, 209715200)
+    ) == (60, 1800, 1.0, 700, 7200, 209715200)  # 60 s: user decision for RNF-01, DEVIATIONS
     assert c.NOTIFY_CATEGORIES == ("PROJECT", "CONTAINER", "DEV_SERVER", "DEV_PROCESS")
     assert (
         c.PRESSURE_WARNING_PCT,

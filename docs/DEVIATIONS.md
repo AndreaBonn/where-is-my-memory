@@ -309,3 +309,7 @@ La § 8.4 esegue `images.prune`, `prune_builds` e il prune dei container fermi s
 - **Media in sottofondo.** Un browser che riproduce un video o un'app musicale mai portata in primo piano diventano inattivi dopo la finestra di osservazione, come prevede la § 7.8 per Slack. Non c'è un'eccezione per audio o download: le loro azioni sono `caution`, quindi restano fuori da "ferma tutti gli inattivi sicuri" e dalle notifiche di default.
 - **Finestre che non si possono attribuire.** Se il pid della finestra attiva non è un processo visibile (un'app Flatpak riporta il pid del suo namespace), o se non c'è una finestra attiva (schermo bloccato, desktop), il campione è "non misurabile": il gruppo resta in stato sconosciuto e non diventa mai inattivo per un dato che manca.
 - **Lettura fallita in un ciclo.** Un passaggio in primo piano dentro la finestra vale come attività anche se una lettura successiva è fallita (alt-tab, timeout di `xprop`).
+
+## Intervallo di campionamento predefinito a 60 s (RNF-01, decisione dell'utente del 2026-10-17)
+
+La § 11 fissa `sample_interval_s` a 30 s. Misurato su un'ora, il processo usava 1,32-1,60% di un core contro il limite dell'1% di RNF-01; dopo le ottimizzazioni che non cambiano il comportamento il ciclo costa 0,33-0,34 s di CPU (docs/PERF.md), circa 1,1% a 30 s. L'utente ha scelto di portare il valore predefinito a 60 s: circa 0,55% di un core, con stati e numeri aggiornati con il doppio del ritardo. L'intervallo resta regolabile da 10 a 300 s nelle Preferenze, e chi ha già salvato le preferenze con 30 s lo mantiene.

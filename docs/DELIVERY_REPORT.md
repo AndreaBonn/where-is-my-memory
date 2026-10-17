@@ -9,7 +9,7 @@ Questo documento dice che cosa è dimostrato, che cosa resta da provare a mano s
 ## Esito in breve
 
 - Delle 14 voci della Definition of Done (§17): 6 fatte con evidenza automatica, 0 fatte con deviazione, 8 da verificare a mano, 0 non fatte.
-- Misure RNF: RNF-02 e RNF-03 rispettati, **RNF-01 non rispettato** (circa 1,4% di un core a regime contro un limite dell'1%). Serve una vostra decisione su come rientrare, sezione 6.
+- Misure RNF: RNF-02 e RNF-03 rispettati. RNF-01 misurato a 1,32-1,60% di un core con l'intervallo di 30 s; dopo le ottimizzazioni del ciclo (0,33-0,34 s di CPU) e la vostra decisione di portare l'intervallo predefinito a 60 s, la stima è circa 0,55%, da confermare con la misura di un'ora (M-15).
 - Le misure sono state fatte sul build del repository e non sul pacchetto installato, perché l'installazione richiede `sudo`: la ripetizione sull'installato è M-15.
 - La sicurezza (RNF-05) è verificata: nessun finding P0 o P1, cinque note P2 ancora aperte e sotto la soglia di sfruttabilità.
 - Per chiudere il lavoro servono da voi: l'installazione del pacchetto (M-5), un logout con nuovo login (M-6) e gli altri controlli della sezione 3. Il push su GitHub, e quindi il primo giro della CI remota, lo fate voi.
@@ -33,7 +33,7 @@ Stati: fatto, fatto con deviazione, da verificare a mano, non fatto. Una voce è
 | 11 | La vista Disco è coerente con `docker system df` e la pulizia della build cache libera lo spazio indicato (scarto < 10%) | da verificare a mano (M-13) | Il conteggio del recuperabile segue `docker system df` (`0b9a3f9`, `tests/core/test_disk_df_reclaimable.py`, `tests/core/test_disk_reclaim_parity.py`). Sul computer di prova il dato è passato da 22,4 GB a circa 16 GB (REPORT_ATTIVITA, sessione #2). La pulizia della build cache è provata solo su finti (`tests/service/test_executor_disk_docker.py::test_builder_prune_returns_the_space_the_daemon_reports`), mai su dati reali: la specifica stessa la dà come prova manuale |
 | 12 | Dopo un riavvio di GNOME Shell l'icona ricompare senza riavviare l'app | da verificare a mano (M-3) | Ri-registrazione a ogni ricomparsa del servizio della barra, con un servizio finto che sparisce e ricompare: `tests/tray/test_watcher.py`, `tests/tray/test_tray_watcher.py` (`ea86766`). Il riavvio vero della shell (`Alt+F2`, `r`) lo fate voi |
 | 13 | `make lint` e `make test` verdi, copertura >= 90% su `src/wimm/core`, test di integrazione e D-Bus verdi | fatto | Clone pulito (T-6.4): `make setup`, `make lint`, `make test`, `make test-all` verdi, 2029 test. La soglia del 90% è imposta da `make test` con `--cov=src/wimm/core --cov-fail-under=90` (Makefile): sotto soglia il comando fallisce. Il valore esatto della copertura non è riportato in questo documento |
-| 14 | RNF-01, RNF-02 e RNF-03 misurati e riportati in `docs/REPORT_ATTIVITA.md` con i numeri | fatto | Misure del 2026-10-17 nella sezione 2, in `docs/REPORT_ATTIVITA.md` (sessione #3) e in `docs/PERF.md`. La voce chiede la misura, non l'esito: RNF-01 risulta non rispettato |
+| 14 | RNF-01, RNF-02 e RNF-03 misurati e riportati in `docs/REPORT_ATTIVITA.md` con i numeri | fatto | Misure del 2026-10-17 nella sezione 2, in `docs/REPORT_ATTIVITA.md` (sessione #3) e in `docs/PERF.md`. La voce chiede la misura, non l'esito: RNF-01 era sopra il limite con 30 s ed è stato corretto con l'intervallo a 60 s, da riconfermare (M-15) |
 
 Conteggio: fatto 6 (voci 3, 6, 8, 9, 13, 14), fatto con deviazione 0, da verificare a mano 8 (voci 1, 2, 4, 5, 7, 10, 11, 12), non fatto 0.
 
@@ -47,7 +47,7 @@ Condizioni della misura (2026-10-17, 07:02-08:02): 393 processi utente, 8 contai
 
 | Requisito | Soglia (§13) | Valore misurato |
 |---|---|---|
-| RNF-01 | media sotto l'1% di un core a finestra nascosta | **non rispettato**: 1,32-1,60% di un core a regime, media 2,30% sui 10 minuti di `pidstat -p <pid> 60 10` con il picco del 10,15% della prima scansione del disco (build del repository, 1 h, 393 processi utente, 8 container, load average 5,4-6,4). Causa: il ciclo costa 0,47 s di CPU ogni 30 s, dominato dalla lettura di `smaps_rollup` per processo (docs/PERF.md). Con 800+ processi il valore sale. Decisione richiesta, sezione 6 |
+| RNF-01 | media sotto l'1% di un core a finestra nascosta | **non rispettato**: 1,32-1,60% di un core a regime, media 2,30% sui 10 minuti di `pidstat -p <pid> 60 10` con il picco del 10,15% della prima scansione del disco (build del repository, 1 h, 393 processi utente, 8 container, load average 5,4-6,4). Causa: il ciclo costa 0,47 s di CPU ogni 30 s, dominato dalla lettura di `smaps_rollup` per processo (docs/PERF.md). Con 800+ processi il valore sale. Dopo questa misura: ciclo ottimizzato a 0,33-0,34 s e intervallo predefinito a 60 s per vostra decisione, stima circa 0,55%, da riconfermare (sezione 6) |
 | RNF-02 | sotto 120 MB RSS a finestra mai aperta, sotto 200 MB dopo aver aperto e nascosto la finestra, dopo 1 h | rispettato: 63 MB di RSS dopo 55 minuti a finestra mai aperta (limite 120); 136 MB con la finestra aperta (limite 200), valore che vale come limite superiore per la finestra nascosta perché nasconderla non restituisce memoria (build del repository, 1 h, 393 processi utente, 8 container, load average 5,4-6,4). La chiusura con Ctrl+W su Xvfb senza window manager non è riuscita |
 | RNF-03 | ciclo sotto 1,5 s con 900 processi e 10 container; main loop mai bloccato oltre 50 ms | rispettato alle condizioni misurate: 122 cicli, mediana 0,47 s, massimo 0,61 s, nessuno sopra 1,5 s (build del repository, 1 h, 393 processi utente, 8 container, load average 5,4-6,4); con 1300 processi la misura precedente era 1,25-1,55 s (sotto). Main loop: sotto 50 ms (misure precedenti, sotto). Le condizioni della specifica (900 processi, 10 container) non sono state riprodotte |
 
@@ -165,14 +165,9 @@ Una conseguenza visibile della sezione 18: `apt remove` lascia il file di avvio 
 
 ## 6. Punti aperti
 
-### Decisione richiesta: RNF-01
+### RNF-01: decisione presa
 
-Il processo usa circa l'1,4% di un core a regime, sopra il limite dell'1%. Il costo è il ciclo di campionamento (0,47 s ogni 30 s), e la parte più cara è la lettura della memoria esatta di ogni processo (`smaps_rollup`). Tre strade, che cambiano cosa vedete:
-
-- A) Leggere la memoria esatta solo dei processi nei gruppi su cui si può agire, e una stima più grezza per gli altri: la Panoramica resta precisa dove conta, la vista Sistema diventa approssimata.
-- B) Allungare l'intervallo predefinito da 30 a 60 s: CPU dimezzata, stati e numeri si aggiornano con il doppio del ritardo.
-- C) Accettare il valore misurato e alzare il limite di RNF-01 nella specifica.
-
+Il ciclo è stato ottimizzato senza cambiare il comportamento (da 0,41-0,43 a 0,33-0,34 s di CPU, docs/PERF.md) e l'intervallo predefinito è passato da 30 a 60 s per vostra scelta del 2026-10-17 (docs/DEVIATIONS.md). Stima: circa 0,55% di un core. La misura di un'ora va ripetuta per confermarlo (M-15).
 
 ### Note di sicurezza P2 ancora aperte
 
