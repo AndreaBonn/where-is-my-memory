@@ -41,7 +41,7 @@ def _detail_label() -> Gtk.Label:
 class SummaryPanel(Gtk.Box):
     """RAM bar, disk usage, reclaimable totals and the (phase 3) stop-all button."""
 
-    def __init__(self) -> None:
+    def __init__(self, *, on_stop_all: Callable[[], None] | None = None) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=SECTION_SPACING)
         self._ram_text = _detail_label()
         self._bar = MemoryBar()
@@ -54,8 +54,11 @@ class SummaryPanel(Gtk.Box):
         self._reclaim = _detail_label()
         self._reclaim.add_css_class("wimm-reclaim")
         self._stop_all = Gtk.Button(label=ACTION_LABELS[ActionKind.STOP_ALL_IDLE_SAFE])
-        self._stop_all.set_sensitive(False)
-        self._stop_all.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+        if on_stop_all is None:
+            self._stop_all.set_sensitive(False)
+            self._stop_all.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+        else:
+            self._stop_all.connect("clicked", lambda *_args: on_stop_all())
         self._stop_all.set_name("stop-all-idle")
         for widget in (
             _section_title(text="RAM"),

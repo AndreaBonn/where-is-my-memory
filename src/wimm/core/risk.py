@@ -171,6 +171,14 @@ def _resource_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessme
         if target.has_repo_digests:
             return _assessment(level=Risk.SAFE, key=ConsequenceKey.REGISTRY)
         return _assessment(level=Risk.CAUTION, key=ConsequenceKey.LOCAL_IMAGE)
+    if action is ActionKind.CONTAINER_STOP:
+        return RiskAssessment(
+            level=Risk.SAFE,
+            consequences=(
+                CONSEQUENCES[ConsequenceKey.STOP],
+                CONSEQUENCES[ConsequenceKey.STOP_TIMEOUT],
+            ),
+        )
     level, key = STATIC_ASSESSMENTS[action]
     return _assessment(level=level, key=key)
 

@@ -133,6 +133,8 @@ def test_plan_container_stop_and_remove_follow_container_state() -> None:
 
     assert stop_plan.steps[0].fingerprint == ContainerFingerprint(id="up", status="running")
     assert stop_plan.risk is Risk.SAFE
+    assert CONSEQUENCES[ConsequenceKey.STOP_TIMEOUT] in stop_plan.consequences
+    assert CONSEQUENCES[ConsequenceKey.STOP_TIMEOUT] not in remove_plan.consequences
     assert remove_plan.steps[0].fingerprint == ContainerFingerprint(id="down", status="exited")
     assert remove_plan.risk is Risk.CAUTION
     with pytest.raises(InvalidRequest):

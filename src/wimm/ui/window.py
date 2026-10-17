@@ -2,6 +2,7 @@ import logging
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
+from typing import cast
 
 import gi
 
@@ -10,10 +11,13 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk
 
 from wimm import __version__
+from wimm.model.actions import ActionRequest
 from wimm.paths import default_user_paths
+from wimm.ui.action_flow import ActionFlow, ActionSource, can_act
 from wimm.ui.pages.overview import OverviewPage
 from wimm.ui.pages.system import SystemPage
 from wimm.ui.widgets import install_style, name_icon_button
+from wimm.ui.window_shortcuts import ACTION_PREFERENCES, shortcut_controller
 from wimm.ui.window_state import (
     MIN_HEIGHT,
     MIN_WIDTH,
@@ -30,7 +34,6 @@ NARROW_CONDITION = "max-width: 600px"
 FAILURE_LIMIT = 3
 FAILURE_POLL_SECONDS = 2
 SAVE_DELAY_MS = 500
-ACTION_PREFERENCES = "app.preferences"
 ACTION_SNOOZE_ALL = "app.snooze-all"
 ACTION_QUIT = "app.quit"
 ACTION_ABOUT = "win.about"
@@ -63,9 +66,12 @@ class MainWindow(Adw.Window):
         width, height = load_window_size(path=self._state_path)
         self.set_default_size(width, height)
         self.set_size_request(MIN_WIDTH, MIN_HEIGHT)
-        self.overview = OverviewPage()
+        self.overview = OverviewPage(
+            on_action=self._start_action if can_act(source=source) else None
+        )
         self.system = SystemPage()
         self._build_chrome()
+        self._init_actions_flow()
         self._build_shortcuts()
         self._connect_signals()
         self.sync()
@@ -82,6 +88,19 @@ class MainWindow(Adw.Window):
         self.connect("notify::default-width", self._schedule_save)
         self.connect("notify::default-height", self._schedule_save)
         self._source_handler = self._source.connect("snapshot-updated", self._on_snapshot_updated)
+
+    def _init_actions_flow(self) -> None:
+        self.action_flow: ActionFlow | None = None
+        if can_act(source=self._source):
+            self.action_flow = ActionFlow(
+                source=cast(ActionSource, self._source),
+                parent=self,
+                notify=lambda text: self.toasts.add_toast(Adw.Toast(title=text, use_markup=False)),
+            )
+
+    def _start_action(self, request: ActionRequest, subject: str | None) -> None:
+        if self.action_flow is not None:
+            self.action_flow.start(request=request, subject=subject)
 
     @property
     def can_refresh(self) -> bool:
@@ -106,7 +125,8 @@ class MainWindow(Adw.Window):
         self.tray_banner = Adw.Banner(title=TRAY_MISSING_TEXT, revealed=False)
         toolbar.add_top_bar(self.tray_banner)
         toolbar.add_bottom_bar(bar)
-        self.set_content(toolbar)
+        self.toasts = Adw.ToastOverlay(child=toolbar)
+        self.set_content(self.toasts)
         breakpoint_ = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NARROW_CONDITION))
         breakpoint_.add_setter(bar, "reveal", True)
         breakpoint_.add_setter(switcher, "visible", False)
@@ -146,28 +166,9 @@ class MainWindow(Adw.Window):
         self._actions.add_action(action)
 
     def _build_shortcuts(self) -> None:
-        controller = Gtk.ShortcutController(scope=Gtk.ShortcutScope.GLOBAL)
-        shortcuts = (
-            ("F5", Gtk.CallbackAction.new(self._on_refresh_key)),
-            (
-                "<Control>f",
-                Gtk.CallbackAction.new(self._on_find_key),
-            ),
-            ("<Control>comma", Gtk.NamedAction.new(ACTION_PREFERENCES)),
+        self.add_controller(
+            shortcut_controller(on_refresh=self.refresh, on_find=self.overview.focus_search)
         )
-        for trigger, action in shortcuts:
-            controller.add_shortcut(
-                Gtk.Shortcut.new(Gtk.ShortcutTrigger.parse_string(trigger), action)
-            )
-        self.add_controller(controller)
-
-    def _on_refresh_key(self, *_args: object) -> bool:
-        self.refresh()
-        return True
-
-    def _on_find_key(self, *_args: object) -> bool:
-        self.overview.focus_search()
-        return True
 
     def _show_about(self, *_args: object) -> None:
         Adw.AboutDialog(
@@ -239,6 +240,8 @@ class MainWindow(Adw.Window):
             self._source.disconnect(self._source_handler)
             self._source_handler = 0
         self._stop_timers()
+        if self.action_flow is not None:
+            self.action_flow.close()
         self.overview.cancel()
         if self._save_timer:
             GLib.source_remove(self._save_timer)

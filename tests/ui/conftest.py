@@ -11,7 +11,10 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, GObject, Gtk
 
-from wimm.model.enums import ActionKind, ActivityState, Category, GroupId, Risk
+from wimm.core.planning import PlanningContext, plan_action
+from wimm.model.actions import ActionRequest, Plan
+from wimm.model.enums import ActionKind, ActivityState, Category, GroupId, PlanId, Risk
+from wimm.model.errors import WimmError
 from wimm.model.memory import MemoryUse
 from wimm.model.snapshot import (
     ActionOffer,
@@ -22,6 +25,7 @@ from wimm.model.snapshot import (
 from wimm.serialize import snapshot_from_json
 from wimm.ui.pages.overview import OverviewPage
 from wimm.ui.window import MainWindow, create_main_window
+from wimm.ui.window_state import SnapshotSource
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "snapshot_whitebox.json"
 WAIT_TIMEOUT_S = 5.0
@@ -46,6 +50,46 @@ class FakeSource(GObject.Object):
     def publish(self, snapshot: Snapshot) -> None:
         self._snapshot = snapshot
         self.emit("snapshot-updated")
+
+
+class FakeActionService(GObject.Object):
+    """Stands in for AppService with actions: real planner, recorded execute calls."""
+
+    __gsignals__: ClassVar = {
+        "snapshot-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
+        "action-finished": (
+            GObject.SignalFlags.RUN_LAST,
+            None,
+            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
+        ),
+        "action-rejected": (
+            GObject.SignalFlags.RUN_LAST,
+            None,
+            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
+        ),
+    }
+
+    def __init__(self, *, snapshot: Snapshot, plan_error: WimmError | None = None) -> None:
+        super().__init__()
+        self._snapshot = snapshot
+        self.consecutive_failures = 0
+        self.plan_error = plan_error
+        self.planned: list[ActionRequest] = []
+        self.executed: list[tuple[PlanId, str | None]] = []
+
+    def snapshot(self) -> Snapshot:
+        return self._snapshot
+
+    def plan(self, *, request: ActionRequest) -> Plan:
+        self.planned.append(request)
+        if self.plan_error is not None:
+            raise self.plan_error
+        return plan_action(
+            request=request, snapshot=self._snapshot, context=PlanningContext(owner_uid=1000)
+        )
+
+    def execute(self, *, plan_id: PlanId, typed_confirmation: str | None) -> None:
+        self.executed.append((plan_id, typed_confirmation))
 
 
 class RefreshableSource(FakeSource):
@@ -162,7 +206,7 @@ def idle_filter(overview: Gtk.Widget) -> Gtk.ToggleButton:
 class WindowFactory(Protocol):
     """Builds a window; rows are settled unless ``settled`` is False."""
 
-    def __call__(self, source: "FakeSource", *, settled: bool = True) -> MainWindow: ...
+    def __call__(self, source: "SnapshotSource", *, settled: bool = True) -> MainWindow: ...
 
 
 @pytest.fixture(scope="session")
@@ -188,7 +232,7 @@ def window_factory(
 ) -> Iterator[WindowFactory]:
     windows: list[MainWindow] = []
 
-    def build(source: FakeSource, *, settled: bool = True) -> MainWindow:
+    def build(source: SnapshotSource, *, settled: bool = True) -> MainWindow:
         window = create_main_window(
             application=application, source=source, clock=lambda: now, state_dir=tmp_path / "state"
         )

@@ -232,7 +232,7 @@ def test_build_groups_dev_server_explanation_names_folder_and_port() -> None:
     )
 
     assert groups[0].explanation == (
-        "un processo uvicorn in ascolto sulla porta 8000 nella cartella `whitebox`"
+        "un processo uvicorn in ascolto sulla porta 8000 nella cartella whitebox"
     )
 
 

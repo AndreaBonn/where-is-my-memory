@@ -14,6 +14,7 @@ class ConsequenceKey(StrEnum):
     TERMINAL = "terminal"
     KILL = "kill"
     STOP = "stop"
+    STOP_TIMEOUT = "stop_timeout"
     CONTAINER_REMOVE = "container_remove"
     DOWN = "down"
     DOWN_VOLUMES = "down_volumes"
@@ -52,7 +53,10 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.KILL: "Chiusura immediata senza salvataggio.",
     ConsequenceKey.STOP: (
         "Il container si ferma; dati e configurazione restano. "
-        "Si riavvia con `docker start` o `docker compose up`."
+        "Si riavvia con docker start o docker compose up."
+    ),
+    ConsequenceKey.STOP_TIMEOUT: (
+        "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
     ),
     ConsequenceKey.CONTAINER_REMOVE: (
         "Le modifiche fatte dentro il container fuori dai volumi si perdono."
@@ -70,7 +74,7 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.CACHE: "I pacchetti si riscaricano quando servono.",
     ConsequenceKey.TRASH: "I file nel cestino vengono eliminati in modo definitivo.",
     ConsequenceKey.DEVDIR: (
-        "Serve reinstallare le dipendenze (`npm install` / `uv sync`) prima di usare il progetto."
+        "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
     ),
 }
 STATIC_ASSESSMENTS: dict[ActionKind, tuple[Risk, ConsequenceKey]] = {

@@ -135,7 +135,7 @@ def test_destroying_the_window_leaves_no_idle_of_the_page(
 
 
 class ExplodingRow(Adw.ExpanderRow):
-    def __init__(self, *, row: object) -> None:
+    def __init__(self, *, row: object, on_action: object = None) -> None:
         raise RuntimeError("cannot build row")
 
 

@@ -12,8 +12,9 @@ from wimm.model.snapshot import ActionOffer
 PROCESS = Target(kind="process", category=Category.DEV_PROCESS, activity=ActivityState.IDLE)
 CONTAINER_TEXT = (
     "Il container si ferma; dati e configurazione restano. Si riavvia con "
-    "`docker start` o `docker compose up`."
+    "docker start o docker compose up."
 )
+CONTAINER_TIMEOUT_TEXT = "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
 
 
 @pytest.mark.parametrize(
@@ -50,11 +51,6 @@ CONTAINER_TEXT = (
             "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
         ): (Target(kind="terminal", category=Category.TERMINAL), Action.APP_CLOSE, Risk.CAUTION),
         ("Chiusura immediata senza salvataggio."): (PROCESS, Action.PROCESS_KILL, Risk.CAUTION),
-        CONTAINER_TEXT: (
-            Target(kind="container", is_running=True),
-            Action.CONTAINER_STOP,
-            Risk.SAFE,
-        ),
         ("Le modifiche fatte dentro il container fuori dai volumi si perdono."): (
             Target(kind="container", is_running=False),
             Action.CONTAINER_REMOVE,
@@ -105,10 +101,11 @@ CONTAINER_TEXT = (
             Action.TRASH_EMPTY,
             Risk.DANGER,
         ),
-        (
-            "Serve reinstallare le dipendenze (`npm install` / `uv sync`) "
-            "prima di usare il progetto."
-        ): (Target(kind="devdir"), Action.DEVDIR_DELETE, Risk.CAUTION),
+        ("Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."): (
+            Target(kind="devdir"),
+            Action.DEVDIR_DELETE,
+            Risk.CAUTION,
+        ),
     }.items(),
 )
 def test_assess_risk_specification_rows(
@@ -122,6 +119,22 @@ def test_assess_risk_specification_rows(
         offers = available_actions(target=target)
         assert ActionOffer(kind=action, risk=level) in offers
         assert len(offers) == (3 if target.kind == "compose_project" else 1)
+
+
+def test_container_stop_tells_that_docker_terminates_it_after_ten_seconds() -> None:
+    target = Target(kind="container", is_running=True)
+
+    assessment = assess_risk(target=target, action=Action.CONTAINER_STOP)
+
+    assert assessment.level is Risk.SAFE
+    assert assessment.consequences == (CONTAINER_TEXT, CONTAINER_TIMEOUT_TEXT)
+    assert ActionOffer(kind=Action.CONTAINER_STOP, risk=Risk.SAFE) in available_actions(
+        target=target
+    )
+    removal = assess_risk(
+        target=Target(kind="container", is_running=False), action=Action.CONTAINER_REMOVE
+    )
+    assert CONTAINER_TIMEOUT_TEXT not in removal.consequences
 
 
 class TestRiskBehavior:
@@ -294,3 +307,11 @@ class TestRiskBehavior:
         assert result.consequences == (
             "I dati dei volumi associati al progetto vengono cancellati in modo definitivo.",
         )
+
+
+def test_user_facing_consequences_carry_no_markdown_backticks() -> None:
+    # Shown in plain GTK labels: a backtick would appear literally on screen.
+    from wimm.core.risk_table import CONSEQUENCES
+
+    assert all("`" not in text for text in CONSEQUENCES.values())
+    assert any("docker start" in text for text in CONSEQUENCES.values())  # positive pair

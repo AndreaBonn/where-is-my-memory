@@ -55,3 +55,12 @@ Misura: `_build_window` in un sottoprocesso senza `DISPLAY` né `WAYLAND_DISPLAY
 | Data | Idea | Prima | Dopo | Verdetto | Perché |
 |---|---|---|---|---|---|
 | 2026-10-16 | Controllo del display aperto da GTK prima di importare libadwaita | `Adw.init()` blocca 25,1 s prima del `RuntimeError` | errore in meno di 1 s (test D-Bus `--group` da 25 s a 2,5 s) | tenuta | il processo residente non resta fermo quando la sessione grafica manca |
+
+## Pianificazione delle azioni sul main loop (RNF-03: sotto 50 ms)
+
+Misura: `plan_action` in processo, 20 ripetizioni, snapshot sintetico con 300 gruppi idle e 3 processi ciascuno (900 processi). Il dialogo di conferma lo chiama sul main loop a ogni clic e a ogni interruttore.
+
+| Data | Richiesta | Mediana | Massimo | Verdetto |
+|---|---|---|---|---|
+| 2026-10-17 | `stop_all_idle_safe` (900 step) | 20,2 ms | 22,0 ms | sotto il limite, nessuna ottimizzazione |
+| 2026-10-17 | `group_stop` su un gruppo | 0,1 ms | 0,1 ms | sotto il limite |

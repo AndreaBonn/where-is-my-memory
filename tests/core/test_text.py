@@ -210,7 +210,7 @@ def test_explain_group_launched_plural_and_folder_basename() -> None:
     facts = _facts(category=Category.AI_CLI, processes=3, folder="/work/api/")
 
     assert text.explain_group(facts=facts) == (
-        "3 processi lanciati dal terminale nella cartella `api`"
+        "3 processi lanciati dal terminale nella cartella api"
     )
 
 

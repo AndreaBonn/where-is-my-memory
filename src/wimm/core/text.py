@@ -214,7 +214,7 @@ def _explain_project(*, facts: GroupFacts) -> str:
 def _named_folder(*, folder: str | None) -> str:
     if folder is None:
         return ""
-    return f" nella cartella `{PurePosixPath(folder).name or folder}`"
+    return f" nella cartella {PurePosixPath(folder).name or folder}"
 
 
 def _explain_launched(*, facts: GroupFacts) -> str:

@@ -1,4 +1,5 @@
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from gi.repository import Adw, Gdk, Gio, GLib, Gtk
@@ -153,12 +154,15 @@ def _member_key(*, member: MemberRow) -> tuple[str, str]:
 class GroupRowWidget(Adw.ExpanderRow):
     """One group of the Panoramica; members are built when the row is first expanded."""
 
-    def __init__(self, *, row: GroupRow) -> None:
+    def __init__(
+        self, *, row: GroupRow, on_action: Callable[[GroupRow], None] | None = None
+    ) -> None:
         super().__init__(
             use_markup=False,
             title_lines=TITLE_LINES,
             subtitle_lines=SUBTITLE_LINES,
         )
+        self._on_action = on_action
         self.group_id = row.id
         self.sort_rank = 0
         self.context_actions: Gio.SimpleActionGroup
@@ -210,12 +214,18 @@ class GroupRowWidget(Adw.ExpanderRow):
             self._action = None
         if row.primary_action is None:
             return
-        # Phase 3 wires the action; until then the button only announces itself.
         self._action = Gtk.Button(label=row.primary_action.label, valign=Gtk.Align.CENTER)
         self._action.set_name(PRIMARY_ACTION_NAME)
-        self._action.set_sensitive(False)
-        self._action.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+        if self._on_action is None:
+            self._action.set_sensitive(False)
+            self._action.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+        else:
+            self._action.connect("clicked", self._on_primary_clicked)
         self._suffix.insert_child_after(self._action, self._badge)
+
+    def _on_primary_clicked(self, *_args: object) -> None:
+        if self._on_action is not None and self._row is not None:
+            self._on_action(self._row)
 
     def _on_expanded(self, *_args: object) -> None:
         self._members_wanted = self.get_expanded()

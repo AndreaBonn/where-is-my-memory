@@ -1,13 +1,17 @@
 import logging
 import time
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from datetime import datetime
 
 from gi.repository import Adw, GLib, Gtk
 
+from wimm.model.actions import ActionRequest
+from wimm.model.enums import ActionKind
 from wimm.model.snapshot import Snapshot
+from wimm.ui.requests import request_for_row
 from wimm.ui.viewmodel import build_rows, build_summary, empty_state
 from wimm.ui.views import GroupRow, RowFilters
+from wimm.ui.widgets.group_list import build_list
 from wimm.ui.widgets.group_row import GroupRowWidget
 from wimm.ui.widgets.state_views import EmptyView, ErrorView, LoadingView
 from wimm.ui.widgets.summary import FilterBar, SummaryPanel
@@ -30,8 +34,14 @@ SLICE_BUDGET_S = 0.010
 class OverviewPage(Gtk.Stack):
     """Panoramica: summary, filters and one expandable row per actionable group."""
 
-    def __init__(self, *, slow_loading_ms: int = SLOW_LOADING_MS) -> None:
+    def __init__(
+        self,
+        *,
+        slow_loading_ms: int = SLOW_LOADING_MS,
+        on_action: Callable[[ActionRequest, str | None], None] | None = None,
+    ) -> None:
         super().__init__()
+        self._on_action = on_action
         self._slow_ms = slow_loading_ms
         self._slow_timer = 0
         self._loading_started = False
@@ -47,9 +57,13 @@ class OverviewPage(Gtk.Stack):
         self._loading = LoadingView()
         self._error = ErrorView()
         self._empty = EmptyView()
-        self._summary = SummaryPanel()
+        self._summary = SummaryPanel(on_stop_all=None if on_action is None else self._on_stop_all)
         self._filters = FilterBar(on_changed=self._on_filters_changed)
-        self._list = _build_list()
+        self._list = build_list()
+        self._build_pages()
+        self.show_loading()
+
+    def _build_pages(self) -> None:
         self._list_stack = Gtk.Stack()
         self._list_stack.add_named(self._list, LIST_PAGE)
         self._list_stack.add_named(self._empty.page, EMPTY_PAGE)
@@ -58,7 +72,6 @@ class OverviewPage(Gtk.Stack):
         self.add_named(self._loading.page, STATE_LOADING)
         self.add_named(self._error.page, STATE_ERROR)
         self.add_named(self._scroller, STATE_CONTENT)
-        self.show_loading()
 
     def _build_content(self) -> Adw.Clamp:
         box = Gtk.Box(
@@ -132,6 +145,15 @@ class OverviewPage(Gtk.Stack):
         widget.set_expanded(True)
         widget.grab_focus()
         return True
+
+    def _on_row_action(self, row: GroupRow) -> None:
+        request = request_for_row(row=row)
+        if request is not None and self._on_action is not None:
+            self._on_action(request, row.title)
+
+    def _on_stop_all(self) -> None:
+        if self._on_action is not None:
+            self._on_action(ActionRequest(kind=ActionKind.STOP_ALL_IDLE_SAFE), None)
 
     def _on_slow(self) -> bool:
         self._slow_timer = 0
@@ -248,7 +270,9 @@ class OverviewPage(Gtk.Stack):
         for rank, row in enumerate(rows):
             widget = self._widgets.get(row.id)
             if widget is None:
-                widget = GroupRowWidget(row=row)
+                widget = GroupRowWidget(
+                    row=row, on_action=None if self._on_action is None else self._on_row_action
+                )
                 widget.set_narrow(narrow=self._narrow)
                 widget.sort_rank = rank
                 self._widgets[row.id] = widget
@@ -262,17 +286,3 @@ class OverviewPage(Gtk.Stack):
         if self._sort_dirty:
             self._sort_dirty = False
             self._list.invalidate_sort()
-
-
-def _build_list() -> Gtk.ListBox:
-    listing = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-    listing.add_css_class("boxed-list")
-    listing.set_sort_func(_by_rank)
-    return listing
-
-
-def _by_rank(first: Gtk.ListBoxRow, second: Gtk.ListBoxRow) -> int:
-    """Order rows by the position the view model gave them (reclaimable, name, id)."""
-    if not (isinstance(first, GroupRowWidget) and isinstance(second, GroupRowWidget)):
-        return 0
-    return first.sort_rank - second.sort_rank

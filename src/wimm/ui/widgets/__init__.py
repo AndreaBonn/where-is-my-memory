@@ -33,6 +33,7 @@ _STYLE = """
 .wimm-badge.error { color: @error_color; background: alpha(@error_color, 0.16); }
 .wimm-badge.dim-label { background: alpha(currentColor, 0.08); }
 .wimm-reclaim { font-weight: 600; }
+.wimm-warning { background: alpha(@warning_color, 0.14); border-radius: 8px; padding: 8px 12px; }
 """
 
 _installed_displays: set[Gdk.Display] = set()
