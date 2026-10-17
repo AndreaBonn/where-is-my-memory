@@ -362,3 +362,13 @@ c'è il punto della specifica, cosa cambia e perché.
 - **P4, "Ferma tutti gli inattivi sicuri" (RF-24).** Il pulsante dice quanto libera e
   chi ferma ("Libera 4,2 GB senza rischi"), ed è spento quando non c'è niente di sicuro da
   fermare; la conferma si intitola "Fermare i programmi che non usi?".
+- **D2, azione nuova `disk_free_safe` (RF-22, §8.1).** "Libera X senza rischi" in testa al
+  Disco compone in un solo piano i passi già esistenti valutati `safe`: cache (non il
+  cestino), cache di build, immagini non usate. Il totale mostrato è lo stesso di
+  `safe_reclaimable_bytes`; nel dialogo ogni voce si può togliere, e dopo l'esecuzione il
+  disco si ricontrolla come per le altre azioni sul disco.
+- **D3, ordine delle sezioni del Disco (§10.2).** Le sezioni sono raggruppate per costo:
+  "Si libera senza pensarci" (cache, cache di build), "Da guardare prima" (immagini,
+  container fermi, cartelle di dipendenze), "Attenzione: cancella dati" (volumi, cestino).
+- **D6, azioni di massa.** Le etichette dicono quanto liberano ("Elimina immagini senza
+  nome (120 MB)").
