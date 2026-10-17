@@ -171,3 +171,10 @@ LAST_ACTIVE_RETENTION_S = 30 * 24 * 3600
 
 # SPECIFICHE 10 (Disk view): sections show their largest entries up to this cap + a counter.
 DISK_SECTION_CAP = 200
+
+# SPECIFICHE 7.6.1 (directory size): GIL yield every N entries, I/O pause every M entries.
+DIRSIZE_YIELD_EVERY = 1000
+DIRSIZE_PAUSE_EVERY = 10000
+DIRSIZE_PAUSE_S = 0.01
+DISK_CACHE_FILENAME = "disk-cache.json"
+DISK_CACHE_VERSION = 1
