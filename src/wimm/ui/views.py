@@ -32,7 +32,6 @@ class BarSegment:
     size_text: str
     percent: int
     fraction: float
-    percent_text: str
     legend: str
 
 
@@ -49,6 +48,9 @@ class SummaryView:
     disk_total: str
     disk_free: str
     disk_fraction: float
+    ram_headline: str
+    ram_details: str
+    disk_headline: str
     reclaimable_ram: str
     reclaimable_disk: str
     pressure: Pressure

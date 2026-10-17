@@ -1,4 +1,4 @@
-"""The "Gruppi ignorati" section: user state, changed at once, never part of "Applica"."""
+"""The "Programmi senza avvisi" section: user state, changed at once, never part of "Applica"."""
 
 from typing import Any
 
@@ -10,9 +10,9 @@ from gi.repository import Adw, Gtk
 
 from wimm.model.enums import GroupId
 
-TITLE = "Gruppi ignorati"
-DESCRIPTION = "Non compaiono nelle notifiche. Il cambiamento vale subito."
-EMPTY_TEXT = "Nessun gruppo ignorato"
+TITLE = "Programmi senza avvisi"
+DESCRIPTION = "Non ricevi avvisi per questi programmi. Il cambiamento vale subito."
+EMPTY_TEXT = "Nessun programma senza avvisi"
 UNIGNORE_LABEL = "Non ignorare più"
 INACTIVE_TEXT = "non attivo ora"
 

@@ -21,7 +21,7 @@ from wimm.ui.window_state import DEFAULT_HEIGHT, DEFAULT_WIDTH, MIN_HEIGHT, MIN_
 pytestmark = pytest.mark.ui
 MANY_GROUPS = 300
 LONG_NAME = "x" * 200
-IDLE_MESSAGE = "Niente di inattivo. Tutto ciò che è acceso risulta in uso."
+IDLE_MESSAGE = "Niente da liberare: tutto ciò che è acceso risulta in uso."
 BUILD_BUDGET_S = 1.0
 # RNF-03: no main-loop slice of row work may exceed 50 ms.
 SLICE_BUDGET_S = 0.050

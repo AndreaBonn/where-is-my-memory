@@ -18,7 +18,9 @@ FILTER_COLUMN_SPACING = 8
 FILTER_ROW_SPACING = 6
 LINE_SPACING = 2
 SEARCH_PLACEHOLDER = "Cerca…"
-SEARCH_LABEL = "Cerca tra i gruppi"
+SEARCH_LABEL = "Cerca tra i programmi"
+RAM_TITLE = "Memoria (RAM)"
+DISK_TITLE = "Spazio sul disco"
 FILTER_ALL = "Tutti"
 FILTER_IDLE = "Inattivi"
 CATEGORY_MENU = "Categoria"
@@ -38,6 +40,19 @@ def _detail_label() -> Gtk.Label:
     return Gtk.Label(xalign=0, wrap=True, selectable=False)
 
 
+def _headline_label() -> Gtk.Label:
+    label = _detail_label()
+    label.add_css_class("title-3")
+    return label
+
+
+def _dim_caption() -> Gtk.Label:
+    label = _detail_label()
+    label.add_css_class("caption")
+    label.add_css_class("dim-label")
+    return label
+
+
 def _build_stop_all(*, on_stop_all: Callable[[], None] | None) -> Gtk.Button:
     button = Gtk.Button(label=ACTION_LABELS[ActionKind.STOP_ALL_IDLE_SAFE])
     if on_stop_all is None:
@@ -54,21 +69,21 @@ class SummaryPanel(Gtk.Box):
 
     def __init__(self, *, on_stop_all: Callable[[], None] | None = None) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=SECTION_SPACING)
-        self._ram_text = _detail_label()
+        self._ram_text = _headline_label()
+        self._ram_details = _dim_caption()
         self._bar = MemoryBar()
-        self._note = _detail_label()
-        self._note.add_css_class("caption")
-        self._note.add_css_class("dim-label")
-        self._disk_title = _section_title(text="Disco")
-        self._disk_text = _detail_label()
+        self._note = _dim_caption()
+        self._disk_title = _section_title(text=DISK_TITLE)
+        self._disk_text = _headline_label()
         self._disk_bar = Gtk.ProgressBar()
         self._reclaim = _detail_label()
         self._reclaim.add_css_class("wimm-reclaim")
         self._stop_all = _build_stop_all(on_stop_all=on_stop_all)
         self._can_stop_all = on_stop_all is not None
         for widget in (
-            _section_title(text="RAM"),
+            _section_title(text=RAM_TITLE),
             self._ram_text,
+            self._ram_details,
             self._bar,
             self._note,
             self._disk_title,
@@ -95,21 +110,18 @@ class SummaryPanel(Gtk.Box):
 
     def update(self, *, view: SummaryView) -> None:
         """Show a new SummaryView."""
-        self._ram_text.set_label(
-            f"{view.ram_used} / {view.ram_total} · disponibile {view.ram_available}"
-            f" · swap {view.swap_used} / {view.swap_total} · pressione {view.pressure_text}"
-        )
+        self._ram_text.set_label(view.ram_headline)
+        self._ram_details.set_label(view.ram_details)
         self._bar.update(segments=view.segments)
         self._note.set_label(view.kernel_cache_note)
-        self._disk_title.set_label(f"Disco {view.disk_mount}")
-        self._disk_text.set_label(f"{view.disk_used} / {view.disk_total} · liberi {view.disk_free}")
+        self._disk_text.set_label(view.disk_headline)
         self._disk_bar.set_fraction(view.disk_fraction)
         self._disk_bar.update_property(
             [Gtk.AccessibleProperty.LABEL],
             [f"Uso del disco {view.disk_mount}: {view.disk_used} su {view.disk_total}"],
         )
         self._reclaim.set_label(
-            f"Recuperabile ora: {view.reclaimable_ram} di RAM · {view.reclaimable_disk} di disco"
+            f"Liberabile ora: {view.reclaimable_ram} di RAM · {view.reclaimable_disk} di disco"
         )
 
 

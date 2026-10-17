@@ -3,7 +3,7 @@ from collections.abc import Callable
 from gi.repository import Adw, GLib, Gtk
 
 from wimm.model.enums import ActionKind
-from wimm.ui.disk_view import DiskRowView, DiskSectionView, SectionActionView
+from wimm.ui.disk_model import DiskRowView, DiskSectionView, SectionActionView
 from wimm.ui.format import button_label
 from wimm.ui.widgets.risk_badge import make_risk_badge
 
@@ -45,16 +45,14 @@ def build_disk_row(
         title=row.title,
         subtitle=row.subtitle,
         use_markup=False,
-        title_lines=1,
-        subtitle_lines=1,
+        title_lines=2,
+        subtitle_lines=2,
         tooltip_text=row.title,
     )
     suffix = _build_suffix(row=row)
     widget.add_suffix(suffix)
     if on_action is not None and row.action_kind is not None and row.risk is not None:
-        button = Gtk.Button(
-            label=button_label(kind=row.action_kind, risk=row.risk), halign=Gtk.Align.END
-        )
+        button = Gtk.Button(label=button_label(kind=row.action_kind), halign=Gtk.Align.END)
         button.connect("clicked", lambda *_a: on_action(row))
         suffix.append(button)
         if buttons is not None:
@@ -71,7 +69,7 @@ class SectionGroup:
         self.key = key
         self.group = Adw.PreferencesGroup()
         self.spinner = Gtk.Spinner(width_request=SPINNER_SIZE, height_request=SPINNER_SIZE)
-        self.spinner.update_property([Gtk.AccessibleProperty.LABEL], ["Scansione in corso"])
+        self.spinner.update_property([Gtk.AccessibleProperty.LABEL], ["Controllo in corso"])
         self.group.set_header_suffix(self.spinner)
         self._on_action, self._on_section = on_action, on_section
         self._busy = False
@@ -102,7 +100,8 @@ class SectionGroup:
         self._shown = section
         self.group.set_title(section.title)
         # The description is markup and the message can carry a raw Docker error.
-        self.group.set_description(GLib.markup_escape_text(section.message or ""))
+        text = "\n".join(t for t in (section.description, section.message) if t)
+        self.group.set_description(GLib.markup_escape_text(text))
         for child in self._children:
             self.group.remove(child)
         self._buttons = []

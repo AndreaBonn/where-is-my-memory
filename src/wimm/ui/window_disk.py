@@ -7,7 +7,7 @@ import gi
 from wimm.core.constants import DEVDIRS_MIN_AGE_DAYS
 from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind, TargetId
-from wimm.ui.disk_view import DiskRowView
+from wimm.ui.disk_model import DiskRowView
 from wimm.ui.pages.disk import DiskPage
 from wimm.ui.window_state import SnapshotSource
 

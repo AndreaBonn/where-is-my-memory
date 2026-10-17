@@ -24,10 +24,11 @@ _STYLE = """
 .wimm-seg-5 { background: @yellow_5; }
 .wimm-seg-6 { background: @red_3; }
 .wimm-seg-7 { background: @brown_3; }
+.wimm-seg-other { background: @brown_1; }
 .wimm-seg-cache { background: @light_5; }
 .wimm-seg-unattributed { background: @dark_2; }
 .wimm-seg-free { background: alpha(currentColor, 0.14); }
-.wimm-badge { padding: 1px 8px; border-radius: 999px; font-size: small; font-weight: 600; }
+.wimm-badge { padding: 1px 8px; border-radius: 8px; font-size: small; font-weight: 600; }
 .wimm-badge.success { color: @success_color; background: alpha(@success_color, 0.16); }
 .wimm-badge.warning { color: @warning_color; background: alpha(@warning_color, 0.16); }
 .wimm-badge.error { color: @error_color; background: alpha(@error_color, 0.16); }

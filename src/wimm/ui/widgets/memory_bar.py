@@ -5,7 +5,12 @@ from wimm.ui.views import BarSegment
 from . import clear_children
 
 PALETTE_SIZE = 8
-SPECIAL_CLASSES = {"kernel_cache": "cache", "unattributed": "unattributed", "free": "free"}
+SPECIAL_CLASSES = {
+    "other_programs": "other",
+    "kernel_cache": "cache",
+    "unattributed": "unattributed",
+    "free": "free",
+}
 BAR_LABEL = "Memoria per categoria"
 LEGEND_COLUMNS = 6
 BAR_SPACING = 6

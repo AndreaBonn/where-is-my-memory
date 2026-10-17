@@ -113,7 +113,7 @@ def test_member_subtitle_lists_pid_command_cwd_ports_start_and_memory(group_row:
 
     text = member_subtitle(member=process)
 
-    assert text.splitlines()[0] == "PID 941149 · avvio 16/10 06:46 · 180 MB · inattivo da 5 h"
+    assert text.splitlines()[0] == "PID 941149 · avvio 16/10 06:46 · 180 MB · non in uso da 5 h"
     assert "comando: uvicorn app:main --port 8000" in text
     assert "cartella: /home/bonn/projects/ai-whitebox-core" in text
     assert "porte: 8000" in text

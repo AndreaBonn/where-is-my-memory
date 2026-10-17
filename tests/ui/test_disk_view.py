@@ -14,12 +14,9 @@ from tests.core.disk_helpers import (
 from wimm.model.disk import CacheKind, DockerDisk
 from wimm.model.enums import ActionKind
 from wimm.model.snapshot import DockerStatus
-from wimm.ui.disk_view import (
-    DiskSectionView,
-    build_disk_sections,
-    last_scan_text,
-    more_text,
-)
+from wimm.ui.disk_model import DiskSectionView, more_text
+from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, disk_headline
+from wimm.ui.disk_view import build_disk_sections, last_scan_text
 
 MIN_AGE = 90
 LOCAL = timezone(timedelta(hours=2))
@@ -36,9 +33,64 @@ def test_no_report_has_no_sections() -> None:
 def test_last_scan_text_uses_local_time_and_none_text() -> None:
     now = datetime(2026, 10, 16, 15, 0, tzinfo=LOCAL)
     scanned = report().scanned_at
-    assert last_scan_text(report=report(), now=now) == "Ultima scansione: 14:00"
+    assert last_scan_text(report=report(), now=now) == "Ultimo controllo alle 14:00"
     assert scanned.hour == 12
-    assert last_scan_text(report=None, now=now) == "Nessuna scansione ancora"
+    assert last_scan_text(report=None, now=now) == "Nessun controllo ancora"
+
+
+def test_every_section_explains_what_it_holds() -> None:
+    caches = (cache(kind=CacheKind.UV, size=3 * MB), cache(kind=CacheKind.TRASH, size=9 * MB))
+    sections = build_disk_sections(report=report(caches=caches), min_age_days=MIN_AGE)
+
+    for section in sections:
+        assert section.description == SECTION_DESCRIPTIONS[section.key]
+        assert section.description
+    assert "si ricrea" in SECTION_DESCRIPTIONS["caches"]
+
+
+def test_disk_headline_sums_what_the_rows_can_free() -> None:
+    docker = docker_disk(images=(image(char="d", tags=("reg:1",), size=5 * MB),))
+    caches = (cache(kind=CacheKind.UV, size=3 * MB),)
+    sections = build_disk_sections(
+        report=report(docker=docker, caches=caches), min_age_days=MIN_AGE
+    )
+
+    assert disk_headline(sections=sections) == "Puoi liberare fino a 8 MB"
+
+
+def test_disk_headline_counts_only_the_freeable_build_cache_and_no_user_data() -> None:
+    docker = docker_disk(
+        build_cache_size=10 * MB,
+        build_cache_reclaimable=4 * MB,
+        volumes=(volume(name="db", size=50 * MB),),
+    )
+    trash = (cache(kind=CacheKind.TRASH, size=9 * MB),)
+    sections = build_disk_sections(report=report(docker=docker, caches=trash), min_age_days=MIN_AGE)
+
+    # The volume and the trash are "Pericolo": their bytes are data, not a promise.
+    assert disk_headline(sections=sections) == "Puoi liberare fino a 4 MB"
+
+
+def test_last_scan_on_another_day_names_the_date() -> None:
+    now = datetime(2026, 10, 18, 15, 0, tzinfo=LOCAL)
+    assert last_scan_text(report=report(), now=now) == "Ultimo controllo il 16/10 alle 14:00"
+
+
+def test_disk_headline_with_nothing_to_free_and_before_a_scan() -> None:
+    assert disk_headline(sections=()) == ""
+    nothing = build_disk_sections(report=report(), min_age_days=MIN_AGE)
+    assert disk_headline(sections=nothing) == "Niente da liberare sul disco"
+
+
+def test_untagged_image_reads_as_image_without_name() -> None:
+    docker = docker_disk(images=(image(char="b", tags=(), dangling=True),))
+    (row,) = sections_by_key(
+        sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
+    )["images"].rows
+
+    assert row.title == "Immagine senza nome"
+    assert "sha256:" not in row.title
+    assert row.subtitle.endswith("id " + "b" * 12)
 
 
 def test_image_rows_state_risk_and_in_use_has_no_badge() -> None:
@@ -56,10 +108,10 @@ def test_image_rows_state_risk_and_in_use_has_no_badge() -> None:
     by_title = {row.title: row for row in rows}
     assert by_title["app:1"].risk_text is None
     assert "in uso" in by_title["app:1"].subtitle
-    assert by_title["sha256:" + "b" * 12].risk_text == "Sicuro"
-    assert by_title["loc:1"].risk_text == "Attenzione"
+    assert by_title["Immagine senza nome"].risk_text == "Sicuro: si ricrea quando serve"
+    assert by_title["loc:1"].risk_text == "Attenzione: leggi prima cosa si perde"
     assert by_title["loc:1"].risk_style == "warning"
-    assert by_title["reg:1"].risk_text == "Sicuro"
+    assert by_title["reg:1"].risk_text == "Sicuro: si ricrea quando serve"
     assert by_title["reg:1"].size_text == "5 MB"
 
 
@@ -77,15 +129,15 @@ def test_volume_rows_unknown_size_and_missing_created_at() -> None:
         sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
     )["volumes"].rows
     by_title = {row.title: row for row in rows}
-    assert by_title["ok"].risk_text == "Pericolo"
+    assert by_title["ok"].risk_text == "Pericolo: cancella dati"
     assert by_title["ok"].risk_style == "error"
-    assert by_title["nosize"].size_text == "dimensione non nota"
+    assert by_title["nosize"].size_text == "dimensione sconosciuta"
     assert by_title["nodate"].risk_text is None
     assert "data di creazione" in by_title["nodate"].subtitle
     assert by_title["used"].risk_text is None
     assert "in uso" in by_title["used"].subtitle
     assert by_title["unknown_use"].risk_text is None
-    assert "uso non noto" in by_title["unknown_use"].subtitle
+    assert by_title["unknown_use"].subtitle == "non sappiamo se un contenitore lo usa"
 
 
 def test_containers_and_build_cache_rows() -> None:
@@ -100,12 +152,13 @@ def test_containers_and_build_cache_rows() -> None:
     )
     container = by_key["containers"]
     assert container.rows[0].title == "ctr-a"
-    assert container.rows[0].risk_text == "Attenzione"
+    assert container.rows[0].subtitle == "fermo"
+    assert container.rows[0].risk_text == "Attenzione: leggi prima cosa si perde"
     assert container.more_text == "e altre 3"
     build = by_key["build_cache"].rows[0]
     assert build.size_text == "10 MB"
     assert "4 MB" in build.subtitle
-    assert build.risk_text == "Sicuro"
+    assert build.risk_text == "Sicuro: si ricrea quando serve"
 
 
 def test_build_cache_with_nothing_to_reclaim_has_no_badge() -> None:
@@ -146,9 +199,9 @@ def test_caches_and_trash_are_separate_sections() -> None:
         sections=build_disk_sections(report=report(caches=caches), min_age_days=MIN_AGE)
     )
     assert [row.title for row in by_key["caches"].rows] == ["uv"]
-    assert by_key["caches"].rows[0].risk_text == "Sicuro"
+    assert by_key["caches"].rows[0].risk_text == "Sicuro: si ricrea quando serve"
     assert by_key["trash"].rows[0].size_text == "9 MB"
-    assert by_key["trash"].rows[0].risk_text == "Pericolo"
+    assert by_key["trash"].rows[0].risk_text == "Pericolo: cancella dati"
 
 
 def test_empty_devdirs_message_uses_configured_age() -> None:

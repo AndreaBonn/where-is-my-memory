@@ -253,7 +253,7 @@ def test_ignored_groups_are_listed_and_unignore_calls_the_service(
     titles = [w.get_title() for w in tree(dialog) if isinstance(w, Adw.ActionRow)]
     assert len(buttons) == 2
     assert "<b>g0</b>" in titles and "visible" not in titles
-    assert "Nessun gruppo ignorato" not in titles
+    assert "Nessun programma senza avvisi" not in titles
     buttons[1].emit("clicked")
 
     assert service.ignored == [(GroupId("id-g1"), False)]
@@ -267,7 +267,7 @@ def test_no_ignored_groups_shows_the_empty_row(
     dialog = PreferencesDialog(source=service, paths=paths, home=home)
 
     titles = [w.get_title() for w in tree(dialog) if isinstance(w, Adw.ActionRow)]
-    assert "Nessun gruppo ignorato" in titles
+    assert "Nessun programma senza avvisi" in titles
     assert ignored_buttons(dialog) == []
 
 
@@ -284,7 +284,7 @@ def test_ignored_section_is_absent_without_set_ignored(
     dialog = PreferencesDialog(source=NoIgnore(), paths=paths, home=home)
 
     titles = [w.get_title() for w in tree(dialog) if isinstance(w, Adw.PreferencesGroup)]
-    assert "Gruppi ignorati" not in titles
+    assert "Programmi senza avvisi" not in titles
     assert "Campionamento" in titles
 
 
@@ -347,7 +347,7 @@ def test_ignored_groups_are_listed_before_the_first_snapshot(
 
     titles = [w.get_title() for w in tree(dialog) if isinstance(w, Adw.ActionRow)]
     assert "a" in titles
-    assert "Nessun gruppo ignorato" not in titles
+    assert "Nessun programma senza avvisi" not in titles
 
 
 def test_wimm_error_on_save_is_reported_with_its_user_message(

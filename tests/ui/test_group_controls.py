@@ -111,13 +111,13 @@ def test_the_row_shows_ignored_and_snoozed_state_from_the_snapshot(
     window = window_factory(service)
     present_and_settle(window)
     widget = window.overview.group_widgets["srv"]
-    assert f"silenziato fino alle {(now + timedelta(hours=1)):%H:%M}" in widget.get_subtitle()
-    assert "ignorato" not in widget.get_subtitle()
+    assert f"avvisi in pausa fino alle {(now + timedelta(hours=1)):%H:%M}" in widget.get_subtitle()
+    assert "senza avvisi" not in widget.get_subtitle()
 
     service.publish(one_group(ignored=True, snoozed_until=now - timedelta(hours=1)))
     present_and_settle(window)
 
-    assert "ignorato" in widget.get_subtitle()
+    assert "senza avvisi" in widget.get_subtitle()
     assert "silenziato" not in widget.get_subtitle()
 
 

@@ -4,17 +4,20 @@ from datetime import datetime
 from gi.repository import Adw, Gtk
 
 from wimm.model.disk import DiskReport
-from wimm.ui.disk_view import DiskSectionView, build_disk_sections, last_scan_text
+from wimm.ui.disk_model import DiskSectionView
+from wimm.ui.disk_texts import ACTIONS_NOTE, disk_headline
+from wimm.ui.disk_view import build_disk_sections, last_scan_text
 from wimm.ui.pages.disk_rows import RowAction, SectionAction, SectionGroup
 
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
-SCAN_LABEL = "Scansiona ora"
-WAITING_TITLE = "Nessuna scansione ancora"
-WAITING_TEXT = "La prima scansione parte poco dopo l'avvio. Puoi avviarla con Scansiona ora."
-SCANNING_TITLE = "Scansione in corso…"
-FAILED_WITH_REPORT = "La scansione non è riuscita: l'elenco mostra l'ultimo risultato."
-FAILED_WITHOUT_REPORT = "La scansione non è riuscita. Riprova con Scansiona ora."
+SCAN_LABEL = "Controlla ora"
+WAITING_TITLE = "Nessun controllo ancora"
+WAITING_TEXT = "Il primo controllo parte poco dopo l'avvio. Puoi avviarlo con Controlla ora."
+SCANNING_TITLE = "Controllo in corso…"
+FAILED_WITH_REPORT = "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
+FAILED_WITHOUT_REPORT = "Il controllo non è riuscito. Riprova con Controlla ora."
+HEADER_SPACING = 2
 STATE_WAITING = "waiting"
 STATE_LIST = "list"
 
@@ -61,16 +64,27 @@ class DiskPage(Gtk.Box):
         return scroller
 
     def _build_header(self) -> None:
-        self._scan_label = Gtk.Label(
-            label=WAITING_TITLE, xalign=0, hexpand=True, wrap=True, valign=Gtk.Align.CENTER
-        )
+        self._headline = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self._headline.add_css_class("title-3")
+        self._scan_label = Gtk.Label(label=WAITING_TITLE, xalign=0, wrap=True)
         self._scan_label.add_css_class("dim-label")
+        note = Gtk.Label(label=ACTIONS_NOTE, xalign=0, wrap=True)
+        note.add_css_class("caption")
+        note.add_css_class("dim-label")
+        texts = Gtk.Box(
+            orientation=Gtk.Orientation.VERTICAL,
+            spacing=HEADER_SPACING,
+            hexpand=True,
+            valign=Gtk.Align.CENTER,
+        )
+        for label in (self._headline, self._scan_label, note):
+            texts.append(label)
         self._spinner = Gtk.Spinner(visible=False)
-        self._spinner.update_property([Gtk.AccessibleProperty.LABEL], ["Scansione in corso"])
+        self._spinner.update_property([Gtk.AccessibleProperty.LABEL], ["Controllo in corso"])
         self._button = Gtk.Button(label=SCAN_LABEL, valign=Gtk.Align.CENTER)
         self._button.connect("clicked", lambda *_a: self._start_scan())
         header = Gtk.Box(spacing=PAGE_MARGIN)
-        for widget in (self._scan_label, self._spinner, self._button):
+        for widget in (texts, self._spinner, self._button):
             header.append(widget)
         # Same column as the sections, so the button sits over the list it rescans.
         clamp = Adw.Clamp(maximum_size=MAX_CONTENT_WIDTH, child=header, margin_top=PAGE_MARGIN)
@@ -87,6 +101,11 @@ class DiskPage(Gtk.Box):
     def header_text(self) -> str:
         """The last-scan line."""
         return self._scan_label.get_label()
+
+    @property
+    def headline_text(self) -> str | None:
+        """The "Puoi liberare fino a …" line, if shown."""
+        return self._headline.get_label() if self._headline.get_visible() else None
 
     @property
     def notice_text(self) -> str | None:
@@ -126,7 +145,11 @@ class DiskPage(Gtk.Box):
         self._has_report = report is not None
         self._notice.set_visible(False)
         self._scan_label.set_label(last_scan_text(report=report, now=now))
-        self._sync_groups(sections=build_disk_sections(report=report, min_age_days=min_age_days))
+        sections = build_disk_sections(report=report, min_age_days=min_age_days)
+        headline = disk_headline(sections=sections)
+        self._headline.set_label(headline)
+        self._headline.set_visible(bool(headline))
+        self._sync_groups(sections=sections)
         self._set_scanning(scanning=False)
 
     def set_busy(self, *, busy: bool) -> None:

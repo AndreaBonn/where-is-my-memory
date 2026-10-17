@@ -1,11 +1,19 @@
 from gi.repository import Gtk
 
 BADGE_CLASS = "wimm-badge"
+# The badge says the consequence too (P8): it wraps instead of crushing the row title.
+BADGE_MAX_CHARS = 18
 
 
 def make_risk_badge(*, text: str, style: str) -> Gtk.Label:
     """Return a pill label: risk is always text, the style class only reinforces it."""
-    badge = Gtk.Label(label=text, valign=Gtk.Align.CENTER)
+    badge = Gtk.Label(
+        label=text,
+        valign=Gtk.Align.CENTER,
+        wrap=True,
+        max_width_chars=BADGE_MAX_CHARS,
+        justify=Gtk.Justification.CENTER,
+    )
     badge.add_css_class(BADGE_CLASS)
     badge.add_css_class(style)
     return badge

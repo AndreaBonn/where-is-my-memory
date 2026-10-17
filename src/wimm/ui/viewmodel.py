@@ -13,8 +13,8 @@ from wimm.model.snapshot import (
 
 from .format import (
     CATEGORY_LABELS,
+    RISK_CONSEQUENCE,
     RISK_STYLE,
-    RISK_TEXT,
     activity_text,
     button_label,
     fold_text,
@@ -34,8 +34,8 @@ from .views import (
 
 NEUTRAL_STYLE = "dim-label"
 NO_ACTION_BADGE = "Nessuna azione"
-NOTHING_IDLE_MESSAGE = "Niente di inattivo. Tutto ciò che è acceso risulta in uso."
-NO_RESULTS_MESSAGE = "Nessun gruppo corrisponde ai filtri attivi."
+NOTHING_IDLE_MESSAGE = "Niente da liberare: tutto ciò che è acceso risulta in uso."
+NO_RESULTS_MESSAGE = "Nessun programma corrisponde ai filtri."
 PORTS_SEPARATOR = ", "
 DETAIL_SEPARATOR = " · "
 
@@ -45,9 +45,7 @@ def ports_text(*, ports: tuple[int, ...]) -> str:
 
 
 def action_button(*, offer: ActionOffer) -> ActionButton:
-    return ActionButton(
-        label=button_label(kind=offer.kind, risk=offer.risk), kind=offer.kind, risk=offer.risk
-    )
+    return ActionButton(label=button_label(kind=offer.kind), kind=offer.kind, risk=offer.risk)
 
 
 def _elapsed(*, since: datetime | None, now: datetime) -> float | None:
@@ -121,7 +119,7 @@ def _row_risk(*, group: Group) -> Risk | None:
 def _badge(*, risk: Risk | None) -> tuple[str, str]:
     if risk is None:
         return NO_ACTION_BADGE, NEUTRAL_STYLE
-    return RISK_TEXT[risk], RISK_STYLE[risk]
+    return RISK_CONSEQUENCE[risk], RISK_STYLE[risk]
 
 
 def _detail(*, group: Group) -> str:
@@ -138,9 +136,9 @@ def _snooze(*, group: Group, now: datetime) -> tuple[datetime | None, str | None
         return None, None
     local = until.astimezone(now.tzinfo)
     if local.date() == now.date():
-        text = f"silenziato fino alle {local:%H:%M}"
+        text = f"avvisi in pausa fino alle {local:%H:%M}"
     else:
-        text = f"silenziato fino al {local:%d/%m} alle {local:%H:%M}"
+        text = f"avvisi in pausa fino al {local:%d/%m} alle {local:%H:%M}"
     return until, text
 
 

@@ -102,12 +102,12 @@ def test_fixture_group_row_reads_like_the_spec_mockup(snapshot: Snapshot, now: d
     (row,) = build_rows(snapshot=snapshot, filters=RowFilters(), now=now)
 
     assert row.title == "whitebox"
-    assert row.subtitle == "Progetto · inattivo da 5 h"
+    assert row.subtitle == "Progetto · non in uso da 5 h"
     assert row.detail == (
         "nessuna connessione in ingresso e CPU media 0,1% negli ultimi 30 minuti · porte 8000, 8080"
     )
     assert (row.reclaimable, row.memory) == ("1,1 GB", "1,1 GB")
-    assert (row.risk_text, row.risk_style) == ("Sicuro", "success")
+    assert (row.risk_text, row.risk_style) == ("Sicuro: non perdi nulla", "success")
     assert row.primary_action is not None
     assert (row.primary_action.label, row.primary_action.kind) == ("Ferma", ActionKind.GROUP_STOP)
     assert row.explanation.startswith("progetto compose 'whitebox'")
@@ -139,7 +139,7 @@ def test_fixture_members_show_command_cwd_ports_image_and_mounts(
     assert process.ports == "8000"
     assert process.started == "16/10 06:46"
     assert process.memory == "180 MB"
-    assert process.activity == "inattivo da 5 h"
+    assert process.activity == "non in uso da 5 h"
     assert [a.label for a in process.actions] == ["Termina"]
 
 
@@ -348,9 +348,9 @@ def test_protected_groups_never_appear_in_the_overview(snapshot: Snapshot, now: 
 @pytest.mark.parametrize(
     ("risk", "text", "style", "label"),
     [
-        (Risk.SAFE, "Sicuro", "success", "Ferma"),
-        (Risk.CAUTION, "Attenzione", "warning", "Ferma…"),
-        (Risk.DANGER, "Pericolo", "error", "Ferma…"),
+        (Risk.SAFE, "Sicuro: non perdi nulla", "success", "Ferma"),
+        (Risk.CAUTION, "Attenzione: puoi perdere lavoro", "warning", "Ferma"),
+        (Risk.DANGER, "Pericolo: cancella dati", "error", "Ferma"),
     ],
 )
 def test_badge_and_button_for_each_risk(
@@ -381,7 +381,10 @@ def test_actionable_group_without_primary_uses_riskiest_member_action(
         )
     }
 
-    assert (rows["whitebox"].risk_text, rows["whitebox"].primary_action) == ("Pericolo", None)
+    assert (rows["whitebox"].risk_text, rows["whitebox"].primary_action) == (
+        "Pericolo: cancella dati",
+        None,
+    )
     assert (rows["idle-none"].risk_text, rows["idle-none"].risk_style) == (
         "Nessuna azione",
         "dim-label",
@@ -411,9 +414,9 @@ def test_subtitle_for_each_activity_state(snapshot: Snapshot, now: datetime) -> 
         for r in build_rows(snapshot=with_groups(snapshot, *groups), filters=RowFilters(), now=now)
     }
     assert rows == {
-        "a": "Dev server · in uso",
+        "a": "Server di sviluppo · in uso",
         "b": "Browser · attività non misurabile",
-        "c": "CLI AI · in osservazione",
+        "c": "Assistente AI · in osservazione",
     }
 
 
@@ -431,8 +434,8 @@ def test_snooze_text_only_while_in_the_future(snapshot: Snapshot, now: datetime)
     }
 
     assert rows["future"].snoozed_until == future
-    assert rows["future"].snoozed_text == "silenziato fino alle 11:30"
-    assert rows["tomorrow"].snoozed_text == "silenziato fino al 17/10 alle 14:30"
+    assert rows["future"].snoozed_text == "avvisi in pausa fino alle 11:30"
+    assert rows["tomorrow"].snoozed_text == "avvisi in pausa fino al 17/10 alle 14:30"
     assert (rows["past"].snoozed_until, rows["past"].snoozed_text) == (None, None)
     assert rows["ignored"].ignored is True
     assert rows["future"].ignored is False
@@ -460,6 +463,16 @@ def test_summary_formats_ram_swap_disk_and_reclaimable(snapshot: Snapshot) -> No
     assert "si libera da sola" in summary.kernel_cache_note
 
 
+def test_summary_headlines_use_round_numbers_and_plain_words(snapshot: Snapshot) -> None:
+    summary = build_summary(snapshot=snapshot)
+
+    assert summary.ram_headline == "33 GB usati su 42 GB"
+    assert summary.ram_details == "disponibili 8,8 GB · swap 120 MB su 4,3 GB · memoria quasi piena"
+    calm = build_summary(snapshot=replace(snapshot, pressure=Pressure.OK))
+    assert calm.ram_details == "disponibili 8,8 GB · swap 120 MB su 4,3 GB"
+    assert summary.disk_headline == "28 GB liberi su 376 GB"
+
+
 def test_summary_segments_are_ranked_and_carry_a_text_legend(snapshot: Snapshot) -> None:
     segments = build_summary(snapshot=snapshot).segments
 
@@ -468,15 +481,16 @@ def test_summary_segments_are_ranked_and_carry_a_text_legend(snapshot: Snapshot)
         "DESKTOP_APP",
         "AI_CLI",
         "DEV_SERVER",
-        "CONTAINER",
+        "other_programs",
         "kernel_cache",
         "unattributed",
         "free",
     ]
-    assert segments[0].legend == "Browser: 9,8 GB (23%)"
-    assert segments[-2].legend == "Non attribuita: 1,9 GB (4%)"
-    assert segments[-3].label == "Cache del kernel"
-    assert segments[-1].legend == "Libera: 14,9 GB (36%)"
+    assert segments[0].legend == "Browser: 9,8 GB"
+    assert segments[4].legend == "Altro: 950 MB"
+    assert segments[-2].legend == "Non attribuita: 1,9 GB"
+    assert segments[-3].label == "Memoria di appoggio del sistema"
+    assert segments[-1].legend == "Libera: 14,9 GB"
     assert segments[0].fraction == pytest.approx(9.8 / 41.742)
 
 
@@ -511,7 +525,7 @@ def test_summary_always_lists_unattributed_but_skips_empty_categories(snapshot: 
     segments = build_summary(snapshot=shot).segments
 
     assert [s.key for s in segments] == ["CONTAINER", "unattributed", "free"]
-    assert segments[1].legend == "Non attribuita: 0 B (0%)"
+    assert segments[1].legend == "Non attribuita: 0 B"
 
 
 def test_summary_without_free_memory_has_no_free_segment(snapshot: Snapshot) -> None:
@@ -563,7 +577,7 @@ def test_empty_state_for_idle_filter_uses_spec_text(snapshot: Snapshot) -> None:
 
     assert view is not None
     assert view.kind is EmptyKind.NOTHING_IDLE
-    assert view.message == "Niente di inattivo. Tutto ciò che è acceso risulta in uso."
+    assert view.message == "Niente da liberare: tutto ciò che è acceso risulta in uso."
 
 
 def test_empty_state_is_none_when_rows_exist_or_unfiltered(snapshot: Snapshot) -> None:

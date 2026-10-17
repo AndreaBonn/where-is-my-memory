@@ -11,7 +11,7 @@ from wimm.core.disk_wire import disk_report_from_json
 from wimm.model.disk import CacheKind, DiskReport, DockerDisk
 from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import DockerStatus, Snapshot
-from wimm.ui.disk_view import DiskRowView
+from wimm.ui.disk_model import DiskRowView
 from wimm.ui.pages.disk import DiskPage
 from wimm.ui.pages.disk_rows import build_disk_row
 
@@ -38,7 +38,7 @@ def labels(widget: Gtk.Widget) -> list[str]:
 
 def scan_button(page: DiskPage) -> Gtk.Button:
     buttons = (w for w in descendants(page) if isinstance(w, Gtk.Button))
-    return next(b for b in buttons if b.get_label() == "Scansiona ora")
+    return next(b for b in buttons if b.get_label() == "Controlla ora")
 
 
 def show(page: DiskPage, *, report_: DiskReport | None, now: datetime) -> None:
@@ -47,7 +47,8 @@ def show(page: DiskPage, *, report_: DiskReport | None, now: datetime) -> None:
 
 def test_page_starts_waiting_with_no_scan_header(display: None, now: datetime) -> None:
     page = make_page()
-    assert page.header_text == "Nessuna scansione ancora"
+    assert page.header_text == "Nessun controllo ancora"
+    assert page.headline_text is None
     assert page.row_count == 0
     assert not page.is_scanning
 
@@ -55,7 +56,9 @@ def test_page_starts_waiting_with_no_scan_header(display: None, now: datetime) -
 def test_report_fills_sections_and_header(display: None, now: datetime, sample: DiskReport) -> None:
     page = make_page()
     show(page, report_=sample, now=now)
-    assert page.header_text.startswith("Ultima scansione: ")
+    assert page.header_text.startswith("Ultimo controllo alle ")
+    assert page.headline_text is not None
+    assert page.headline_text.startswith("Puoi liberare fino a ")
     assert list(page.sections) == [
         "images",
         "containers",
@@ -109,7 +112,7 @@ def test_failed_scan_keeps_last_report_and_shows_notice(
 
     assert not page.is_scanning
     assert page.row_count == rows
-    assert page.notice_text == "La scansione non è riuscita: l'elenco mostra l'ultimo risultato."
+    assert page.notice_text == "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
     page.begin_scan()
     assert page.notice_text is None
 
@@ -118,7 +121,7 @@ def test_failed_first_scan_says_to_retry(display: None) -> None:
     page = make_page()
     page.begin_scan()
     page.show_scan_failed()
-    assert page.notice_text == "La scansione non è riuscita. Riprova con Scansiona ora."
+    assert page.notice_text == "Il controllo non è riuscito. Riprova con Controlla ora."
     assert page.row_count == 0
 
 
@@ -183,7 +186,7 @@ def test_row_with_callback_has_action_button_that_calls_it(display: None) -> Non
     got: list[DiskRowView] = []
     widget = build_disk_row(row=row, on_action=got.append)
     (button,) = buttons_in(widget)
-    assert button.get_label() == "Rimuovi volume…"
+    assert button.get_label() == "Rimuovi volume"
     button.emit("clicked")
     assert got == [row]
 
@@ -207,7 +210,7 @@ def test_window_disk_page_follows_the_service(
     source = FakeDiskSource(snapshot=snapshot, report=sample)
     window = window_factory(source)
     assert window.disk.row_count > 0
-    assert window.disk.header_text.startswith("Ultima scansione")
+    assert window.disk.header_text.startswith("Ultimo controllo")
 
     scan_button(window.disk).emit("clicked")
     main_context_iterate()
@@ -231,7 +234,7 @@ def test_window_without_disk_scan_keeps_the_page_waiting(
 ) -> None:
     window = window_factory(FakeSource(snapshot=snapshot))
     assert window.disk.row_count == 0
-    assert window.disk.header_text == "Nessuna scansione ancora"
+    assert window.disk.header_text == "Nessun controllo ancora"
 
 
 @pytest.mark.parametrize("error", ["a <b & c", "socket <unix>"])

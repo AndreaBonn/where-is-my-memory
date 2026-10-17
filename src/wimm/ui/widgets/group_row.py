@@ -23,8 +23,8 @@ MEMBER_SUBTITLE_LINES = 8
 SUFFIX_SPACING = 8
 PRIMARY_ACTION_NAME = "primary-action"
 BUSY_LABEL = "In corso…"
-RECLAIMABLE_TOOLTIP = "Memoria recuperabile"
-IGNORED_TEXT = "ignorato"
+RECLAIMABLE_TOOLTIP = "Memoria liberabile"
+IGNORED_TEXT = "senza avvisi"
 LINE_SEPARATOR = "\n"
 FIELD_SEPARATOR = " · "
 
@@ -244,7 +244,7 @@ class GroupRowWidget(Adw.ExpanderRow):
 
 
 def _info_title(*, row: GroupRow) -> str:
-    return f"Recuperabile: {row.reclaimable} · in uso: {row.memory}"
+    return f"Liberabile: {row.reclaimable} · in uso: {row.memory}"
 
 
 def _subtitle(*, row: GroupRow) -> str:

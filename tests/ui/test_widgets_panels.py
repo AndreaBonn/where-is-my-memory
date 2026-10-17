@@ -38,9 +38,16 @@ def test_risk_badge_shows_text_and_style_class_and_updates(display: None) -> Non
     assert not badge.has_css_class("success")
 
 
+def test_long_risk_badge_wraps_instead_of_widening_the_row(display: None) -> None:
+    badge = make_risk_badge(text="Attenzione: leggi prima cosa si perde", style="warning")
+
+    assert badge.get_wrap()
+    assert 0 < badge.get_max_width_chars() < len(badge.get_label())
+
+
 def test_segment_classes_keep_remainders_apart_from_the_palette() -> None:
     def seg(key: str) -> BarSegment:
-        return BarSegment(key, key, 1, "1 B", 1, 0.1, "1%", key)
+        return BarSegment(key, key, 1, "1 B", 1, 0.1, key)
 
     classes = segment_classes(segments=tuple(seg(k) for k in ("A", "kernel_cache", "B", "free")))
 
@@ -70,8 +77,11 @@ def test_summary_panel_shows_totals_and_a_disabled_stop_all_button(
     panel.update(view=build_summary(snapshot=snapshot))
 
     texts = " | ".join(label.get_label() for label in labels_under(panel))
-    assert "Recuperabile ora:" in texts
-    assert "liberi" in texts
+    assert "Liberabile ora:" in texts
+    assert "33 GB usati su 42 GB" in texts
+    assert "28 GB liberi su 376 GB" in texts
+    assert "Memoria (RAM)" in texts
+    assert "memoria quasi piena" in texts
     (button,) = [w for w in descendants(panel) if w.get_name() == "stop-all-idle"]
     assert isinstance(button, Gtk.Button)
     assert not button.get_sensitive()
@@ -121,7 +131,7 @@ def test_filter_bar_reset_clears_everything_and_notifies_once(display: None) -> 
 
 def test_empty_view_shows_the_view_model_message_verbatim(display: None) -> None:
     view = EmptyView()
-    message = "Niente di inattivo. Tutto ciò che è acceso risulta in uso."
+    message = "Niente da liberare: tutto ciò che è acceso risulta in uso."
 
     view.show_state(state=EmptyStateView(kind=EmptyKind.NOTHING_IDLE, message=message))
 

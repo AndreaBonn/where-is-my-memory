@@ -10,15 +10,16 @@ SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
 OBSERVING_PREFIX = "in osservazione"
-ELLIPSIS = "…"
+ROUND_FROM_BYTES = 10_000_000_000
+BYTES_PER_GB = 1_000_000_000
 
 CATEGORY_LABELS = MappingProxyType(
     {
         Category.SYSTEM: "Sistema",
-        Category.CONTAINER: "Container",
-        Category.DEV_SERVER: "Dev server",
-        Category.DEV_PROCESS: "Processo di sviluppo",
-        Category.AI_CLI: "CLI AI",
+        Category.CONTAINER: "Contenitore Docker",
+        Category.DEV_SERVER: "Server di sviluppo",
+        Category.DEV_PROCESS: "Strumento di sviluppo",
+        Category.AI_CLI: "Assistente AI",
         Category.BROWSER: "Browser",
         Category.DESKTOP_APP: "App",
         Category.TERMINAL: "Terminale",
@@ -31,8 +32,33 @@ CATEGORY_LABELS = MappingProxyType(
 RISK_TEXT = MappingProxyType(
     {Risk.SAFE: "Sicuro", Risk.CAUTION: "Attenzione", Risk.DANGER: "Pericolo"}
 )
+# The badge says the risk and what closing costs (P8); RISK_TEXT stays the short filter label.
+RISK_CONSEQUENCE = MappingProxyType(
+    {
+        Risk.SAFE: "Sicuro: non perdi nulla",
+        Risk.CAUTION: "Attenzione: puoi perdere lavoro",
+        Risk.DANGER: "Pericolo: cancella dati",
+    }
+)
+# On the disk the cost depends on the item: "caution" sends the user to the confirmation,
+# which lists what is lost (a stopped container loses its own files for good).
+DISK_RISK_CONSEQUENCE = MappingProxyType(
+    {
+        Risk.SAFE: "Sicuro: si ricrea quando serve",
+        Risk.CAUTION: "Attenzione: leggi prima cosa si perde",
+        Risk.DANGER: "Pericolo: cancella dati",
+    }
+)
 # libadwaita style classes (spec 10.4).
 RISK_STYLE = MappingProxyType({Risk.SAFE: "success", Risk.CAUTION: "warning", Risk.DANGER: "error"})
+# P1/P2: what a non-expert should know about the pressure, none when it is normal.
+PRESSURE_PLAIN = MappingProxyType(
+    {
+        Pressure.OK: "",
+        Pressure.WARNING: "memoria quasi piena",
+        Pressure.CRITICAL: "memoria quasi finita",
+    }
+)
 PRESSURE_TEXT = MappingProxyType(
     {Pressure.OK: "Normale", Pressure.WARNING: "Alta", Pressure.CRITICAL: "Critica"}
 )
@@ -91,11 +117,6 @@ def allocate_percents(*, sizes: tuple[int, ...]) -> tuple[int, ...]:
     return tuple(points)
 
 
-def percent_text(*, percent: int, size: int) -> str:
-    """Render a percent; a non-empty share rounded to zero reads ``<1%``."""
-    return "<1%" if percent == 0 and size > 0 else f"{percent}%"
-
-
 def fold_text(*, text: str) -> str:
     """Casefold and strip accents, for accent-insensitive search."""
     decomposed = unicodedata.normalize("NFD", text)
@@ -117,11 +138,17 @@ def activity_text(*, state: ActivityState, reason: str, elapsed_s: float | None)
     if state is ActivityState.ACTIVE:
         return "in uso"
     if state is ActivityState.IDLE:
-        return f"inattivo {format_elapsed(seconds=elapsed_s or 0)}"
+        return f"non in uso {format_elapsed(seconds=elapsed_s or 0)}"
     return OBSERVING_PREFIX if reason.startswith(OBSERVING_PREFIX) else "attività non misurabile"
 
 
-def button_label(*, kind: ActionKind, risk: Risk) -> str:
-    """Return the button label; caution and danger end with an ellipsis (confirmation)."""
-    label = ACTION_LABELS[kind]
-    return label if risk is Risk.SAFE else label + ELLIPSIS
+def button_label(*, kind: ActionKind) -> str:
+    """Return the button label, the same for every risk: every action asks first (D7)."""
+    return ACTION_LABELS[kind]
+
+
+def format_round_size(*, size: int) -> str:
+    """Like format_size, but whole gigabytes from 10 GB on (``33 GB``), for headline totals."""
+    if size < ROUND_FROM_BYTES:
+        return format_size(size=size)
+    return f"{(2 * size + BYTES_PER_GB) // (2 * BYTES_PER_GB)} GB"

@@ -7,6 +7,7 @@ from wimm.ui.format import (
     ACTION_LABELS,
     CATEGORY_LABELS,
     PRESSURE_TEXT,
+    RISK_CONSEQUENCE,
     RISK_STYLE,
     RISK_TEXT,
     activity_text,
@@ -15,8 +16,8 @@ from wimm.ui.format import (
     fold_text,
     format_clock,
     format_elapsed,
+    format_round_size,
     format_size,
-    percent_text,
 )
 
 from ..helpers import invalid_model_value
@@ -91,12 +92,6 @@ def test_allocate_percents_gives_extra_points_to_largest_remainders() -> None:
     assert sum(result) == 100
 
 
-def test_percent_text_marks_tiny_non_zero_shares() -> None:
-    assert percent_text(percent=0, size=5) == "<1%"
-    assert percent_text(percent=0, size=0) == "0%"
-    assert percent_text(percent=12, size=5) == "12%"
-
-
 def test_fold_text_drops_accents_and_case() -> None:
     assert fold_text(text="Attività ÈÙ") == "attivita eu"
     assert fold_text(text="plain") == "plain"
@@ -127,11 +122,13 @@ def test_format_clock_other_day_adds_date() -> None:
 def test_activity_text_active_and_idle() -> None:
     assert activity_text(state=ActivityState.ACTIVE, reason="x", elapsed_s=10) == "in uso"
     idle = activity_text(state=ActivityState.IDLE, reason="x", elapsed_s=5 * 3600 + 60)
-    assert idle == "inattivo da 5 h"
+    assert idle == "non in uso da 5 h"
 
 
 def test_activity_text_idle_without_elapsed_is_zero_seconds() -> None:
-    assert activity_text(state=ActivityState.IDLE, reason="x", elapsed_s=None) == "inattivo da 0 s"
+    assert (
+        activity_text(state=ActivityState.IDLE, reason="x", elapsed_s=None) == "non in uso da 0 s"
+    )
 
 
 def test_activity_text_unknown_distinguishes_observing_from_unmeasurable() -> None:
@@ -145,18 +142,18 @@ def test_activity_text_unknown_distinguishes_observing_from_unmeasurable() -> No
     assert unmeasurable == "attività non misurabile"
 
 
-@pytest.mark.parametrize(
-    ("risk", "label"),
-    [(Risk.SAFE, "Ferma"), (Risk.CAUTION, "Ferma…"), (Risk.DANGER, "Ferma…")],
-)
-def test_button_label_ellipsis_only_when_confirmation_is_needed(risk: Risk, label: str) -> None:
-    assert button_label(kind=ActionKind.GROUP_STOP, risk=risk) == label
+def test_button_labels_carry_no_ellipsis() -> None:
+    # D7: every action asks for confirmation, so no label marks the ones that do.
+    labels = [button_label(kind=kind) for kind in ActionKind]
+    assert labels == [ACTION_LABELS[kind] for kind in ActionKind]
+    assert not [label for label in labels if label.endswith("…")]
+    assert button_label(kind=ActionKind.GROUP_STOP) == "Ferma"
 
 
 def test_every_enum_member_has_a_label() -> None:
     assert set(ACTION_LABELS) == set(ActionKind)
     assert set(CATEGORY_LABELS) == set(Category)
-    assert set(RISK_TEXT) == set(RISK_STYLE) == set(Risk)
+    assert set(RISK_TEXT) == set(RISK_STYLE) == set(RISK_CONSEQUENCE) == set(Risk)
     assert set(PRESSURE_TEXT) == set(Pressure)
     assert all(label.strip() for label in ACTION_LABELS.values())
 
@@ -165,7 +162,33 @@ def test_labels_match_spec_wording() -> None:
     assert [RISK_TEXT[r] for r in Risk] == ["Sicuro", "Attenzione", "Pericolo"]
     assert [RISK_STYLE[r] for r in Risk] == ["success", "warning", "error"]
     assert CATEGORY_LABELS[Category.PROJECT] == "Progetto"
-    assert CATEGORY_LABELS[Category.DEV_PROCESS] == "Processo di sviluppo"
+    assert CATEGORY_LABELS[Category.DEV_PROCESS] == "Strumento di sviluppo"
+
+
+def test_category_labels_avoid_jargon() -> None:
+    assert CATEGORY_LABELS[Category.AI_CLI] == "Assistente AI"
+    assert CATEGORY_LABELS[Category.DEV_SERVER] == "Server di sviluppo"
+    assert CATEGORY_LABELS[Category.CONTAINER] == "Contenitore Docker"
+
+
+@pytest.mark.parametrize(
+    ("risk", "text"),
+    [
+        (Risk.SAFE, "Sicuro: non perdi nulla"),
+        (Risk.CAUTION, "Attenzione: puoi perdere lavoro"),
+        (Risk.DANGER, "Pericolo: cancella dati"),
+    ],
+)
+def test_risk_consequence_names_the_risk_and_what_is_lost(risk: Risk, text: str) -> None:
+    assert RISK_CONSEQUENCE[risk] == text
+
+
+@pytest.mark.parametrize(
+    ("size", "text"),
+    [(32_900_000_000, "33 GB"), (9_840_000_000, "9,8 GB"), (980_000_000, "980 MB"), (0, "0 B")],
+)
+def test_format_round_size_drops_decimals_from_10_gb(size: int, text: str) -> None:
+    assert format_round_size(size=size) == text
 
 
 def test_format_clock_shows_utc_values_in_the_system_time_zone() -> None:
