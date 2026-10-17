@@ -89,3 +89,15 @@ Misura: `bench_cycle.py`, 12 cicli dopo uno di riscaldamento, tempo di CPU del p
 | Lettura di `smaps_rollup` solo per i processi dei gruppi su cui si può agire (O1) | stima: 83 processi su 390 del proprio utente sono fuori da quei gruppi, `memory_full_info` costa 0,10 s per tutti i 390 | non provata | risparmio atteso circa 0,02 s: non porta da solo sotto 0,30 s |
 
 Dopo le tre modifiche tenute il ciclo costa 0,33-0,34 s di CPU (circa 1,1% di un core a 30 s): RNF-01 resta sopra il limite. La voce rimasta più grande è `memory_full_info` (0,10 s).
+
+## Conferma di RNF-01 con l'intervallo a 60 s (2026-10-17, 12:31-12:45)
+
+Stesso isolamento della misura di un'ora (build del repository, bus D-Bus privato, Xvfb, servizio della barra finto, cartelle XDG temporanee). 391 processi utente, 8 container, load average 6,1-7,1. `pidstat -p <pid> 60 13` a partire dal primo minuto.
+
+| Grandezza | Valore | Limite | Verdetto |
+|---|---|---|---|
+| CPU a regime, minuti 8-15 | 0,53-0,63% di un core | 1% | rispettato |
+| CPU, minuti 4-13 | media 0,75% | 1% | rispettato |
+| CPU, tutti i 13 minuti | media 1,72%, con il 14,05% del minuto della prima scansione del disco (2 minuti dopo l'avvio, poi ogni 6 ore) | 1% | sopra il limite solo per la scansione iniziale |
+| Ciclo di campionamento, 15 cicli | mediana 0,40 s, massimo 0,71 s | 1,5 s | rispettato |
+| RSS dopo 14 minuti, finestra mai aperta | 62 MB | 120 MB | rispettato |
