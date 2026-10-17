@@ -197,3 +197,58 @@ Resta da provare a mano la pulizia vera dello spazio usato da Docker per costrui
 - **Complessità:** alta (6 commit, circa 5000 righe tra codice e test)
 - **Stato:** lotto L5-1..L5-3 implementato e verificato in automatico. Resta M-13.
 - **Prossimo:** L5-4 (T-5.4a/b, vista Disco).
+
+## 2026-10-17 | Sessione #3 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Il lavoro copre gli 8 commit da `26bb749` a `37efebc` più questo, e chiude il piano: vista Disco (L5-4), attività dal primo piano (T-5.5b) e Fase 6.
+
+### Richiesta
+
+Proseguire il piano fino alla fine, per commit atomici.
+
+### Azioni Eseguite
+
+**Orari nel fuso del sistema** (`26bb749`)
+- Gli orari mostrati erano in UTC, due ore indietro a Roma. Ora seguono il fuso del sistema; i test fissano `Europe/Rome`.
+
+**T-5.4a e T-5.4b, vista Disco** (`3471048`, `30f28e4`)
+- Sezioni Docker, cache, cartelle di dipendenze e cestino, con il badge di rischio che il piano assegnerebbe; "Scansiona ora" con lo spinner guidato dal servizio (`disk-scan-started`).
+- Azioni dalle righe e azioni di massa (immagini senza nome, immagini inutilizzate, container fermi) attraverso i dialoghi di conferma. "Dettagli" compare solo se qualche bersaglio fallisce (§10.3).
+
+**T-5.5b, attività dal primo piano** (`c0e8c5c`)
+- Browser, app desktop e terminali sono attivi se la loro finestra è stata in primo piano nella finestra di osservazione, inattivi dopo una finestra intera senza. Wayland, rilevamento spento o dati mancanti: stato sconosciuto, mai inattivo.
+
+**T-6.1, baseline di sicurezza** (`24444ec`)
+- Nessun P0 o P1; ricerca di `sudo`, `pkexec`, `setcap`, `shell=True` vuota con controllo positivo. Corretto il P2-1: i comandi di pulizia delle cache girano da `/`. Rapporto in `docs/security/`.
+
+**T-6.4, clone pulito** (`ecc0ccf`)
+- `make setup`, `make lint`, `make test`, `make test-all` verdi da un clone in una cartella temporanea (2029 test). L'unica differenza: un errore di ordine degli import nascosto da una cache di ruff vecchia; `make lint` ora gira senza cache.
+
+**T-6.3 e T-6.2, ADR e README** (`a4cc342`, `37efebc`)
+- Cinque ADR in `docs/adr/`. README riscritto per chi installa: il precedente diceva ancora che l'app non agisce. Reader-test a contesto pulito su 9 domande, tutte trovate al secondo giro.
+
+**T-6.5, misure RNF** (questo commit)
+- Build del repository con `wimm --background` per 1 h su bus D-Bus privato e Xvfb, cartelle XDG temporanee e un servizio della barra finto, 2026-10-17 07:02-08:02: 393 processi utente, 8 container, load average 5,4-6,4.
+- RNF-01: 1,32-1,60% di un core a regime, media 2,30% sui 10 minuti di `pidstat` con il picco del 10,15% della prima scansione del disco. **Non rispettato** (limite 1%).
+- RNF-02: 63 MB dopo 55 minuti a finestra mai aperta (limite 120); 136 MB con la finestra aperta (limite 200).
+- RNF-03: 122 cicli, mediana 0,47 s, massimo 0,61 s, nessuno sopra 1,5 s.
+
+**T-6.6, Delivery Report** (questo commit)
+- `docs/DELIVERY_REPORT.md`: Definition of Done voce per voce con evidenza (6 fatte, 8 da verificare a mano), RNF, controlli manuali M-1..M-16, decisioni, deviazioni, punti aperti.
+
+### Punti aperti
+
+- RNF-01 sopra il limite: serve una decisione (sezione 6 del Delivery Report).
+- Misure RNF da ripetere sull'installato a macchina quieta (M-15); installazione e controlli manuali (M-2..M-16) all'utente.
+- Il disco della macchina di sviluppo ha meno del 10% di spazio libero: l'app lo ha segnalato durante la misura.
+- Codex non disponibile: tutto il lavoro delegato è girato in-house.
+
+### Note per il Cliente (linguaggio NON tecnico)
+
+L'app è completa: mostra memoria e disco, dice cosa è fermo e lo può chiudere o cancellare con la vostra conferma. Una misura non rispetta l'obiettivo fissato: l'app usa circa l'1,4% di un processore invece di meno dell'1%. Le possibili soluzioni sono descritte nel Delivery Report e chiedono una vostra scelta.
+
+### Riepilogo
+
+- **Complessità:** alta (9 commit)
+- **Stato:** piano completato; RNF-01 non rispettato, controlli manuali all'utente.
+- **Prossimo:** decisione su RNF-01, poi M-5 (installazione) e i controlli manuali.

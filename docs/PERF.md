@@ -64,3 +64,14 @@ Misura: `plan_action` in processo, 20 ripetizioni, snapshot sintetico con 300 gr
 |---|---|---|---|---|
 | 2026-10-17 | `stop_all_idle_safe` (900 step) | 20,2 ms | 22,0 ms | sotto il limite, nessuna ottimizzazione |
 | 2026-10-17 | `group_stop` su un gruppo | 0,1 ms | 0,1 ms | sotto il limite |
+
+## Misura di un'ora (T-6.5, 2026-10-17)
+
+Build del repository, `wimm --background` per 1 h su bus D-Bus privato e Xvfb, cartelle XDG temporanee, servizio della barra finto. 393 processi utente, 8 container, load average 5,4-6,4.
+
+| Grandezza | Valore | Limite | Verdetto |
+|---|---|---|---|
+| CPU a regime (`pidstat -p <pid> 60 10`, minuti 2-11) | 1,32-1,60% di un core; media 2,30% con il picco del 10,15% della prima scansione del disco | 1% (RNF-01) | non rispettato: il ciclo costa 0,47 s ogni 30 s, dominato da `smaps_rollup` |
+| RSS a finestra mai aperta, dopo 55 min | 63 MB | 120 MB (RNF-02) | rispettato |
+| RSS con la finestra aperta, dopo 56 min | 136 MB | 200 MB (RNF-02) | rispettato (limite superiore della finestra nascosta) |
+| Ciclo di campionamento, 122 cicli | mediana 0,47 s, massimo 0,61 s | 1,5 s (RNF-03) | rispettato a 393 processi |
