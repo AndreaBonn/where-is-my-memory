@@ -9,6 +9,7 @@ from typing import ClassVar, Protocol
 from gi.repository import GLib, GObject
 
 from wimm.config import Config, ConfigParseResult, save_config, update_config
+from wimm.core import constants as c
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import PlanId
@@ -20,6 +21,7 @@ from wimm.service.errors import ControlFailed, InvalidRequest, WimmError
 from wimm.service.plan_registry import PlanRegistry
 from wimm.service.reclaim import ReclaimTracker
 from wimm.service.sampler import wall_clock
+from wimm.service.state_store import StateSaver
 
 LOGGER = logging.getLogger(__name__)
 _ActionResult = tuple[tuple[StepOutcome, ...], Snapshot | None]
@@ -66,6 +68,8 @@ class AppService(GObject.Object):
         actions: ActionSetup | None = None,
     ) -> None:
         super().__init__()
+        self._state_saver: StateSaver | None = None
+        self._state_timer = 0
         self._actions = actions
         self._plans = PlanRegistry()
         self._reclaim = ReclaimTracker()
@@ -143,7 +147,21 @@ class AppService(GObject.Object):
         if self._timer or self._stopped:
             return
         self._timer = GLib.timeout_add_seconds(self._config.sample_interval_s, self.request_cycle)
+        if self._state_saver is not None:
+            self._state_timer = GLib.timeout_add_seconds(
+                c.STATE_SAVE_INTERVAL_S, self.save_state_tick
+            )
         self.request_cycle()
+
+    def attach_state_saver(self, *, saver: StateSaver) -> None:
+        """Persist through ``saver`` every 5 minutes and on stop; call before ``start``."""
+        self._state_saver = saver
+
+    def save_state_tick(self) -> bool:
+        """Periodic save, on the worker so the main loop never waits for the disk."""
+        if self._state_saver is not None and not self._stopped:
+            self._executor.submit(self._state_saver.save)
+        return GLib.SOURCE_CONTINUE
 
     def request_cycle(self) -> bool:
         if not self._busy and not self._stopped:
@@ -273,5 +291,10 @@ class AppService(GObject.Object):
         if self._timer:
             GLib.source_remove(self._timer)
             self._timer = 0
+        if self._state_timer:
+            GLib.source_remove(self._state_timer)
+        if self._state_saver is not None:
+            # Inline: the executor is not awaited, so the file is written now.
+            self._state_saver.close()
         # Not waiting: the main loop must not freeze until a running action ends.
         self._executor.shutdown(wait=False, cancel_futures=True)

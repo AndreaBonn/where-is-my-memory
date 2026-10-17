@@ -62,9 +62,11 @@ def _assess_idle(
     return ActivityAssessment(state=ActivityState.IDLE, since=since, reason=reason)
 
 
-def _assess_short_history(*, inputs: ActivityInputs) -> ActivityAssessment:
+def _assess_short_history(*, inputs: ActivityInputs, config: ActivityConfig) -> ActivityAssessment:
     observed = (inputs.now - inputs.history[0].taken_at).total_seconds() if inputs.history else 0.0
-    if inputs.persisted_last_active is None:
+    persisted = inputs.persisted_last_active
+    # A persisted instant younger than a window is not yet proof of inactivity.
+    if persisted is None or (inputs.now - persisted).total_seconds() < config.window_s:
         return _unknown(reason=text.reason_observing(elapsed_s=observed))
     since, _ = _idle_since(inputs=inputs)
     reason = text.reason_idle_persisted(
@@ -92,8 +94,22 @@ def assess_activity(*, inputs: ActivityInputs, config: ActivityConfig) -> Activi
         reason = text.reason_active(active_for_s=(inputs.now - run_start).total_seconds())
         return ActivityAssessment(state=ActivityState.ACTIVE, since=run_start, reason=reason)
     if not _covers_window(inputs=inputs, config=config):
-        return _assess_short_history(inputs=inputs)
+        return _assess_short_history(inputs=inputs, config=config)
     return _assess_idle(inputs=inputs, kind=kind, config=config, steps=steps)
+
+
+def last_active_at(*, inputs: ActivityInputs, config: ActivityConfig) -> datetime | None:
+    """End of the latest active step in the window, None when nothing was active.
+
+    An entity stays "active" for a whole window after its last activity: this is the
+    instant the activity actually stopped, which an idle ``since`` must count from.
+    """
+    kind = kind_of(category=inputs.category)
+    if kind in (EntityKind.NOT_EVALUATED, EntityKind.UNMEASURABLE):
+        return None
+    steps = build_steps(inputs=inputs, kind=kind, config=config)
+    latest = next((step for step in reversed(steps) if step.active), None)
+    return None if latest is None else latest.curr.taken_at
 
 
 def assess_group_activity(*, members: Sequence[GroupMember]) -> ActivityAssessment:

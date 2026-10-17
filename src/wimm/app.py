@@ -3,6 +3,7 @@ import os
 import signal
 import sys
 from collections.abc import Callable, Mapping
+from dataclasses import replace
 from functools import partial
 from typing import TYPE_CHECKING, Any, Protocol
 
@@ -133,11 +134,13 @@ def _start_service(application: Any) -> None:
     from wimm.logging_setup import setup_logging
     from wimm.paths import default_user_paths
     from wimm.service.app_service import AppService
-    from wimm.service.sampler import Sampler, default_collectors, default_environment
+    from wimm.service.sampler import Sampler, default_collectors, default_environment, wall_clock
+    from wimm.service.state_store import StateSaver, load_state
 
     paths = default_user_paths()
     setup_logging(paths=paths)
-    environment = default_environment(paths=paths)
+    state = load_state(paths=paths, now=wall_clock())
+    environment = replace(default_environment(paths=paths), persisted_last_active=state.last_active)
     loaded = load_config(paths=paths, home=environment.home)
     for name, error in loaded.field_errors.items():
         LOGGER.warning("Invalid configuration field %s: %s", name, error)
@@ -147,7 +150,10 @@ def _start_service(application: Any) -> None:
         config=loaded.config,
     )
     actions = _build_actions(config=loaded.config, owner_uid=environment.uid)
-    application._service = AppService(sampler=sampler, config=loaded.config, actions=actions)
+    service = AppService(sampler=sampler, config=loaded.config, actions=actions)
+    saver = StateSaver(paths=paths, state=state, last_active=sampler.export_last_active)
+    service.attach_state_saver(saver=saver)
+    application._service = service
 
 
 def _tray_missing(application: Any, missing: bool) -> None:

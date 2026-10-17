@@ -15,7 +15,8 @@ from wimm.collectors.meminfo import collect_meminfo
 from wimm.collectors.processes import collect_processes
 from wimm.collectors.sockets import collect_sockets
 from wimm.config import Config
-from wimm.core.activity import ActivityInputs, EntitySample, assess_activity
+from wimm.core import constants as c
+from wimm.core.activity import ActivityInputs, EntitySample, assess_activity, last_active_at
 from wimm.core.assemble import (
     AssemblyInput,
     Entities,
@@ -26,13 +27,13 @@ from wimm.core.assemble import (
 )
 from wimm.core.categorize import CategorizationContext, categorize_process
 from wimm.core.grouping import GroupDraft
-from wimm.model.enums import Category, MetricsSource
+from wimm.model.enums import ActivityState, Category, MetricsSource
 from wimm.model.memory import DiskUsage
 from wimm.model.raw import MemInfo, RawProcess, RawSocket
 from wimm.model.snapshot import ActivityAssessment, DockerStatus, Snapshot
 from wimm.paths import UserPaths
 
-from .history import EntityKey, SampleHistory
+from .history import EntityKey, LastActiveTracker, SampleHistory
 from .sampler_environment import SamplerEnvironment as SamplerEnvironment
 from .sampler_environment import activity_config, group_entities
 from .sampler_steps import ListenPorts, ProcessCycle, ProcessSamples, identity
@@ -89,6 +90,7 @@ class Sampler:
         self.history = SampleHistory(
             window_s=config.activity_window_s, interval_s=config.sample_interval_s
         )
+        self._last_active = LastActiveTracker(persisted=environment.persisted_last_active)
         self._cpu = ProcessSamples()
         self._process_warning = False
         self._ports = ListenPorts()
@@ -105,6 +107,10 @@ class Sampler:
         self.settings = config
         self._activity = activity_config(config=config)
         self.history.resize(window_s=config.activity_window_s, interval_s=config.sample_interval_s)
+
+    def export_last_active(self) -> Mapping[EntityKey, datetime]:
+        """Last-active instants to persist; safe to call from any thread."""
+        return self._last_active.export(now=self.clock(), retention_s=c.LAST_ACTIVE_RETENTION_S)
 
     def run_cycle(self) -> Snapshot:
         started = monotonic()
@@ -205,6 +211,7 @@ class Sampler:
 
     def _verdicts(self, *, entities: Entities, cycle: ProcessCycle) -> Verdicts:
         self._record_samples(entities=entities, cycle=cycle)
+        self._last_active.begin_cycle()
         by_pid = {
             pid: self._assess(
                 key=identity(proc=proc),
@@ -228,24 +235,42 @@ class Sampler:
         now: datetime,
         ports: frozenset[int] = frozenset(),
     ) -> ActivityAssessment:
+        inputs = self._inputs_for(key=key, category=category, now=now, ports=ports)
+        assessment = assess_activity(inputs=inputs, config=self._activity)
+        if key is not None:
+            active_at = (
+                last_active_at(inputs=inputs, config=self._activity)
+                if assessment.state is ActivityState.ACTIVE
+                else None
+            )
+            self._last_active.observe(key=key, assessment=assessment, active_at=active_at)
+        return assessment
+
+    def _inputs_for(
+        self,
+        *,
+        key: EntityKey | None,
+        category: Category | None,
+        now: datetime,
+        ports: frozenset[int],
+    ) -> ActivityInputs:
         created = (
             datetime.fromtimestamp(key[1], tz=UTC)
             if isinstance(key, tuple)
             else self.monitor_started_at
         )
-        return assess_activity(
-            inputs=ActivityInputs(
-                category=category or Category.OTHER,
-                history=self.history.history_for(key=key) if key is not None else (),
-                now=now,
-                created_at=created,
-                monitor_started_at=self.monitor_started_at,
-                persisted_last_active=self.environment.persisted_last_active.get(key)
-                if key is not None
-                else None,
-                server_ports=ports,
-            ),
-            config=self._activity,
+        return ActivityInputs(
+            category=category or Category.OTHER,
+            history=self.history.history_for(key=key) if key is not None else (),
+            now=now,
+            created_at=created,
+            monitor_started_at=self.monitor_started_at,
+            # Last activity seen this session (or persisted at start): without it an
+            # entity active an hour ago looked idle since the monitor started.
+            persisted_last_active=self._last_active.last_active(key=key)
+            if key is not None
+            else None,
+            server_ports=ports,
         )
 
     def _assemble(

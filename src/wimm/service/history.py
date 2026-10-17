@@ -1,7 +1,11 @@
+import threading
 from collections import deque
 from collections.abc import Mapping
+from datetime import datetime, timedelta
 
 from wimm.core.activity import EntitySample
+from wimm.model.enums import ActivityState
+from wimm.model.snapshot import ActivityAssessment
 
 # Process: (pid, create_time) so a reused pid is a different entity; container: its id.
 type EntityKey = tuple[int, float] | str
@@ -44,3 +48,52 @@ class SampleHistory:
     def history_for(self, *, key: EntityKey) -> tuple[EntitySample, ...]:
         """Samples of ``key``, oldest first; empty if the entity is unknown."""
         return tuple(self._samples.get(key, ()))
+
+
+class LastActiveTracker:
+    """Last instant each entity was seen active, seeded from the persisted state (RF-12).
+
+    ``observe`` runs on the sampler worker, ``export`` on any thread: a lock guards both.
+    """
+
+    def __init__(self, *, persisted: Mapping[EntityKey, datetime]) -> None:
+        self._last_active = dict(persisted)
+        self._previous: set[EntityKey] = set()
+        self._current: set[EntityKey] = set()
+        self._lock = threading.Lock()
+
+    def begin_cycle(self) -> None:
+        """Start a cycle: seen means observed in this cycle or in the previous complete one.
+
+        The previous cycle stays counted so an export from another thread, in the middle of
+        a cycle, does not forget an entity that is not yet re-observed.
+        """
+        with self._lock:
+            self._previous, self._current = self._current, set()
+
+    def observe(
+        self, *, key: EntityKey, assessment: ActivityAssessment, active_at: datetime | None
+    ) -> None:
+        """Active: the end of the latest active step. Idle: keep the earlier instant, else
+        the assessed ``since``."""
+        with self._lock:
+            self._current.add(key)
+            if assessment.state is ActivityState.ACTIVE and active_at is not None:
+                self._last_active[key] = active_at
+            elif assessment.state is ActivityState.IDLE and assessment.since is not None:
+                self._last_active.setdefault(key, assessment.since)
+
+    def last_active(self, *, key: EntityKey) -> datetime | None:
+        """Last instant seen active this session, else the persisted one, else None."""
+        with self._lock:
+            return self._last_active.get(key)
+
+    def export(self, *, now: datetime, retention_s: int) -> Mapping[EntityKey, datetime]:
+        """Copy to persist; entities absent from the last cycle expire after ``retention_s``."""
+        oldest = now - timedelta(seconds=retention_s)
+        with self._lock:
+            return {
+                key: at
+                for key, at in self._last_active.items()
+                if key in self._current or key in self._previous or at >= oldest
+            }

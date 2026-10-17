@@ -180,6 +180,16 @@ def test_restart_with_persisted_activity_is_idle_immediately() -> None:
     )
 
 
+def test_recent_persisted_activity_is_not_idle_before_a_window_has_passed() -> None:
+    persisted = NOW - timedelta(minutes=10)
+    history = cpu_series([-60, -30, 0])
+    result = assess_activity(inputs=inputs(history, persisted_last_active=persisted), config=CONFIG)
+    assert (result.state, result.since) == (ActivityState.UNKNOWN, None)
+    older = NOW - timedelta(seconds=WINDOW)
+    result = assess_activity(inputs=inputs(history, persisted_last_active=older), config=CONFIG)
+    assert (result.state, result.since) == (ActivityState.IDLE, older)
+
+
 def test_restart_persisted_idle_turns_active_on_first_active_sample() -> None:
     persisted = NOW - timedelta(hours=3)
     history = cpu_series([-90, -60, -30, 0], active_at={-30})
@@ -268,3 +278,21 @@ def test_unmeasured_last_cycle_does_not_cite_a_forgotten_tab() -> None:
     result = assess_activity(inputs=inp, config=CONFIG)
     assert result.state is ActivityState.IDLE
     assert "scheda dimenticata" not in result.reason
+
+
+def test_last_active_at_is_the_end_of_the_latest_active_step() -> None:
+    from wimm.core.activity import last_active_at
+
+    history = cpu_series(FULL, active_at={-1200, -1170, -300, -270})
+
+    assert last_active_at(inputs=inputs(history), config=CONFIG) == at(-270)
+
+
+def test_last_active_at_is_none_without_activity_in_the_window() -> None:
+    from wimm.core.activity import last_active_at
+
+    assert last_active_at(inputs=inputs(cpu_series(FULL, active_at=set())), config=CONFIG) is None
+    # Positive pair: one active sample is enough to report it.
+    assert last_active_at(inputs=inputs(cpu_series(FULL, active_at={-30})), config=CONFIG) == at(
+        -30
+    )

@@ -164,3 +164,7 @@ SESSION_SERVICE_PATTERNS = (
 
 PLAN_TTL_S = 120
 PLAN_ID_BYTES = 16
+
+STATE_SAVE_INTERVAL_S = 300
+# An unseen persisted entity is forgotten after this long without a sighting.
+LAST_ACTIVE_RETENTION_S = 30 * 24 * 3600
