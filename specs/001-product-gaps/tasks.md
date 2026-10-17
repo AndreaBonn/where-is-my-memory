@@ -195,3 +195,6 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T007 | f031619 | `tests/test_i18n.py`; `wimm --help` con de_DE, C, it_IT
 - T009 | afd05a1 | `test_resolve_finds_each_marker`
 - T010 | cad1cca | `tests/core/test_devdir_rules.py`; negazioni del `.gitignore` gestite (review)
+- T011 T012 T013 T014 | 35f9f5c | walker ed executor con `classify_devdir`; marker registrato dal collector e usato nel testo di conferma; 88 cartelle sulla home reale
+- T004 T005 | e4b6244 | non separabili per file; radici rilevate mai scritte su disco (review: salvataggio di un'altra preferenza)
+- T017 | (questo commit) | +3% di durata a parità di cache, `docs/PERF.md`

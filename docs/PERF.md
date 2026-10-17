@@ -111,3 +111,8 @@ del commit misurato. Script `measure_devdirs.py` (nella cartella temporanea di s
 | Data | Codice | Cartelle trovate | Durata (mediana, 3 run) | CPU (mediana) | Verdetto |
 |---|---|---|---|---|---|
 | 2026-10-18 | baseline `d40bd18`, solo `node_modules` e `.venv` | 76 | 5,21 s (7,25 / 5,21 / 4,81) | 4,86 s | baseline |
+| 2026-10-18 | baseline `d40bd18`, rimisurata subito prima del risultato (cache del filesystem calda per entrambi) | 76 | 3,93 s (3,93 / 3,85 / 4,68) | 3,66 s | riferimento a parità di condizioni |
+| 2026-10-18 | `e4b6244`, tabella dei nomi di R4 con marker e secondo segnale | 88 | 4,04 s (4,58 / 4,04 / 3,77) | 3,80 s | tenuta: +3% di durata e +4% di CPU, dentro il rumore fra run e sotto il budget del 30% |
+
+La prima riga di baseline (5,21 s) includeva un run a cache fredda: il confronto valido è fra le
+due righe misurate una dopo l'altra.
