@@ -372,3 +372,23 @@ c'è il punto della specifica, cosa cambia e perché.
   container fermi, cartelle di dipendenze), "Attenzione: cancella dati" (volumi, cestino).
 - **D6, azioni di massa.** Le etichette dicono quanto liberano ("Elimina immagini senza
   nome (120 MB)").
+- **C3, testi delle conseguenze (§5.3, tabella).** Le frasi "Il server si ferma." e "Il
+  container si ferma; dati e configurazione restano." perdono la seconda parte ("Si riavvia
+  con lo stesso comando dalla cartella X", "Si riavvia con `docker start` o `docker compose
+  up`"): come si riaccende sta nel riquadro "Per riaccenderlo" del dialogo, con la cartella
+  del processo e senza comandi Docker. Il dialogo aggiunge anche "Cosa resta" per le sole
+  azioni di arresto.
+- **C2, voci del dialogo (RF-25).** Ogni voce mostra il nome d'uso con quello tecnico fra
+  parentesi e la memoria che libera ("Server web (uvicorn) · 165 MB"); un'immagine senza
+  tag è "Immagine senza nome (12 caratteri dell'id)", una cache è "Cache uv", la cache di
+  build è "Cache di build Docker".
+- **C1, stima del dialogo.** Quando la riga della Panoramica conta più memoria di quella
+  che il piano libera (oltre il 5%), il dialogo lo spiega: "Nella lista conta X: il resto è
+  di parti che non si fermano da qui". Se l'utente ha tolto una voce la nota non compare.
+- **C4, azione nuova "Riaccendi" (`restart_stopped`, passo `container_start`, §8.1).** Dopo
+  un arresto riuscito che ha fermato almeno un container, il messaggio finale offre
+  "Riaccendi": un piano `safe` che riavvia esattamente i container fermati con esito
+  "fatto" da quel piano (il servizio ricorda gli ultimi 8 piani, solo in memoria). Il piano
+  passa dalla conferma come ogni altro; all'esecuzione un container già riacceso resta
+  com'è, uno rimosso nel frattempo dà "Non riuscito". I processi non si riaccendono da qui:
+  il dialogo dice con quale comando e in quale cartella.
