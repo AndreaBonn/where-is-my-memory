@@ -36,7 +36,7 @@ class TrayService(Protocol):
 
     def snapshot(self) -> Snapshot | None: ...
 
-    def mute_notifications(self, *, duration_s: float) -> None: ...
+    def snooze_all(self, *, duration_s: float) -> None: ...
 
     def connect(self, detailed_signal: str, handler: Callable[..., Any]) -> int: ...
 
@@ -142,7 +142,7 @@ class Tray:
         elif callback_id == CALLBACK_QUIT:
             self._on_quit()
         elif callback_id == CALLBACK_MUTE:
-            self._service.mute_notifications(duration_s=MUTE_DURATION_S)
+            self._service.snooze_all(duration_s=MUTE_DURATION_S)
             self._refresh_from_signal()
         elif (group_id := parse_group_callback(callback_id=callback_id)) is not None:
             self._on_open(group_id)

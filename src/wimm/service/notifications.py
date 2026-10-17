@@ -1,20 +1,16 @@
 import logging
 from collections.abc import Callable, Mapping
-from dataclasses import replace
-from datetime import datetime, timedelta
-from types import MappingProxyType
+from datetime import datetime
 from typing import Any, Protocol
 
 from wimm.config import Config
 from wimm.core.notify_rules import NotificationState, NotifyRequest, evaluate_notifications
-from wimm.model.enums import GroupId
 from wimm.model.snapshot import Snapshot
 from wimm.service.notifier import NotificationSink, Notifier
 from wimm.service.sampler import wall_clock
 from wimm.service.state_store import PersistedState
 
 LOGGER = logging.getLogger(__name__)
-SNOOZE_DURATION = timedelta(hours=24)
 SNAPSHOT_SIGNAL = "snapshot-updated"
 
 
@@ -38,10 +34,9 @@ class StateUpdater(Protocol):
 class NotificationCoordinator:
     """Runs the notification rules on every new snapshot; main loop only, no blocking I/O.
 
-    Keeps the idle episodes already notified and the per-group snoozes. Both go to the
-    state saver, which writes them on its worker, so they survive a restart. A snooze
-    lives here and not in the sampler: the sampler runs on the worker, and the rules only
-    need ``Group.snoozed_until``, which this class fills in before evaluating.
+    Keeps the idle episodes already notified, which go to the state saver so they survive a
+    restart. Snoozes and ignores are not its business: the rules read ``Group.snoozed_until``
+    and ``Group.ignored`` from the snapshot, filled in by the user state (``user_state.py``).
     """
 
     def __init__(
@@ -56,20 +51,9 @@ class NotificationCoordinator:
         self._saver = saver
         self._clock = clock
         self._notified: NotificationState = state.notifications
-        self._snoozes: Mapping[GroupId, datetime] = state.snoozes
 
     def attach(self, *, source: NotificationSource) -> None:
         source.connect(SNAPSHOT_SIGNAL, self._on_snapshot)
-
-    def snooze_group(self, *, group_id: GroupId) -> None:
-        """Silence ``group_id`` for 24 h from now (RF-27); an empty target is ignored."""
-        if not group_id:
-            return
-        now = self._clock()
-        live = {g: until for g, until in self._snoozes.items() if until > now}
-        live[group_id] = now + SNOOZE_DURATION
-        self._snoozes = MappingProxyType(live)
-        self._persist(changes={"snoozes": self._snoozes})
 
     def _on_snapshot(self, source: NotificationSource) -> None:
         snapshot = source.snapshot()
@@ -85,7 +69,7 @@ class NotificationCoordinator:
         now = self._clock()
         result = evaluate_notifications(
             request=NotifyRequest(
-                snapshot=self._with_snoozes(snapshot=snapshot, now=now),
+                snapshot=snapshot,
                 config=source.config(),
                 state=self._notified,
                 now=now,
@@ -96,16 +80,6 @@ class NotificationCoordinator:
         if result.state != self._notified:
             self._notified = result.state
             self._persist(changes={"notifications": result.state})
-
-    def _with_snoozes(self, *, snapshot: Snapshot, now: datetime) -> Snapshot:
-        active = {g: until for g, until in self._snoozes.items() if until > now}
-        if not active:
-            return snapshot
-        groups = tuple(
-            replace(group, snoozed_until=active[group.id]) if group.id in active else group
-            for group in snapshot.groups
-        )
-        return replace(snapshot, groups=groups)
 
     def _persist(self, *, changes: Mapping[str, Any]) -> None:
         if self._saver is not None:

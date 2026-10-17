@@ -30,7 +30,7 @@ class FakeService(GObject.Object):
         self._snapshot: Snapshot | None = None
         self.consecutive_failures = 0
         self.muted_until: datetime | None = None
-        self.mute_calls: list[float] = []
+        self.snooze_all_calls: list[float] = []
         self.broken = False
 
     @property
@@ -42,8 +42,8 @@ class FakeService(GObject.Object):
             raise RuntimeError("boom")
         return self._snapshot
 
-    def mute_notifications(self, *, duration_s: float) -> None:
-        self.mute_calls.append(duration_s)
+    def snooze_all(self, *, duration_s: float) -> None:
+        self.snooze_all_calls.append(duration_s)
         self.muted_until = NOW + timedelta(seconds=duration_s)
 
     def publish(self, snapshot: Snapshot) -> None:
@@ -166,14 +166,14 @@ def test_quit_entry_requests_quit_only(harness: Harness) -> None:
     harness.click("Esci")
     spin_until(predicate=lambda: harness.quits == 1)
     assert harness.opened == []
-    assert harness.service.mute_calls == []
+    assert harness.service.snooze_all_calls == []
 
 
 @pytest.mark.dbus
 def test_mute_entry_mutes_for_one_hour_and_menu_shows_the_real_state(harness: Harness) -> None:
     harness.click("Silenzia")
-    spin_until(predicate=lambda: bool(harness.service.mute_calls))
-    assert harness.service.mute_calls == [MUTE_DURATION_S] and MUTE_DURATION_S == 3600
+    spin_until(predicate=lambda: bool(harness.service.snooze_all_calls))
+    assert harness.service.snooze_all_calls == [MUTE_DURATION_S] and MUTE_DURATION_S == 3600
     spin_until(predicate=lambda: "Silenzia notifiche per 1 h" not in harness.labels())
     assert str(harness.labels()[0]).startswith("Notifiche silenziate fino alle")
 

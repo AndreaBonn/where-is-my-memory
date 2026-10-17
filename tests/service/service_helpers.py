@@ -8,7 +8,7 @@ from gi.repository import GLib
 
 from tests.core.assemble_helpers import build_input
 from wimm.config import Config
-from wimm.core.assemble import assemble_snapshot
+from wimm.core.assemble import UserState, assemble_snapshot
 from wimm.model.snapshot import Snapshot
 
 TIMEOUT_S = 5
@@ -38,6 +38,7 @@ class FakeSampler:
         self.current: Snapshot | None = None
         self.cycle_threads: list[int] = []
         self.configs: list[tuple[Config, int]] = []
+        self.user_states: list[UserState] = []
 
     def run_cycle(self) -> Snapshot:
         self.calls += 1
@@ -52,6 +53,9 @@ class FakeSampler:
 
     def apply_config(self, *, config: Config) -> None:
         self.configs.append((config, threading.get_ident()))
+
+    def apply_user_state(self, *, user: UserState) -> None:
+        self.user_states.append(user)
 
 
 class FixedClock:

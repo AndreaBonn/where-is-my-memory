@@ -1,5 +1,4 @@
 from collections.abc import Callable, Mapping
-from dataclasses import replace
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -10,7 +9,7 @@ from wimm.config import Config
 from wimm.core.notify_rules import NotificationState
 from wimm.model.enums import GroupId
 from wimm.model.snapshot import Snapshot
-from wimm.service.notifications import SNOOZE_DURATION, NotificationCoordinator
+from wimm.service.notifications import NotificationCoordinator
 from wimm.service.notifier import Notifier
 from wimm.service.state_store import PersistedState
 
@@ -124,58 +123,35 @@ def test_no_snapshot_yet_sends_nothing() -> None:
     assert rig.sink.sent == []
 
 
-def test_a_failing_sink_is_contained_and_the_next_cycle_retries() -> None:
+def test_a_failing_sink_is_contained_and_not_retried_every_cycle() -> None:
+    # Retrying each cycle would show the same notification every 30 s past the hourly
+    # limit: a failed send is logged and counted as sent.
     rig = Rig()
     rig.sink.fail = True
     rig.source.emit()
     assert rig.sink.sent == []
-    assert not rig.saver.changes
+    assert rig.saver.changes  # the episode is recorded
     rig.sink.fail = False
     rig.source.emit()
-    assert rig.sink.sent == ["idle-g_1"]
-
-
-def test_snooze_group_silences_it_for_24_hours_and_persists() -> None:
-    rig = Rig()
-    rig.coordinator.snooze_group(group_id=GROUP)
-    assert rig.saved("snoozes") == {GROUP: NOW + SNOOZE_DURATION}
-    assert timedelta(hours=24) == SNOOZE_DURATION
-    rig.source.emit()
     assert rig.sink.sent == []
-    rig.clock.now = NOW + SNOOZE_DURATION + timedelta(seconds=1)
-    rig.source.current = make_snapshot((make_group(),))
-    rig.source.emit()
-    assert rig.sink.sent == ["idle-g_1"]
 
 
-def test_a_snooze_loaded_at_startup_is_honoured_and_expired_ones_are_dropped() -> None:
-    state = PersistedState(snoozes={GROUP: NOW + timedelta(hours=1)})
-    rig = Rig(state=state)
-    rig.source.emit()
-    assert rig.sink.sent == []
-    rig.coordinator.snooze_group(group_id=GroupId("other"))
-    rig.clock.now = NOW + timedelta(hours=2)
-    rig.coordinator.snooze_group(group_id=GroupId("third"))
-    assert set(rig.saved("snoozes")) == {GroupId("other"), GroupId("third")}
-
-
-def test_snooze_of_an_empty_target_is_ignored() -> None:
+def test_a_group_snoozed_in_the_snapshot_is_silent_and_others_are_not() -> None:
     rig = Rig()
-    rig.coordinator.snooze_group(group_id=GroupId(""))
-    assert not rig.saver.changes
-
-
-def test_snooze_does_not_touch_other_groups() -> None:
-    rig = Rig()
-    other = replace(make_group("g_2", name="vite"), snoozed_until=None)
-    rig.source.current = make_snapshot((make_group(), other))
-    rig.coordinator.snooze_group(group_id=GROUP)
+    snoozed = make_group(snoozed_until=NOW + timedelta(hours=1))
+    rig.source.current = make_snapshot((snoozed, make_group("g_2", name="vite")))
     rig.source.emit()
     assert rig.sink.sent == ["idle-g_2"]
 
 
 @pytest.mark.parametrize("hours", [0, 3])
 def test_snoozed_until_in_the_past_does_not_silence(hours: int) -> None:
-    rig = Rig(state=PersistedState(snoozes={GROUP: NOW - timedelta(hours=hours)}))
+    rig = Rig()
+    rig.source.current = make_snapshot((make_group(snoozed_until=NOW - timedelta(hours=hours)),))
     rig.source.emit()
     assert rig.sink.sent == ["idle-g_1"]
+
+
+def test_the_coordinator_keeps_no_snooze_of_its_own() -> None:
+    rig = Rig()
+    assert not hasattr(rig.coordinator, "snooze_group")

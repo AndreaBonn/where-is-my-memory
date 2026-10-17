@@ -1,19 +1,13 @@
 import logging
 import os
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
 from datetime import UTC, datetime
-from functools import partial
 from pathlib import Path
 from time import monotonic
 
 from wimm.collectors import CollectorResult
-from wimm.collectors.desktop_entries import DesktopEntry, DesktopEntryIndex
-from wimm.collectors.disk import collect_disk_usage
-from wimm.collectors.docker_source import DockerSample, DockerSource
-from wimm.collectors.meminfo import collect_meminfo
-from wimm.collectors.processes import collect_processes
-from wimm.collectors.sockets import collect_sockets
+from wimm.collectors.desktop_entries import DesktopEntry
+from wimm.collectors.docker_source import DockerSample
 from wimm.config import Config
 from wimm.core import constants as c
 from wimm.core.activity import ActivityInputs, EntitySample, assess_activity, last_active_at
@@ -22,6 +16,7 @@ from wimm.core.assemble import (
     Entities,
     SystemState,
     Thresholds,
+    UserState,
     Verdicts,
     assemble_snapshot,
 )
@@ -29,38 +24,19 @@ from wimm.core.categorize import CategorizationContext, categorize_process
 from wimm.core.grouping import GroupDraft
 from wimm.model.enums import ActivityState, Category, MetricsSource
 from wimm.model.memory import DiskUsage
-from wimm.model.raw import MemInfo, RawProcess, RawSocket
+from wimm.model.raw import MemInfo, RawProcess
 from wimm.model.snapshot import ActivityAssessment, DockerStatus, Snapshot
 from wimm.paths import UserPaths
 
 from .history import EntityKey, LastActiveTracker, SampleHistory
+from .sampler_collectors import Collectors as Collectors
+from .sampler_collectors import default_collectors as default_collectors
 from .sampler_environment import SamplerEnvironment as SamplerEnvironment
 from .sampler_environment import activity_config, group_entities
 from .sampler_steps import ListenPorts, ProcessCycle, ProcessSamples, identity
 
 LOGGER = logging.getLogger(__name__)
 MICROSECONDS_PER_SECOND = 1_000_000
-
-
-@dataclass(frozen=True)
-class Collectors:
-    processes: Callable[[], CollectorResult[tuple[RawProcess, ...]]]
-    sockets: Callable[[], CollectorResult[tuple[RawSocket, ...]]]
-    docker: Callable[[], CollectorResult[DockerSample]]
-    meminfo: Callable[[], CollectorResult[MemInfo | None]]
-    disks: Callable[[], CollectorResult[tuple[DiskUsage, ...]]]
-    desktop: Callable[[], CollectorResult[Mapping[str, DesktopEntry]]]
-
-
-def default_collectors(*, environment: SamplerEnvironment) -> Collectors:
-    return Collectors(
-        processes=partial(collect_processes, own_uid=environment.uid),
-        sockets=collect_sockets,
-        docker=DockerSource().collect,
-        meminfo=collect_meminfo,
-        disks=partial(collect_disk_usage, home=environment.home),
-        desktop=DesktopEntryIndex().collect,
-    )
 
 
 def wall_clock() -> datetime:
@@ -97,6 +73,7 @@ class Sampler:
         self._mem: MemInfo | None = None
         self._disks: tuple[DiskUsage, ...] = ()
         self._activity = activity_config(config=config)
+        self._user = UserState()
 
     def apply_config(self, *, config: Config) -> None:
         """Adopt a new configuration from the next cycle on.
@@ -107,6 +84,10 @@ class Sampler:
         self.settings = config
         self._activity = activity_config(config=config)
         self.history.resize(window_s=config.activity_window_s, interval_s=config.sample_interval_s)
+
+    def apply_user_state(self, *, user: UserState) -> None:
+        """Adopt the user's snoozes and ignores from the next cycle on (worker only)."""
+        self._user = user
 
     def export_last_active(self) -> Mapping[EntityKey, datetime]:
         """Last-active instants to persist; safe to call from any thread."""
@@ -291,6 +272,7 @@ class Sampler:
                 system=SystemState(mem=self._mem, disks=self._disks, docker=system[1]),
                 taken_at=system[0],
                 monitor_started_at=self.monitor_started_at,
+                user=self._user,
                 thresholds=Thresholds(
                     warning_pct=self.settings.pressure_warning_pct,
                     critical_pct=self.settings.pressure_critical_pct,

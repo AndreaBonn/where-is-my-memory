@@ -107,3 +107,19 @@ def test_gio_notification_is_built_from_spec() -> None:
 
     notification = to_gio_notification(spec=build_spec(intent=PRESSURE))
     assert isinstance(notification, Gio.Notification)
+
+
+class FirstFailsSink(FakeSink):
+    def send_notification(self, id: str | None, notification: Any) -> None:
+        if not self.sent and id == "idle-whitebox":
+            self.sent.append(("failed", None))
+            raise RuntimeError("bus gone")
+        super().send_notification(id, notification)
+
+
+def test_one_failing_notification_does_not_block_the_others() -> None:
+    sink = FirstFailsSink()
+
+    Notifier(sink=sink).notify(intents=(IDLE, PRESSURE))
+
+    assert [sent_id for sent_id, _ in sink.sent] == ["failed", "pressure-ram"]

@@ -8,6 +8,7 @@ from wimm.service.notifier import (
     ACTION_SNOOZE_GROUP,
     APP_ACTION_PREFIX,
 )
+from wimm.service.user_state import SNOOZE_GROUP_S
 
 LOGGER = logging.getLogger(__name__)
 
@@ -17,17 +18,17 @@ def _open_group(application: Any, target: str) -> None:
 
 
 def _snooze_group(application: Any, target: str) -> None:
-    if application._notifications is None:
-        LOGGER.warning("Snooze of %r ignored: notifications are not running", target)
+    if application._service is None or not target:
+        LOGGER.warning("Snooze of %r ignored: no service or no target", target)
         return
-    application._notifications.snooze_group(group_id=GroupId(target))
+    application._service.snooze(group_id=GroupId(target), duration_s=SNOOZE_GROUP_S)
 
 
 def register_group_actions(*, application: Any) -> None:
     """Add ``open-group`` and ``snooze-group`` (string target, "" means no group).
 
     Notifications name these as ``app.*`` actions, so they work with the window closed.
-    The handlers read the window host and the coordinator from the application when
+    The handlers read the window host and the service from the application when
     activated: both exist only after startup, and GTK stays unloaded until a window opens.
     """
     from gi.repository import Gio, GLib

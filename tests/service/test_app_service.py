@@ -1,7 +1,5 @@
 import threading
-from datetime import UTC, datetime, timedelta
 
-import pytest
 from gi.repository import GLib
 
 from tests.core.assemble_helpers import build_input
@@ -98,32 +96,5 @@ def test_failed_cycle_emits_cycle_failed_with_updated_counter() -> None:
         service.request_cycle()
         spin_until(predicate=lambda: bool(updates))
         assert seen == [1]
-    finally:
-        service.stop()
-
-
-def test_mute_notifications_sets_expiry_that_lapses_with_the_clock() -> None:
-    start = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
-    clock = FixedClock(start)
-    service = AppService(sampler=FakeSampler(), config=Config(), clock=clock)
-    try:
-        assert service.notifications_muted_until is None
-        service.mute_notifications(duration_s=3600)
-        assert service.notifications_muted_until == start + timedelta(hours=1)
-        clock.now = start + timedelta(minutes=59)
-        assert service.notifications_muted_until == start + timedelta(hours=1)
-        clock.now = start + timedelta(hours=1)
-        assert service.notifications_muted_until is None
-    finally:
-        service.stop()
-
-
-def test_mute_notifications_rejects_non_positive_duration() -> None:
-    service = AppService(sampler=FakeSampler(), config=Config())
-    try:
-        with pytest.raises(ValueError, match="duration_s"):
-            service.mute_notifications(duration_s=0)
-        service.mute_notifications(duration_s=1)
-        assert service.notifications_muted_until is not None
     finally:
         service.stop()

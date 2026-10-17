@@ -115,9 +115,14 @@ class Notifier:
 
     def notify(self, *, intents: tuple[NotificationIntent, ...]) -> None:
         for intent in intents:
-            spec = build_spec(intent=intent)
-            LOGGER.info("Sending notification %s", spec.id)
-            self._sink.send_notification(spec.id, to_gio_notification(spec=spec))
+            # One failing notification must not hold back the others nor be retried every
+            # cycle around the hourly limit: it is logged and counted as sent.
+            try:
+                spec = build_spec(intent=intent)
+                LOGGER.info("Sending notification %s", spec.id)
+                self._sink.send_notification(spec.id, to_gio_notification(spec=spec))
+            except Exception:
+                LOGGER.exception("Cannot send notification %s", intent.id)
 
     def withdraw(self, *, id: str) -> None:
         self._sink.withdraw_notification(id)

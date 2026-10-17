@@ -260,3 +260,8 @@ La § 9 fissa al massimo 3 notifiche in 60 minuti. Le notifiche di pressione (RA
 ## Preferenze aggiornate dalla finestra: un campo invalido tiene il valore precedente (T-4.4a)
 
 La § 11 e la verifica di T-4.4a ("errore sul campo e default") descrivono la lettura del file: un campo invalido in `config.json` torna al default e il resto del file vale. Per una modifica fatta dalla finestra (`update_config`) il campo invalido tiene invece il valore in uso e riporta l'errore su quel campo: tornare al default azzererebbe una soglia che l'utente aveva già impostato bene, per un errore di battitura in un altro momento. Se `pressure_critical_pct` non è valida o non è minore di `pressure_warning_pct`, tornano entrambe all'ultima coppia valida. Una preferenza salvata arriva al sampler e all'executor sul worker del campionamento, poi parte subito un ciclo; se l'applicazione fallisce l'errore va nel log e la configurazione salvata resta quella nuova.
+
+## Silenzio globale solo per la sessione; una notifica che non parte non si ritenta (T-4.3b, T-4.2b)
+
+- "Silenzia notifiche per 1 h" (tray e finestra) vale per la sessione: un riavvio entro l'ora riattiva le notifiche. Gli snooze per gruppo e gli ignorati invece si salvano in `state.json`. La § 11 elenca i "silenzi" fra i dati persistiti senza distinguere; il silenzio globale è una scelta del momento, mentre lo snooze di un gruppo è una decisione su quel gruppo.
+- Se l'invio di una notifica fallisce (bus non raggiungibile), l'errore va nel log e la notifica conta come inviata. Ritentarla a ogni ciclo la mostrerebbe ogni 30 secondi oltre il limite di 3 all'ora; un fallimento non blocca le altre notifiche dello stesso ciclo.

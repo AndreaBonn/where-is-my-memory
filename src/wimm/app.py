@@ -100,33 +100,16 @@ def _quit(application: Any) -> bool:
     return GLib.SOURCE_CONTINUE
 
 
-def _build_actions(*, config: Any, owner_uid: int) -> Any:
-    from wimm.service.actions import ActionSetup
-    from wimm.service.compose import DockerComposeControl
-    from wimm.service.controls import DockerSdkControl, PsutilProcessControl
-    from wimm.service.executor import PlanExecutor
+def _log_field_errors(*, errors: Mapping[str, Any]) -> None:
+    for name, error in errors.items():
+        LOGGER.warning("Invalid configuration field %s: %s", name, error)
 
-    try:
-        containers = DockerSdkControl.from_env()
-    except Exception:
-        LOGGER.warning("Docker client unavailable, container actions disabled", exc_info=True)
-        containers = None
-    try:
-        compose = DockerComposeControl.from_env()
-    except Exception:
-        LOGGER.warning("Docker compose unavailable, project actions disabled", exc_info=True)
-        compose = None
-    processes = PsutilProcessControl(
-        owner_uid=owner_uid, extra_protected_names=config.extra_protected_names
-    )
-    executor = PlanExecutor(
-        processes=processes,
-        containers=containers,
-        compose=compose,
-        owner_uid=owner_uid,
-        terminate_timeout_s=config.terminate_timeout_s,
-    )
-    return ActionSetup(executor=executor, owner_uid=owner_uid)
+
+def _build_sampler(*, environment: Any, config: Any) -> Any:
+    from wimm.service.sampler import Sampler, default_collectors
+
+    collectors = default_collectors(environment=environment)
+    return Sampler(collectors=collectors, environment=environment, config=config)
 
 
 def _start_service(application: Any) -> None:
@@ -134,8 +117,9 @@ def _start_service(application: Any) -> None:
     from wimm.logging_setup import setup_logging
     from wimm.paths import default_user_paths
     from wimm.service.app_service import AppService
+    from wimm.service.build_actions import build_actions
     from wimm.service.notifications import attach_notifications
-    from wimm.service.sampler import Sampler, default_collectors, default_environment, wall_clock
+    from wimm.service.sampler import default_environment, wall_clock
     from wimm.service.state_store import StateSaver, load_state
 
     paths = default_user_paths()
@@ -143,15 +127,11 @@ def _start_service(application: Any) -> None:
     state = load_state(paths=paths, now=wall_clock())
     environment = replace(default_environment(paths=paths), persisted_last_active=state.last_active)
     loaded = load_config(paths=paths, home=environment.home)
-    for name, error in loaded.field_errors.items():
-        LOGGER.warning("Invalid configuration field %s: %s", name, error)
-    sampler = Sampler(
-        collectors=default_collectors(environment=environment),
-        environment=environment,
-        config=loaded.config,
-    )
-    actions = _build_actions(config=loaded.config, owner_uid=environment.uid)
+    _log_field_errors(errors=loaded.field_errors)
+    sampler = _build_sampler(environment=environment, config=loaded.config)
+    actions = build_actions(config=loaded.config, owner_uid=environment.uid)
     service = AppService(sampler=sampler, config=loaded.config, actions=actions)
+    service.restore_user_state(state=state)
     saver = StateSaver(paths=paths, state=state, last_active=sampler.export_last_active)
     service.attach_state_saver(saver=saver)
     application._service = service

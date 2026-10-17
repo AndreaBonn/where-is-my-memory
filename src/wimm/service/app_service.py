@@ -1,7 +1,7 @@
 import logging
 from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
-from datetime import datetime, timedelta
+from datetime import datetime
 from functools import partial
 from pathlib import Path
 from typing import ClassVar, Protocol
@@ -10,18 +10,22 @@ from gi.repository import GLib, GObject
 
 from wimm.config import Config, ConfigParseResult, save_config, update_config
 from wimm.core import constants as c
+from wimm.core.assemble import UserState
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import PlanId
 from wimm.model.snapshot import Snapshot
 from wimm.paths import UserPaths
 from wimm.service.actions import ActionExecutor, ActionSetup
+from wimm.service.app_service_signals import APP_SERVICE_SIGNALS
+from wimm.service.app_service_user import UserStateMixin
 from wimm.service.control_protocols import StepOutcome
 from wimm.service.errors import ControlFailed, InvalidRequest, WimmError
 from wimm.service.plan_registry import PlanRegistry
 from wimm.service.reclaim import ReclaimTracker
 from wimm.service.sampler import wall_clock
-from wimm.service.state_store import StateSaver
+from wimm.service.state_store import PersistedState, StateSaver
+from wimm.service.user_state import UserStateKeeper
 
 LOGGER = logging.getLogger(__name__)
 _ActionResult = tuple[tuple[StepOutcome, ...], Snapshot | None]
@@ -30,34 +34,13 @@ _ActionResult = tuple[tuple[StepOutcome, ...], Snapshot | None]
 class CycleSampler(Protocol):
     def apply_config(self, *, config: Config) -> None: ...
 
+    def apply_user_state(self, *, user: UserState) -> None: ...
+
     def run_cycle(self) -> Snapshot: ...
 
 
-class AppService(GObject.Object):
-    __gsignals__: ClassVar = {
-        "snapshot-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
-        # Emitted after consecutive_failures was incremented.
-        "cycle-failed": (GObject.SignalFlags.RUN_LAST, None, ()),
-        # (plan_id, tuple[StepOutcome, ...]): every step ran, successfully or not.
-        "action-finished": (
-            GObject.SignalFlags.RUN_LAST,
-            None,
-            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
-        ),
-        # (plan_id, WimmError): the plan was refused before any step ran. Errors raised by a
-        # step come back as a `failed` outcome in `action-finished`.
-        "action-rejected": (
-            GObject.SignalFlags.RUN_LAST,
-            None,
-            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
-        ),
-        # (plan_id, ReclaimDelta): measured on a sample taken after the measuring delay.
-        "reclaim-measured": (
-            GObject.SignalFlags.RUN_LAST,
-            None,
-            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
-        ),
-    }
+class AppService(UserStateMixin, GObject.Object):
+    __gsignals__: ClassVar = APP_SERVICE_SIGNALS
 
     def __init__(
         self,
@@ -76,7 +59,7 @@ class AppService(GObject.Object):
         self._cycle_cohort: frozenset[PlanId] = frozenset()
         self._last_sampled: Snapshot | None = None
         self._clock = clock
-        self._muted_until: datetime | None = None
+        self._user = UserStateKeeper(state=PersistedState(), clock=clock)
         self._sampler = sampler
         self._config = config
         self._snapshot: Snapshot | None = None
@@ -84,6 +67,7 @@ class AppService(GObject.Object):
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="wimm-worker")
         self._timer = 0
         self._busy = False
+        self._cycle_pending = False
         self._stopped = False
         self.consecutive_failures = 0
 
@@ -130,19 +114,6 @@ class AppService(GObject.Object):
                 self._config.sample_interval_s, self.request_cycle
             )
 
-    @property
-    def notifications_muted_until(self) -> datetime | None:
-        """Wall-clock end of the mute, or None when not muted or already elapsed."""
-        if self._muted_until is not None and self._clock() >= self._muted_until:
-            self._muted_until = None
-        return self._muted_until
-
-    def mute_notifications(self, *, duration_s: float) -> None:
-        """Silence notifications for ``duration_s`` seconds from now."""
-        if duration_s <= 0:
-            raise ValueError(f"duration_s must be positive, got {duration_s!r}")
-        self._muted_until = self._clock() + timedelta(seconds=duration_s)
-
     def start(self) -> None:
         if self._timer or self._stopped:
             return
@@ -151,11 +122,12 @@ class AppService(GObject.Object):
             self._state_timer = GLib.timeout_add_seconds(
                 c.STATE_SAVE_INTERVAL_S, self.save_state_tick
             )
-        self.request_cycle()
+        self._user_changed()
 
     def attach_state_saver(self, *, saver: StateSaver) -> None:
         """Persist through ``saver`` every 5 minutes and on stop; call before ``start``."""
         self._state_saver = saver
+        self._user.attach_saver(saver=saver)
 
     def save_state_tick(self) -> bool:
         """Periodic save, on the worker so the main loop never waits for the disk."""
@@ -164,6 +136,8 @@ class AppService(GObject.Object):
         return GLib.SOURCE_CONTINUE
 
     def request_cycle(self) -> bool:
+        # A request during a running cycle is kept: that cycle predates the change.
+        self._cycle_pending = self._busy and not self._stopped
         if not self._busy and not self._stopped:
             self._busy = True
             self._cycle_cohort = self._reclaim.due_ids
@@ -192,6 +166,9 @@ class AppService(GObject.Object):
         baseline = self._last_sampled
         return executor.execute(plan=plan), baseline
 
+    def _submit_user_state(self, *, user: UserState) -> None:
+        self._executor.submit(self._sampler.apply_user_state, user=user)
+
     def _completed(self, future: Future[Snapshot]) -> None:
         GLib.idle_add(self._publish, future)
 
@@ -210,6 +187,8 @@ class AppService(GObject.Object):
             self.consecutive_failures = 0
             self.emit("snapshot-updated")
             self._measure_reclaim(snapshot=snapshot)
+        if self._cycle_pending:
+            self.request_cycle()
         return GLib.SOURCE_REMOVE
 
     def plan(self, *, request: ActionRequest) -> Plan:

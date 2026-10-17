@@ -16,18 +16,18 @@ class FakeHost:
         self.calls.append(group_id)
 
 
-class FakeCoordinator:
+class FakeService:
     def __init__(self) -> None:
-        self.snoozed: list[GroupId] = []
+        self.snoozed: list[tuple[GroupId, float]] = []
 
-    def snooze_group(self, *, group_id: GroupId) -> None:
-        self.snoozed.append(group_id)
+    def snooze(self, *, group_id: GroupId, duration_s: float) -> None:
+        self.snoozed.append((group_id, duration_s))
 
 
 def make_application() -> Any:
     application: Any = Gio.Application(application_id="io.github.wimm.ActionsTest")
     application._window_host = FakeHost()
-    application._notifications = FakeCoordinator()
+    application._service = FakeService()
     register_group_actions(application=application)
     return application
 
@@ -52,19 +52,19 @@ def test_open_group_presents_the_window_on_the_group_or_without_one(
     application = make_application()
     activate(application, "open-group", target)
     assert application._window_host.calls == [expected]
-    assert application._notifications.snoozed == []
+    assert application._service.snoozed == []
 
 
-def test_snooze_group_hands_the_group_to_the_coordinator() -> None:
+def test_snooze_group_asks_the_service_for_24_hours() -> None:
     application = make_application()
     activate(application, "snooze-group", "g_1")
-    assert application._notifications.snoozed == [GroupId("g_1")]
+    assert application._service.snoozed == [(GroupId("g_1"), 24 * 3600)]
     assert application._window_host.calls == []
 
 
 def test_snooze_before_startup_is_logged_not_raised(caplog: pytest.LogCaptureFixture) -> None:
     application = make_application()
-    application._notifications = None
+    application._service = None
     activate(application, "snooze-group", "g_1")
     assert "Snooze of 'g_1' ignored" in caplog.text
 
