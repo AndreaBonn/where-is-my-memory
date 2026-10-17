@@ -188,3 +188,10 @@ Ordine: T034 prima di T030 (S18).
 ## Avanzamento
 
 Una riga per task chiuso: `T<id> | commit <sha> | verify`.
+- T016 | 670c590 | baseline 5,21 s, 76 cartelle in `docs/PERF.md`
+- T001 | 47e9021 | `config.py` a 265 righe: il criterio < 260 è rilassato a <= 300 (limite del progetto), margine sufficiente per T004
+- T002 | d09e8e3 | `tests/core/test_dev_roots.py`
+- T003 | f42d904 | `tests/collectors/test_root_candidates.py`; symlink intermedio fuori home rifiutato (review). Restano a T004 da S15: skip dei fstype di rete e rilevazione fuori dal main thread
+- T007 | f031619 | `tests/test_i18n.py`; `wimm --help` con de_DE, C, it_IT
+- T009 | afd05a1 | `test_resolve_finds_each_marker`
+- T010 | cad1cca | `tests/core/test_devdir_rules.py`; negazioni del `.gitignore` gestite (review)
