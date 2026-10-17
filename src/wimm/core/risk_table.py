@@ -38,8 +38,10 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
         "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
     ),
     ConsequenceKey.BROWSER: (
-        "Il browser si chiude. Le schede si recuperano solo se "
-        "il ripristino della sessione è attivo."
+        # Measured in T-3.8b (docs/DEVIATIONS.md): SIGTERM is not a clean quit, the tabs
+        # come back from the periodic crash-recovery file.
+        "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede "
+        "dal salvataggio automatico, che può essere indietro di qualche secondo."
     ),
     ConsequenceKey.DOCUMENTS: "Eventuali file non salvati possono andare persi.",
     ConsequenceKey.OTHER: (

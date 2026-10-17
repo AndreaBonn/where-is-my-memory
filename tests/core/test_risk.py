@@ -34,8 +34,8 @@ CONTAINER_TIMEOUT_TEXT = "Se il container non si ferma da solo, Docker lo termin
             "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
         ): (replace(PROCESS, category=Category.AI_CLI), Action.PROCESS_TERMINATE, Risk.CAUTION),
         (
-            "Il browser si chiude. Le schede si recuperano solo se il "
-            "ripristino della sessione è attivo."
+            "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede "
+            "dal salvataggio automatico, che può essere indietro di qualche secondo."
         ): (Target(kind="browser", category=Category.BROWSER), Action.APP_CLOSE, Risk.CAUTION),
         ("Eventuali file non salvati possono andare persi."): (
             Target(kind="desktop_app", category=Category.DESKTOP_APP, has_documents=True),

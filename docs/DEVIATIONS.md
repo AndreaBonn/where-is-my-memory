@@ -241,3 +241,14 @@ BASIS: measured.
 - `docker compose down` gira sullo stesso worker del campionamento (una sola coda, così un campione non legge a metà azione). Un `down` lento, fino al timeout di 120 s, ferma il campionamento per quella durata: lo snapshot resta quello di prima e la misura del recupero parte dopo. È il costo di serializzare azioni e campioni, scelto in T-3.5.
 - `down` agisce per label di progetto, non per id. L'insieme degli id si ricontrolla subito prima del comando, ma un container con la stessa label creato nei millisecondi successivi viene rimosso con gli altri. È dello stesso utente e dello stesso progetto, quindi il rischio è accettato.
 - La CLI riceve `--context default` e un ambiente senza `DOCKER_CONTEXT` né variabili `COMPOSE_*`: così parla allo stesso daemon che l'SDK ha usato per la rivalidazione (`DOCKER_HOST` o il socket di default) e non legge file o profili scelti nella shell dell'utente.
+
+## Firefox e SIGTERM: la sessione si recupera, la conseguenza cambia (T-3.8b, R8)
+
+Misura del 2026-10-17 su Firefox snap 158.0: istanza separata `--headless --no-remote` con un profilo di test in `~/snap/firefox/common/` (unica area leggibile dallo snap), due schede su pagine locali, `browser.sessionstore.interval` a 2 s per non aspettare il default; profilo e pagine cancellati alla fine. Il SIGTERM è andato solo al processo il cui cmdline conteneva quel profilo, il Firefox dell'utente non è stato toccato.
+
+- Con SIGTERM il processo esce entro 30 s ma non fa la chiusura normale: `sessionstore.jsonlz4`, scritto all'uscita pulita, non compare. Resta `sessionstore-backups/recovery.jsonlz4`, il salvataggio periodico, con le due schede.
+- Rilanciato sullo stesso profilo senza URL, Firefox ripristina `one.html` e `two.html` dal recupero dopo crash.
+
+Conseguenza: la sessione non si perde, quindi R8 non scatta e "Chiudi browser" resta `caution` senza frase di conferma. Il testo della §5.3 ("le schede si recuperano solo se il ripristino della sessione è attivo") non corrispondeva al comportamento osservato ed è sostituito da: "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede dal salvataggio automatico, che può essere indietro di qualche secondo."
+
+Non misurato: il comportamento con una finestra visibile invece che headless (al secondo arresto ravvicinato Firefox può mostrare la pagina di ripristino invece di ripristinare da sé), e il contenuto di moduli compilati e non inviati. L'intervallo di salvataggio di default (`browser.sessionstore.interval`, 15 s) è un valore di configurazione, non misurato qui.
