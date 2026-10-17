@@ -101,3 +101,13 @@ Stesso isolamento della misura di un'ora (build del repository, bus D-Bus privat
 | CPU, tutti i 13 minuti | media 1,72%, con il 14,05% del minuto della prima scansione del disco (2 minuti dopo l'avvio, poi ogni 6 ore) | 1% | sopra il limite solo per la scansione iniziale |
 | Ciclo di campionamento, 15 cicli | mediana 0,40 s, massimo 0,71 s | 1,5 s | rispettato |
 | RSS dopo 14 minuti, finestra mai aperta | 62 MB | 120 MB | rispettato |
+
+## Scansione delle cartelle di dipendenze (001-product-gaps, R4: aumento al massimo del 30%)
+
+Misura: `scan_devdirs` sulla radice `~/Documenti`, profondità 6, cartella di cache vuota a ogni
+run (dimensioni misurate da zero), senza la pausa fra le cartelle (`sleep` nullo), 3 run, codice
+del commit misurato. Script `measure_devdirs.py` (nella cartella temporanea di sessione).
+
+| Data | Codice | Cartelle trovate | Durata (mediana, 3 run) | CPU (mediana) | Verdetto |
+|---|---|---|---|---|---|
+| 2026-10-18 | baseline `d40bd18`, solo `node_modules` e `.venv` | 76 | 5,21 s (7,25 / 5,21 / 4,81) | 4,86 s | baseline |
