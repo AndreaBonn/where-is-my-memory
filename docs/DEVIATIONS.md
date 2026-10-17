@@ -313,3 +313,36 @@ La § 8.4 esegue `images.prune`, `prune_builds` e il prune dei container fermi s
 ## Intervallo di campionamento predefinito a 60 s (RNF-01, decisione dell'utente del 2026-10-17)
 
 La § 11 fissa `sample_interval_s` a 30 s. Misurato su un'ora, il processo usava 1,32-1,60% di un core contro il limite dell'1% di RNF-01; dopo le ottimizzazioni che non cambiano il comportamento il ciclo costa 0,33-0,34 s di CPU (docs/PERF.md), circa 1,1% a 30 s. L'utente ha scelto di portare il valore predefinito a 60 s: circa 0,55% di un core, con stati e numeri aggiornati con il doppio del ritardo. L'intervallo resta regolabile da 10 a 300 s nelle Preferenze, e chi ha già salvato le preferenze con 30 s lo mantiene.
+
+## Proposte UX per chi non è esperto (decisione dell'utente del 2026-10-17)
+
+L'utente ha approvato tutte le 45 proposte del mockup `docs/ux-proposte/index.html`
+("Applica tutte le proposte che hai indicato"). Dove si discostano dalla specifica, qui
+c'è il punto della specifica, cosa cambia e perché.
+
+- **P3, legenda della RAM (RF-02).** "Non attribuita" e la cache del kernel (ora "Memoria
+  di appoggio del sistema") restano voci separate: RF-02 vieta di nasconderle o ripartirle.
+  Si accorpano solo le categorie oltre le prime quattro, in "Altro". Le percentuali escono
+  dalla legenda e restano nelle proporzioni della barra.
+- **P2, riepilogo (RF-01).** I totali in testa sono arrotondati al GB da 10 GB in su
+  ("33 GB usati su 42 GB"); disponibile, swap e pressione restano in una riga attenuata,
+  la pressione a parole ("memoria quasi piena").
+- **P8, badge del rischio (§10.2).** Il badge dice rischio e conseguenza ("Sicuro: non perdi
+  nulla"); i filtri usano ancora le tre parole brevi. Sul disco "Attenzione" rimanda alla
+  conferma ("leggi prima cosa si perde"), perché un container fermo rimosso perde i suoi file.
+- **D7, etichette (§10.2).** Nessuna etichetta porta più i puntini di sospensione: ogni
+  azione apre comunque una conferma, e il Disco lo dice in testa.
+- **D1, testata del Disco.** "Puoi liberare fino a X" somma le righe elencate con
+  un'azione, escluse quelle "Pericolo" (volumi, cestino), che contengono dati; della cache
+  di build conta solo la parte liberabile. Le cartelle oltre il tetto della sezione non
+  sono elencate e non entrano nel totale.
+- **L1, lessico (§3, README).** Nell'interfaccia "inattivo" diventa "non in uso",
+  "recuperabile" diventa "liberabile", "gruppo" diventa "programma", "scansione" diventa
+  "controllo". I motivi tecnici calcolati dal core restano invariati.
+- **T2, etichetta dell'icona (RF-40, §10.1).** "4,2 GB da liberare"; la stringa guida
+  diventa "88,8 GB da liberare".
+- **T3, notifiche (RF-32).** I pulsanti si chiamano "Vedi e decidi" e "Non ora (24 h)":
+  stesse azioni, nomi diversi.
+- **T1, menu dell'icona (RF-42).** Nuova prima voce "Apri Where Is My Memory" (id fisso 6),
+  omessa quando c'è già la voce di errore che apre il pannello, e intestazione "Da liberare:"
+  (id fisso 7). Gli id esistenti non si spostano.
