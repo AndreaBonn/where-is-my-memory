@@ -10,7 +10,8 @@ Usare gli ID `T-x.y` della specifica per riferimenti e attività.
 - `make setup`: crea il venv con Python e pacchetti di sistema, sincronizza con uv.
 - `make test`: esegue i test senza integrazione, UI e D-Bus; copertura core ≥90% quando presente.
 - `make test-all`: esegue tutti i test su bus e display privati.
-- `make lint`: controlla Ruff, formato e tipi con mypy.
+- `make lint`: controlla Ruff, formato, tipi con mypy e traduzioni con `scripts/check_i18n.py`.
+- `make po`: aggiorna `po/en.po` con le stringhe nuove; `make mo` compila il catalogo.
 - `make run`: avvia `scripts/dev_run.sh`, previsto in una fase successiva.
 - `make deb`: esegue `scripts/build_deb.sh`, previsto in una fase successiva.
 
@@ -23,7 +24,9 @@ La `ui` mostra i dati; la `tray` espone icona e menu via Gio/D-Bus.
 
 ## Convenzioni
 
-Codice, commenti, log e commit in inglese; stringhe UI in italiano.
+Codice, commenti, log e commit in inglese. Stringhe UI con msgid italiano dentro `_()`;
+le costanti di modulo con `N_()` e `_()` dove si mostrano, mai `_()` all'import.
+Ogni stringa nuova va tradotta in `po/en.po` (`make po`), termini inglesi invariati.
 Massimo 300 righe per file, 30 per funzione, 4 parametri.
 Keyword argument espliciti, type hint completi, costanti nominate.
 Test-first sul core. Nessuna azione distruttiva reale nei test (§0.5).

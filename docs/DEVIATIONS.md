@@ -428,3 +428,37 @@ c'è il punto della specifica, cosa cambia e perché.
 - **S3, pulsante principale.** Il pulsante di riga è blu (`suggested-action`) solo quando
   l'azione è `safe`; con `caution` o `danger` resta grigio, per non invitare al clic su ciò
   che può far perdere qualcosa.
+
+## Interfaccia bilingue italiano e inglese (decisione dell'utente del 2026-10-17)
+
+La specifica §0.4 vuole le stringhe mostrate all'utente in italiano. Su richiesta esplicita
+dell'utente l'interfaccia è diventata bilingue; il piano è in `specs/i18n/plan.md`.
+
+- **Libreria e chiavi.** `gettext` della libreria standard, con il testo italiano come
+  msgid: l'italiano non ha catalogo, l'inglese sta in `po/en.po` e si compila con
+  `make mo` (il `.deb` lo compila da sé). Le costanti di modulo sono marcate con `N_` e
+  tradotte con `_()` dove si mostrano, perché la lingua cambia mentre l'app gira.
+- **Termini inglesi già presenti** (container, Docker, cache, swap, registry...) restano
+  uguali nella traduzione; lo controlla `scripts/check_i18n.py` in `make lint`.
+- **Scelta e persistenza.** Riga "Lingua" in cima alle Preferenze, con le bandiere italiana
+  e statunitense; la scelta va in `config.json` (`language`) e vale subito. Senza scelta
+  salvata l'app segue la locale di sistema: `en*` dà inglese, ogni altra italiano.
+- **Cambio senza riavvio.** La finestra viene ricostruita e le Preferenze riaperte, il menu
+  della tray rigenerato, e si chiede un campione nuovo perché i motivi già calcolati erano
+  scritti nella lingua precedente. L'azione è `win.set-language`, di finestra: le azioni
+  `app.*` esportate sul bus di sessione restano quattro.
+- **Testi di GTK e libadwaita.** Quelli propri della libreria (per esempio la ricerca nelle
+  Preferenze) seguono `LANGUAGE`, che l'app imposta alla lingua scelta all'avvio e a ogni
+  cambio. La variabile viene creata all'avvio, quando c'è un solo thread: dopo viene solo
+  sostituita, operazione che glibc fa senza riallocare l'ambiente letto dagli altri thread.
+  Con una locale `C` o `POSIX` gettext ignora `LANGUAGE`, quindi lì i testi di GTK restano
+  in inglese anche scegliendo l'italiano. I comandi lanciati dall'app (per esempio
+  `docker compose`) ereditano la variabile: i loro messaggi, che finiscono solo nello storico
+  e nel log, seguono la lingua dell'app.
+- **Limiti noti.** I file `.desktop` e la metainfo li legge la shell con la locale di
+  sistema. Un'azione ancora in corso durante il cambio perde il messaggio di esito (l'azione
+  si completa comunque), e le modifiche non applicate nelle Preferenze si perdono alla
+  riapertura. Log, messaggi interni di errore e l'interfaccia D-Bus Inspector restano in
+  inglese.
+- **Effetto anche sull'italiano.** I plurali passano da `ngettext`, quindi "1 giorni" e
+  "1 volte" diventano "1 giorno" e "1 volta".
