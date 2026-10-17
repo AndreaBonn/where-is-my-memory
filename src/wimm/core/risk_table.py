@@ -1,6 +1,8 @@
+from collections.abc import Mapping
 from enum import StrEnum
+from types import MappingProxyType
 
-from wimm.i18n import N_
+from wimm.i18n import N_, _
 from wimm.model.enums import ActionKind, Risk
 
 
@@ -27,6 +29,7 @@ class ConsequenceKey(StrEnum):
     CACHE = "cache"
     TRASH = "trash"
     DEVDIR = "devdir"
+    DEVDIR_REBUILD = "devdir_rebuild"
     OTHER = "other"
 
 
@@ -78,7 +81,55 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.DEVDIR: N_(
         "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
     ),
+    ConsequenceKey.DEVDIR_REBUILD: N_(
+        "Per usare di nuovo il progetto serve ricostruire la cartella con {command}."
+    ),
 }
+# Rebuild command by folder name; ``target`` depends on the project file beside it.
+DEVDIR_COMMANDS_BY_NAME: Mapping[str, str] = MappingProxyType(
+    {
+        "node_modules": "npm install",
+        ".venv": "uv sync",
+        "venv": "uv sync",
+        ".tox": "uv sync",
+        ".gradle": "gradle build",
+        "build": "gradle build",
+        ".next": "npm run build",
+        ".nuxt": "npm run build",
+        "vendor": "composer install",
+    }
+)
+TARGET_COMMANDS_BY_MARKER: Mapping[str, str] = MappingProxyType(
+    {"Cargo.toml": "cargo build", "pom.xml": "mvn package"}
+)
+TARGET_DIRNAME = "target"
+
+
+def devdir_consequence(*, folder_name: str, marker: str) -> str:
+    """Return the consequence text of deleting a development folder, in the active language.
+
+    Parameters
+    ----------
+    folder_name : str
+        Name of the folder (not a path).
+    marker : str
+        Project file found beside it, empty when unknown.
+
+    Returns
+    -------
+    str
+        The text naming the rebuild command, or the generic text when the folder kind is
+        not recognised (an unlisted name, or ``target`` without a known marker).
+    """
+    if folder_name == TARGET_DIRNAME:
+        command = TARGET_COMMANDS_BY_MARKER.get(marker)
+    else:
+        command = DEVDIR_COMMANDS_BY_NAME.get(folder_name)
+    if command is None:
+        return _(CONSEQUENCES[ConsequenceKey.DEVDIR])
+    return _(CONSEQUENCES[ConsequenceKey.DEVDIR_REBUILD]).format(command=command)
+
+
 STATIC_ASSESSMENTS: dict[ActionKind, tuple[Risk, ConsequenceKey]] = {
     ActionKind.CONTAINER_STOP: (Risk.SAFE, ConsequenceKey.STOP),
     ActionKind.CONTAINER_REMOVE: (Risk.CAUTION, ConsequenceKey.CONTAINER_REMOVE),

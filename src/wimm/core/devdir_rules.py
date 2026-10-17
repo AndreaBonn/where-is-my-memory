@@ -106,3 +106,13 @@ def classify_devdir(*, name: str, context: DevdirContext) -> bool:
     if name not in NEEDS_SECOND_SIGNAL:
         return True
     return context.has_cachedir_tag or name in gitignore_names(text=context.gitignore_text)
+
+
+def rebuild_marker(*, name: str, parent_entries: frozenset[str]) -> str:
+    """Return the first marker of ``name`` found next to it, or ``""`` when none applies.
+
+    The marker tells which tool rebuilds the folder: ``target`` beside ``pom.xml`` is a
+    Maven build, beside ``Cargo.toml`` a Cargo one. Table order breaks a tie.
+    """
+    markers = MARKERS_BY_NAME.get(name, ())
+    return next((marker for marker in markers if marker in parent_entries), "")

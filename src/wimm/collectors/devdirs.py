@@ -6,15 +6,16 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
+from wimm.collectors.devdir_context import read_devdir_context
 from wimm.collectors.dirsize import measure_dir_size
 from wimm.core.constants import (
-    DEVDIR_NAMES,
     DEVDIR_SOURCE_DIRNAME,
     DIRSIZE_PAUSE_EVERY,
     DIRSIZE_PAUSE_S,
     DIRSIZE_YIELD_EVERY,
     SECONDS_PER_DAY,
 )
+from wimm.core.devdir_rules import MARKERS_BY_NAME, classify_devdir, rebuild_marker
 from wimm.model.disk import DevDir
 
 LOGGER = logging.getLogger(__name__)
@@ -38,13 +39,14 @@ class DevDirScan:
 
 
 class _Walker:
-    def __init__(self, max_depth: int, sleep: Callable[[float], None]) -> None:
+    def __init__(self, max_depth: int, sleep: Callable[[float], None], home: Path) -> None:
         self._max_depth = max_depth
         self._sleep = sleep
+        self._home = home
         self._entries = 0
         self.errors = 0
         # Keyed by path: nested or repeated roots reach the same folder twice.
-        self.found: dict[Path, None] = {}
+        self.found: dict[Path, str] = {}
 
     def tick(self) -> None:
         self._entries += 1
@@ -61,11 +63,26 @@ class _Walker:
                 self._classify(child=child, depth=depth + 1, pending=pending)
 
     def _classify(self, child: Path, depth: int, pending: list[tuple[Path, int]]) -> None:
-        # `.venv`, the one hidden folder of interest, is a DEVDIR_NAMES match.
-        if child.name in DEVDIR_NAMES:
-            self.found[child] = None
+        # Hidden folders are skipped, except the hidden names of the table (a refused one
+        # is still not entered); a folder that was found is not entered either.
+        marker = self._devdir_marker(path=child)
+        if marker is not None:
+            self.found[child] = marker
         elif depth < self._max_depth and not child.name.startswith("."):
             pending.append((child, depth))
+
+    def _devdir_marker(self, path: Path) -> str | None:
+        """Return the rebuild marker of a dependency folder, ``None`` when it is not one."""
+        if path.name not in MARKERS_BY_NAME:
+            return None
+        try:
+            context = read_devdir_context(path=path, home=self._home)
+        except OSError:
+            self.errors += 1
+            return None
+        if not classify_devdir(name=path.name, context=context):
+            return None
+        return rebuild_marker(name=path.name, parent_entries=context.parent_entries)
 
     def _subdirectories(self, directory: Path) -> list[Path]:
         children: list[Path] = []
@@ -103,9 +120,10 @@ class _Walker:
     def newest_mtime(self, project: Path) -> float:
         """Newest mtime in the project first level and in ``src/`` first level.
 
-        Dependency folders are not the user's edits, so none of them counts.
+        Dependency and build-output folders are not the user's edits, so no name of the
+        table counts, found or not: a freshly rebuilt ``target`` must not make a project recent.
         """
-        newest = self._newest_in(directory=project, skip=DEVDIR_NAMES)
+        newest = self._newest_in(directory=project, skip=frozenset(MARKERS_BY_NAME))
         source = project / DEVDIR_SOURCE_DIRNAME
         if _is_real_dir(path=source):
             newest = max(newest, self._newest_in(directory=source, skip=frozenset()))
@@ -155,7 +173,7 @@ def project_age_days(*, project: Path, now: float) -> int | None:
     first level of a real ``src/``; never negative. ``None`` if any of it could not be read:
     an age computed on a partial view could hide a recent edit.
     """
-    walker = _Walker(max_depth=0, sleep=time.sleep)
+    walker = _Walker(max_depth=0, sleep=time.sleep, home=Path.home())
     newest = walker.newest_mtime(project=project)
     if walker.errors:
         return None
@@ -197,6 +215,7 @@ def _build_devdir(path: Path, walker: _Walker, cache_dir: Path, now: float) -> D
         age_days=age_days,
         st_ino=info.st_ino,
         st_dev=info.st_dev,
+        marker=walker.found.get(path, ""),
     )
 
 
@@ -206,17 +225,18 @@ def scan_devdirs(
     now: float,
     sleep: Callable[[float], None] = time.sleep,
 ) -> DevDirScan:
-    """Find ``node_modules`` / ``.venv`` folders under the configured roots (SPECIFICHE 7.6).
+    """Find rebuildable dependency folders under the configured roots (SPECIFICHE 7.6).
 
-    Symlinks are never followed, hidden folders are skipped except ``.venv``,
-    and the search does not descend into a folder found. A folder at depth
-    ``max_depth`` is found, one deeper is not. ``age_days`` is the whole number
-    of days between ``now`` (epoch seconds) and the newest mtime among the
+    A folder qualifies by ``classify_devdir`` (name, sibling marker, second signal; never
+    a project directly in the home). Symlinks are never followed, hidden folders are
+    skipped except the hidden names of that table, and the search does not descend into a
+    folder found. A folder at depth ``max_depth`` is found, one deeper is not. ``age_days``
+    is the whole number of days between ``now`` (epoch seconds) and the newest mtime among the
     parent project's first-level entries (the found folder excluded) and the
     first level of its ``src/``; an empty project falls back to its own mtime.
     Unreadable entries are skipped and counted, never raised.
     """
-    walker = _Walker(max_depth=settings.max_depth, sleep=sleep)
+    walker = _Walker(max_depth=settings.max_depth, sleep=sleep, home=settings.home)
     for root in settings.roots:
         if _is_usable_root(root=root, home=settings.home):
             walker.walk(root=root)

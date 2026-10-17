@@ -80,3 +80,25 @@ def test_missing_field_is_rejected(document: dict[str, Any]) -> None:
 def test_non_json_text_is_a_format_error() -> None:
     with pytest.raises(SnapshotFormatError):
         disk_report_from_json(text="{not json")
+
+
+def test_report_saved_before_markers_decodes_with_an_empty_marker() -> None:
+    decoded = disk_report_from_json(text=SAMPLE.read_text(encoding="utf-8"))
+
+    assert [d.marker for d in decoded.devdirs] == [""]
+
+
+def test_devdir_marker_survives_a_roundtrip(document: dict[str, Any]) -> None:
+    document["devdirs"][0]["marker"] = "Cargo.toml"
+
+    decoded = disk_report_from_json(text=json.dumps(document))
+
+    assert decoded.devdirs[0].marker == "Cargo.toml"
+    assert json.loads(disk_report_to_json(report=decoded)) == document
+
+
+def test_devdir_marker_of_the_wrong_type_is_rejected(document: dict[str, Any]) -> None:
+    document["devdirs"][0]["marker"] = 7
+
+    with pytest.raises(SnapshotFormatError, match="marker"):
+        disk_report_from_json(text=json.dumps(document))

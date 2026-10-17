@@ -8,7 +8,7 @@ SECONDS_SUFFIX = "_s"
 FIELD_MESSAGES = MappingProxyType(
     {
         "notify_categories": N_("Scegli solo categorie su cui sono consentite azioni"),
-        "devdirs_roots": N_("Indica directory esistenti all'interno della home"),
+        "devdirs_roots": N_("Indica cartelle all'interno della home"),
         "extra_protected_names": N_("Indica una lista di nomi di processo"),
         "foreground_tracking": N_("Deve essere un valore booleano"),
         "language": N_("Scegli una lingua disponibile"),

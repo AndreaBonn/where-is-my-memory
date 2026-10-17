@@ -114,6 +114,16 @@ EXEMPT = {
         "Chat",
         "InstantMessaging",
     },
+    "core/risk_table.py": {
+        # Shell commands shown verbatim inside the translated rebuild sentence.
+        "npm install",
+        "uv sync",
+        "gradle build",
+        "npm run build",
+        "composer install",
+        "cargo build",
+        "mvn package",
+    },
     "collectors/desktop_entries.py": {"Desktop Entry"},  # .desktop file section name
     "redaction.py": {"[REDACTED]"},  # log redaction marker
     "tray/status_notifier.py": {"Active"},  # StatusNotifierItem Status value

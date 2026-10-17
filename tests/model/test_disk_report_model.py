@@ -123,3 +123,9 @@ def test_cache_and_devdir_reject_negative_numbers() -> None:
 
 def test_cache_kinds_cover_the_spec_list() -> None:
     assert {k.value for k in CacheKind} == {"uv", "npm", "pip", "thumbnails", "trash"}
+
+
+def test_devdir_marker_defaults_to_empty_and_must_be_text() -> None:
+    assert devdir(path="/w/node_modules").marker == ""
+    with pytest.raises(ValueError, match="marker"):
+        replace(devdir(path="/w/target"), marker=invalid_model_value(3))

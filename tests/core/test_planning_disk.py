@@ -354,3 +354,23 @@ def test_volume_remove_without_a_report_is_refused() -> None:
     # Without a report there is no creation time, and the executor would refuse anyway.
     with pytest.raises(InvalidRequest):
         _plan(kind=ActionKind.VOLUME_REMOVE, disk=None, target="pgdata")
+
+
+@pytest.mark.parametrize(
+    ("path", "marker", "command"),
+    [
+        ("/w/rs/target", "Cargo.toml", "cargo build"),
+        ("/w/java/target", "pom.xml", "mvn package"),
+        ("/w/web/node_modules", "", "npm install"),
+    ],
+)
+def test_devdir_delete_plan_tells_how_to_rebuild_that_kind_of_folder(
+    path: str, marker: str, command: str
+) -> None:
+    disk = report(devdirs=(devdir(path=path, marker=marker),))
+
+    plan = _plan(kind=ActionKind.DEVDIR_DELETE, disk=disk, target=path)
+
+    assert plan.consequences == (
+        f"Per usare di nuovo il progetto serve ricostruire la cartella con {command}.",
+    )

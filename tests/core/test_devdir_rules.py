@@ -1,6 +1,11 @@
 import pytest
 
-from wimm.core.devdir_rules import DevdirContext, classify_devdir, gitignore_names
+from wimm.core.devdir_rules import (
+    DevdirContext,
+    classify_devdir,
+    gitignore_names,
+    rebuild_marker,
+)
 
 
 def ctx(*entries: str, **kwargs: object) -> DevdirContext:
@@ -68,3 +73,12 @@ def test_gitignore_names_strips_slashes_and_skips_comments_and_negations() -> No
 def test_gitignore_names_drops_a_name_negated_later() -> None:
     assert "target" not in gitignore_names(text="target/\n!target\n")
     assert "target" in gitignore_names(text="!target\ntarget/\n")
+
+
+def test_rebuild_marker_returns_the_first_listed_marker_present() -> None:
+    assert rebuild_marker(name="target", parent_entries=frozenset({"pom.xml"})) == "pom.xml"
+    assert rebuild_marker(name="target", parent_entries=frozenset({"pom.xml", "Cargo.toml"})) == (
+        "Cargo.toml"
+    )
+    assert rebuild_marker(name="node_modules", parent_entries=frozenset({"package.json"})) == ""
+    assert rebuild_marker(name="target", parent_entries=frozenset()) == ""

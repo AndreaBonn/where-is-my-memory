@@ -9,6 +9,7 @@ import pytest
 from tests.service.fs_fakes import (
     MIN_AGE_DAYS,
     NOW,
+    OLD,
     FsRig,
     age,
     build_rig,
@@ -58,9 +59,68 @@ def test_devdir_delete_removes_the_dependency_folder_and_keeps_the_project(rig: 
 
 def test_devdir_delete_also_removes_a_venv(rig: FsRig) -> None:
     folder = make_project(root=rig.root, folder=".venv")
+    (folder / "pyvenv.cfg").write_text("home = /usr/bin\n", encoding="utf-8")
 
     assert delete_devdir(rig=rig, folder=folder) is StepStatus.DONE
     assert not folder.exists()
+
+
+def make_rust_project(*, rig: FsRig) -> Path:
+    """A project with an old `Cargo.toml` and a `target` that carries cargo's cache tag."""
+    folder = make_project(root=rig.root, name="crate", folder="target")
+    (folder / "CACHEDIR.TAG").write_text("Signature: 8a477f597d28d172789f06886806bc55\n")
+    cargo = folder.parent / "Cargo.toml"
+    cargo.write_text("[package]\n", encoding="utf-8")
+    age(path=cargo, mtime=OLD)
+    return folder
+
+
+def test_devdir_with_its_marker_and_second_signal_is_deleted(rig: FsRig) -> None:
+    folder = make_rust_project(rig=rig)
+
+    assert delete_devdir(rig=rig, folder=folder) is StepStatus.DONE
+    assert not folder.exists()
+    assert (folder.parent / "Cargo.toml").exists()
+
+
+def test_devdir_without_its_marker_is_refused(rig: FsRig) -> None:
+    folder = make_rust_project(rig=rig)
+    plan = dir_plan(kind=DELETE, path=folder)
+    (folder.parent / "Cargo.toml").unlink()
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=plan)
+    assert (folder / "pkg" / "lib" / "util.js").exists()
+
+
+def test_devdir_that_lost_its_second_signal_is_refused(rig: FsRig) -> None:
+    folder = make_rust_project(rig=rig)
+    plan = dir_plan(kind=DELETE, path=folder)
+    (folder / "CACHEDIR.TAG").unlink()
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=plan)
+    assert (folder / "top.txt").exists()
+
+
+def test_a_venv_without_pyvenv_cfg_is_refused(rig: FsRig) -> None:
+    folder = make_project(root=rig.root, folder=".venv")
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=dir_plan(kind=DELETE, path=folder))
+    assert (folder / "top.txt").exists()
+
+
+def test_a_project_directly_in_the_home_is_refused(rig: FsRig) -> None:
+    rig.control = replace(rig.control, roots=(rig.home,))
+    folder = rig.home / "node_modules"
+    folder.mkdir()
+    (folder / "top.txt").write_text("z", encoding="utf-8")
+    age(path=rig.home, mtime=OLD)
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=dir_plan(kind=DELETE, path=folder))
+    assert (folder / "top.txt").exists()
 
 
 def test_a_folder_outside_every_root_is_refused_and_survives(rig: FsRig, tmp_path: Path) -> None:

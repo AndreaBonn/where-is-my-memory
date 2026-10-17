@@ -47,3 +47,11 @@ def test_container_stop_lists_both_consequences() -> None:
 
 def test_trash_phrase_is_translated_for_the_typed_confirmation() -> None:
     assert _(TRASH_PHRASE) == "Trash"
+
+
+def test_devdir_rebuild_consequence_is_translated_and_keeps_the_command() -> None:
+    from wimm.core.risk_table import devdir_consequence
+
+    text = devdir_consequence(folder_name="target", marker="Cargo.toml")
+
+    assert text == "To use the project again, rebuild the folder with cargo build."

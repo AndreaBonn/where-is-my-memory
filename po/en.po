@@ -28,8 +28,8 @@ msgid "Scegli solo categorie su cui sono consentite azioni"
 msgstr "Choose only categories that allow actions"
 
 #: src/wimm/config_messages.py:11
-msgid "Indica directory esistenti all'interno della home"
-msgstr "Enter existing folders inside your home"
+msgid "Indica cartelle all'interno della home"
+msgstr "Enter folders inside your home"
 
 #: src/wimm/config_messages.py:12
 msgid "Indica una lista di nomi di processo"
@@ -188,17 +188,17 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:34 src/wimm/ui/disk_view.py:22
+#: src/wimm/core/planning_disk.py:36 src/wimm/ui/disk_view.py:22
 #: src/wimm/ui/disk_view.py:96
 msgid "Cestino"
 msgstr "Trash"
 
-#: src/wimm/core/planning_disk.py:37
+#: src/wimm/core/planning_disk.py:39
 #, python-brace-format
 msgid "Il report mostra le {shown} voci più grandi: altre {hidden} restano e serve una nuova scansione dopo la pulizia."
 msgstr "The report shows the {shown} largest items: {hidden} more remain, and a new scan is needed after the cleanup."
 
-#: src/wimm/core/planning_disk.py:145 src/wimm/core/planning_disk.py:146
+#: src/wimm/core/planning_disk.py:147 src/wimm/core/planning_disk.py:148
 msgid "Build cache"
 msgstr "Build cache"
 
@@ -211,98 +211,103 @@ msgstr "{name} (pid {pid})"
 msgid "associati al progetto"
 msgstr "linked to the project"
 
-#: src/wimm/core/risk_table.py:34
+#: src/wimm/core/risk_table.py:37
 msgid "Il server si ferma."
 msgstr "The server stops."
 
-#: src/wimm/core/risk_table.py:35
+#: src/wimm/core/risk_table.py:38
 msgid "È in uso adesso: chi lo sta usando perde la connessione."
 msgstr "It is in use right now: whoever is using it loses the connection."
 
-#: src/wimm/core/risk_table.py:37
+#: src/wimm/core/risk_table.py:40
 msgid "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
 msgstr "It is running in the foreground in a terminal: you might interrupt work in progress."
 
-#: src/wimm/core/risk_table.py:40
+#: src/wimm/core/risk_table.py:43
 msgid "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
 msgstr "The agent session closes: unsaved work in the conversation is lost."
 
-#: src/wimm/core/risk_table.py:45
+#: src/wimm/core/risk_table.py:48
 msgid "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede dal salvataggio automatico, che può essere indietro di qualche secondo."
 msgstr "The browser closes without a normal shutdown: when reopened it restores the tabs from its automatic save, which may be a few seconds behind."
 
-#: src/wimm/core/risk_table.py:48
+#: src/wimm/core/risk_table.py:51
 msgid "Eventuali file non salvati possono andare persi."
 msgstr "Any unsaved files may be lost."
 
-#: src/wimm/core/risk_table.py:50
+#: src/wimm/core/risk_table.py:53
 msgid "Il programma si ferma: ciò che ha in memoria e non ha salvato va perso. Se è un servizio, potrebbe riavviarsi da solo."
 msgstr "The program stops: whatever it holds in memory and has not saved is lost. If it is a service, it might restart on its own."
 
-#: src/wimm/core/risk_table.py:53
+#: src/wimm/core/risk_table.py:56
 msgid "L'applicazione si chiude."
 msgstr "The application closes."
 
-#: src/wimm/core/risk_table.py:55
+#: src/wimm/core/risk_table.py:58
 msgid "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
 msgstr "All the terminal windows and tabs close, along with the programs inside them."
 
-#: src/wimm/core/risk_table.py:57
+#: src/wimm/core/risk_table.py:60
 msgid "Chiusura immediata senza salvataggio."
 msgstr "Immediate shutdown without saving."
 
-#: src/wimm/core/risk_table.py:58
+#: src/wimm/core/risk_table.py:61
 msgid "Il container si ferma; dati e configurazione restano."
 msgstr "The container stops; its data and configuration remain."
 
-#: src/wimm/core/risk_table.py:60
+#: src/wimm/core/risk_table.py:63
 msgid "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
 msgstr "If the container does not stop by itself, Docker ends it after 10 seconds."
 
-#: src/wimm/core/risk_table.py:62
+#: src/wimm/core/risk_table.py:65
 msgid "Il container riparte con la configurazione di prima."
 msgstr "The container starts again with its previous configuration."
 
-#: src/wimm/core/risk_table.py:64
+#: src/wimm/core/risk_table.py:67
 msgid "Le modifiche fatte dentro il container fuori dai volumi si perdono."
 msgstr "Changes made inside the container outside its volumes are lost."
 
-#: src/wimm/core/risk_table.py:66
+#: src/wimm/core/risk_table.py:69
 msgid "I container vengono rimossi; i volumi con i dati restano."
 msgstr "The containers are removed; the volumes with the data remain."
 
-#: src/wimm/core/risk_table.py:68
+#: src/wimm/core/risk_table.py:71
 #, python-brace-format
 msgid "I dati dei volumi {volumes} vengono cancellati in modo definitivo."
 msgstr "The data in the volumes {volumes} is permanently deleted."
 
-#: src/wimm/core/risk_table.py:70
+#: src/wimm/core/risk_table.py:73
 msgid "Si riscarica dal registry quando serve."
 msgstr "It is downloaded again from the registry when needed."
 
-#: src/wimm/core/risk_table.py:72
+#: src/wimm/core/risk_table.py:75
 msgid "Immagine costruita in locale, non è su un registry: per riaverla serve ricostruirla."
 msgstr "Image built locally, not on a registry: to get it back you have to build it again."
 
-#: src/wimm/core/risk_table.py:74
+#: src/wimm/core/risk_table.py:77
 msgid "Le prossime build saranno più lente."
 msgstr "The next builds will be slower."
 
-#: src/wimm/core/risk_table.py:75
+#: src/wimm/core/risk_table.py:78
 msgid "I dati del volume vengono cancellati in modo definitivo."
 msgstr "The volume data is permanently deleted."
 
-#: src/wimm/core/risk_table.py:76
+#: src/wimm/core/risk_table.py:79
 msgid "I pacchetti si riscaricano quando servono."
 msgstr "Packages are downloaded again when needed."
 
-#: src/wimm/core/risk_table.py:77
+#: src/wimm/core/risk_table.py:80
 msgid "I file nel cestino vengono eliminati in modo definitivo."
 msgstr "The files in the trash are permanently deleted."
 
-#: src/wimm/core/risk_table.py:79
+#: src/wimm/core/risk_table.py:82
 msgid "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
 msgstr "You need to reinstall the dependencies (npm install or uv sync) before using the project."
+
+#: src/wimm/core/risk_table.py:85
+#, python-brace-format
+msgid "Per usare di nuovo il progetto serve ricostruire la cartella con {command}."
+msgstr "To use the project again, rebuild the folder with {command}."
 
 #: src/wimm/core/text.py:17
 msgid "i browser"
@@ -363,7 +368,7 @@ msgstr "no connection"
 msgid "{prefix} da {duration}"
 msgstr "{prefix} for {duration}"
 
-#: src/wimm/core/text.py:90 src/wimm/ui/format.py:149
+#: src/wimm/core/text.py:90 src/wimm/ui/format.py:151
 msgid "attività non misurabile"
 msgstr "activity cannot be measured"
 
@@ -1631,17 +1636,17 @@ msgid_plural "da {count} giorni"
 msgstr[0] "for {count} day"
 msgstr[1] "for {count} days"
 
-#: src/wimm/ui/format.py:143
+#: src/wimm/ui/format.py:145
 msgid "in uso"
 msgstr "in use"
 
-#: src/wimm/ui/format.py:145
+#: src/wimm/ui/format.py:147
 #, python-brace-format
 msgid "non in uso {elapsed}"
 msgstr "not in use {elapsed}"
 
 #. TRANSLATORS: strftime pattern of a day without the year; English puts the month first.
-#: src/wimm/ui/format.py:167
+#: src/wimm/ui/format.py:169
 #, no-python-format
 msgid "%d/%m"
 msgstr "%m/%d"

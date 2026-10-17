@@ -96,8 +96,8 @@ def cache(*, kind: CacheKind, size: int = MB, ino: int = 11, dev: int = 2049) ->
     )
 
 
-def devdir(*, path: str, size: int = MB, age_days: int = 120) -> DevDir:
-    return DevDir(path=path, size=size, age_days=age_days, st_ino=77, st_dev=2049)
+def devdir(*, path: str, size: int = MB, age_days: int = 120, marker: str = "") -> DevDir:
+    return DevDir(path=path, size=size, age_days=age_days, st_ino=77, st_dev=2049, marker=marker)
 
 
 def report(

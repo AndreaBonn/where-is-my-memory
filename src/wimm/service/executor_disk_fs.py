@@ -4,14 +4,15 @@ import os
 import stat
 from pathlib import Path
 
+from wimm.collectors.devdir_context import read_devdir_context
 from wimm.collectors.devdirs import project_age_days
 from wimm.core.constants import (
     CACHE_COMMAND_TIMEOUT_S,
     CACHE_ENV_VARS,
     CACHE_RELATIVE_PATHS,
-    DEVDIR_NAMES,
     TRASH_CONTENT_DIRS,
 )
+from wimm.core.devdir_rules import MARKERS_BY_NAME, classify_devdir
 from wimm.model.actions import DirFingerprint, PlanStep
 from wimm.model.enums import ActionKind
 
@@ -63,14 +64,28 @@ def _inside_a_root(*, path: Path, control: DiskFsControl) -> bool:
     return False
 
 
+def _require_devdir_markers(*, path: Path, control: DiskFsControl) -> None:
+    """Classify the folder by what sits around it now, not by what the plan saw.
+
+    The marker (`Cargo.toml`, `pyvenv.cfg`...) or the second signal may be gone since the plan.
+    """
+    try:
+        context = read_devdir_context(path=path, home=control.home)
+    except OSError as error:
+        raise ProtectedTarget(f"{path.parent} could not be read to check {path.name}") from error
+    if not classify_devdir(name=path.name, context=context):
+        raise ProtectedTarget(f"{path} is no longer recognised as a rebuildable folder")
+
+
 def _check_devdir(*, fingerprint: DirFingerprint, control: DiskFsControl) -> bool:
     path = Path(fingerprint.realpath)
-    if path.name not in DEVDIR_NAMES:
+    if path.name not in MARKERS_BY_NAME:
         raise ProtectedTarget(f"{path.name} is not a dependency folder name")
     if not _inside_a_root(path=path, control=control):
         raise ProtectedTarget(f"{path} is not inside a configured development root")
     if not _verify_directory(fingerprint=fingerprint):
         return False
+    _require_devdir_markers(path=path, control=control)
     age = project_age_days(project=path.parent, now=control.clock())
     if age is None:
         raise TargetChanged(f"{path.parent} could not be read to check its age")

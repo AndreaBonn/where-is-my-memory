@@ -34,8 +34,15 @@ OPTIONAL_BYTES = nullable(decoder=byte_count)
 OPTIONAL_INTEGER = nullable(decoder=INTEGER)
 
 
+# Fields added after the first release: a report written without them decodes to the
+# default, and the encoder leaves them out while they hold it, so old readers still parse.
+OPTIONAL_FIELDS: dict[type, dict[str, Any]] = {m.DevDir: {"marker": ""}}
+
+
 def _record[T](cls: type[T]) -> Decoder:
     def decode(value: Any, path: str) -> T:
+        if isinstance(value, dict):
+            value = {**OPTIONAL_FIELDS.get(cls, {}), **value}
         values = decode_fields(value=value, schema=SCHEMAS[cls], path=path)
         try:
             return cls(**values)
@@ -87,6 +94,7 @@ SCHEMAS: dict[type, Schema] = {
         "age_days": INTEGER,
         "st_ino": INTEGER,
         "st_dev": INTEGER,
+        "marker": TEXT,
     },
 }
 REPORT_SCHEMA: Schema = {
@@ -107,7 +115,12 @@ def _encode(value: Any) -> Any:
     if isinstance(value, tuple):
         return [_encode(value=item) for item in value]
     if type(value) in SCHEMAS:
-        return {f.name: _encode(value=getattr(value, f.name)) for f in dataclass_fields(value)}
+        defaults = OPTIONAL_FIELDS.get(type(value), {})
+        return {
+            f.name: _encode(value=getattr(value, f.name))
+            for f in dataclass_fields(value)
+            if f.name not in defaults or getattr(value, f.name) != defaults[f.name]
+        }
     return value
 
 

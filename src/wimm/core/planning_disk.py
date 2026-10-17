@@ -6,6 +6,7 @@ one removal step per id read from the report, so the executor can recheck each o
 """
 
 from dataclasses import replace
+from pathlib import PurePath
 from typing import Protocol
 
 from wimm.i18n import N_, _
@@ -21,6 +22,7 @@ from wimm.model.errors import InvalidRequest
 
 from .planning_drafts import Draft, assess_draft, volume_draft
 from .risk import RiskTarget, TargetKind
+from .risk_table import devdir_consequence
 
 __all__ = [
     "BUILD_CACHE_ID",
@@ -241,14 +243,15 @@ def _plan_devdir_delete(*, request: ActionRequest, report: DiskReport | None) ->
     for item in report.devdirs:
         if item.path == request.target_id:
             fingerprint = DirFingerprint(realpath=item.path, st_ino=item.st_ino, st_dev=item.st_dev)
-            return [
-                _dir_draft(
-                    fingerprint=fingerprint,
-                    size=item.size,
-                    kind=ActionKind.DEVDIR_DELETE,
-                    name=item.path,
-                )
-            ]
+            draft = _dir_draft(
+                fingerprint=fingerprint,
+                size=item.size,
+                kind=ActionKind.DEVDIR_DELETE,
+                name=item.path,
+            )
+            text = devdir_consequence(folder_name=PurePath(item.path).name, marker=item.marker)
+            assessed = replace(draft.assessed, consequences=(text,))
+            return [replace(draft, assessed=assessed)]
     raise InvalidRequest(f"Unknown development folder {request.target_id}")
 
 

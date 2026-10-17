@@ -197,9 +197,8 @@ CACHE_RELATIVE_PATHS = (
     ("trash", ".local/share/Trash"),
     ("thumbnails", ".cache/thumbnails"),
 )
-# SPECIFICHE 7.6 (dependency folders): exact names searched (`.venv` is the only hidden
-# folder of interest) and the project subfolder whose first level counts for the age.
-DEVDIR_NAMES = frozenset({"node_modules", ".venv"})
+# SPECIFICHE 7.6 (dependency folders): the project subfolder whose first level counts for
+# the age. The searched names live in core.devdir_rules.
 DEVDIR_SOURCE_DIRNAME = "src"
 SECONDS_PER_DAY = 86400
 # SPECIFICHE 8.4 (caches): pip falls back to removing the folder content when the tool is not

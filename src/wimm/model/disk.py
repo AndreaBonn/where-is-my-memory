@@ -146,13 +146,18 @@ class CacheEntry(ImmutableModel):
 
 @dataclass(frozen=True, slots=True)
 class DevDir(ImmutableModel):
-    """A `node_modules` or `.venv` found by the scan; `age_days` is the project's staleness."""
+    """A rebuildable folder found by the scan; `age_days` is the project's staleness.
+
+    `marker` is the project file that qualified the folder (`Cargo.toml` for a `target`),
+    empty when the name alone was enough or the report predates the field.
+    """
 
     path: str
     size: int
     age_days: int
     st_ino: int
     st_dev: int
+    marker: str = ""
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
@@ -161,6 +166,8 @@ class DevDir(ImmutableModel):
         require_nonnegative(value=self.age_days, field="age_days")
         require_nonnegative(value=self.st_ino, field="st_ino")
         require_nonnegative(value=self.st_dev, field="st_dev")
+        if type(self.marker) is not str:
+            raise ValueError("marker must be text")
 
 
 @dataclass(frozen=True, slots=True)
