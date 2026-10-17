@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from wimm.i18n import N_, _
 from wimm.model.enums import ActivityState, Pressure, Protection
 from wimm.model.snapshot import Group, Snapshot
 from wimm.tray.dbus_menu import MenuItem
@@ -19,11 +20,11 @@ MAX_MENU_GROUPS = 5
 FAILURES_BEFORE_ERROR = 3
 PERCENT = 100
 
-ERROR_TEXT = "Monitoraggio in errore: apri il pannello per i dettagli"
-OPEN_TEXT = "Apri Where Is My Memory"
-GROUPS_HEADER_TEXT = "Da liberare:"
-MUTE_TEXT = "Silenzia notifiche per 1 h"
-QUIT_TEXT = "Esci"
+ERROR_TEXT = N_("Monitoraggio in errore: apri il pannello per i dettagli")
+OPEN_TEXT = N_("Apri Where Is My Memory")
+GROUPS_HEADER_TEXT = N_("Da liberare:")
+MUTE_TEXT = N_("Silenzia notifiche per 1 h")
+QUIT_TEXT = N_("Esci")
 
 # Fixed dbusmenu ids: a click may arrive for the layout the user saw before a refresh,
 # so an id must never move to another entry (the old "Silenzia" id must not become "Esci").
@@ -48,22 +49,23 @@ def _ram_percent(*, snapshot: Snapshot) -> int:
 
 
 def _disk_free(*, snapshot: Snapshot) -> str:
-    return f"{format_round_size(size=snapshot.disk.free)} liberi"
+    return _("{size} liberi").format(size=format_round_size(size=snapshot.disk.free))
 
 
 def tray_label(*, snapshot: Snapshot | None) -> str:
     """Short text beside the icon: the reclaimable RAM, nothing below 100 MB (RF-40)."""
     if snapshot is None or snapshot.reclaimable_now.ram < LABEL_MIN_BYTES:
         return ""
-    return f"{format_size(size=snapshot.reclaimable_now.ram)} da liberare"
+    return _("{size} da liberare").format(size=format_size(size=snapshot.reclaimable_now.ram))
 
 
 def tray_tooltip(*, snapshot: Snapshot | None) -> str:
     """RAM and disk summary, for example ``Memoria usata 79%, disco: 28 GB liberi``."""
     if snapshot is None:
         return ""
-    return (
-        f"Memoria usata {_ram_percent(snapshot=snapshot)}%, disco: {_disk_free(snapshot=snapshot)}"
+    # xgettext: no-python-format
+    return _("Memoria usata {percent}%, disco: {disk}").format(
+        percent=_ram_percent(snapshot=snapshot), disk=_disk_free(snapshot=snapshot)
     )
 
 
@@ -97,12 +99,17 @@ def _idle_groups(*, snapshot: Snapshot) -> list[Group]:
 
 def _summary_entries(*, snapshot: Snapshot) -> list[Entry]:
     entries = [
-        (RAM_ID, f"Memoria usata: {_ram_percent(snapshot=snapshot)}%", False, ""),
-        (DISK_ID, f"Disco: {_disk_free(snapshot=snapshot)}", False, ""),
+        (
+            RAM_ID,
+            _("Memoria usata: {percent}%").format(percent=_ram_percent(snapshot=snapshot)),
+            False,
+            "",
+        ),
+        (DISK_ID, _("Disco: {disk}").format(disk=_disk_free(snapshot=snapshot)), False, ""),
     ]
     idle = _idle_groups(snapshot=snapshot)
     if idle:
-        entries.append((GROUPS_HEADER_ID, GROUPS_HEADER_TEXT, False, ""))
+        entries.append((GROUPS_HEADER_ID, _(GROUPS_HEADER_TEXT), False, ""))
     for slot, group in enumerate(idle):
         size = format_size(size=group.memory.reclaimable)
         label = f"{group.name} ({size})"
@@ -112,9 +119,9 @@ def _summary_entries(*, snapshot: Snapshot) -> list[Entry]:
 
 def _mute_entry(*, muted_until: datetime | None) -> Entry:
     if muted_until is None:
-        return (MUTE_ID, MUTE_TEXT, True, CALLBACK_MUTE)
+        return (MUTE_ID, _(MUTE_TEXT), True, CALLBACK_MUTE)
     until = muted_until.astimezone().strftime("%H:%M")
-    return (MUTE_ID, f"Notifiche silenziate fino alle {until}", False, "")
+    return (MUTE_ID, _("Notifiche silenziate fino alle {until}").format(until=until), False, "")
 
 
 def build_menu(
@@ -124,13 +131,13 @@ def build_menu(
     entries: list[Entry] = []
     if consecutive_failures >= FAILURES_BEFORE_ERROR:
         # The error entry already opens the panel: one way in is enough.
-        entries.append((ERROR_ID, ERROR_TEXT, True, CALLBACK_OPEN))
+        entries.append((ERROR_ID, _(ERROR_TEXT), True, CALLBACK_OPEN))
     else:
-        entries.append((OPEN_ID, OPEN_TEXT, True, CALLBACK_OPEN))
+        entries.append((OPEN_ID, _(OPEN_TEXT), True, CALLBACK_OPEN))
     if snapshot is not None:
         entries.extend(_summary_entries(snapshot=snapshot))
     entries.append(_mute_entry(muted_until=muted_until))
-    entries.append((QUIT_ID, QUIT_TEXT, True, CALLBACK_QUIT))
+    entries.append((QUIT_ID, _(QUIT_TEXT), True, CALLBACK_QUIT))
     return [
         MenuItem(id=item_id, label=label, enabled=enabled, callback_id=callback_id)
         for item_id, label, enabled, callback_id in entries

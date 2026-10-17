@@ -4,6 +4,7 @@ from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
 from wimm.core.notify_rules import NotificationIntent
+from wimm.i18n import N_, _
 
 if TYPE_CHECKING:
     from gi.repository import Gio
@@ -17,8 +18,8 @@ ACTION_SNOOZE_GROUP = f"{APP_ACTION_PREFIX}snooze-group"
 # notifier only names the actions: registering them is the application's job.
 NO_GROUP_TARGET = ""
 PRESSURE_ID_PREFIX = "pressure-"
-OPEN_LABEL = "Vedi e decidi"
-SNOOZE_LABEL = "Non ora (24 h)"
+OPEN_LABEL = N_("Vedi e decidi")
+SNOOZE_LABEL = N_("Non ora (24 h)")
 
 
 class NotifierPriority(Enum):
@@ -80,8 +81,8 @@ def build_spec(*, intent: NotificationIntent) -> NotificationSpec:
         default_action=ACTION_OPEN_GROUP,
         default_target=group_id,
         buttons=(
-            NotificationButton(label=OPEN_LABEL, action=ACTION_OPEN_GROUP, target=group_id),
-            NotificationButton(label=SNOOZE_LABEL, action=ACTION_SNOOZE_GROUP, target=group_id),
+            NotificationButton(label=_(OPEN_LABEL), action=ACTION_OPEN_GROUP, target=group_id),
+            NotificationButton(label=_(SNOOZE_LABEL), action=ACTION_SNOOZE_GROUP, target=group_id),
         ),
     )
 

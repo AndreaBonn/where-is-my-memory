@@ -90,6 +90,24 @@ def _log_field_errors(*, errors: Mapping[str, Any]) -> None:
         LOGGER.warning("Invalid configuration field %s: %s", name, error)
 
 
+def _set_startup_language() -> None:
+    """Pick the language before the ``--help`` texts exist; the service start applies it again."""
+    from pathlib import Path
+
+    from wimm import i18n
+    from wimm.config import load_config
+    from wimm.paths import default_user_paths
+
+    # No logging yet: a warning would hit stderr; the service start logs it to the file.
+    config_logger = logging.getLogger(load_config.__module__)
+    config_logger.disabled = True
+    try:
+        saved = load_config(paths=default_user_paths(), home=Path.home()).config.language
+    finally:
+        config_logger.disabled = False
+    i18n.set_language(language=saved or i18n.resolve_default(environ=os.environ))
+
+
 def _apply_config(*, loaded: Any) -> None:
     """Log invalid fields and switch to the saved language, or the system one."""
     from wimm import i18n
@@ -256,12 +274,13 @@ def create_application() -> "Gio.Application":
 def _configure_options(application: "Gio.Application") -> None:
     from gi.repository import Gio, GLib
 
+    from wimm.i18n import _
     from wimm.service.group_actions import register_group_actions, register_monitor_action
 
     for name, kind, description, argument in (
-        ("background", GLib.OptionArg.NONE, "Avvia senza aprire la finestra", None),
-        ("group", GLib.OptionArg.STRING, "Mostra un gruppo", "ID"),
-        ("version", GLib.OptionArg.NONE, "Mostra la versione", None),
+        ("background", GLib.OptionArg.NONE, _("Avvia senza aprire la finestra"), None),
+        ("group", GLib.OptionArg.STRING, _("Mostra un gruppo"), "ID"),
+        ("version", GLib.OptionArg.NONE, _("Mostra la versione"), None),
     ):
         application.add_main_option(name, 0, GLib.OptionFlags.NONE, kind, description, argument)
     action = Gio.SimpleAction.new(name="quit", parameter_type=None)
@@ -276,5 +295,6 @@ def main(argv: list[str] | None = None) -> int:
     if arguments == ["--version"]:
         print(f"wimm {__version__}")
         return SUCCESS
+    _set_startup_language()
     application = create_application()
     return application.run(argv=["wimm", *arguments])

@@ -10,6 +10,8 @@ gi.require_version("Gio", "2.0")
 gi.require_version("GLib", "2.0")
 from gi.repository import Gio, GLib
 
+from wimm.i18n import N_, _
+
 LOGGER = logging.getLogger(__name__)
 
 SNI_IFACE = "org.kde.StatusNotifierItem"
@@ -21,7 +23,8 @@ ITEM_ID = "io.github.wimm.WhereIsMyMemory"
 CATEGORY = "SystemServices"
 STATUS_ACTIVE = "Active"
 ICON_NORMAL = "wimm-normal"
-LABEL_GUIDE = "88,8 GB da liberare"
+# The widest label tray_label() can show, so the panel reserves room for it.
+LABEL_GUIDE = N_("88,8 GB da liberare")
 INSTALLED_ICON_DIRECTORY = Path("/usr/share/icons")
 WATCHER_TIMEOUT_MS = 2000
 
@@ -89,7 +92,7 @@ class StatusNotifierItem:
         self._callbacks = {"Activate": on_activate, "SecondaryActivate": on_secondary_activate}
         self._title, self._tooltip = title, ""
         self._status, self._icon_name = STATUS_ACTIVE, ICON_NORMAL
-        self._label, self._guide = "", LABEL_GUIDE
+        self._label, self._guide = "", _(LABEL_GUIDE)
         self._theme_path = icon_theme_path()
         info = Gio.DBusNodeInfo.new_for_xml(xml_data=INTROSPECTION)
         self._registration = connection.register_object(

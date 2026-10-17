@@ -11,6 +11,64 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: src/wimm/app.py:275
+msgid "Avvia senza aprire la finestra"
+msgstr "Start without opening the window"
+
+#: src/wimm/app.py:276
+msgid "Mostra un gruppo"
+msgstr "Show a group"
+
+#: src/wimm/app.py:277
+msgid "Mostra la versione"
+msgstr "Show the version"
+
+#: src/wimm/config_messages.py:10
+msgid "Scegli solo categorie su cui sono consentite azioni"
+msgstr "Choose only categories that allow actions"
+
+#: src/wimm/config_messages.py:11
+msgid "Indica directory esistenti all'interno della home"
+msgstr "Enter existing folders inside your home"
+
+#: src/wimm/config_messages.py:12
+msgid "Indica una lista di nomi di processo"
+msgstr "Enter a list of process names"
+
+#: src/wimm/config_messages.py:13
+msgid "Deve essere un valore booleano"
+msgstr "Must be true or false"
+
+#: src/wimm/config_messages.py:14
+msgid "Scegli una lingua disponibile"
+msgstr "Choose an available language"
+
+#: src/wimm/config_messages.py:17
+msgid "Deve essere minore della soglia di avviso"
+msgstr "Must be lower than the warning threshold"
+
+#: src/wimm/config_messages.py:22
+msgid "un numero"
+msgstr "a number"
+
+#: src/wimm/config_messages.py:22
+msgid "un numero intero"
+msgstr "a whole number"
+
+#: src/wimm/config_messages.py:23
+msgid " secondi"
+msgstr " seconds"
+
+#: src/wimm/config_messages.py:25
+#, python-brace-format
+msgid "Deve essere {number} almeno {lower}{unit}"
+msgstr "Must be {number}, at least {lower}{unit}"
+
+#: src/wimm/config_messages.py:28
+#, python-brace-format
+msgid "Deve essere {number} fra {lower} e {upper}{unit}"
+msgstr "Must be {number} between {lower} and {upper}{unit}"
+
 #: src/wimm/core/assemble.py:57
 msgid "audio e media del desktop"
 msgstr "desktop audio and media"
@@ -558,6 +616,68 @@ msgstr "Docker is not available"
 #: src/wimm/service/errors.py:46
 msgid "L'elemento non esiste più"
 msgstr "The item no longer exists"
+
+#: src/wimm/service/notifier.py:21
+msgid "Vedi e decidi"
+msgstr "See and decide"
+
+#: src/wimm/service/notifier.py:22
+msgid "Non ora (24 h)"
+msgstr "Not now (24 h)"
+
+#: src/wimm/tray/menu_model.py:23
+msgid "Monitoraggio in errore: apri il pannello per i dettagli"
+msgstr "Monitoring failed: open the panel for details"
+
+#: src/wimm/tray/menu_model.py:24
+msgid "Apri Where Is My Memory"
+msgstr "Open Where Is My Memory"
+
+#: src/wimm/tray/menu_model.py:25
+msgid "Da liberare:"
+msgstr "To free up:"
+
+#: src/wimm/tray/menu_model.py:26
+msgid "Silenzia notifiche per 1 h"
+msgstr "Mute notifications for 1 h"
+
+#: src/wimm/tray/menu_model.py:27 src/wimm/ui/window_notify.py:68
+msgid "Esci"
+msgstr "Quit"
+
+#: src/wimm/tray/menu_model.py:52
+#, python-brace-format
+msgid "{size} liberi"
+msgstr "{size} free"
+
+#: src/wimm/tray/menu_model.py:59
+#, python-brace-format
+msgid "{size} da liberare"
+msgstr "{size} to free up"
+
+#: src/wimm/tray/menu_model.py:67
+#, no-python-format, python-brace-format
+msgid "Memoria usata {percent}%, disco: {disk}"
+msgstr "Memory used {percent}%, disk: {disk}"
+
+#: src/wimm/tray/menu_model.py:104
+#, python-brace-format
+msgid "Memoria usata: {percent}%"
+msgstr "Memory used: {percent}%"
+
+#: src/wimm/tray/menu_model.py:108
+#, python-brace-format
+msgid "Disco: {disk}"
+msgstr "Disk: {disk}"
+
+#: src/wimm/tray/menu_model.py:124 src/wimm/ui/window_notify.py:14
+#, python-brace-format
+msgid "Notifiche silenziate fino alle {until}"
+msgstr "Notifications muted until {until}"
+
+#: src/wimm/tray/status_notifier.py:27
+msgid "88,8 GB da liberare"
+msgstr "88.8 GB to free up"
 
 #: src/wimm/ui/action_flow.py:34
 msgid "Non c'è niente da fermare senza rischi"
@@ -2055,15 +2175,6 @@ msgstr "Refresh (F5)"
 msgid "Silenzia 1 h"
 msgstr "Mute for 1 h"
 
-#: src/wimm/ui/window_notify.py:14
-#, python-brace-format
-msgid "Notifiche silenziate fino alle {until}"
-msgstr "Notifications muted until {until}"
-
 #: src/wimm/ui/window_notify.py:67
 msgid "Info"
 msgstr "About"
-
-#: src/wimm/ui/window_notify.py:68
-msgid "Esci"
-msgstr "Quit"

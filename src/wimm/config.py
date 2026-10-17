@@ -7,6 +7,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any
 
+from wimm.config_messages import field_message, pressure_order_message, range_message
 from wimm.core import constants as c
 from wimm.i18n import LANGUAGES
 from wimm.model import Category, Protection, protection_of
@@ -32,7 +33,6 @@ RANGES: Mapping[str, tuple[int | float, int | float | None]] = MappingProxyType(
     }
 )
 FLOAT_FIELDS = frozenset({"cpu_active_threshold_pct"})
-SECONDS_SUFFIX = "_s"
 _PRESSURE_FIELDS = frozenset({"pressure_warning_pct", "pressure_critical_pct"})
 
 
@@ -165,18 +165,8 @@ def _decode_field(name: str, value: object, home: Path) -> Any:
 def _field_error(name: str) -> str:
     if name in RANGES:
         lower, upper = RANGES[name]
-        unit = " secondi" if name.endswith(SECONDS_SUFFIX) else ""
-        interval = f"fra {lower} e {upper}" if upper is not None else f"almeno {lower}"
-        return (
-            f"Deve essere un numero {'intero ' if name not in FLOAT_FIELDS else ''}{interval}{unit}"
-        )
-    return {
-        "notify_categories": "Scegli solo categorie su cui sono consentite azioni",
-        "devdirs_roots": "Indica directory esistenti all'interno della home",
-        "extra_protected_names": "Indica una lista di nomi di processo",
-        "foreground_tracking": "Deve essere un valore booleano",
-        "language": "Scegli una lingua disponibile",
-    }[name]
+        return range_message(name=name, lower=lower, upper=upper, integer=name not in FLOAT_FIELDS)
+    return field_message(name=name)
 
 
 def parse_config(raw: Mapping[str, object], home: Path) -> ConfigParseResult:
@@ -217,7 +207,7 @@ def _restore_pressure_defaults(values: dict[str, Any], errors: dict[str, str]) -
             pressure_warning_pct=c.PRESSURE_WARNING_PCT,
             pressure_critical_pct=c.PRESSURE_CRITICAL_PCT,
         )
-        errors["pressure_critical_pct"] = "Deve essere minore della soglia di avviso"
+        errors["pressure_critical_pct"] = pressure_order_message()
 
 
 def update_config(config: Config, changes: Mapping[str, object], home: Path) -> ConfigParseResult:
