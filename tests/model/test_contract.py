@@ -245,6 +245,8 @@ def test_action_catalog_is_exact() -> None:
         "trash_empty",
         "devdir_delete",
         "disk_free_safe",
+        "container_start",
+        "restart_stopped",
     }
 
 
@@ -269,6 +271,8 @@ def test_action_target_shape_map_is_complete() -> None:
         ActionKind.TRASH_EMPTY: TargetShape.NONE,
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
         ActionKind.DISK_FREE_SAFE: TargetShape.NONE,
+        ActionKind.CONTAINER_START: TargetShape.TARGET,
+        ActionKind.RESTART_STOPPED: TargetShape.TARGET,
     }
 
 

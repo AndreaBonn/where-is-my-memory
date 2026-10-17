@@ -27,6 +27,9 @@ ACTION_TARGET_SHAPES: Mapping[ActionKind, TargetShape] = MappingProxyType(
         ActionKind.TRASH_EMPTY: TargetShape.NONE,
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
         ActionKind.DISK_FREE_SAFE: TargetShape.NONE,
+        ActionKind.CONTAINER_START: TargetShape.TARGET,
+        # C4: the target is the stop plan whose containers start again.
+        ActionKind.RESTART_STOPPED: TargetShape.TARGET,
     }
 )
 # The prunes expand to one step per image or container id (Q-13), so the user can drop single ones.
@@ -138,6 +141,8 @@ ACTION_FINGERPRINT_TYPES: Mapping[ActionKind, tuple[type, ...]] = MappingProxyTy
         ActionKind.BUILDER_PRUNE: (type(None),),
         ActionKind.CONTAINERS_PRUNE_STOPPED: (type(None),),
         ActionKind.DISK_FREE_SAFE: (),
+        ActionKind.CONTAINER_START: (ContainerFingerprint,),
+        ActionKind.RESTART_STOPPED: (),
     }
 )
 

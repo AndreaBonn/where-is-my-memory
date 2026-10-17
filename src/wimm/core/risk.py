@@ -117,10 +117,8 @@ def _process_category_assessment(target: RiskTarget) -> RiskAssessment:
         return _app_assessment(target=target)
     if target.activity is not ActivityState.IDLE:
         return _assessment(level=Risk.CAUTION, key=ConsequenceKey.ACTIVE)
-    location = f"dalla cartella {target.cwd}" if target.cwd is not None else "dalla sua cartella"
-    return RiskAssessment(
-        level=Risk.SAFE, consequences=(CONSEQUENCES[ConsequenceKey.IDLE].format(location=location),)
-    )
+    # How to restart it is the dialog's "Per riaccenderlo" line (C3), not a consequence.
+    return _assessment(level=Risk.SAFE, key=ConsequenceKey.IDLE)
 
 
 def _applicable_actions(target: RiskTarget) -> tuple[ActionKind, ...]:

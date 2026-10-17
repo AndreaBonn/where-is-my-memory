@@ -97,6 +97,12 @@ class FakeDocker:
         self.calls.append(("stop", f"{container_id}:{timeout_s}"))
         self.live[container_id] = LiveContainer(id=container_id, status="exited")
 
+    def start(self, *, container_id: str) -> None:
+        if container_id in self.failing:
+            raise ControlFailed(f"cannot start {container_id}")
+        self.calls.append(("start", container_id))
+        self.live[container_id] = LiveContainer(id=container_id, status="running")
+
     def remove(self, *, container_id: str, volumes: bool) -> None:
         self.calls.append(("remove", f"{container_id}:v={volumes}"))
         self.live.pop(container_id, None)

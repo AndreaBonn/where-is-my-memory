@@ -83,6 +83,8 @@ ACTION_LABELS = MappingProxyType(
         ActionKind.TRASH_EMPTY: "Svuota cestino",
         ActionKind.DEVDIR_DELETE: "Elimina cartella",
         ActionKind.DISK_FREE_SAFE: "Libera spazio",
+        ActionKind.CONTAINER_START: "Riaccendi",
+        ActionKind.RESTART_STOPPED: "Riaccendi",
     }
 )
 

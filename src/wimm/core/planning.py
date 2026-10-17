@@ -1,8 +1,8 @@
 """Pure construction of action plans (SPECIFICHE 8.1, 8.2). No I/O, no system reads."""
 
 import secrets
-from collections.abc import Callable, Iterator
-from dataclasses import dataclass
+from collections.abc import Callable, Iterator, Mapping
+from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
@@ -27,6 +27,7 @@ from .planning_drafts import (
     is_actionable_process,
     process_draft,
 )
+from .planning_restart import StoppedContainer, plan_restart
 
 __all__ = ["PlanningContext", "cmdline_hash", "plan_action"]
 
@@ -39,10 +40,12 @@ class PlanningContext:
     (spec 8.2 requires `uid == os.getuid()` at execution). The fingerprint carries the
     process's own uid, so the executor compares it against the live one. `disk_report` is
     the last disk scan, needed only by disk actions (images, volumes, caches, folders).
+    `stopped` holds, by plan id, the containers recent plans stopped (C4, «Riaccendi»).
     """
 
     owner_uid: int
     disk_report: DiskReport | None = None
+    stopped: Mapping[str, tuple[StoppedContainer, ...]] = field(default_factory=dict)
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
     new_plan_id: Callable[[], PlanId] = lambda: PlanId(secrets.token_urlsafe(PLAN_ID_BYTES))
 
@@ -215,12 +218,18 @@ def plan_action(*, request: ActionRequest, snapshot: Snapshot, context: Planning
         If the target is unknown, the action does not apply to it, the kind is not
         plannable, no step is left, or a danger target has a blank name.
     """
+    drafts = _drafts(request=request, snapshot=snapshot, context=context)
+    return _build_plan(request=request, drafts=drafts, context=context)
+
+
+def _drafts(*, request: ActionRequest, snapshot: Snapshot, context: PlanningContext) -> list[Draft]:
+    """Pick the planner by what it reads: the stopped plans, the disk report or the snapshot."""
+    if request.kind is ActionKind.RESTART_STOPPED:
+        return plan_restart(request=request, stopped=context.stopped)
     disk_planner = _DISK_PLANNERS.get(request.kind)
     if disk_planner is not None:
-        drafts = disk_planner(request=request, report=context.disk_report)
-        return _build_plan(request=request, drafts=drafts, context=context)
+        return disk_planner(request=request, report=context.disk_report)
     planner = _PLANNERS.get(request.kind)
     if planner is None:
         raise InvalidRequest(f"Action {request.kind.value} cannot be planned")
-    drafts = planner(request=request, snapshot=snapshot, owner_uid=context.owner_uid)
-    return _build_plan(request=request, drafts=drafts, context=context)
+    return planner(request=request, snapshot=snapshot, owner_uid=context.owner_uid)

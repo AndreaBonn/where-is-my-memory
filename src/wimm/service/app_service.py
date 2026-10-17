@@ -4,7 +4,7 @@ from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime
 from functools import partial
 from pathlib import Path
-from typing import ClassVar, Protocol
+from typing import ClassVar
 
 from gi.repository import GLib, GObject
 
@@ -18,28 +18,20 @@ from wimm.model.snapshot import Snapshot
 from wimm.paths import UserPaths
 from wimm.service.actions import ActionExecutor, ActionSetup
 from wimm.service.app_service_disk import DiskMixin
+from wimm.service.app_service_sampler import CycleSampler
 from wimm.service.app_service_signals import APP_SERVICE_SIGNALS
 from wimm.service.app_service_user import UserStateMixin
 from wimm.service.control_protocols import StepOutcome
 from wimm.service.errors import ControlFailed, InvalidRequest, WimmError
 from wimm.service.plan_registry import PlanRegistry
 from wimm.service.reclaim import ReclaimTracker
+from wimm.service.restart_memory import StoppedContainers
 from wimm.service.sampler import wall_clock
 from wimm.service.state_store import PersistedState, StateSaver
 from wimm.service.user_state import UserStateKeeper
 
 LOGGER = logging.getLogger(__name__)
 _ActionResult = tuple[tuple[StepOutcome, ...], Snapshot | None]
-
-
-class CycleSampler(Protocol):
-    def apply_config(self, *, config: Config) -> None: ...
-
-    def apply_user_state(self, *, user: UserState) -> None: ...
-
-    def apply_reclaimable_disk(self, *, reclaimable_disk: int) -> None: ...
-
-    def run_cycle(self) -> Snapshot: ...
 
 
 class AppService(UserStateMixin, DiskMixin, GObject.Object):
@@ -58,6 +50,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         self._state_timer = 0
         self._actions = actions
         self._plans = PlanRegistry()
+        self._restart = StoppedContainers()
         self._reclaim = ReclaimTracker()
         self._cycle_cohort: frozenset[PlanId] = frozenset()
         self._last_sampled: Snapshot | None = None
@@ -206,7 +199,10 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         if self._snapshot is None:
             raise InvalidRequest("No snapshot yet, cannot plan an action")
         context = PlanningContext(
-            owner_uid=setup.owner_uid, now=self._clock, disk_report=self._disk_report
+            owner_uid=setup.owner_uid,
+            now=self._clock,
+            disk_report=self._disk_report,
+            stopped=self._restart.stopped,
         )
         plan = plan_action(request=request, snapshot=self._snapshot, context=context)
         self._plans.add(plan=plan, now=self._clock())
@@ -231,6 +227,9 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         )
         self._track_disk_plan(plan=plan)
         future = self._executor.submit(self._run_action, setup.executor, plan)
+        # After submit: a refused submit leaves nothing tracked. The outcome is published
+        # on this same main loop, so it cannot arrive before the plan is tracked.
+        self._restart.track(plan=plan)
         future.add_done_callback(partial(self._action_completed, plan_id))
 
     def _require_actions(self) -> ActionSetup:
@@ -248,6 +247,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
             outcomes, before = future.result()
         except Exception as error:
             self._after_action(plan_id=plan_id, ran=False)
+            self._restart.record(plan_id=plan_id, outcomes=())
             if not isinstance(error, WimmError):
                 LOGGER.exception("Action %s crashed", plan_id)
             self.emit(
@@ -256,6 +256,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
                 error if isinstance(error, WimmError) else ControlFailed(),
             )
             return GLib.SOURCE_REMOVE
+        self._restart.record(plan_id=plan_id, outcomes=outcomes)
         self.emit("action-finished", plan_id, outcomes)
         self._after_action(plan_id=plan_id, ran=True)
         if self._reclaim.watch(plan_id=plan_id, before=before):

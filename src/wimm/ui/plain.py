@@ -63,6 +63,11 @@ def plain_reason(*, activity: ActivityAssessment, now: datetime) -> str:
     return f"Non lo usi da {at_least}{span}{tail}"
 
 
+def titled_name(*, name: str, friendly: str | None) -> str:
+    """P11/C2: the name of use first, the technical name in brackets."""
+    return name if friendly is None else f"{friendly} ({name})"
+
+
 def friendly_container_name(*, image: str) -> str | None:
     """The name of use of a container from its image, None when the image is not known.
 

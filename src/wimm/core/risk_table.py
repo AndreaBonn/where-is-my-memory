@@ -15,6 +15,7 @@ class ConsequenceKey(StrEnum):
     KILL = "kill"
     STOP = "stop"
     STOP_TIMEOUT = "stop_timeout"
+    START = "start"
     CONTAINER_REMOVE = "container_remove"
     DOWN = "down"
     DOWN_VOLUMES = "down_volumes"
@@ -29,7 +30,7 @@ class ConsequenceKey(StrEnum):
 
 
 CONSEQUENCES: dict[ConsequenceKey, str] = {
-    ConsequenceKey.IDLE: "Il server si ferma. Si riavvia con lo stesso comando {location}.",
+    ConsequenceKey.IDLE: "Il server si ferma.",
     ConsequenceKey.ACTIVE: "È in uso adesso: chi lo sta usando perde la connessione.",
     ConsequenceKey.FOREGROUND: (
         "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
@@ -53,13 +54,11 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
         "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
     ),
     ConsequenceKey.KILL: "Chiusura immediata senza salvataggio.",
-    ConsequenceKey.STOP: (
-        "Il container si ferma; dati e configurazione restano. "
-        "Si riavvia con docker start o docker compose up."
-    ),
+    ConsequenceKey.STOP: "Il container si ferma; dati e configurazione restano.",
     ConsequenceKey.STOP_TIMEOUT: (
         "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
     ),
+    ConsequenceKey.START: "Il container riparte con la configurazione di prima.",
     ConsequenceKey.CONTAINER_REMOVE: (
         "Le modifiche fatte dentro il container fuori dai volumi si perdono."
     ),

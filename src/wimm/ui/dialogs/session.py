@@ -18,6 +18,7 @@ from wimm.model.actions import (
 from wimm.model.enums import ActionKind
 from wimm.model.errors import InvalidRequest, WimmError
 from wimm.model.snapshot import ContainerMember, Group, ProcessMember, Snapshot
+from wimm.ui.dialogs.facts import entry_label, members_by_id
 
 LOGGER = logging.getLogger(__name__)
 CHANGED_NOTICE = "La situazione è cambiata: chiudi e riapri per vedere l'elenco aggiornato."
@@ -59,12 +60,12 @@ def _group_names(*, snapshot: Snapshot | None) -> dict[str, str]:
 def entries_for(*, plan: Plan, snapshot: Snapshot | None) -> tuple[StepEntry, ...]:
     """One entry per step of ``plan``, labelled with the group each member belongs to."""
     names = _group_names(snapshot=snapshot)
+    members = members_by_id(snapshot=snapshot)
     entries = []
     for step in plan.steps:
         step_id = step_id_of(step=step)
-        entries.append(
-            StepEntry(step_id=step_id, label=step.target_label, group=names.get(step_id or ""))
-        )
+        label = entry_label(step=step, members=members)
+        entries.append(StepEntry(step_id=step_id, label=label, group=names.get(step_id or "")))
     return tuple(entries)
 
 
@@ -92,6 +93,11 @@ class ConfirmSession:
             and (plan.request.kind is ActionKind.STOP_ALL_IDLE_SAFE or len(plan.steps) > 1)
             and all(entry.step_id is not None for entry in entries)
         )
+
+    @property
+    def has_exclusions(self) -> bool:
+        """True once the user has unticked at least one entry."""
+        return bool(self._excluded)
 
     def is_included(self, *, step_id: str) -> bool:
         """True while the entry is part of the request."""

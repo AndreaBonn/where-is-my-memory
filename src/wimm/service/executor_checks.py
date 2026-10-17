@@ -14,7 +14,9 @@ from .executor_disk_docker import DISK_DOCKER_KINDS
 from .executor_disk_fs import DISK_FS_KINDS
 
 PROCESS_KINDS = frozenset({ActionKind.PROCESS_TERMINATE, ActionKind.APP_CLOSE})
-CONTAINER_KINDS = frozenset({ActionKind.CONTAINER_STOP, ActionKind.CONTAINER_REMOVE})
+CONTAINER_KINDS = frozenset(
+    {ActionKind.CONTAINER_STOP, ActionKind.CONTAINER_REMOVE, ActionKind.CONTAINER_START}
+)
 DOCKER_KINDS = CONTAINER_KINDS | DISK_DOCKER_KINDS
 SUPPORTED_KINDS = PROCESS_KINDS | DOCKER_KINDS | COMPOSE_KINDS | DISK_FS_KINDS
 
@@ -83,6 +85,9 @@ def check_container(*, step: PlanStep, control: DockerControl) -> None:
         return
     # Stopped by the user in the meantime: the stop is already done (section 8.4 point 5).
     if step.kind is ActionKind.CONTAINER_STOP and live.status not in STOPPABLE_STATES:
+        return
+    # Started again by the user meanwhile: «Riaccendi» has nothing left to do (C4).
+    if step.kind is ActionKind.CONTAINER_START and live.status in STOPPABLE_STATES:
         return
     raise TargetChanged(
         f"Container {fingerprint.id[:12]} is {live.status}, plan expected {fingerprint.status}"

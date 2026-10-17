@@ -16,6 +16,7 @@ from wimm.service.executor import PlanExecutor
 pytestmark = [pytest.mark.integration, pytest.mark.docker]
 STOP = ActionKind.CONTAINER_STOP
 REMOVE = ActionKind.CONTAINER_REMOVE
+START = ActionKind.CONTAINER_START
 
 
 @pytest.fixture
@@ -58,6 +59,21 @@ def test_container_created_by_the_test_is_stopped_then_removed(
         removed = executor.execute(plan=remove)
         assert [o.status for o in removed] == [StepStatus.DONE]
         assert not exists(client=client, container_id=container.id)
+
+
+def test_container_stopped_by_a_plan_is_started_again(client: Any, executor: PlanExecutor) -> None:
+    with started_container(client=client) as container:
+        stop = single_step_plan(step=container_step(container_id=container.id, kind=STOP))
+        start = single_step_plan(
+            step=container_step(container_id=container.id, kind=START, status="exited")
+        )
+        executor.execute(plan=stop)
+
+        started = executor.execute(plan=start)
+
+        container.reload()
+        assert [o.status for o in started] == [StepStatus.DONE]
+        assert container.status == "running"
 
 
 def test_remove_of_a_running_container_is_refused_and_leaves_it_running(

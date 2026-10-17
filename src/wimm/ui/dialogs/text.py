@@ -26,13 +26,19 @@ TITLES = MappingProxyType(
         ActionKind.TRASH_EMPTY: "Svuotare il cestino?",
         ActionKind.DEVDIR_DELETE: "Eliminare la cartella {subject}?",
         ActionKind.DISK_FREE_SAFE: "Liberare lo spazio che si ricrea da solo?",
+        ActionKind.CONTAINER_START: "Riaccendere {subject}?",
+        ActionKind.RESTART_STOPPED: "Riaccendere i contenitori appena fermati?",
     }
 )
 CANCEL_LABEL = "Annulla"
 EMPTY_TEXT = "Nessuna voce selezionata: non c'è nulla da eseguire."
-NO_ESTIMATE_TEXT = "Recupero non stimabile."
-TOTAL_PREFIX = "Totale stimato"
-SINGLE_TOTAL = "Recupero stimato"
+# C4: a restart frees nothing, so the body says what it gives back instead.
+RESTART_TEXT = "Ripartono come prima e tornano a usare la loro memoria."
+NO_ESTIMATE_TEXT = "Quanto si libera non si può stimare prima."
+TOTAL_PREFIX = "In tutto liberi circa"
+SINGLE_TOTAL = "Liberi circa"
+# C1: a listed amount larger than the plan by more than this share gets explained.
+LISTED_TOLERANCE = 1.05
 MIXED_NAME = "questi elementi"
 PHRASE_HINT = (
     "Ti chiediamo di scrivere il nome perché questa azione cancella dati in modo "
@@ -56,13 +62,23 @@ def entry_title(*, phrase: str) -> str:
 
 
 def reclaim_text(*, ram: int, disk: int, total: bool) -> str:
-    """The estimated recovery sentence, e.g. "Recupero stimato: libera circa 1,1 GB di RAM"."""
+    """The estimated recovery sentence, e.g. "Liberi circa 1,1 GB di memoria."."""
     parts = []
     if ram > 0:
-        parts.append(f"{format_size(size=ram)} di RAM")
+        parts.append(f"{format_size(size=ram)} di memoria")
     if disk > 0:
-        parts.append(f"{format_size(size=disk)} di disco")
+        parts.append(f"{format_size(size=disk)} di spazio sul disco")
     if not parts:
         return NO_ESTIMATE_TEXT
     prefix = TOTAL_PREFIX if total else SINGLE_TOTAL
-    return f"{prefix}: libera circa {' e '.join(parts)}."
+    return f"{prefix} {' e '.join(parts)}."
+
+
+def listed_note(*, listed: int | None, planned: int) -> str | None:
+    """C1: why the list shows more than the plan frees (parts that cannot be stopped here)."""
+    if listed is None or listed <= planned * LISTED_TOLERANCE:
+        return None
+    return (
+        f"Nella lista conta {format_size(size=listed)}: il resto è di parti "
+        "che non si fermano da qui."
+    )

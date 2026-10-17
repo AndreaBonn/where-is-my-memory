@@ -10,17 +10,15 @@ from wimm.model.enums import ActivityState, Category, Risk
 from wimm.model.snapshot import ActionOffer
 
 PROCESS = Target(kind="process", category=Category.DEV_PROCESS, activity=ActivityState.IDLE)
-CONTAINER_TEXT = (
-    "Il container si ferma; dati e configurazione restano. Si riavvia con "
-    "docker start o docker compose up."
-)
+# C3: how to restart moves to its own line of the dialog, "Per riaccenderlo".
+CONTAINER_TEXT = "Il container si ferma; dati e configurazione restano."
 CONTAINER_TIMEOUT_TEXT = "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
 
 
 @pytest.mark.parametrize(
     ("text", "case"),
     {
-        ("Il server si ferma. Si riavvia con lo stesso comando dalla cartella /work."): (
+        ("Il server si ferma."): (
             replace(PROCESS, cwd="/work"),
             Action.PROCESS_TERMINATE,
             Risk.SAFE,
@@ -217,7 +215,7 @@ class TestRiskBehavior:
         assert result.consequences == (
             "Eventuali file non salvati possono andare persi."
             if has_documents
-            else "Il server si ferma. Si riavvia con lo stesso comando dalla sua cartella.",
+            else "Il server si ferma.",
         )
 
     @pytest.mark.parametrize("kind", ["process", "desktop_app", "browser"])
@@ -314,4 +312,5 @@ def test_user_facing_consequences_carry_no_markdown_backticks() -> None:
     from wimm.core.risk_table import CONSEQUENCES
 
     assert all("`" not in text for text in CONSEQUENCES.values())
-    assert any("docker start" in text for text in CONSEQUENCES.values())  # positive pair
+    assert any("Docker" in text for text in CONSEQUENCES.values())  # positive pair
+    assert not any("docker start" in text for text in CONSEQUENCES.values())

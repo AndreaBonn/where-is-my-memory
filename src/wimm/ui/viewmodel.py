@@ -21,7 +21,7 @@ from .format import (
     format_clock,
     format_size,
 )
-from .plain import friendly_container_name, friendly_process_name, plain_reason
+from .plain import friendly_container_name, friendly_process_name, plain_reason, titled_name
 from .summary import build_summary as build_summary
 from .views import (
     ActionButton,
@@ -71,18 +71,13 @@ def _mount_text(*, member: ContainerMember) -> tuple[str, ...]:
     return tuple(f"{m.type}: {m.source} -> {m.destination}" for m in member.mounts)
 
 
-def _titled(*, name: str, friendly: str | None) -> str:
-    """P11: the name of use first, the technical name in brackets."""
-    return name if friendly is None else f"{friendly} ({name})"
-
-
 def _process_row(*, member: ProcessMember, now: datetime) -> MemberRow:
     started = datetime.fromtimestamp(member.create_time, tz=now.tzinfo)
     return MemberRow(
         key=str(member.pid),
         kind="process",
         name=member.name,
-        title=_titled(name=member.name, friendly=friendly_process_name(name=member.name)),
+        title=titled_name(name=member.name, friendly=friendly_process_name(name=member.name)),
         command=shlex.join(member.cmdline) if member.cmdline else None,
         cwd=member.cwd,
         ports=ports_text(ports=member.listen_ports),
@@ -101,7 +96,7 @@ def _container_row(*, member: ContainerMember, now: datetime) -> MemberRow:
         key=member.id,
         kind="container",
         name=member.name,
-        title=_titled(name=member.name, friendly=friendly_container_name(image=member.image)),
+        title=titled_name(name=member.name, friendly=friendly_container_name(image=member.image)),
         command=None,
         cwd=None,
         ports="",

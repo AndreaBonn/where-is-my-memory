@@ -39,3 +39,16 @@ def test_step_reports_without_a_plan_use_a_generic_label_and_offer_no_force() ->
     (report,) = step_reports(plan=None, outcomes=outcomes(StepStatus.NOT_RESPONDING))
     assert report == StepReport(label="Passo 0", status=StepStatus.NOT_RESPONDING, pid=None)
     assert not report.can_force
+
+
+def test_a_start_reads_as_started_not_closed() -> None:
+    from tests.service.executor_fakes import container_step, make_plan
+    from wimm.model.enums import ActionKind
+
+    step = container_step(order=1, container_id="c1", kind=ActionKind.CONTAINER_START)
+    plan = make_plan(steps=[step])
+    outcomes = (StepOutcome(order=1, status=StepStatus.DONE),)
+    gone = (StepOutcome(order=1, status=StepStatus.ALREADY_GONE),)
+
+    assert step_reports(plan=plan, outcomes=outcomes)[0].status_text == "Riacceso"
+    assert step_reports(plan=plan, outcomes=gone)[0].status_text == "Già acceso"

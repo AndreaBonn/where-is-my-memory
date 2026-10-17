@@ -39,6 +39,7 @@ _STYLE = """
 .wimm-status.warning { background: alpha(@warning_color, 0.16); }
 .wimm-status.error { background: alpha(@error_color, 0.16); }
 .wimm-warning { background: alpha(@warning_color, 0.14); border-radius: 8px; padding: 8px 12px; }
+.wimm-facts { background: alpha(currentColor, 0.06); border-radius: 8px; padding: 8px 12px; }
 """
 
 _installed_displays: set[Gdk.Display] = set()

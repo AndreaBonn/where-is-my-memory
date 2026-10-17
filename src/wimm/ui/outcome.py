@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from types import MappingProxyType
 
 from wimm.model.actions import Plan, ProcessFingerprint
+from wimm.model.enums import ActionKind
 from wimm.service.actions import ReclaimDelta
 from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.ui.format import format_size
@@ -21,6 +22,10 @@ STATUS_TEXTS = MappingProxyType(
         StepStatus.FAILED: "Non riuscito",
     }
 )
+# C4: a start is the opposite of a stop, and reads that way.
+START_STATUS_TEXTS = MappingProxyType(
+    {**STATUS_TEXTS, StepStatus.DONE: "Riacceso", StepStatus.ALREADY_GONE: "Già acceso"}
+)
 OK_STATUSES = frozenset({StepStatus.DONE, StepStatus.ALREADY_GONE})
 
 
@@ -31,11 +36,12 @@ class StepReport:
     label: str
     status: StepStatus
     pid: int | None
+    started: bool = False
 
     @property
     def status_text(self) -> str:
         """The status in Italian."""
-        return STATUS_TEXTS[self.status]
+        return (START_STATUS_TEXTS if self.started else STATUS_TEXTS)[self.status]
 
     @property
     def can_force(self) -> bool:
@@ -53,7 +59,8 @@ def step_reports(*, plan: Plan | None, outcomes: Sequence[StepOutcome]) -> tuple
         if step is not None and isinstance(step.fingerprint, ProcessFingerprint):
             pid = step.fingerprint.pid
         label = STEP_FALLBACK.format(order=outcome.order) if step is None else step.target_label
-        reports.append(StepReport(label=label, status=outcome.status, pid=pid))
+        started = step is not None and step.kind is ActionKind.CONTAINER_START
+        reports.append(StepReport(label=label, status=outcome.status, pid=pid, started=started))
     return tuple(reports)
 
 

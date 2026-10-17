@@ -10,6 +10,7 @@ from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind, Category, GroupId, TargetId
 from wimm.model.snapshot import Snapshot
 from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE, ConfirmDialog
+from wimm.ui.dialogs.facts import SHORT_ID_CHARS, UNNAMED_IMAGE
 from wimm.ui.dialogs.session import ConfirmSession, entries_for
 from wimm.ui.format import format_size
 
@@ -32,7 +33,9 @@ def open_dialog(
     )
     confirmed: Confirmed = []
     dialog = ConfirmDialog(
-        session=session, on_confirm=lambda p, typed: confirmed.append((p, typed))
+        session=session,
+        on_confirm=lambda p, typed: confirmed.append((p, typed)),
+        snapshot=snap,
     )
     return dialog, service, confirmed
 
@@ -55,6 +58,16 @@ def switches(dialog: ConfirmDialog) -> dict[str, Adw.SwitchRow]:
     extra = dialog.get_extra_child()
     assert extra is not None
     return {w.get_title(): w for w in descendants(extra) if isinstance(w, Adw.SwitchRow)}
+
+
+def row_for(rows: dict[str, Adw.SwitchRow], *, part: str) -> Adw.SwitchRow:
+    """The one switch whose plain title mentions the technical name `part`."""
+    (row,) = [row for title, row in rows.items() if part in title]
+    return row
+
+
+def unnamed(*, image_id: str) -> str:
+    return UNNAMED_IMAGE.format(short=image_id.removeprefix("sha256:")[:SHORT_ID_CHARS])
 
 
 def entry_rows(dialog: ConfirmDialog) -> list[Adw.EntryRow]:
@@ -83,8 +96,8 @@ def test_safe_dialog_names_the_target_the_recovery_and_uses_the_suggested_style(
     assert dialog.get_response_label(CONFIRM_RESPONSE) == "Ferma"
     assert dialog.get_response_label("cancel") == "Annulla"
     assert dialog.get_response_appearance(CONFIRM_RESPONSE) == Adw.ResponseAppearance.SUGGESTED
-    assert f"libera circa {format_size(size=GB)} di RAM" in dialog.get_body()
-    assert "node (pid 1)" in labels(dialog)
+    assert f"Liberi circa {format_size(size=GB)} di memoria." in dialog.get_body()
+    assert "node · 1,0 GB" in labels(dialog)
     assert dialog.get_response_enabled(CONFIRM_RESPONSE)
     assert not entry_rows(dialog)
     assert not switches(dialog)
@@ -159,13 +172,13 @@ def test_removing_an_entry_asks_for_a_new_plan_and_updates_total_and_risk(displa
     warning = CONSEQUENCES[ConsequenceKey.AGENT]
     rows = switches(dialog)
 
-    assert set(rows) == {"node (pid 1)", "node (pid 2)", "name-db"}
+    assert set(rows) == {"node · 1,0 GB", "node · 100 MB", "name-db · 500 MB"}
     assert all(row.get_active() for row in rows.values())
     assert warning in labels(dialog)
     assert dialog.get_response_appearance(CONFIRM_RESPONSE) == Adw.ResponseAppearance.DESTRUCTIVE
     assert format_size(size=GB + GB // 10 + GB // 2) in before
 
-    rows["node (pid 2)"].set_active(False)
+    rows["node · 100 MB"].set_active(False)
 
     assert service.planned[-1].excluded_ids == frozenset({"2"})
     assert format_size(size=GB + GB // 2) in dialog.get_body()
@@ -189,7 +202,7 @@ def test_removing_every_entry_disables_the_button_and_adding_one_back_enables_it
     assert service.planned[-1].excluded_ids == frozenset({"1", "2", "db"})
     assert not dialog.get_response_enabled(CONFIRM_RESPONSE)
     assert "Nessuna voce" in dialog.get_body()
-    rows["name-db"].set_active(True)
+    row_for(rows, part="name-db").set_active(True)
     assert dialog.get_response_enabled(CONFIRM_RESPONSE)
     dialog.emit("response", CONFIRM_RESPONSE)
     assert [sorted(s.target_label for s in plan.steps) for plan, _ in confirmed] == [["name-db"]]
@@ -216,7 +229,7 @@ def test_stop_all_lists_entries_grouped_by_group_with_one_total(display: None) -
     assert titles == ["alfa", "beta"]
     assert "600 B" in dialog.get_body()
 
-    switches(dialog)["name-c"].set_active(False)
+    row_for(switches(dialog), part="name-c").set_active(False)
 
     assert service.planned[-1].kind is ActionKind.STOP_ALL_IDLE_SAFE
     assert service.planned[-1].excluded_ids == frozenset({"c"})
@@ -241,9 +254,9 @@ def test_prune_dialog_offers_a_switch_per_image_and_replans_without_the_removed_
     dialog = ConfirmDialog(session=session, on_confirm=lambda *_: None)
 
     rows = switches(dialog)
-    assert set(rows) == {first.id[:19], second.id[:19]}
+    assert set(rows) == {unnamed(image_id=first.id), unnamed(image_id=second.id)}
 
-    rows[second.id[:19]].set_active(False)
+    rows[unnamed(image_id=second.id)].set_active(False)
 
     assert service.planned[-1].excluded_ids == frozenset({second.id})
     assert format_size(size=5 * GB) in dialog.get_body()
@@ -260,7 +273,7 @@ def test_names_with_markup_characters_are_shown_literally(display: None) -> None
     assert extra is not None
     shown = [w.get_text() for w in descendants(extra) if isinstance(w, Gtk.Label)]
     assert "R&D <lab>" in shown
-    assert "node (pid 1)" in shown  # positive pair: the plain names still render
+    assert "node · 1,0 GB" in shown  # positive pair: the plain names still render
     (entry,) = [w for w in descendants(extra) if isinstance(w, Adw.EntryRow)]
     entry.set_title("Scrivi R&D <lab> per confermare")
     assert "Scrivi R&D <lab> per confermare" in [
@@ -285,7 +298,53 @@ def test_free_safe_dialog_lets_each_item_be_left_out(display: None) -> None:
 
     rows = switches(dialog)
     assert len(rows) == 3
-    rows["/home/u/.cache/uv"].set_active(False)
+    rows["Cache uv"].set_active(False)
 
     assert service.planned[-1].excluded_ids == frozenset({"/home/u/.cache/uv"})
-    assert f"libera circa {format_size(size=6 * MB)} di disco" in dialog.get_body()
+    assert f"liberi circa {format_size(size=6 * MB)} di spazio sul disco" in dialog.get_body()
+
+
+def test_safe_stop_shows_what_stays_and_how_to_restart(display: None) -> None:
+    members = (proc(pid=1, reclaimable=GB), container(cid="db", reclaimable=GB // 2))
+    snap = snapshot(group(gid="p", name="whitebox", members=members))
+
+    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="whitebox")
+
+    shown = labels(dialog)
+    assert "Cosa resta" in shown
+    assert "Per riaccenderlo" in shown
+    assert not [text for text in shown if "docker start" in text]
+
+
+def test_body_explains_a_listed_amount_the_plan_cannot_free(display: None) -> None:
+    from dataclasses import replace
+
+    other = proc(pid=9, reclaimable=GB, uid=4242)  # another user's process: not stopped
+    snap = snapshot(group(gid="p", name="mixed", members=(proc(pid=1, reclaimable=GB), other)))
+    listed = replace(snap.groups[0].memory, reclaimable=2 * GB)
+    snap = replace(snap, groups=(replace(snap.groups[0], memory=listed),))
+
+    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="mixed")
+
+    body = dialog.get_body()
+    assert f"Liberi circa {format_size(size=GB)} di memoria." in body
+    assert f"Nella lista conta {format_size(size=2 * GB)}" in body
+
+
+def test_unticking_an_entry_does_not_blame_parts_that_cannot_stop(display: None) -> None:
+    from dataclasses import replace
+
+    members = (
+        proc(pid=1, reclaimable=GB),
+        proc(pid=2, reclaimable=GB),
+        proc(pid=9, reclaimable=GB, uid=4242),  # another user's process: not stopped
+    )
+    snap = snapshot(group(gid="p", name="mixed", members=members))
+    listed = replace(snap.groups[0].memory, reclaimable=3 * GB)
+    snap = replace(snap, groups=(replace(snap.groups[0], memory=listed),))
+    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="mixed")
+    assert "Nella lista conta" in dialog.get_body()
+
+    next(iter(switches(dialog).values())).set_active(False)
+
+    assert "Nella lista conta" not in dialog.get_body()

@@ -7,15 +7,19 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk
 
 from wimm.model.actions import Plan
-from wimm.model.enums import Risk
+from wimm.model.enums import ActionKind, Risk
+from wimm.model.snapshot import Snapshot
+from wimm.ui.dialogs.facts import LINE_SEPARATOR, facts_for
 from wimm.ui.dialogs.session import ConfirmSession, StepEntry
 from wimm.ui.dialogs.text import (
     CANCEL_LABEL,
     EMPTY_TEXT,
     PHRASE_HINT,
+    RESTART_TEXT,
     confirm_label,
     dialog_title,
     entry_title,
+    listed_note,
     reclaim_text,
 )
 from wimm.ui.widgets import clear_children, install_style
@@ -26,6 +30,7 @@ CONTENT_SPACING = 12
 WARNING_SPACING = 6
 LIST_MAX_HEIGHT = 260
 WARNING_CLASS = "wimm-warning"
+FACTS_CLASS = "wimm-facts"
 
 
 def _build_group(*, title: str | None) -> Adw.PreferencesGroup:
@@ -44,15 +49,19 @@ class ConfirmDialog(Adw.AlertDialog):
     """
 
     def __init__(
-        self, *, session: ConfirmSession, on_confirm: Callable[[Plan, str | None], None]
+        self,
+        *,
+        session: ConfirmSession,
+        on_confirm: Callable[[Plan, str | None], None],
+        snapshot: Snapshot | None = None,
     ) -> None:
         super().__init__()
         install_style()
         self._session = session
+        self._snapshot = snapshot
         self._confirmed = False
         self._on_confirm = on_confirm
         self._warning = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=WARNING_SPACING)
-        self._warning.add_css_class(WARNING_CLASS)
         self._phrase = Adw.EntryRow(use_markup=False)
         self._phrase_box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._phrase_box.add_css_class("boxed-list")
@@ -125,18 +134,41 @@ class ConfirmDialog(Adw.AlertDialog):
     def _body_text(self, *, plan: Plan | None) -> str:
         if plan is None:
             return self._session.notice or EMPTY_TEXT
-        return reclaim_text(
+        if plan.request.kind is ActionKind.RESTART_STOPPED:
+            return RESTART_TEXT
+        text = reclaim_text(
             ram=plan.estimated_reclaim_ram,
             disk=plan.estimated_reclaim_disk,
             total=self._session.multiple,
         )
+        # After an untick the gap is the user's choice, not parts that cannot stop.
+        listed = None if self._session.has_exclusions else self._listed_ram(plan=plan)
+        note = listed_note(listed=listed, planned=plan.estimated_reclaim_ram)
+        return text if note is None else f"{text}\n{note}"
+
+    def _listed_ram(self, *, plan: Plan) -> int | None:
+        """What the Panoramica row shows for the group this plan acts on, if any."""
+        group_id = plan.request.group_id
+        groups = () if self._snapshot is None else self._snapshot.groups
+        return next((g.memory.reclaimable for g in groups if g.id == group_id), None)
 
     def _show_consequences(self, *, plan: Plan | None) -> None:
+        """C3: what happens, what stays and how to restart; warning style only when risky."""
         clear_children(container=self._warning)
-        lines = () if plan is None or plan.risk is Risk.SAFE else plan.consequences
-        for line in lines:
-            self._warning.append(Gtk.Label(label=line, xalign=0, wrap=True))
-        self._warning.set_visible(bool(lines))
+        facts = () if plan is None else facts_for(plan=plan, snapshot=self._snapshot)
+        for title, text in facts:
+            heading = Gtk.Label(label=title, xalign=0, wrap=True)
+            heading.add_css_class("heading")
+            self._warning.append(heading)
+            for line in text.split(LINE_SEPARATOR):
+                self._warning.append(Gtk.Label(label=line, xalign=0, wrap=True))
+        risky = plan is not None and plan.risk is not Risk.SAFE
+        for name, on in ((WARNING_CLASS, risky), (FACTS_CLASS, not risky)):
+            if on:
+                self._warning.add_css_class(name)
+            else:
+                self._warning.remove_css_class(name)
+        self._warning.set_visible(bool(facts))
 
     def _can_confirm(self) -> bool:
         plan = self._session.plan

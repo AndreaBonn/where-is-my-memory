@@ -150,6 +150,8 @@ class _ContainerLike(Protocol):
 
     def stop(self, *, timeout: int) -> None: ...
 
+    def start(self) -> None: ...
+
     def remove(self, *, v: bool) -> None: ...
 
 
@@ -187,6 +189,10 @@ class DockerSdkControl(DiskSdkOps):
     def stop(self, *, container_id: str, timeout_s: int) -> None:
         with _sdk_errors(action="stop"):
             self._client.containers.get(container_id).stop(timeout=timeout_s)
+
+    def start(self, *, container_id: str) -> None:
+        with _sdk_errors(action="start"):
+            self._client.containers.get(container_id).start()
 
     def remove(self, *, container_id: str, volumes: bool) -> None:
         with _sdk_errors(action="remove"):

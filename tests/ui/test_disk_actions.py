@@ -24,6 +24,7 @@ from wimm.model.errors import InvalidRequest
 from wimm.model.snapshot import Snapshot
 from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE, ConfirmDialog
+from wimm.ui.dialogs.facts import SHORT_ID_CHARS, UNNAMED_IMAGE
 from wimm.ui.window import MainWindow
 
 pytestmark = pytest.mark.ui
@@ -209,8 +210,12 @@ def test_dangling_prune_lists_its_images_and_executes_without_the_excluded_one(
     extra = dialog.get_extra_child()
     assert extra is not None
     switches = {w.get_title(): w for w in descendants(extra) if isinstance(w, Adw.SwitchRow)}
-    assert set(switches) == {DANGLING.id[:19], other.id[:19]}
-    switches[other.id[:19]].set_active(False)
+    names = {
+        UNNAMED_IMAGE.format(short=i.id.removeprefix("sha256:")[:SHORT_ID_CHARS]): i
+        for i in (DANGLING, other)
+    }
+    assert set(switches) == set(names)
+    switches[next(n for n, i in names.items() if i is other)].set_active(False)
     assert service.planned[-1].excluded_ids == frozenset({other.id})
     dialog.emit("response", CONFIRM_RESPONSE)
     assert service.last_plan is not None

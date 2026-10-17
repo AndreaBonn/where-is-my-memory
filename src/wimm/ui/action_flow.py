@@ -1,6 +1,7 @@
 import logging
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
+from functools import partial
 from typing import Any, Protocol
 
 import gi
@@ -14,7 +15,7 @@ from wimm.model.enums import ActionKind, PlanId, TargetId
 from wimm.model.errors import InvalidRequest, WimmError
 from wimm.model.snapshot import Snapshot
 from wimm.service.actions import ReclaimDelta
-from wimm.service.control_protocols import StepOutcome
+from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.service.errors import PlanExpired, TargetChanged
 from wimm.ui.dialogs.confirm import ConfirmDialog
 from wimm.ui.dialogs.outcome import OutcomeDialog
@@ -38,6 +39,7 @@ NOTHING_LEFT_TEXTS = {
 }
 REPLAN_TEXT = "La situazione è cambiata, ricalcolo…"
 DETAILS_LABEL = "Dettagli"
+RESTART_LABEL = "Riaccendi"
 REPLANNED_ERRORS = (PlanExpired, TargetChanged)
 
 
@@ -85,6 +87,7 @@ class _Report:
     summary: str
     steps: tuple[StepReport, ...]
     freed: str | None = None
+    restartable: bool = False
 
 
 class ActionFlow:
@@ -139,6 +142,7 @@ class ActionFlow:
         )
         dialog = ConfirmDialog(
             session=session,
+            snapshot=self._source.snapshot(),
             on_confirm=lambda confirmed, typed: self._confirm(
                 _Pending(plan=confirmed, subject=subject, may_replan=may_replan), typed
             ),
@@ -179,6 +183,7 @@ class ActionFlow:
             summary=summary_text(outcomes=outcomes),
             steps=steps,
             freed=outcomes_freed_text(outcomes=outcomes),
+            restartable=_stopped_containers(plan=plan, outcomes=outcomes),
         )
         self._announce()
 
@@ -188,10 +193,20 @@ class ActionFlow:
             return
         text = report.summary if report.freed is None else f"{report.summary}. {report.freed}"
         # SPECIFICHE 10.3: the details are offered only when some target did not succeed.
-        if all(step.status in OK_STATUSES for step in report.steps):
-            self._notify(text)
-        else:
+        if not all(step.status in OK_STATUSES for step in report.steps):
             self._notify(text, button=DETAILS_LABEL, on_button=self._show_details)
+        elif report.restartable:
+            restart = partial(self._restart, plan_id=report.plan_id)
+            self._notify(text, button=RESTART_LABEL, on_button=restart)
+        else:
+            self._notify(text)
+
+    def _restart(self, *, plan_id: PlanId) -> None:
+        """C4: plan the start of what ``plan_id`` stopped; the user confirms it as usual."""
+        target = TargetId(plan_id)
+        self.start(
+            request=ActionRequest(kind=ActionKind.RESTART_STOPPED, target_id=target), subject=None
+        )
 
     def _on_reclaim(self, _source: object, plan_id: str, delta: ReclaimDelta) -> None:
         report = self._report
@@ -230,6 +245,13 @@ class ActionFlow:
             self._begin(request=pending.plan.request, subject=pending.subject, may_replan=False)
             return
         self._notify(error.user_message)
+
+
+def _stopped_containers(*, plan: Plan | None, outcomes: Sequence[StepOutcome]) -> bool:
+    """True when the plan stopped at least one container: those can be started again."""
+    done = {outcome.order for outcome in outcomes if outcome.status is StepStatus.DONE}
+    steps = () if plan is None else plan.steps
+    return any(s.kind is ActionKind.CONTAINER_STOP and s.order in done for s in steps)
 
 
 def _should_replan(*, pending: "_Pending", error: WimmError) -> bool:

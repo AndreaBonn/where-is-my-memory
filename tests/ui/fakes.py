@@ -13,6 +13,7 @@ from gi.repository import GObject
 
 from wimm.config import Config, ConfigParseResult, update_config
 from wimm.core.planning import PlanningContext, plan_action
+from wimm.core.planning_restart import StoppedContainer
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.disk import DiskReport
 from wimm.model.enums import GroupId, PlanId
@@ -83,6 +84,7 @@ class FakeActionService(GObject.Object):
         self.executed: list[tuple[PlanId, str | None]] = []
         self.last_plan: Plan | None = None
         self.disk_report: DiskReport | None = None
+        self.stopped: dict[str, tuple[StoppedContainer, ...]] = {}
         self.snoozed: list[tuple[GroupId, float]] = []
         self.ignored: list[tuple[GroupId, bool]] = []
         self.snoozed_all: list[float] = []
@@ -130,7 +132,9 @@ class FakeActionService(GObject.Object):
         self.last_plan = plan_action(
             request=request,
             snapshot=self._snapshot,
-            context=PlanningContext(owner_uid=1000, disk_report=self.disk_report),
+            context=PlanningContext(
+                owner_uid=1000, disk_report=self.disk_report, stopped=self.stopped
+            ),
         )
         return self.last_plan
 
@@ -228,6 +232,6 @@ class FakeDiskActionService(FakeActionService):
         self.last_plan = plan_action(
             request=request,
             snapshot=self._snapshot,
-            context=PlanningContext(owner_uid=1000, disk_report=self._report),
+            context=PlanningContext(owner_uid=1000, disk_report=self._report, stopped=self.stopped),
         )
         return self.last_plan

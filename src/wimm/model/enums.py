@@ -59,6 +59,8 @@ class ActionKind(Enum):
     TRASH_EMPTY = "trash_empty"
     DEVDIR_DELETE = "devdir_delete"
     DISK_FREE_SAFE = "disk_free_safe"
+    CONTAINER_START = "container_start"
+    RESTART_STOPPED = "restart_stopped"
 
 
 class MetricsSource(Enum):
