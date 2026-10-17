@@ -19,7 +19,7 @@ from .control_protocols import (
 )
 from .errors import DockerUnavailable, InvalidRequest
 from .executor_checks import (
-    CONTAINER_KINDS,
+    DOCKER_KINDS,
     PROCESS_KINDS,
     ProcessRules,
     check_container,
@@ -27,6 +27,12 @@ from .executor_checks import (
     check_supported,
 )
 from .executor_compose import COMPOSE_KINDS, check_compose, run_compose_step
+from .executor_disk_docker import (
+    DISK_DOCKER_KINDS,
+    check_disk_docker,
+    log_disk_outcomes,
+    run_disk_docker_step,
+)
 from .executor_docker import run_container_step
 from .executor_process import TerminationRequest, close_root, terminate_tree
 
@@ -59,7 +65,9 @@ class PlanExecutor:
         self._revalidate(plan=plan, rules=rules)
         outcomes: list[StepOutcome] = []
         for _, run in groupby(plan.steps, key=lambda step: step.kind):
-            outcomes.extend(self._run_batch(steps=tuple(run), rules=rules))
+            batch = self._run_batch(steps=tuple(run), rules=rules)
+            outcomes.extend(batch)
+            log_disk_outcomes(plan=plan, outcomes=batch)
         return tuple(outcomes)
 
     def _revalidate(self, *, plan: Plan, rules: ProcessRules) -> None:
@@ -67,7 +75,7 @@ class PlanExecutor:
         for step in plan.steps:
             check_supported(step=step)
         containers = self.containers
-        if containers is None and any(s.kind in CONTAINER_KINDS for s in plan.steps):
+        if containers is None and any(s.kind in DOCKER_KINDS for s in plan.steps):
             raise DockerUnavailable()
         compose = self.compose
         if compose is None and any(s.kind in COMPOSE_KINDS for s in plan.steps):
@@ -77,6 +85,8 @@ class PlanExecutor:
                 check_process(step=step, control=self.processes, rules=rules)
             elif step.kind in COMPOSE_KINDS and compose is not None:
                 check_compose(step=step, control=compose)
+            elif containers is not None and step.kind in DISK_DOCKER_KINDS:
+                check_disk_docker(step=step, control=containers)
             elif containers is not None:
                 check_container(step=step, control=containers)
 
@@ -85,6 +95,8 @@ class PlanExecutor:
             return [self._terminate(step=s, rules=rules) for s in steps]
         if steps[0].kind in COMPOSE_KINDS:
             return self._run_compose(steps=steps)
+        if steps[0].kind in DISK_DOCKER_KINDS:
+            return self._run_disk_docker(steps=steps)
         if steps[0].kind is ActionKind.CONTAINER_STOP:
             return self._run_containers(steps=steps, parallel=True)
         return self._run_containers(steps=steps, parallel=False)
@@ -94,6 +106,12 @@ class PlanExecutor:
         if control is None:
             raise DockerUnavailable()
         return [run_compose_step(control=control, step=s) for s in steps]
+
+    def _run_disk_docker(self, *, steps: tuple[PlanStep, ...]) -> list[StepOutcome]:
+        control = self.containers
+        if control is None:
+            raise DockerUnavailable()
+        return [run_disk_docker_step(control=control, step=s) for s in steps]
 
     def _run_containers(self, *, steps: tuple[PlanStep, ...], parallel: bool) -> list[StepOutcome]:
         control = self.containers

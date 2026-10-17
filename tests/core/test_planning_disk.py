@@ -14,7 +14,18 @@ from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import ActionKind, PlanId, Risk, TargetId
 from wimm.model.errors import InvalidRequest
 
-from .disk_helpers import MB, SCANNED_AT, cache, devdir, docker_disk, image, report, stopped, volume
+from .disk_helpers import (
+    MB,
+    SCANNED_AT,
+    VOLUME_CREATED_AT,
+    cache,
+    devdir,
+    docker_disk,
+    image,
+    report,
+    stopped,
+    volume,
+)
 from .planning_helpers import NOW, OWNER_UID, snapshot
 
 
@@ -58,8 +69,17 @@ def test_volume_remove_orphan_is_danger_and_confirmed_by_its_name() -> None:
 
     assert plan.risk is Risk.DANGER
     assert plan.confirm_phrase == "scratch"
-    assert plan.steps[0].fingerprint == VolumeFingerprint(name="scratch")
+    assert plan.steps[0].fingerprint == VolumeFingerprint(
+        name="scratch", created_at=VOLUME_CREATED_AT
+    )
     assert plan.estimated_reclaim_disk == 120 * MB
+
+
+def test_volume_remove_refuses_a_volume_whose_creation_time_is_unknown() -> None:
+    disk = report(docker=docker_disk(volumes=(volume(name="scratch", created_at=""),)))
+
+    with pytest.raises(InvalidRequest, match="creation time"):
+        _plan(kind=ActionKind.VOLUME_REMOVE, disk=disk, target="scratch")
 
 
 def test_volume_remove_refuses_a_volume_in_use_or_unknown_to_the_report() -> None:
@@ -330,8 +350,7 @@ def test_docker_actions_with_docker_unavailable_name_the_reason() -> None:
         _plan(kind=ActionKind.IMAGES_PRUNE_UNUSED, disk=disk)
 
 
-def test_volume_remove_without_a_report_keeps_the_name_only_plan() -> None:
-    plan = _plan(kind=ActionKind.VOLUME_REMOVE, disk=None, target="pgdata")
-
-    assert plan.confirm_phrase == "pgdata"
-    assert plan.estimated_reclaim_disk == 0
+def test_volume_remove_without_a_report_is_refused() -> None:
+    # Without a report there is no creation time, and the executor would refuse anyway.
+    with pytest.raises(InvalidRequest):
+        _plan(kind=ActionKind.VOLUME_REMOVE, disk=None, target="pgdata")

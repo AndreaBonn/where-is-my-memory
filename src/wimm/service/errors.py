@@ -37,3 +37,9 @@ class ControlFailed(WimmError):
     code = "CONTROL_FAILED"
     message = "System control call failed"
     user_message = "L'operazione non è riuscita"
+
+
+class TargetGone(WimmError):
+    code = "TARGET_GONE"
+    message = "Action target no longer exists"
+    user_message = "L'elemento non esiste più"

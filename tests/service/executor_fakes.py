@@ -9,13 +9,15 @@ from wimm.core.planning import cmdline_hash
 from wimm.model.actions import (
     ActionRequest,
     ContainerFingerprint,
+    ImageFingerprint,
     Plan,
     PlanStep,
     ProcessFingerprint,
+    VolumeFingerprint,
 )
 from wimm.model.enums import ActionKind, GroupId, PlanId, Risk, TargetId
-from wimm.service.control_protocols import LiveContainer, LiveProcess
-from wimm.service.errors import ControlFailed
+from wimm.service.control_protocols import LiveContainer, LiveImage, LiveProcess, LiveVolume
+from wimm.service.errors import ControlFailed, TargetGone
 
 OWNER_UID = 1000
 WIMM_PID = 900
@@ -24,6 +26,7 @@ GROUP_TARGET_KINDS = frozenset(
     {ActionKind.APP_CLOSE, ActionKind.COMPOSE_DOWN, ActionKind.COMPOSE_DOWN_VOLUMES}
 )
 CMDLINE = ("python3", "-m", "http.server")
+VOLUME_CREATED_AT = "2026-10-01T10:00:00Z"
 
 
 @dataclass(slots=True)
@@ -75,6 +78,12 @@ class FakeDocker:
     live: dict[str, LiveContainer] = field(default_factory=dict)
     failing: frozenset[str] = frozenset()
     crashing: frozenset[str] = frozenset()
+    images: dict[str, LiveImage] = field(default_factory=dict)
+    volumes: dict[str, LiveVolume] = field(default_factory=dict)
+    cache_freed: int = 0
+    failing_disk: frozenset[str] = frozenset()
+    digests: dict[str, tuple[str, ...]] = field(default_factory=dict)
+    prune_error: BaseException | None = None
     calls: list[tuple[str, str]] = field(default_factory=list)
 
     def inspect(self, *, container_id: str) -> LiveContainer | None:
@@ -91,6 +100,52 @@ class FakeDocker:
     def remove(self, *, container_id: str, volumes: bool) -> None:
         self.calls.append(("remove", f"{container_id}:v={volumes}"))
         self.live.pop(container_id, None)
+
+    def inspect_image(self, *, image_id: str) -> LiveImage | None:
+        return self.images.get(image_id)
+
+    def resolve_image(self, *, ref: str) -> str | None:
+        if ref in self.images:
+            return ref
+        return next((i for i, image in self.images.items() if ref in image.tags), None)
+
+    def remove_image(self, *, ref: str) -> None:
+        """Like the daemon: a tag drops that tag, an id with several tags or children is a 409.
+
+        An image that still has a digest reference survives its last tag.
+        """
+        if ref in self.failing_disk:
+            raise ControlFailed(f"cannot remove {ref}")
+        owner = self.resolve_image(ref=ref)
+        if owner is None:
+            raise TargetGone()
+        self.calls.append(("remove_image", ref))
+        image = self.images[owner]
+        if ref == owner:
+            if len(image.tags) > 1 or image.has_children:
+                raise ControlFailed("conflict: unable to delete, image has dependants")
+            del self.images[owner]
+            return
+        tags = tuple(t for t in image.tags if t != ref)
+        if tags or self.digests.get(owner):
+            self.images[owner] = replace(image, tags=tags)
+        else:
+            del self.images[owner]
+
+    def inspect_volume(self, *, name: str) -> LiveVolume | None:
+        return self.volumes.get(name)
+
+    def remove_volume(self, *, name: str) -> None:
+        if name not in self.volumes:
+            raise TargetGone()
+        self.calls.append(("remove_volume", name))
+        del self.volumes[name]
+
+    def prune_build_cache(self) -> int:
+        self.calls.append(("prune_build_cache", ""))
+        if self.prune_error is not None:
+            raise self.prune_error
+        return self.cache_freed
 
 
 def live_process(*, pid: int, uid: int = OWNER_UID, protected: bool = False) -> LiveProcess:
@@ -126,8 +181,42 @@ def container_step(
     )
 
 
-def make_plan(*, steps: Sequence[PlanStep]) -> Plan:
-    if len(steps) == 1 and steps[0].kind in GROUP_TARGET_KINDS:
+def image_step(*, order: int, image_id: str) -> PlanStep:
+    return PlanStep(
+        order=order,
+        kind=ActionKind.IMAGE_REMOVE,
+        target_label=image_id,
+        fingerprint=ImageFingerprint(id=image_id),
+        risk=Risk.SAFE,
+    )
+
+
+def volume_step(*, order: int, name: str, created_at: str = VOLUME_CREATED_AT) -> PlanStep:
+    return PlanStep(
+        order=order,
+        kind=ActionKind.VOLUME_REMOVE,
+        target_label=name,
+        fingerprint=VolumeFingerprint(name=name, created_at=created_at),
+        risk=Risk.DANGER,
+    )
+
+
+def builder_step(*, order: int) -> PlanStep:
+    return PlanStep(
+        order=order,
+        kind=ActionKind.BUILDER_PRUNE,
+        target_label="build cache",
+        fingerprint=None,
+        risk=Risk.SAFE,
+    )
+
+
+def make_plan(*, steps: Sequence[PlanStep], request_kind: ActionKind | None = None) -> Plan:
+    if request_kind is not None:
+        request = ActionRequest(kind=request_kind)
+    elif len(steps) == 1 and steps[0].kind is ActionKind.BUILDER_PRUNE:
+        request = ActionRequest(kind=ActionKind.BUILDER_PRUNE)
+    elif len(steps) == 1 and steps[0].kind in GROUP_TARGET_KINDS:
         request = ActionRequest(kind=steps[0].kind, group_id=GroupId("g_test"))
     elif len(steps) == 1:
         request = ActionRequest(kind=steps[0].kind, target_id=TargetId("target"))

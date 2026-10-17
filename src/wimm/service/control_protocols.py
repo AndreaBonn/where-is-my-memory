@@ -19,11 +19,17 @@ class StepStatus(Enum):
 
 @dataclass(frozen=True, slots=True)
 class StepOutcome:
-    """Result of one plan step; `message` is set for `failed` and `not_responding`."""
+    """Result of one plan step; `message` is set for `failed` and `not_responding`.
+
+    A `done` image removal may carry a note (tags left alone because they moved).
+
+    `freed_bytes` is only set when the daemon reports it (the build cache prune).
+    """
 
     order: int
     status: StepStatus
     message: str | None = None
+    freed_bytes: int | None = None
 
 
 LOGGER = logging.getLogger(__name__)
@@ -64,6 +70,33 @@ class LiveContainer:
     status: str
 
 
+@dataclass(frozen=True, slots=True)
+class LiveImage:
+    """`in_use`: some container, running or stopped, was created from exactly this image id.
+
+    `has_children`: another image names this one as its parent, so the daemon refuses to
+    delete the id (409) once its tags are gone.
+    """
+
+    id: str
+    in_use: bool
+    tags: tuple[str, ...] = ()
+    has_children: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class LiveVolume:
+    """`in_use`: some container, running or stopped, mounts the volume.
+
+    `created_at` is Docker's `CreatedAt` string, kept verbatim: it tells a recreated volume
+    from the one the plan showed. Empty when the daemon does not report it.
+    """
+
+    name: str
+    in_use: bool
+    created_at: str
+
+
 class ProcessControl(Protocol):
     def inspect(self, *, pid: int) -> LiveProcess | None:
         """Return the live process, or None if it no longer exists."""
@@ -98,6 +131,33 @@ class DockerControl(Protocol):
     def stop(self, *, container_id: str, timeout_s: int) -> None: ...
 
     def remove(self, *, container_id: str, volumes: bool) -> None: ...
+
+    def inspect_image(self, *, image_id: str) -> LiveImage | None:
+        """Return the live image, or None if it no longer exists."""
+        ...
+
+    def resolve_image(self, *, ref: str) -> str | None:
+        """Return the id `ref` (a tag) points to right now, or None if it no longer exists."""
+        ...
+
+    def remove_image(self, *, ref: str) -> None:
+        """Remove a reference: a tag untags (the last tag deletes the image), an id deletes it.
+
+        Raise `TargetGone` if the reference does not exist (anymore).
+        """
+        ...
+
+    def inspect_volume(self, *, name: str) -> LiveVolume | None:
+        """Return the live volume, or None if it no longer exists."""
+        ...
+
+    def remove_volume(self, *, name: str) -> None:
+        """Remove the volume; raise `TargetGone` if it does not exist (anymore)."""
+        ...
+
+    def prune_build_cache(self) -> int:
+        """Remove every unused build cache record; return the `SpaceReclaimed` of the daemon."""
+        ...
 
 
 class ComposeControl(Protocol):

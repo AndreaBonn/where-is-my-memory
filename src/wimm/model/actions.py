@@ -89,7 +89,10 @@ class ImageFingerprint(ImmutableModel):
 
 @dataclass(frozen=True, slots=True)
 class VolumeFingerprint(ImmutableModel):
+    """Identity of a volume: its name and Docker's `CreatedAt`, to tell a recreated one."""
+
     name: str
+    created_at: str
 
 
 @dataclass(frozen=True, slots=True)

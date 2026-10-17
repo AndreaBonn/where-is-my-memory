@@ -56,7 +56,12 @@ SCHEMAS: dict[type, Schema] = {
         "dangling": BOOLEAN,
         "local_build": BOOLEAN,
     },
-    m.DockerVolume: {"name": TEXT, "size": OPTIONAL_BYTES, "ref_count": OPTIONAL_INTEGER},
+    m.DockerVolume: {
+        "name": TEXT,
+        "size": OPTIONAL_BYTES,
+        "ref_count": OPTIONAL_INTEGER,
+        "created_at": TEXT,
+    },
     m.StoppedContainer: {"id": TEXT, "name": TEXT, "state": TEXT, "size": byte_count},
     m.DockerDisk: {
         "status": _record(cls=m.DockerStatus),

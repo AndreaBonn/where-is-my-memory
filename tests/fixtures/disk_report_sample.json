@@ -11,8 +11,9 @@
        "tags": [], "size": 300000000, "unique_size": 120000000, "in_use": false, "dangling": true, "local_build": true}
     ],
     "volumes": [
-      {"name": "scratch", "size": 120000000, "ref_count": 0},
-      {"name": "nosize", "size": null, "ref_count": null}
+      {"name": "scratch", "size": 120000000, "ref_count": 0,
+       "created_at": "2026-10-01T10:00:00Z"},
+      {"name": "nosize", "size": null, "ref_count": null, "created_at": ""}
     ],
     "stopped_containers": [
       {"id": "c20000000000000000000000000000000000000000000000000000000000000",

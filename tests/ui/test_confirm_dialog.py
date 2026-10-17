@@ -1,11 +1,12 @@
 import pytest
 from gi.repository import Adw, Gtk
 
-from tests.core.disk_helpers import docker_disk, image, report
+from tests.core.disk_helpers import docker_disk, image, report, volume
 from tests.core.planning_helpers import container, group, proc, snapshot
 from tests.ui.conftest import FakeActionService, descendants
 from wimm.core.risk_table import CONSEQUENCES, ConsequenceKey
 from wimm.model.actions import ActionRequest, Plan
+from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind, Category, GroupId, TargetId
 from wimm.model.snapshot import Snapshot
 from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE, ConfirmDialog
@@ -18,9 +19,10 @@ Confirmed = list[tuple[Plan, str | None]]
 
 
 def open_dialog(
-    *, snap: Snapshot, request: ActionRequest, subject: str | None
+    *, snap: Snapshot, request: ActionRequest, subject: str | None, disk: DiskReport | None = None
 ) -> tuple[ConfirmDialog, FakeActionService, Confirmed]:
     service = FakeActionService(snapshot=snap)
+    service.disk_report = disk
     plan = service.plan(request=request)
     session = ConfirmSession(
         plan=plan,
@@ -107,7 +109,10 @@ def test_caution_dialog_is_destructive_and_shows_the_consequences(display: None)
 
 def test_danger_dialog_enables_the_button_only_for_the_exact_phrase(display: None) -> None:
     request = ActionRequest(kind=ActionKind.VOLUME_REMOVE, target_id=TargetId("pgdata"))
-    dialog, _, confirmed = open_dialog(snap=snapshot(), request=request, subject="pgdata")
+    orphan = report(docker=docker_disk(volumes=(volume(name="pgdata"),)))
+    dialog, _, confirmed = open_dialog(
+        snap=snapshot(), request=request, subject="pgdata", disk=orphan
+    )
     (entry,) = entry_rows(dialog)
 
     assert "pgdata" in entry.get_title()

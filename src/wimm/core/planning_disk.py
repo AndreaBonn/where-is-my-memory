@@ -147,19 +147,31 @@ def _plan_builder_prune(*, request: ActionRequest, report: DiskReport | None) ->
 
 
 def _plan_volume_remove(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
-    """Plan a volume removal; without a report only the name is known (legacy plan).
+    """Plan a volume removal from the disk report.
 
     With a report the volume must be listed and an orphan; the executor still rechecks
-    `RefCount == 0` at execution (8.2).
+    that no container mounts it at execution (8.2). Its `CreatedAt` goes into the
+    fingerprint, so a volume recreated under the same name is refused; a record without
+    it cannot be told apart, so it is not planned, and neither is a volume before the
+    first disk scan.
     """
     name = str(request.target_id)
     if report is None:
-        return [volume_draft(name=name, kind=ActionKind.VOLUME_REMOVE)]
+        raise InvalidRequest(f"No disk report yet, cannot plan the removal of volume {name}")
     for volume in _docker(report=report).volumes:
         if volume.name == name:
             if not volume.orphan:
                 raise InvalidRequest(f"Volume {name} is in use or its usage is unknown")
-            return [volume_draft(name=name, kind=request.kind, reclaim_disk=volume.size or 0)]
+            if not volume.created_at:
+                raise InvalidRequest(f"Volume {name} has no known creation time")
+            return [
+                volume_draft(
+                    name=name,
+                    kind=request.kind,
+                    created_at=volume.created_at,
+                    reclaim_disk=volume.size or 0,
+                )
+            ]
     raise InvalidRequest(f"Unknown volume {name}")
 
 

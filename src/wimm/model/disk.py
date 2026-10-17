@@ -53,11 +53,15 @@ class DockerImage(ImmutableModel):
 
 @dataclass(frozen=True, slots=True)
 class DockerVolume(ImmutableModel):
-    """A volume; `size` and `ref_count` are None when Docker did not compute them."""
+    """A volume; `size` and `ref_count` are None when Docker did not compute them.
+
+    `created_at` is Docker's `CreatedAt` string, verbatim; empty when the record lacks it.
+    """
 
     name: str
     size: int | None
     ref_count: int | None
+    created_at: str
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)

@@ -15,6 +15,9 @@ TERMINATE_TIMEOUT_S = 5
 CONTAINER_STOP_TIMEOUT_S = 10
 CONTAINER_STOP_WORKERS = 8
 COMPOSE_TIMEOUT_S = 120
+# SPECIFICHE 8.4: `POST /build/prune` with `all` can take minutes on a large cache; the
+# client default (60 s) would report a failure while the daemon is still freeing space.
+BUILD_PRUNE_TIMEOUT_S = 600
 DEVDIRS_ROOTS = ("~/Documenti/00_Lavoro",)
 DEVDIRS_MIN_AGE_DAYS = 90
 DEVDIRS_MAX_DEPTH = 6

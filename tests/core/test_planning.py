@@ -1,7 +1,9 @@
+from dataclasses import replace
 from datetime import timedelta
 
 import pytest
 
+from tests.core.disk_helpers import VOLUME_CREATED_AT, docker_disk, report, volume
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.risk_table import CONSEQUENCES, ConsequenceKey
 from wimm.model.actions import (
@@ -29,14 +31,23 @@ def _terminate(pid: int) -> ActionRequest:
     return ActionRequest(kind=ActionKind.PROCESS_TERMINATE, target_id=TargetId(str(pid)))
 
 
+ORPHANS = report(docker=docker_disk(volumes=(volume(name="pgdata"), volume(name="v"))))
+
+
+def _with_volumes(base: PlanningContext) -> PlanningContext:
+    return replace(base, disk_report=ORPHANS)
+
+
 def test_plan_volume_remove_requires_volume_name_as_confirm_phrase() -> None:
     request = ActionRequest(kind=ActionKind.VOLUME_REMOVE, target_id=TargetId("pgdata"))
 
-    plan = plan_action(request=request, snapshot=snapshot(), context=context())
+    plan = plan_action(request=request, snapshot=snapshot(), context=_with_volumes(context()))
 
     assert plan.confirm_phrase == "pgdata"
     assert plan.risk is Risk.DANGER
-    assert plan.steps[0].fingerprint == VolumeFingerprint(name="pgdata")
+    assert plan.steps[0].fingerprint == VolumeFingerprint(
+        name="pgdata", created_at=VOLUME_CREATED_AT
+    )
     assert plan.steps[0].kind is ActionKind.VOLUME_REMOVE
 
 
@@ -99,7 +110,7 @@ def test_plan_expires_120_seconds_after_creation_with_injected_id() -> None:
     plan = plan_action(
         request=ActionRequest(kind=ActionKind.VOLUME_REMOVE, target_id=TargetId("v")),
         snapshot=snapshot(),
-        context=context(),
+        context=_with_volumes(context()),
     )
 
     assert plan.plan_id == "p-1"
@@ -109,7 +120,7 @@ def test_plan_expires_120_seconds_after_creation_with_injected_id() -> None:
 
 def test_plan_default_context_generates_distinct_urlsafe_ids() -> None:
     request = ActionRequest(kind=ActionKind.VOLUME_REMOVE, target_id=TargetId("v"))
-    default = PlanningContext(owner_uid=OWNER_UID)
+    default = PlanningContext(owner_uid=OWNER_UID, disk_report=ORPHANS)
 
     first = plan_action(request=request, snapshot=snapshot(), context=default)
     second = plan_action(request=request, snapshot=snapshot(), context=default)

@@ -6,6 +6,8 @@ from time import monotonic
 import pytest
 from gi.repository import GLib
 
+from tests.core.disk_helpers import docker_disk, report
+from tests.core.disk_helpers import volume as disk_volume
 from tests.core.planning_helpers import NOW, group, proc, snapshot
 from tests.service.service_helpers import (
     TIMEOUT_S,
@@ -17,6 +19,7 @@ from tests.service.service_helpers import (
 )
 from wimm.config import Config
 from wimm.model.actions import ActionRequest, Plan
+from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind, Category, PlanId, TargetId
 from wimm.model.snapshot import Snapshot
 from wimm.service.actions import ActionSetup, ReclaimDelta
@@ -162,8 +165,21 @@ def test_second_execute_with_the_same_id_raises_plan_not_found(rigs: RigFactory)
     assert len(rig.executor.plans) == 1
 
 
+class OrphanVolumeScanner:
+    """A disk scan that finds one orphan volume, so a volume removal can be planned."""
+
+    def scan(self, *, config: Config) -> DiskReport:
+        return report(docker=docker_disk(volumes=(disk_volume(name="pgdata"),)))
+
+    def cancel(self) -> None:
+        return None
+
+
 def test_wrong_phrase_raises_mismatch_and_exact_phrase_then_runs(rigs: RigFactory) -> None:
     rig = rigs.build()
+    rig.service.attach_disk_scanner(scanner=OrphanVolumeScanner())
+    rig.service.rescan_disk()
+    spin_until(predicate=lambda: rig.service.disk_report() is not None)
     plan = rig.service.plan(request=volume("pgdata"))
     assert plan.confirm_phrase == "pgdata"
 

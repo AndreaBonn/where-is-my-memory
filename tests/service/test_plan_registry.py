@@ -21,7 +21,7 @@ def make(*, plan_id: str, ttl_s: int = 120, phrase: str | None = None) -> Plan:
                 order=1,
                 kind=ActionKind.VOLUME_REMOVE,
                 target_label=phrase,
-                fingerprint=VolumeFingerprint(name=phrase),
+                fingerprint=VolumeFingerprint(name=phrase, created_at="2026-10-01T10:00:00Z"),
                 risk=Risk.DANGER,
             ),
         )

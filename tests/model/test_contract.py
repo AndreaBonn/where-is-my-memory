@@ -172,7 +172,7 @@ def test_docker_status_and_datetime_contract() -> None:
         ContainerFingerprint(id="c", status="running"),
         ComposeFingerprint(project="demo", container_ids=frozenset({"a", "b"})),
         ImageFingerprint(id="i"),
-        VolumeFingerprint(name="v"),
+        VolumeFingerprint(name="v", created_at="2026-10-01T10:00:00Z"),
         DirFingerprint(realpath="/projects/demo", st_ino=1, st_dev=2),
     ],
 )

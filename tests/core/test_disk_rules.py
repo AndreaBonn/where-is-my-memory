@@ -121,6 +121,23 @@ def test_images_at_cap_are_not_truncated() -> None:
     assert (len(docker.images), docker.images_truncated) == (200, 0)
 
 
+def test_volume_keeps_the_created_at_string_of_the_df_record_verbatim() -> None:
+    by_name = {v.name: v for v in parse_docker_df(df=load_df()).volumes}
+
+    assert by_name["orphan_small"].created_at == "2026-10-01T10:00:00Z"
+
+
+def test_volume_record_without_created_at_gets_an_empty_string() -> None:
+    df: dict[str, Any] = {
+        "Images": [],
+        "Containers": [],
+        "BuildCache": [],
+        "Volumes": [{"Name": "old", "UsageData": {"RefCount": 0, "Size": 1}}],
+    }
+
+    assert parse_docker_df(df=df).volumes[0].created_at == ""
+
+
 def test_volumes_and_containers_over_cap_count_their_own_truncation() -> None:
     df: dict[str, Any] = {
         "Images": [],

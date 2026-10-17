@@ -52,9 +52,9 @@ def test_image_id_must_not_be_blank() -> None:
 
 
 def test_volume_size_none_allowed_but_negative_rejected() -> None:
-    assert DockerVolume(name="v", size=None, ref_count=None).size is None
+    assert DockerVolume(name="v", size=None, ref_count=None, created_at="").size is None
     with pytest.raises(ValueError, match="size"):
-        DockerVolume(name="v", size=-1, ref_count=0)
+        DockerVolume(name="v", size=-1, ref_count=0, created_at="")
 
 
 @pytest.mark.parametrize(("tags", "dangling"), [(("app:1",), True), ((), False)])

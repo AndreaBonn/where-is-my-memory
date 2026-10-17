@@ -49,8 +49,17 @@ def image(
     )
 
 
-def volume(*, name: str, ref_count: int | None = 0, size: int | None = MB) -> DockerVolume:
-    return DockerVolume(name=name, size=size, ref_count=ref_count)
+VOLUME_CREATED_AT = "2026-10-01T10:00:00Z"
+
+
+def volume(
+    *,
+    name: str,
+    ref_count: int | None = 0,
+    size: int | None = MB,
+    created_at: str = VOLUME_CREATED_AT,
+) -> DockerVolume:
+    return DockerVolume(name=name, size=size, ref_count=ref_count, created_at=created_at)
 
 
 def stopped(*, cid: str, state: str = "exited", size: int = 1024) -> StoppedContainer:

@@ -102,6 +102,7 @@ def _volume(*, raw: Raw) -> DockerVolume:
         name=str(raw["Name"]),
         size=size if type(size) is int and size >= 0 else None,
         ref_count=refs if type(refs) is int and refs >= 0 else None,
+        created_at=str(raw.get("CreatedAt") or ""),
     )
 
 

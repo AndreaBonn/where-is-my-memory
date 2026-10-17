@@ -162,14 +162,14 @@ def compose_draft(*, group: Group, kind: ActionKind) -> Draft:
     )
 
 
-def volume_draft(*, name: str, kind: ActionKind, reclaim_disk: int = 0) -> Draft:
+def volume_draft(*, name: str, kind: ActionKind, created_at: str, reclaim_disk: int = 0) -> Draft:
     """Draft a volume removal; the reclaim is zero unless the disk report knows the size."""
     return Draft(
         owner_ids=frozenset({name}),
         kind=kind,
         label=name,
         name=name,
-        fingerprint=VolumeFingerprint(name=name),
+        fingerprint=VolumeFingerprint(name=name, created_at=created_at),
         assessed=assess_draft(target=RiskTarget(kind="volume"), kind=kind),
         reclaim_ram=0,
         reclaim_disk=reclaim_disk,

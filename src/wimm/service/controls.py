@@ -16,6 +16,7 @@ from wimm.core.categorize import CategorizationContext, categorize_process
 from wimm.model.enums import Protection, protection_of
 
 from .control_protocols import LiveContainer, LiveProcess
+from .controls_disk import DiskClientLike, DiskSdkOps
 from .errors import ControlFailed
 
 LOGGER = logging.getLogger(__name__)
@@ -156,13 +157,18 @@ class _ContainerCollection(Protocol):
     def get(self, container_id: str) -> _ContainerLike: ...
 
 
-class DockerClientLike(Protocol):
+class DockerClientLike(DiskClientLike, Protocol):
     @property
     def containers(self) -> _ContainerCollection: ...
 
 
-class DockerSdkControl:
-    """Container control on the Docker SDK; SDK failures become `ControlFailed`."""
+class DockerSdkControl(DiskSdkOps):
+    """Docker control on the SDK (containers here, disk objects in `DiskSdkOps`).
+
+    SDK failures become `ControlFailed`.
+    """
+
+    _client: DockerClientLike
 
     def __init__(self, *, client: DockerClientLike) -> None:
         self._client = client

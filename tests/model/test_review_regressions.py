@@ -12,7 +12,7 @@ PROCESS = m.ProcessFingerprint(pid=1, create_time=1.0, uid=1000, cmdline_hash="h
 CONTAINER = m.ContainerFingerprint(id="c", status="running")
 COMPOSE = m.ComposeFingerprint(project="demo", container_ids=frozenset({"c"}))
 IMAGE = m.ImageFingerprint(id="i")
-VOLUME = m.VolumeFingerprint(name="v")
+VOLUME = m.VolumeFingerprint(name="v", created_at="2026-10-01T10:00:00Z")
 DIRECTORY = m.DirFingerprint(realpath="/cache", st_ino=1, st_dev=1)
 STEP_FINGERPRINTS = [
     (m.ActionKind.PROCESS_TERMINATE, PROCESS),
