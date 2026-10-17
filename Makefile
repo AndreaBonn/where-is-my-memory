@@ -8,6 +8,7 @@ CORE_COVERAGE := $(if $(strip $(CORE_HAS_CODE)),--cov=src/wimm/core --cov-fail-u
 
 # The msgid is the Italian source text: only the English catalog exists (wimm.i18n).
 XGETTEXT_FLAGS := --from-code=UTF-8 --language=Python --keyword=N_ --keyword=pgettext:1c,2 \
+	--add-comments=TRANSLATORS: \
 	--package-name=where-is-my-memory --sort-by-file --force-po
 PO_TEMPLATE := build/po/wimm.pot
 MO_FILE := src/wimm/locale/en/LC_MESSAGES/wimm.mo
@@ -31,6 +32,8 @@ lint:
 	uv run ruff check --no-cache .
 	uv run ruff format --no-cache --check .
 	uv run mypy src tests
+	# Every user-visible string goes through gettext and po/en.po covers them all.
+	uv run python scripts/check_i18n.py
 
 # Extract every marked string into the (unversioned) template.
 pot:
