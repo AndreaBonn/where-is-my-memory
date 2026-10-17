@@ -5,6 +5,8 @@ from typing import Any, Protocol
 from gi.repository import Gio, GLib
 
 from wimm import __version__
+from wimm.core.disk_wire import disk_report_to_json
+from wimm.model.disk import DiskReport
 from wimm.model.snapshot import Snapshot
 from wimm.redaction import REDACTED, SECRET_ARGUMENT, redact_text
 from wimm.serialize import snapshot_to_json
@@ -14,11 +16,14 @@ OBJECT_PATH = "/io/github/wimm/Inspector"
 XML_FILE = "io.github.wimm.Inspector1.xml"
 INSTALLED_XML_DIRECTORY = Path("/usr/share/where-is-my-memory/dbus")
 NOT_READY = "io.github.wimm.Error.NotReady"
+# Before the first scan there is no report: the reply says so instead of failing.
 DISK_REPORT = '{"schema":1,"available":false}'
 
 
 class SnapshotSource(Protocol):
     def snapshot(self) -> Snapshot | None: ...
+
+    def disk_report(self) -> DiskReport | None: ...
 
 
 def introspection_path() -> Path:
@@ -71,7 +76,9 @@ class Inspector:
     def _method_call(self, *args: Any) -> None:
         _, _, _, _, method, _, invocation = args
         if method == "GetDiskReport":
-            invocation.return_value(GLib.Variant("(s)", (DISK_REPORT,)))
+            report = self._service.disk_report()
+            text = DISK_REPORT if report is None else disk_report_to_json(report=report)
+            invocation.return_value(GLib.Variant("(s)", (text,)))
             return
         snapshot = self._service.snapshot()
         if snapshot is None:

@@ -74,6 +74,7 @@ class Sampler:
         self._disks: tuple[DiskUsage, ...] = ()
         self._activity = activity_config(config=config)
         self._user = UserState()
+        self._reclaimable_disk = 0
 
     def apply_config(self, *, config: Config) -> None:
         """Adopt a new configuration from the next cycle on.
@@ -88,6 +89,10 @@ class Sampler:
     def apply_user_state(self, *, user: UserState) -> None:
         """Adopt the user's snoozes and ignores from the next cycle on (worker only)."""
         self._user = user
+
+    def apply_reclaimable_disk(self, *, reclaimable_disk: int) -> None:
+        """Adopt the safe-to-free disk bytes of the latest disk scan (worker only)."""
+        self._reclaimable_disk = reclaimable_disk
 
     def export_last_active(self) -> Mapping[EntityKey, datetime]:
         """Last-active instants to persist; safe to call from any thread."""
@@ -269,7 +274,12 @@ class Sampler:
                 drafts=drafts,
                 entities=entities,
                 verdicts=verdicts,
-                system=SystemState(mem=self._mem, disks=self._disks, docker=system[1]),
+                system=SystemState(
+                    mem=self._mem,
+                    disks=self._disks,
+                    docker=system[1],
+                    reclaimable_disk=self._reclaimable_disk,
+                ),
                 taken_at=system[0],
                 monitor_started_at=self.monitor_started_at,
                 user=self._user,

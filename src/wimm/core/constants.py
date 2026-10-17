@@ -19,6 +19,8 @@ DEVDIRS_ROOTS = ("~/Documenti/00_Lavoro",)
 DEVDIRS_MIN_AGE_DAYS = 90
 DEVDIRS_MAX_DEPTH = 6
 DISK_SCAN_INTERVAL_S = 21600
+# SPECIFICHE 7.6: the first disk scan waits, so startup is not slowed by directory walks.
+DISK_SCAN_START_DELAY_S = 120
 EXTRA_PROTECTED_NAMES: tuple[str, ...] = ()
 FOREGROUND_TRACKING = True
 

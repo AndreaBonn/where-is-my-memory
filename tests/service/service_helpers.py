@@ -39,6 +39,7 @@ class FakeSampler:
         self.cycle_threads: list[int] = []
         self.configs: list[tuple[Config, int]] = []
         self.user_states: list[UserState] = []
+        self.reclaimable: list[tuple[int, int]] = []
 
     def run_cycle(self) -> Snapshot:
         self.calls += 1
@@ -56,6 +57,9 @@ class FakeSampler:
 
     def apply_user_state(self, *, user: UserState) -> None:
         self.user_states.append(user)
+
+    def apply_reclaimable_disk(self, *, reclaimable_disk: int) -> None:
+        self.reclaimable.append((reclaimable_disk, threading.get_ident()))
 
 
 class FixedClock:

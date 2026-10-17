@@ -12,11 +12,14 @@ import pytest
 from gi.repository import Gio, GLib
 
 from tests.core.assemble_helpers import build_input, draft, pair
+from tests.core.disk_helpers import MB, cache, devdir, report
 from tests.core.helpers import process
 from tests.service.dbus_helpers import stop_application, wait_for_actions
 from tests.service.test_app_service import spin_until
 from wimm import __version__
 from wimm.core.assemble import assemble_snapshot
+from wimm.core.disk_wire import disk_report_from_json
+from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import Category
 from wimm.model.snapshot import ProcessMember, Snapshot
 from wimm.serialize import snapshot_from_json
@@ -28,6 +31,10 @@ APP_STARTUP_TIMEOUT_S = 45
 
 class SnapshotSource:
     current: Snapshot | None = None
+    report: DiskReport | None = None
+
+    def disk_report(self) -> DiskReport | None:
+        return self.report
 
     def snapshot(self) -> Snapshot | None:
         return self.current
@@ -185,6 +192,23 @@ def test_inspector_exports_only_read_only_members(private_connections: Any) -> N
             parameters=GLib.Variant("(ss)", (INTERFACE, "Version")),
         ).unpack()[0]
         assert version == __version__
+    finally:
+        inspector.close()
+
+
+@pytest.mark.dbus
+def test_get_disk_report_returns_json_the_wire_decoder_parses(
+    private_connections: Any,
+) -> None:
+    source = SnapshotSource()
+    source.report = report(
+        caches=(cache(kind=CacheKind.UV, size=3 * MB),),
+        devdirs=(devdir(path="/home/u/p/node_modules", size=5 * MB),),
+    )
+    inspector = Inspector(connection=private_connections[0], service=source)
+    try:
+        text = call(connections=private_connections, method="GetDiskReport").unpack()[0]
+        assert disk_report_from_json(text=text) == source.report
     finally:
         inspector.close()
 

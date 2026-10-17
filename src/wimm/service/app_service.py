@@ -17,6 +17,7 @@ from wimm.model.enums import PlanId
 from wimm.model.snapshot import Snapshot
 from wimm.paths import UserPaths
 from wimm.service.actions import ActionExecutor, ActionSetup
+from wimm.service.app_service_disk import DiskMixin
 from wimm.service.app_service_signals import APP_SERVICE_SIGNALS
 from wimm.service.app_service_user import UserStateMixin
 from wimm.service.control_protocols import StepOutcome
@@ -36,10 +37,12 @@ class CycleSampler(Protocol):
 
     def apply_user_state(self, *, user: UserState) -> None: ...
 
+    def apply_reclaimable_disk(self, *, reclaimable_disk: int) -> None: ...
+
     def run_cycle(self) -> Snapshot: ...
 
 
-class AppService(UserStateMixin, GObject.Object):
+class AppService(UserStateMixin, DiskMixin, GObject.Object):
     __gsignals__: ClassVar = APP_SERVICE_SIGNALS
 
     def __init__(
@@ -58,6 +61,7 @@ class AppService(UserStateMixin, GObject.Object):
         self._reclaim = ReclaimTracker()
         self._cycle_cohort: frozenset[PlanId] = frozenset()
         self._last_sampled: Snapshot | None = None
+        self._init_disk()
         self._clock = clock
         self._user = UserStateKeeper(state=PersistedState(), clock=clock)
         self._sampler = sampler
@@ -98,14 +102,18 @@ class AppService(UserStateMixin, GObject.Object):
         if result.config == self._config:
             return result
         save_config(paths=paths, config=result.config)
-        interval_changed = result.config.sample_interval_s != self._config.sample_interval_s
-        self._config = result.config
+        previous, self._config = self._config, result.config
         self._executor.submit(self._apply_config, result.config)
         # Sample right away, so a protected name added or removed shows in the window now.
         self.request_cycle()
-        if interval_changed:
-            self._reschedule_timer()
+        self._reschedule_timers(previous=previous)
         return result
+
+    def _reschedule_timers(self, *, previous: Config) -> None:
+        if self._config.sample_interval_s != previous.sample_interval_s:
+            self._reschedule_timer()
+        if self._config.disk_scan_interval_s != previous.disk_scan_interval_s:
+            self._reschedule_disk_timer()
 
     def _reschedule_timer(self) -> None:
         if self._timer:
@@ -123,6 +131,7 @@ class AppService(UserStateMixin, GObject.Object):
                 c.STATE_SAVE_INTERVAL_S, self.save_state_tick
             )
         self._user_changed()
+        self._start_disk()
 
     def attach_state_saver(self, *, saver: StateSaver) -> None:
         """Persist through ``saver`` every 5 minutes and on stop; call before ``start``."""
@@ -196,7 +205,9 @@ class AppService(UserStateMixin, GObject.Object):
         setup = self._require_actions()
         if self._snapshot is None:
             raise InvalidRequest("No snapshot yet, cannot plan an action")
-        context = PlanningContext(owner_uid=setup.owner_uid, now=self._clock)
+        context = PlanningContext(
+            owner_uid=setup.owner_uid, now=self._clock, disk_report=self._disk_report
+        )
         plan = plan_action(request=request, snapshot=self._snapshot, context=context)
         self._plans.add(plan=plan, now=self._clock())
         return plan
@@ -275,5 +286,6 @@ class AppService(UserStateMixin, GObject.Object):
         if self._state_saver is not None:
             # Inline: the executor is not awaited, so the file is written now.
             self._state_saver.close()
+        self._stop_disk()
         # Not waiting: the main loop must not freeze until a running action ends.
         self._executor.shutdown(wait=False, cancel_futures=True)

@@ -130,6 +130,7 @@ def _start_service(application: Any) -> None:
     from wimm.paths import default_user_paths
     from wimm.service.app_service import AppService
     from wimm.service.build_actions import build_actions
+    from wimm.service.disk_scanner import build_disk_scanner
     from wimm.service.notifications import attach_notifications
     from wimm.service.sampler import default_environment, wall_clock
     from wimm.service.state_store import StateSaver, load_state
@@ -144,6 +145,9 @@ def _start_service(application: Any) -> None:
     actions = build_actions(config=loaded.config, owner_uid=environment.uid)
     service = AppService(sampler=sampler, config=loaded.config, actions=actions)
     service.restore_user_state(state=state)
+    service.attach_disk_scanner(
+        scanner=build_disk_scanner(home=environment.home, cache_dir=paths.cache_dir)
+    )
     saver = StateSaver(paths=paths, state=state, last_active=sampler.export_last_active)
     service.attach_state_saver(saver=saver)
     application._service = service

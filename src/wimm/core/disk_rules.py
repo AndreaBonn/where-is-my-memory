@@ -10,6 +10,7 @@ from typing import Any
 
 from wimm.model.disk import (
     CacheEntry,
+    CacheKind,
     DevDir,
     DiskReport,
     DockerDisk,
@@ -17,14 +18,17 @@ from wimm.model.disk import (
     DockerVolume,
     StoppedContainer,
 )
+from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import DockerStatus
 
 from .constants import DISK_SECTION_CAP
+from .risk import RiskTarget, assess_risk
 
 __all__ = [
     "build_disk_report",
     "filter_devdirs",
     "parse_docker_df",
+    "safe_reclaimable_bytes",
     "unavailable_docker",
 ]
 
@@ -166,4 +170,44 @@ def build_disk_report(
         caches=tuple(sorted(caches, key=lambda c: (-c.size, c.kind.value))),
         devdirs=kept,
         devdirs_truncated=cut,
+    )
+
+
+def _is_safe(*, target: RiskTarget, action: ActionKind) -> bool:
+    """The risk the planner assigns to this target: one rule for the plan and the total."""
+    return assess_risk(target=target, action=action).level is Risk.SAFE
+
+
+def _safe_image_bytes(*, docker: DockerDisk) -> int:
+    total = 0
+    for item in docker.images:
+        target = RiskTarget(
+            kind="image", has_repo_digests=not item.local_build, dangling=item.dangling
+        )
+        if not item.in_use and _is_safe(target=target, action=ActionKind.IMAGE_REMOVE):
+            total += item.size
+    return total
+
+
+def safe_reclaimable_bytes(*, report: DiskReport | None) -> int:
+    """Bytes of the report's items whose removal is rated `safe`; 0 before the first scan.
+
+    Same ratings as the planner (decision Q-6): caches except the trash, the build cache
+    and the images no container uses (dangling, or pullable again). Stopped containers,
+    volumes, development folders and the trash are never counted.
+    """
+    if report is None:
+        return 0
+    cache_ok = _is_safe(target=RiskTarget(kind="cache"), action=ActionKind.CACHE_CLEAN)
+    trash_ok = _is_safe(target=RiskTarget(kind="trash"), action=ActionKind.TRASH_EMPTY)
+    total = sum(
+        entry.size
+        for entry in report.caches
+        if (trash_ok if entry.kind is CacheKind.TRASH else cache_ok)
+    )
+    build_ok = _is_safe(target=RiskTarget(kind="build_cache"), action=ActionKind.BUILDER_PRUNE)
+    return (
+        total
+        + _safe_image_bytes(docker=report.docker)
+        + (report.docker.build_cache_size if build_ok else 0)
     )
