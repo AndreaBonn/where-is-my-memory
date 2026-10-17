@@ -38,6 +38,17 @@ def _detail_label() -> Gtk.Label:
     return Gtk.Label(xalign=0, wrap=True, selectable=False)
 
 
+def _build_stop_all(*, on_stop_all: Callable[[], None] | None) -> Gtk.Button:
+    button = Gtk.Button(label=ACTION_LABELS[ActionKind.STOP_ALL_IDLE_SAFE])
+    if on_stop_all is None:
+        button.set_sensitive(False)
+        button.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+    else:
+        button.connect("clicked", lambda *_args: on_stop_all())
+    button.set_name("stop-all-idle")
+    return button
+
+
 class SummaryPanel(Gtk.Box):
     """RAM bar, disk usage, reclaimable totals and the (phase 3) stop-all button."""
 
@@ -53,13 +64,8 @@ class SummaryPanel(Gtk.Box):
         self._disk_bar = Gtk.ProgressBar()
         self._reclaim = _detail_label()
         self._reclaim.add_css_class("wimm-reclaim")
-        self._stop_all = Gtk.Button(label=ACTION_LABELS[ActionKind.STOP_ALL_IDLE_SAFE])
-        if on_stop_all is None:
-            self._stop_all.set_sensitive(False)
-            self._stop_all.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
-        else:
-            self._stop_all.connect("clicked", lambda *_args: on_stop_all())
-        self._stop_all.set_name("stop-all-idle")
+        self._stop_all = _build_stop_all(on_stop_all=on_stop_all)
+        self._can_stop_all = on_stop_all is not None
         for widget in (
             _section_title(text="RAM"),
             self._ram_text,
@@ -71,6 +77,10 @@ class SummaryPanel(Gtk.Box):
             self._build_reclaim_row(),
         ):
             self.append(widget)
+
+    def set_busy(self, *, busy: bool) -> None:
+        """Disable "stop all" while an action runs, so a second plan cannot start over it."""
+        self._stop_all.set_sensitive(self._can_stop_all and not busy)
 
     def _build_reclaim_row(self) -> Gtk.FlowBox:
         row = Gtk.FlowBox(

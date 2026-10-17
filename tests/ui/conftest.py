@@ -67,6 +67,11 @@ class FakeActionService(GObject.Object):
             None,
             (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
         ),
+        "reclaim-measured": (
+            GObject.SignalFlags.RUN_LAST,
+            None,
+            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
+        ),
     }
 
     def __init__(self, *, snapshot: Snapshot, plan_error: WimmError | None = None) -> None:
@@ -76,6 +81,7 @@ class FakeActionService(GObject.Object):
         self.plan_error = plan_error
         self.planned: list[ActionRequest] = []
         self.executed: list[tuple[PlanId, str | None]] = []
+        self.last_plan: Plan | None = None
 
     def snapshot(self) -> Snapshot:
         return self._snapshot
@@ -84,9 +90,10 @@ class FakeActionService(GObject.Object):
         self.planned.append(request)
         if self.plan_error is not None:
             raise self.plan_error
-        return plan_action(
+        self.last_plan = plan_action(
             request=request, snapshot=self._snapshot, context=PlanningContext(owner_uid=1000)
         )
+        return self.last_plan
 
     def execute(self, *, plan_id: PlanId, typed_confirmation: str | None) -> None:
         self.executed.append((plan_id, typed_confirmation))

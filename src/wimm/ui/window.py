@@ -2,7 +2,6 @@ import logging
 from collections.abc import Callable
 from datetime import datetime
 from pathlib import Path
-from typing import cast
 
 import gi
 
@@ -13,10 +12,11 @@ from gi.repository import Adw, Gio, GLib, Gtk
 from wimm import __version__
 from wimm.model.actions import ActionRequest
 from wimm.paths import default_user_paths
-from wimm.ui.action_flow import ActionFlow, ActionSource, can_act
+from wimm.ui.action_flow import can_act
 from wimm.ui.pages.overview import OverviewPage
 from wimm.ui.pages.system import SystemPage
 from wimm.ui.widgets import install_style, name_icon_button
+from wimm.ui.window_actions import build_action_flow
 from wimm.ui.window_shortcuts import ACTION_PREFERENCES, shortcut_controller
 from wimm.ui.window_state import (
     MIN_HEIGHT,
@@ -90,13 +90,9 @@ class MainWindow(Adw.Window):
         self._source_handler = self._source.connect("snapshot-updated", self._on_snapshot_updated)
 
     def _init_actions_flow(self) -> None:
-        self.action_flow: ActionFlow | None = None
-        if can_act(source=self._source):
-            self.action_flow = ActionFlow(
-                source=cast(ActionSource, self._source),
-                parent=self,
-                notify=lambda text: self.toasts.add_toast(Adw.Toast(title=text, use_markup=False)),
-            )
+        self.action_flow = build_action_flow(
+            parent=self, source=self._source, toasts=self.toasts, overview=self.overview
+        )
 
     def _start_action(self, request: ActionRequest, subject: str | None) -> None:
         if self.action_flow is not None:

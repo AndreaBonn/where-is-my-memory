@@ -15,6 +15,7 @@ SUBTITLE_LINES = 3
 MEMBER_SUBTITLE_LINES = 8
 SUFFIX_SPACING = 8
 PRIMARY_ACTION_NAME = "primary-action"
+BUSY_LABEL = "In corso…"
 RECLAIMABLE_TOOLTIP = "Memoria recuperabile"
 MENU_TOOLTIP = "Altre azioni"
 IGNORED_TEXT = "ignorato"
@@ -171,6 +172,7 @@ class GroupRowWidget(Adw.ExpanderRow):
         self._entries: dict[tuple[str, str], _MemberEntry] = {}
         self._members_wanted = False
         self._action: Gtk.Button | None = None
+        self._busy = False
         self._reclaim = Gtk.Label(valign=Gtk.Align.CENTER)
         self._reclaim.add_css_class("wimm-reclaim")
         self._reclaim.set_tooltip_text(RECLAIMABLE_TOOLTIP)
@@ -222,6 +224,15 @@ class GroupRowWidget(Adw.ExpanderRow):
         else:
             self._action.connect("clicked", self._on_primary_clicked)
         self._suffix.insert_child_after(self._action, self._badge)
+        self.set_busy(busy=self._busy)
+
+    def set_busy(self, *, busy: bool) -> None:
+        """Disable the primary button and say "In corso…" while an action runs."""
+        self._busy = busy
+        if self._action is None or self._row is None or self._row.primary_action is None:
+            return
+        self._action.set_sensitive(self._on_action is not None and not busy)
+        self._action.set_label(BUSY_LABEL if busy else self._row.primary_action.label)
 
     def _on_primary_clicked(self, *_args: object) -> None:
         if self._on_action is not None and self._row is not None:

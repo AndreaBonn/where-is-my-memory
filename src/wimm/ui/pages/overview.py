@@ -48,6 +48,7 @@ class OverviewPage(Gtk.Stack):
         self._snapshot: Snapshot | None = None
         self._now: datetime | None = None
         self._narrow = False
+        self._busy = False
         self._widgets: dict[str, GroupRowWidget] = {}
         self._job: Generator[None] | None = None
         self._job_source = 0
@@ -126,6 +127,13 @@ class OverviewPage(Gtk.Stack):
         self._snapshot, self._now = snapshot, now
         self._render()
         self.set_visible_child_name(STATE_CONTENT)
+
+    def set_busy(self, *, busy: bool) -> None:
+        """Disable every action button while a confirmed action runs."""
+        self._busy = busy
+        self._summary.set_busy(busy=busy)
+        for widget in self._widgets.values():
+            widget.set_busy(busy=busy)
 
     def set_narrow(self, *, narrow: bool) -> None:
         """Apply the one-column layout to every row."""
@@ -274,6 +282,7 @@ class OverviewPage(Gtk.Stack):
                     row=row, on_action=None if self._on_action is None else self._on_row_action
                 )
                 widget.set_narrow(narrow=self._narrow)
+                widget.set_busy(busy=self._busy)
                 widget.sort_rank = rank
                 self._widgets[row.id] = widget
                 self._list.append(widget)
