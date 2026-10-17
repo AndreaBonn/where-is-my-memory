@@ -4,20 +4,20 @@ from datetime import datetime
 from gi.repository import Adw, Gtk
 
 from wimm.model.disk import DiskReport
+from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import DiskSectionView
-from wimm.ui.disk_texts import ACTIONS_NOTE, disk_headline
+from wimm.ui.disk_texts import TIER_TITLES, disk_headline, safe_label
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
+from wimm.ui.pages.disk_header import DiskHeader, tier_heading
 from wimm.ui.pages.disk_rows import RowAction, SectionAction, SectionGroup
 
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
-SCAN_LABEL = "Controlla ora"
 WAITING_TITLE = "Nessun controllo ancora"
 WAITING_TEXT = "Il primo controllo parte poco dopo l'avvio. Puoi avviarlo con Controlla ora."
 SCANNING_TITLE = "Controllo in corso…"
 FAILED_WITH_REPORT = "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
 FAILED_WITHOUT_REPORT = "Il controllo non è riuscito. Riprova con Controlla ora."
-HEADER_SPACING = 2
 STATE_WAITING = "waiting"
 STATE_LIST = "list"
 
@@ -38,19 +38,27 @@ class DiskPage(Gtk.Box):
         self._scanning = False
         self._has_report = False
         self._groups: dict[str, SectionGroup] = {}
-        self._build_header()
+        self._headings: list[Gtk.Widget] = []
+        self._header = DiskHeader(
+            waiting=WAITING_TITLE,
+            on_scan=self._start_scan,
+            on_safe=None if on_section is None else lambda: on_section(ActionKind.DISK_FREE_SAFE),
+        )
+        self.append(self._header.widget)
         self._notice = Gtk.Label(xalign=0, wrap=True, visible=False)
         self._notice.add_css_class("wimm-warning")
+        self.append(self._notice)
+        self.append(self._build_stack())
+
+    def _build_stack(self) -> Gtk.Stack:
         self._waiting = Adw.StatusPage(
             title=WAITING_TITLE, description=WAITING_TEXT, icon_name="drive-harddisk-symbolic"
         )
-        scroller = self._build_list()
         self._stack = Gtk.Stack(vexpand=True)
         self._stack.add_named(self._waiting, STATE_WAITING)
-        self._stack.add_named(scroller, STATE_LIST)
-        self.append(self._notice)
-        self.append(self._stack)
+        self._stack.add_named(self._build_list(), STATE_LIST)
         self._stack.set_visible_child_name(STATE_WAITING)
+        return self._stack
 
     def _build_list(self) -> Gtk.ScrolledWindow:
         self._sections_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=PAGE_MARGIN)
@@ -63,35 +71,6 @@ class DiskPage(Gtk.Box):
         scroller.set_child(clamp)
         return scroller
 
-    def _build_header(self) -> None:
-        self._headline = Gtk.Label(xalign=0, wrap=True, visible=False)
-        self._headline.add_css_class("title-3")
-        self._scan_label = Gtk.Label(label=WAITING_TITLE, xalign=0, wrap=True)
-        self._scan_label.add_css_class("dim-label")
-        note = Gtk.Label(label=ACTIONS_NOTE, xalign=0, wrap=True)
-        note.add_css_class("caption")
-        note.add_css_class("dim-label")
-        texts = Gtk.Box(
-            orientation=Gtk.Orientation.VERTICAL,
-            spacing=HEADER_SPACING,
-            hexpand=True,
-            valign=Gtk.Align.CENTER,
-        )
-        for label in (self._headline, self._scan_label, note):
-            texts.append(label)
-        self._spinner = Gtk.Spinner(visible=False)
-        self._spinner.update_property([Gtk.AccessibleProperty.LABEL], ["Controllo in corso"])
-        self._button = Gtk.Button(label=SCAN_LABEL, valign=Gtk.Align.CENTER)
-        self._button.connect("clicked", lambda *_a: self._start_scan())
-        header = Gtk.Box(spacing=PAGE_MARGIN)
-        for widget in (texts, self._spinner, self._button):
-            header.append(widget)
-        # Same column as the sections, so the button sits over the list it rescans.
-        clamp = Adw.Clamp(maximum_size=MAX_CONTENT_WIDTH, child=header, margin_top=PAGE_MARGIN)
-        clamp.set_margin_start(PAGE_MARGIN)
-        clamp.set_margin_end(PAGE_MARGIN)
-        self.append(clamp)
-
     @property
     def is_scanning(self) -> bool:
         """True from the service's disk-scan-started until the report or the failure arrives."""
@@ -100,12 +79,13 @@ class DiskPage(Gtk.Box):
     @property
     def header_text(self) -> str:
         """The last-scan line."""
-        return self._scan_label.get_label()
+        return self._header.scan_text.get_label()
 
     @property
     def headline_text(self) -> str | None:
         """The "Puoi liberare fino a …" line, if shown."""
-        return self._headline.get_label() if self._headline.get_visible() else None
+        headline = self._header.headline
+        return headline.get_label() if headline.get_visible() else None
 
     @property
     def notice_text(self) -> str | None:
@@ -133,9 +113,7 @@ class DiskPage(Gtk.Box):
 
     def _set_scanning(self, *, scanning: bool) -> None:
         self._scanning = scanning
-        self._spinner.set_visible(scanning)
-        self._spinner.set_spinning(scanning)
-        self._button.set_sensitive(not scanning)
+        self._header.set_scanning(scanning=scanning)
         for group in self._groups.values():
             group.set_scanning(scanning=scanning)
         self._waiting.set_title(SCANNING_TITLE if scanning else WAITING_TITLE)
@@ -144,17 +122,19 @@ class DiskPage(Gtk.Box):
         """Show a fresh report (or None before the first scan) and end the scan state."""
         self._has_report = report is not None
         self._notice.set_visible(False)
-        self._scan_label.set_label(last_scan_text(report=report, now=now))
         sections = build_disk_sections(report=report, min_age_days=min_age_days)
-        headline = disk_headline(sections=sections)
-        self._headline.set_label(headline)
-        self._headline.set_visible(bool(headline))
+        self._header.fill(
+            headline=disk_headline(sections=sections),
+            scan_text=last_scan_text(report=report, now=now),
+            safe_label=safe_label(sections=sections),
+        )
         self._sync_groups(sections=sections)
         self._set_scanning(scanning=False)
 
     def set_busy(self, *, busy: bool) -> None:
         """Disable every action button while a confirmed action runs."""
         self._busy = busy
+        self._header.set_busy(busy=busy)
         for group in self._groups.values():
             group.set_busy(busy=busy)
 
@@ -173,12 +153,20 @@ class DiskPage(Gtk.Box):
         self._stack.set_visible_child_name(STATE_LIST if sections else STATE_WAITING)
 
     def _rebuild_boxes(self, *, sections: tuple[DiskSectionView, ...]) -> None:
-        for group in self._groups.values():
-            self._sections_box.remove(group.group)
+        for widget in [*self._headings, *(g.group for g in self._groups.values())]:
+            self._sections_box.remove(widget)
+        self._headings = []
         self._groups = {
             s.key: SectionGroup(key=s.key, on_action=self._on_action, on_section=self._on_section)
             for s in sections
         }
-        for group in self._groups.values():
+        tier = None
+        for section, group in zip(sections, self._groups.values(), strict=True):
+            # The "Docker non disponibile" notice belongs to no risk tier: no title above it.
+            if section.tier != tier and section.tier in TIER_TITLES:
+                tier = section.tier
+                heading = tier_heading(tier=tier)
+                self._headings.append(heading)
+                self._sections_box.append(heading)
             self._sections_box.append(group.group)
             group.set_busy(busy=self._busy)

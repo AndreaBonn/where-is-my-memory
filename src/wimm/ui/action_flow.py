@@ -30,6 +30,12 @@ from wimm.ui.outcome import (
 
 LOGGER = logging.getLogger(__name__)
 NOTHING_TO_STOP_TEXT = "Non c'è niente da fermare senza rischi"
+NOTHING_SAFE_ON_DISK_TEXT = "Non c'è niente da liberare senza rischi sul disco"
+# The invalid requests the UI builds itself: "everything safe" with nothing left to do.
+NOTHING_LEFT_TEXTS = {
+    ActionKind.STOP_ALL_IDLE_SAFE: NOTHING_TO_STOP_TEXT,
+    ActionKind.DISK_FREE_SAFE: NOTHING_SAFE_ON_DISK_TEXT,
+}
 REPLAN_TEXT = "La situazione è cambiata, ricalcolo…"
 DETAILS_LABEL = "Dettagli"
 REPLANNED_ERRORS = (PlanExpired, TargetChanged)
@@ -120,9 +126,7 @@ class ActionFlow:
         try:
             plan = self._source.plan(request=request)
         except InvalidRequest as error:
-            # The only invalid request the UI builds itself is stop-all with nothing left.
-            nothing = request.kind is ActionKind.STOP_ALL_IDLE_SAFE
-            self._notify(NOTHING_TO_STOP_TEXT if nothing else error.user_message)
+            self._notify(NOTHING_LEFT_TEXTS.get(request.kind, error.user_message))
             return
         except WimmError as error:
             self._notify(error.user_message)

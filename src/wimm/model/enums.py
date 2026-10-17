@@ -58,6 +58,7 @@ class ActionKind(Enum):
     CACHE_CLEAN = "cache_clean"
     TRASH_EMPTY = "trash_empty"
     DEVDIR_DELETE = "devdir_delete"
+    DISK_FREE_SAFE = "disk_free_safe"
 
 
 class MetricsSource(Enum):

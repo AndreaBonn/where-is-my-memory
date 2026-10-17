@@ -12,7 +12,9 @@ from wimm.model.disk import CacheKind, DiskReport, DockerDisk
 from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import DockerStatus, Snapshot
 from wimm.ui.disk_model import DiskRowView
+from wimm.ui.disk_texts import TIER_TITLES
 from wimm.ui.pages.disk import DiskPage
+from wimm.ui.pages.disk_header import SAFE_BUTTON_NAME
 from wimm.ui.pages.disk_rows import build_disk_row
 
 pytestmark = pytest.mark.ui
@@ -60,14 +62,16 @@ def test_report_fills_sections_and_header(display: None, now: datetime, sample: 
     assert page.headline_text is not None
     assert page.headline_text.startswith("Puoi liberare fino a ")
     assert list(page.sections) == [
+        "caches",
+        "build_cache",
         "images",
         "containers",
-        "volumes",
-        "build_cache",
-        "caches",
         "devdirs",
+        "volumes",
         "trash",
     ]
+    tiers = [t for t in labels(page) if t in TIER_TITLES.values()]
+    assert tiers == list(TIER_TITLES.values())
     assert page.row_count > 0
     assert page.sections["devdirs"].row_count == len(sample.devdirs)
 
@@ -143,7 +147,7 @@ def test_docker_unavailable_only_in_docker_section(display: None, now: datetime)
     )
     page = make_page()
     show(page, report_=report(docker=down, caches=(cache(kind=CacheKind.UV),)), now=now)
-    assert list(page.sections)[:1] == ["docker"]
+    assert list(page.sections)[:2] == ["caches", "docker"]
     assert sum("Docker non disponibile: socket assente" in t for t in labels(page)) == 1
     assert page.sections["caches"].row_count == 1
 
@@ -284,3 +288,54 @@ def test_a_window_opened_during_a_scan_shows_the_spinner(
     source.start_scan()
     window = window_factory(source)
     assert window.disk.is_scanning
+
+
+def test_safe_button_frees_everything_safe_with_one_click(
+    display: None, now: datetime, sample: DiskReport
+) -> None:
+    calls: list[ActionKind] = []
+    page = DiskPage(on_rescan=lambda: None, on_section=calls.append)
+    show(page, report_=sample, now=now)
+
+    (button,) = [b for b in buttons_in(page) if (b.get_label() or "").endswith("senza rischi")]
+    assert (button.get_label() or "").startswith("Libera ")
+    assert button.get_visible()
+    button.emit("clicked")
+
+    assert calls == [ActionKind.DISK_FREE_SAFE]
+
+
+def test_safe_button_is_hidden_with_nothing_safe(display: None, now: datetime) -> None:
+    page = DiskPage(on_rescan=lambda: None, on_section=lambda _kind: None)
+    show(page, report_=report(), now=now)
+
+    (button,) = [b for b in buttons_in(page) if b.get_name() == SAFE_BUTTON_NAME]
+    assert not button.get_visible()
+
+
+def safe_button(page: DiskPage) -> Gtk.Button:
+    (button,) = [b for b in buttons_in(page) if b.get_name() == SAFE_BUTTON_NAME]
+    return button
+
+
+def test_safe_button_is_off_while_an_action_runs(
+    display: None, now: datetime, sample: DiskReport
+) -> None:
+    page = DiskPage(on_rescan=lambda: None, on_section=lambda _kind: None)
+    show(page, report_=sample, now=now)
+    assert safe_button(page).get_sensitive()
+
+    page.set_busy(busy=True)
+    assert not safe_button(page).get_sensitive()
+
+    page.set_busy(busy=False)
+    assert safe_button(page).get_sensitive()
+
+
+def test_safe_button_is_absent_without_actions(
+    display: None, now: datetime, sample: DiskReport
+) -> None:
+    page = make_page()  # a source without the action service
+    show(page, report_=sample, now=now)
+
+    assert not safe_button(page).get_visible()

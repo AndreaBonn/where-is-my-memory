@@ -57,6 +57,7 @@ def test_request_target_shapes_and_exclusions(kind: ActionKind) -> None:
         ActionKind.IMAGES_PRUNE_DANGLING,
         ActionKind.IMAGES_PRUNE_UNUSED,
         ActionKind.CONTAINERS_PRUNE_STOPPED,
+        ActionKind.DISK_FREE_SAFE,
     }:
         assert replace(request, excluded_ids=frozenset({"x"})).excluded_ids == {"x"}
     else:
@@ -243,6 +244,7 @@ def test_action_catalog_is_exact() -> None:
         "cache_clean",
         "trash_empty",
         "devdir_delete",
+        "disk_free_safe",
     }
 
 
@@ -266,6 +268,7 @@ def test_action_target_shape_map_is_complete() -> None:
         ActionKind.CACHE_CLEAN: TargetShape.TARGET,
         ActionKind.TRASH_EMPTY: TargetShape.NONE,
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
+        ActionKind.DISK_FREE_SAFE: TargetShape.NONE,
     }
 
 

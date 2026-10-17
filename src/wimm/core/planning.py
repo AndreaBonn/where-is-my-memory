@@ -14,7 +14,8 @@ from wimm.model.snapshot import ContainerMember, Group, Member, ProcessMember, S
 
 from .assemble_members import STOPPABLE_STATES
 from .constants import PLAN_ID_BYTES, PLAN_TTL_S
-from .planning_disk import DISK_PLANNERS
+from .planning_disk import DISK_PLANNERS, DiskPlanner
+from .planning_disk_safe import plan_disk_free_safe
 from .planning_drafts import (
     APP_CLOSE_KINDS,
     Draft,
@@ -150,6 +151,12 @@ _PLANNERS: dict[ActionKind, _Planner] = {
 }
 
 
+_DISK_PLANNERS: dict[ActionKind, DiskPlanner] = {
+    **DISK_PLANNERS,
+    ActionKind.DISK_FREE_SAFE: plan_disk_free_safe,
+}
+
+
 def _confirm_phrase(*, drafts: list[Draft]) -> str | None:
     danger = [draft for draft in drafts if draft.risk is Risk.DANGER]
     if not danger:
@@ -208,7 +215,7 @@ def plan_action(*, request: ActionRequest, snapshot: Snapshot, context: Planning
         If the target is unknown, the action does not apply to it, the kind is not
         plannable, no step is left, or a danger target has a blank name.
     """
-    disk_planner = DISK_PLANNERS.get(request.kind)
+    disk_planner = _DISK_PLANNERS.get(request.kind)
     if disk_planner is not None:
         drafts = disk_planner(request=request, report=context.disk_report)
         return _build_plan(request=request, drafts=drafts, context=context)

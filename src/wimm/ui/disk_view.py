@@ -8,7 +8,7 @@ from wimm.core.risk import RiskTarget
 from wimm.model.disk import CacheEntry, CacheKind, DevDir, DiskReport
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import ActionSpec, DiskRowView, DiskSectionView, make_row, more_text
-from wimm.ui.disk_texts import SECTION_DESCRIPTIONS
+from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, SECTION_TIERS
 from wimm.ui.disk_view_docker import docker_sections
 
 NO_SCAN_TEXT = "Nessun controllo ancora"
@@ -99,4 +99,10 @@ def build_disk_sections(
     sections = docker_sections(report=report) + _local_sections(
         report=report, min_age_days=min_age_days
     )
-    return tuple(replace(s, description=SECTION_DESCRIPTIONS[s.key]) for s in sections)
+    # SECTION_TIERS lists the keys tier by tier: its order is the page order.
+    order = list(SECTION_TIERS)
+    described = (
+        replace(s, description=SECTION_DESCRIPTIONS[s.key], tier=SECTION_TIERS[s.key])
+        for s in sections
+    )
+    return tuple(sorted(described, key=lambda s: order.index(s.key)))

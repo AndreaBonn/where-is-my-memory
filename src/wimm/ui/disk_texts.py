@@ -24,6 +24,41 @@ SECTION_DESCRIPTIONS = {
 }
 
 
+# D3: sections grouped by what freeing them costs, cheapest first.
+TIER_TITLES = {
+    "safe": "Si libera senza pensarci",
+    "review": "Da guardare prima",
+    "data": "Attenzione: cancella dati",
+}
+TIER_DESCRIPTIONS = {
+    "safe": "Si ricrea da solo quando serve.",
+    "review": "Si può riscaricare o ricreare, ma con un po' di lavoro.",
+    "data": "Dentro possono esserci database o file che non si recuperano.",
+}
+SECTION_TIERS = {
+    "caches": "safe",
+    "build_cache": "safe",
+    "images": "review",
+    "containers": "review",
+    "docker": "notice",
+    "devdirs": "review",
+    "volumes": "data",
+    "trash": "data",
+}
+SAFE_CAPTION = "Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano."
+
+
+def safe_label(*, sections: Iterable["DiskSectionView"]) -> str:
+    """D2: "Libera X senza rischi" over the safe rows, empty when there is none."""
+    total = sum(
+        row.size_bytes
+        for section in sections
+        for row in section.rows
+        if row.action_kind and row.risk is Risk.SAFE
+    )
+    return f"Libera {format_size(size=total)} senza rischi" if total > 0 else ""
+
+
 def disk_headline(*, sections: Iterable["DiskSectionView"]) -> str:
     """The D1 headline: what the listed rows free without deleting user data.
 

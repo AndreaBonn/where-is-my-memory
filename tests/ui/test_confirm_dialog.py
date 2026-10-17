@@ -266,3 +266,26 @@ def test_names_with_markup_characters_are_shown_literally(display: None) -> None
     assert "Scrivi R&D <lab> per confermare" in [
         w.get_text() for w in descendants(entry) if isinstance(w, Gtk.Label)
     ]
+
+
+def test_free_safe_dialog_lets_each_item_be_left_out(display: None) -> None:
+    from tests.core.disk_helpers import MB, cache
+    from wimm.model.disk import CacheKind
+
+    disk = report(
+        docker=docker_disk(
+            images=(image(char="a", tags=(), dangling=True, size=2 * MB),),
+            build_cache_size=5 * MB,
+            build_cache_reclaimable=4 * MB,
+        ),
+        caches=(cache(kind=CacheKind.UV, size=3 * MB),),
+    )
+    request = ActionRequest(kind=ActionKind.DISK_FREE_SAFE)
+    dialog, service, _ = open_dialog(snap=snapshot(), request=request, subject=None, disk=disk)
+
+    rows = switches(dialog)
+    assert len(rows) == 3
+    rows["/home/u/.cache/uv"].set_active(False)
+
+    assert service.planned[-1].excluded_ids == frozenset({"/home/u/.cache/uv"})
+    assert f"libera circa {format_size(size=6 * MB)} di disco" in dialog.get_body()

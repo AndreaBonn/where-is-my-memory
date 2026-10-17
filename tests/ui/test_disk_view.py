@@ -15,7 +15,7 @@ from wimm.model.disk import CacheKind, DockerDisk
 from wimm.model.enums import ActionKind
 from wimm.model.snapshot import DockerStatus
 from wimm.ui.disk_model import DiskSectionView, more_text
-from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, disk_headline
+from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, TIER_TITLES, disk_headline, safe_label
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
 
 MIN_AGE = 90
@@ -256,3 +256,103 @@ def test_rows_carry_action_kind_and_target_id() -> None:
     assert by_key["volumes"].rows[0].target_id == "v1"
     assert by_key["volumes"].rows[0].action_kind is ActionKind.VOLUME_REMOVE
     assert by_key["images"].rows[0].target_id == "sha256:" + "a" * 64
+
+
+def test_sections_are_grouped_by_what_freeing_them_costs() -> None:
+    docker = docker_disk(
+        images=(image(char="a", tags=(), dangling=True),),
+        volumes=(volume(name="db"),),
+        containers=(stopped(cid="b"),),
+        build_cache_size=10 * MB,
+        build_cache_reclaimable=4 * MB,
+    )
+    caches = (cache(kind=CacheKind.UV), cache(kind=CacheKind.TRASH, ino=12))
+    disk = report(docker=docker, caches=caches, devdirs=(devdir(path="/p/node_modules"),))
+
+    sections = build_disk_sections(report=disk, min_age_days=MIN_AGE)
+
+    assert [(s.tier, s.key) for s in sections] == [
+        ("safe", "caches"),
+        ("safe", "build_cache"),
+        ("review", "images"),
+        ("review", "containers"),
+        ("review", "devdirs"),
+        ("data", "volumes"),
+        ("data", "trash"),
+    ]
+    assert TIER_TITLES["data"] == "Attenzione: cancella dati"
+
+
+def test_mass_actions_say_how_much_they_free() -> None:
+    docker = docker_disk(
+        images=(
+            image(char="a", tags=(), dangling=True, size=2 * MB),
+            image(char="b", tags=("old:1",), size=5 * MB),
+            image(char="c", tags=("app:1",), in_use=True, size=9 * MB),
+        ),
+        containers=(stopped(cid="d", size=3000),),
+    )
+    by_key = sections_by_key(
+        sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
+    )
+
+    assert [a.label for a in by_key["images"].actions] == [
+        "Elimina immagini senza nome (2 MB)",
+        "Elimina immagini inutilizzate (7 MB)",
+    ]
+    assert [a.label for a in by_key["containers"].actions] == ["Elimina container fermi (3 kB)"]
+
+
+def test_safe_label_sums_only_the_safe_rows() -> None:
+    docker = docker_disk(
+        images=(image(char="a", tags=(), dangling=True, size=2 * MB),),
+        volumes=(volume(name="db", size=50 * MB),),
+        build_cache_size=10 * MB,
+        build_cache_reclaimable=4 * MB,
+    )
+    caches = (
+        cache(kind=CacheKind.UV, size=3 * MB),
+        cache(kind=CacheKind.TRASH, size=9 * MB, ino=12),
+    )
+    sections = build_disk_sections(
+        report=report(docker=docker, caches=caches), min_age_days=MIN_AGE
+    )
+
+    assert safe_label(sections=sections) == "Libera 9 MB senza rischi"
+    assert safe_label(sections=build_disk_sections(report=report(), min_age_days=MIN_AGE)) == ""
+
+
+def test_safe_label_header_and_plan_promise_the_same_amount() -> None:
+    from tests.core.planning_helpers import NOW, OWNER_UID, snapshot
+    from wimm.core.disk_rules import safe_reclaimable_bytes
+    from wimm.core.planning import PlanningContext, plan_action
+    from wimm.model.actions import ActionRequest
+    from wimm.model.enums import PlanId
+    from wimm.ui.format import format_size
+
+    docker = docker_disk(
+        images=(
+            image(char="a", tags=(), dangling=True, size=2 * MB),
+            image(char="b", tags=("loc:1",), local_build=True, size=7 * MB),
+        ),
+        volumes=(volume(name="db", size=50 * MB),),
+        containers=(stopped(cid="c"),),
+        build_cache_size=10 * MB,
+        build_cache_reclaimable=4 * MB,
+    )
+    caches = (
+        cache(kind=CacheKind.UV, size=3 * MB),
+        cache(kind=CacheKind.TRASH, size=9 * MB, ino=12),
+    )
+    disk = report(docker=docker, caches=caches, devdirs=(devdir(path="/p/node_modules"),))
+    context = PlanningContext(
+        owner_uid=OWNER_UID, now=lambda: NOW, new_plan_id=lambda: PlanId("p"), disk_report=disk
+    )
+    plan = plan_action(
+        request=ActionRequest(kind=ActionKind.DISK_FREE_SAFE), snapshot=snapshot(), context=context
+    )
+    sections = build_disk_sections(report=disk, min_age_days=MIN_AGE)
+
+    total = safe_reclaimable_bytes(report=disk)
+    assert plan.estimated_reclaim_disk == total
+    assert safe_label(sections=sections) == f"Libera {format_size(size=total)} senza rischi"

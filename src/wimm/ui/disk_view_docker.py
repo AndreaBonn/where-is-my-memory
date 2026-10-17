@@ -86,8 +86,11 @@ def _build_cache_row(*, docker: DockerDisk) -> DiskRowView:
     return replace(row, size_bytes=reclaimable)
 
 
-def _prune_action(*, kind: ActionKind) -> SectionActionView:
-    return SectionActionView(kind=kind, label=button_label(kind=kind))
+def _prune_action(*, kind: ActionKind, size: int) -> SectionActionView:
+    """D6: the label says how much the mass action frees."""
+    return SectionActionView(
+        kind=kind, label=f"{button_label(kind=kind)} ({format_size(size=size)})"
+    )
 
 
 def _image_actions(*, images: tuple[DockerImage, ...]) -> tuple[SectionActionView, ...]:
@@ -96,16 +99,19 @@ def _image_actions(*, images: tuple[DockerImage, ...]) -> tuple[SectionActionVie
     dangling = [i for i in unused if i.dangling]
     actions = []
     if dangling:
-        actions.append(_prune_action(kind=ActionKind.IMAGES_PRUNE_DANGLING))
+        size = sum(i.unique_size for i in dangling)
+        actions.append(_prune_action(kind=ActionKind.IMAGES_PRUNE_DANGLING, size=size))
     if len(unused) > len(dangling):
-        actions.append(_prune_action(kind=ActionKind.IMAGES_PRUNE_UNUSED))
+        size = sum(i.unique_size for i in unused)
+        actions.append(_prune_action(kind=ActionKind.IMAGES_PRUNE_UNUSED, size=size))
     return tuple(actions)
 
 
 def _container_actions(*, docker: DockerDisk) -> tuple[SectionActionView, ...]:
     if not docker.stopped_containers:
         return ()
-    return (_prune_action(kind=ActionKind.CONTAINERS_PRUNE_STOPPED),)
+    size = sum(c.size for c in docker.stopped_containers)
+    return (_prune_action(kind=ActionKind.CONTAINERS_PRUNE_STOPPED, size=size),)
 
 
 def docker_sections(*, report: DiskReport) -> tuple[DiskSectionView, ...]:

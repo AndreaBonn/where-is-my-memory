@@ -26,6 +26,7 @@ ACTION_TARGET_SHAPES: Mapping[ActionKind, TargetShape] = MappingProxyType(
         ActionKind.CACHE_CLEAN: TargetShape.TARGET,
         ActionKind.TRASH_EMPTY: TargetShape.NONE,
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
+        ActionKind.DISK_FREE_SAFE: TargetShape.NONE,
     }
 )
 # The prunes expand to one step per image or container id (Q-13), so the user can drop single ones.
@@ -36,6 +37,7 @@ EXCLUDABLE_ACTIONS = frozenset(
         ActionKind.IMAGES_PRUNE_DANGLING,
         ActionKind.IMAGES_PRUNE_UNUSED,
         ActionKind.CONTAINERS_PRUNE_STOPPED,
+        ActionKind.DISK_FREE_SAFE,
     }
 )
 
@@ -135,6 +137,7 @@ ACTION_FINGERPRINT_TYPES: Mapping[ActionKind, tuple[type, ...]] = MappingProxyTy
         ActionKind.IMAGES_PRUNE_UNUSED: (type(None),),
         ActionKind.BUILDER_PRUNE: (type(None),),
         ActionKind.CONTAINERS_PRUNE_STOPPED: (type(None),),
+        ActionKind.DISK_FREE_SAFE: (),
     }
 )
 

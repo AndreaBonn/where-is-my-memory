@@ -19,7 +19,7 @@ from tests.ui.conftest import WindowFactory, descendants, main_context_iterate, 
 from tests.ui.fakes import FakeDiskActionService, FakeDiskSource
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DiskReport
-from wimm.model.enums import ActionKind, TargetId
+from wimm.model.enums import ActionKind, Risk, TargetId
 from wimm.model.errors import InvalidRequest
 from wimm.model.snapshot import Snapshot
 from wimm.service.control_protocols import StepOutcome, StepStatus
@@ -327,3 +327,31 @@ def test_buttons_are_disabled_while_an_action_runs_and_back_after(
     service.emit("action-finished", service.last_plan.plan_id, (done,))
 
     assert button.get_sensitive()
+
+
+def test_free_safe_plans_only_the_safe_items_and_asks_once(window_factory: WindowFactory) -> None:
+    window, service = setup(window_factory)
+
+    click_label(window, "Libera ")
+
+    assert service.planned == [ActionRequest(kind=ActionKind.DISK_FREE_SAFE)]
+    assert service.last_plan is not None
+    assert {s.risk for s in service.last_plan.steps} == {Risk.SAFE}
+    dialog = dialog_of(window)
+    assert dialog.get_heading() == "Liberare lo spazio che si ricrea da solo?"
+    dialog.emit("response", CONFIRM_RESPONSE)
+    assert service.executed == [(service.last_plan.plan_id, None)]
+
+
+def test_free_safe_with_nothing_left_says_so(window_factory: WindowFactory) -> None:
+    from wimm.ui.action_flow import NOTHING_SAFE_ON_DISK_TEXT
+
+    window, service = setup(window_factory)
+    service.set_report(report())  # everything was cleaned since the page was built
+
+    click_label(window, "Libera ")
+    main_context_iterate()
+
+    assert window.action_flow is not None
+    assert window.action_flow.dialog is None
+    assert NOTHING_SAFE_ON_DISK_TEXT in toast_texts(window)

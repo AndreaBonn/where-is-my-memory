@@ -4,10 +4,12 @@ import logging
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
+from wimm.core.planning_disk import BUILD_CACHE_ID
 from wimm.model.actions import (
     EXCLUDABLE_ACTIONS,
     ActionRequest,
     ContainerFingerprint,
+    DirFingerprint,
     ImageFingerprint,
     Plan,
     PlanStep,
@@ -31,13 +33,15 @@ class StepEntry:
 
 
 def step_id_of(*, step: PlanStep) -> str | None:
-    """The id `excluded_ids` uses for a step: the pid, container id or image id."""
+    """The id `excluded_ids` uses for a step: pid, container or image id, folder, build cache."""
     fingerprint = step.fingerprint
     if isinstance(fingerprint, ProcessFingerprint):
         return str(fingerprint.pid)
     if isinstance(fingerprint, ContainerFingerprint | ImageFingerprint):
         return fingerprint.id
-    return None
+    if isinstance(fingerprint, DirFingerprint):
+        return fingerprint.realpath
+    return BUILD_CACHE_ID if step.kind is ActionKind.BUILDER_PRUNE else None
 
 
 def _group_names(*, snapshot: Snapshot | None) -> dict[str, str]:

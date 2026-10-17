@@ -21,7 +21,14 @@ from wimm.model.errors import InvalidRequest
 from .planning_drafts import Draft, assess_draft, volume_draft
 from .risk import RiskTarget, TargetKind
 
-__all__ = ["DISK_PLANNERS", "DiskPlanner"]
+__all__ = [
+    "BUILD_CACHE_ID",
+    "DISK_PLANNERS",
+    "DiskPlanner",
+    "plan_builder_prune",
+    "plan_cache_clean",
+    "plan_image_remove",
+]
 
 TRASH_PHRASE = "Cestino"
 BUILD_CACHE_ID = "build_cache"
@@ -59,7 +66,7 @@ def _image_draft(*, image: DockerImage) -> Draft:
     )
 
 
-def _plan_image_remove(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
+def plan_image_remove(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
     for image in _docker(report=report).images:
         if image.id == request.target_id:
             if image.in_use:
@@ -126,7 +133,7 @@ def _plan_prune_containers(*, request: ActionRequest, report: DiskReport | None)
     )
 
 
-def _plan_builder_prune(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
+def plan_builder_prune(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
     size = _docker(report=report).build_cache_reclaimable
     if size == 0:
         raise InvalidRequest("Build cache has nothing to reclaim")
@@ -210,7 +217,7 @@ def _caches(*, report: DiskReport | None) -> tuple[CacheEntry, ...]:
     return report.caches
 
 
-def _plan_cache_clean(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
+def plan_cache_clean(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
     entry = next(
         (
             c
@@ -245,13 +252,13 @@ def _plan_devdir_delete(*, request: ActionRequest, report: DiskReport | None) ->
 
 
 DISK_PLANNERS: dict[ActionKind, DiskPlanner] = {
-    ActionKind.IMAGE_REMOVE: _plan_image_remove,
+    ActionKind.IMAGE_REMOVE: plan_image_remove,
     ActionKind.IMAGES_PRUNE_DANGLING: _plan_prune_dangling,
     ActionKind.IMAGES_PRUNE_UNUSED: _plan_prune_unused,
     ActionKind.CONTAINERS_PRUNE_STOPPED: _plan_prune_containers,
-    ActionKind.BUILDER_PRUNE: _plan_builder_prune,
+    ActionKind.BUILDER_PRUNE: plan_builder_prune,
     ActionKind.VOLUME_REMOVE: _plan_volume_remove,
-    ActionKind.CACHE_CLEAN: _plan_cache_clean,
+    ActionKind.CACHE_CLEAN: plan_cache_clean,
     ActionKind.TRASH_EMPTY: _plan_trash_empty,
     ActionKind.DEVDIR_DELETE: _plan_devdir_delete,
 }

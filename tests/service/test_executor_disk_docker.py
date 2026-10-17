@@ -483,3 +483,28 @@ def test_volume_creation_time_in_another_format_of_the_same_instant_is_accepted(
 
     assert docker.calls != []
     assert moved.calls == []
+
+
+def test_a_free_safe_plan_runs_each_of_its_steps() -> None:
+    # D2 composes the single disk steps; the executor runs them as it runs them alone.
+    docker = FakeDocker(images={IMAGE_ID: LiveImage(id=IMAGE_ID, in_use=False)}, cache_freed=GB)
+    plan = make_plan(
+        steps=[builder_step(order=1), image_step(order=2, image_id=IMAGE_ID)],
+        request_kind=ActionKind.DISK_FREE_SAFE,
+    )
+
+    outcomes = executor_for(docker=docker).execute(plan=plan)
+
+    assert [o.status for o in outcomes] == [StepStatus.DONE, StepStatus.DONE]
+    assert docker.calls == [("prune_build_cache", ""), ("remove_image", IMAGE_ID)]
+
+
+def test_a_free_safe_plan_is_logged_step_by_step(caplog: pytest.LogCaptureFixture) -> None:
+    docker = FakeDocker(cache_freed=GB)
+    plan = make_plan(steps=[builder_step(order=1)], request_kind=ActionKind.DISK_FREE_SAFE)
+
+    with caplog.at_level(logging.INFO, logger="wimm.service.executor_disk_docker"):
+        executor_for(docker=docker).execute(plan=plan)
+
+    lines = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
+    assert lines == [f"disk action=builder_prune target=build cache outcome=done freed_bytes={GB}"]

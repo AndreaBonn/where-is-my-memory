@@ -25,6 +25,7 @@ TITLES = MappingProxyType(
         ActionKind.CACHE_CLEAN: "Pulire la cache {subject}?",
         ActionKind.TRASH_EMPTY: "Svuotare il cestino?",
         ActionKind.DEVDIR_DELETE: "Eliminare la cartella {subject}?",
+        ActionKind.DISK_FREE_SAFE: "Liberare lo spazio che si ricrea da solo?",
     }
 )
 CANCEL_LABEL = "Annulla"

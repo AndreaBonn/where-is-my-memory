@@ -41,6 +41,7 @@ class DiskSectionView:
     message: str | None = None
     actions: tuple[SectionActionView, ...] = ()
     description: str = ""
+    tier: str = ""
 
 
 def more_text(*, count: int) -> str | None:
