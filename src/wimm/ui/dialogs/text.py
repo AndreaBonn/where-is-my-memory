@@ -17,7 +17,7 @@ TITLES = MappingProxyType(
         ActionKind.COMPOSE_DOWN_VOLUMES: "Spegnere il progetto {subject} e rimuovere i volumi?",
         ActionKind.STOP_ALL_IDLE_SAFE: "Fermare tutti gli inattivi sicuri?",
         ActionKind.IMAGE_REMOVE: "Rimuovere l'immagine {subject}?",
-        ActionKind.IMAGES_PRUNE_DANGLING: "Eliminare le immagini orfane?",
+        ActionKind.IMAGES_PRUNE_DANGLING: "Eliminare le immagini senza nome?",
         ActionKind.IMAGES_PRUNE_UNUSED: "Eliminare le immagini inutilizzate?",
         ActionKind.BUILDER_PRUNE: "Svuotare la cache di build?",
         ActionKind.CONTAINERS_PRUNE_STOPPED: "Eliminare i container fermi?",

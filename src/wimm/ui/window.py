@@ -77,7 +77,8 @@ class MainWindow(Adw.Window):
             controls=group_controls(source=self._source),
         )
         self.system = SystemPage()
-        self._disk = DiskBinding(source=self._source, clock=self._clock)
+        start = self._start_action if can_act(source=self._source) else None
+        self._disk = DiskBinding(source=self._source, clock=self._clock, start=start)
         self.disk = self._disk.page
 
     def _init_actions(self, *, application: Gio.Application) -> None:
@@ -100,8 +101,12 @@ class MainWindow(Adw.Window):
 
     def _init_actions_flow(self) -> None:
         self.action_flow = build_action_flow(
-            parent=self, source=self._source, toasts=self.toasts, overview=self.overview
+            parent=self, source=self._source, toasts=self.toasts, on_busy=self._set_busy
         )
+
+    def _set_busy(self, busy: bool) -> None:
+        self.overview.set_busy(busy=busy)
+        self.disk.set_busy(busy=busy)
 
     def _start_action(self, request: ActionRequest, subject: str | None) -> None:
         if self.action_flow is not None:

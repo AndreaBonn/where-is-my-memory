@@ -3,7 +3,7 @@
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import ClassVar
+from typing import Any, ClassVar
 
 import gi
 
@@ -187,3 +187,47 @@ class FakeDiskSource(FakeSource):
     def fail_scan(self) -> None:
         self._scanning = False
         self.emit("disk-scan-failed")
+
+
+class FakeDiskActionService(FakeActionService):
+    """An action service that also has the disk scan API, so the Disco page can act.
+
+    ``disk_report`` is a method here (like AppService); ``set_report`` swaps the report the
+    planner reads without emitting an update.
+    """
+
+    disk_report: Any
+
+    __gsignals__: ClassVar = {
+        "disk-report-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
+        "disk-scan-failed": (GObject.SignalFlags.RUN_LAST, None, ()),
+        "disk-scan-started": (GObject.SignalFlags.RUN_LAST, None, ()),
+    }
+
+    def __init__(self, *, snapshot: Snapshot, report: DiskReport | None) -> None:
+        self._report: DiskReport | None = None
+        super().__init__(snapshot=snapshot)
+        self._report = report
+        self.disk_report = lambda: self._report
+
+    def set_report(self, report: DiskReport | None) -> None:
+        self._report = report
+
+    def disk_scanning(self) -> bool:
+        return False
+
+    def rescan_disk(self) -> None:
+        self.rescans += 1
+
+    rescans = 0
+
+    def plan(self, *, request: ActionRequest) -> Plan:
+        self.planned.append(request)
+        if self.plan_error is not None:
+            raise self.plan_error
+        self.last_plan = plan_action(
+            request=request,
+            snapshot=self._snapshot,
+            context=PlanningContext(owner_uid=1000, disk_report=self._report),
+        )
+        return self.last_plan

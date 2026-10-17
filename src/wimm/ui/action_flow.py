@@ -19,7 +19,14 @@ from wimm.service.errors import PlanExpired, TargetChanged
 from wimm.ui.dialogs.confirm import ConfirmDialog
 from wimm.ui.dialogs.outcome import OutcomeDialog
 from wimm.ui.dialogs.session import ConfirmSession, entries_for
-from wimm.ui.outcome import StepReport, freed_text, step_reports, summary_text
+from wimm.ui.outcome import (
+    OK_STATUSES,
+    StepReport,
+    freed_text,
+    outcomes_freed_text,
+    step_reports,
+    summary_text,
+)
 
 LOGGER = logging.getLogger(__name__)
 NOTHING_TO_STOP_TEXT = "Non c'è nessun gruppo inattivo e sicuro da fermare"
@@ -164,7 +171,10 @@ class ActionFlow:
         plan = None if pending is None else pending.plan
         steps = step_reports(plan=plan, outcomes=outcomes)
         self._report = _Report(
-            plan_id=PlanId(plan_id), summary=summary_text(outcomes=outcomes), steps=steps
+            plan_id=PlanId(plan_id),
+            summary=summary_text(outcomes=outcomes),
+            steps=steps,
+            freed=outcomes_freed_text(outcomes=outcomes),
         )
         self._announce()
 
@@ -173,7 +183,11 @@ class ActionFlow:
         if report is None:
             return
         text = report.summary if report.freed is None else f"{report.summary}. {report.freed}"
-        self._notify(text, button=DETAILS_LABEL, on_button=self._show_details)
+        # SPECIFICHE 10.3: the details are offered only when some target did not succeed.
+        if all(step.status in OK_STATUSES for step in report.steps):
+            self._notify(text)
+        else:
+            self._notify(text, button=DETAILS_LABEL, on_button=self._show_details)
 
     def _on_reclaim(self, _source: object, plan_id: str, delta: ReclaimDelta) -> None:
         report = self._report

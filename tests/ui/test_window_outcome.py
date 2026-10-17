@@ -110,19 +110,16 @@ def test_finished_with_a_failure_offers_details_with_each_step_in_italian(
     assert outcome_rows(open_details(window)) == [(label, "Non riuscito")]
 
 
-def test_finished_all_done_still_offers_details_with_the_done_status(
-    window_factory: WindowFactory,
-) -> None:
+def test_finished_all_done_offers_no_details(window_factory: WindowFactory) -> None:
+    # SPECIFICHE 10.3: "Dettagli" only when some target failed.
     window, service = ready(window_factory)
     plan = confirmed(window, service)
-    label = plan.steps[0].target_label
-    assert button_labelled(window, DETAILS) is None
 
     finish(service, plan, StepStatus.DONE)
     main_context_iterate()
 
     shown(window, "Fatto")
-    assert outcome_rows(open_details(window)) == [(label, "Chiuso")]
+    assert button_labelled(window, DETAILS) is None
 
 
 def test_reclaim_measured_after_finished_shows_in_the_details(
@@ -130,7 +127,7 @@ def test_reclaim_measured_after_finished_shows_in_the_details(
 ) -> None:
     window, service = ready(window_factory)
     plan = confirmed(window, service)
-    finish(service, plan, StepStatus.DONE)
+    finish(service, plan, StepStatus.FAILED)
     main_context_iterate()
     before = open_details(window)
     assert "Liberati 1,1 GB di RAM" not in window_labels_of(before)
@@ -157,7 +154,7 @@ def test_reclaim_of_another_plan_or_nothing_freed_is_not_reported(
 ) -> None:
     window, service = ready(window_factory)
     plan = confirmed(window, service)
-    finish(service, plan, StepStatus.DONE)
+    finish(service, plan, StepStatus.FAILED)
     service.emit("reclaim-measured", "other-plan", ReclaimDelta(freed_ram=GB, freed_disk=0))
     service.emit("reclaim-measured", plan.plan_id, ReclaimDelta(freed_ram=-5, freed_disk=0))
     main_context_iterate()
@@ -253,12 +250,12 @@ def test_a_process_that_ignores_sigterm_offers_force_kill_as_a_new_plan(
     assert len(service.executed) == executed_before
 
 
-def test_force_kill_is_not_offered_when_every_step_is_done(
+def test_force_kill_is_not_offered_when_no_step_is_unresponsive(
     window_factory: WindowFactory,
 ) -> None:
     window, service = ready(window_factory)
     plan = confirmed(window, service)
-    finish(service, plan, StepStatus.DONE)
+    finish(service, plan, StepStatus.FAILED)
     main_context_iterate()
 
     details = open_details(window)

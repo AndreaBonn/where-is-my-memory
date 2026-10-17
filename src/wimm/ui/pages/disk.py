@@ -5,7 +5,7 @@ from gi.repository import Adw, Gtk
 
 from wimm.model.disk import DiskReport
 from wimm.ui.disk_view import DiskSectionView, build_disk_sections, last_scan_text
-from wimm.ui.pages.disk_rows import RowAction, SectionGroup
+from wimm.ui.pages.disk_rows import RowAction, SectionAction, SectionGroup
 
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
@@ -23,10 +23,15 @@ class DiskPage(Gtk.Box):
     """Disco: scan header plus one group per section; the last report stays while scanning."""
 
     def __init__(
-        self, *, on_rescan: Callable[[], None], on_action: RowAction | None = None
+        self,
+        *,
+        on_rescan: Callable[[], None],
+        on_action: RowAction | None = None,
+        on_section: SectionAction | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
-        self._on_rescan, self._on_action = on_rescan, on_action
+        self._on_rescan, self._on_action, self._on_section = on_rescan, on_action, on_section
+        self._busy = False
         self._scanning = False
         self._has_report = False
         self._groups: dict[str, SectionGroup] = {}
@@ -36,6 +41,15 @@ class DiskPage(Gtk.Box):
         self._waiting = Adw.StatusPage(
             title=WAITING_TITLE, description=WAITING_TEXT, icon_name="drive-harddisk-symbolic"
         )
+        scroller = self._build_list()
+        self._stack = Gtk.Stack(vexpand=True)
+        self._stack.add_named(self._waiting, STATE_WAITING)
+        self._stack.add_named(scroller, STATE_LIST)
+        self.append(self._notice)
+        self.append(self._stack)
+        self._stack.set_visible_child_name(STATE_WAITING)
+
+    def _build_list(self) -> Gtk.ScrolledWindow:
         self._sections_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=PAGE_MARGIN)
         scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER, vexpand=True)
         clamp = Adw.Clamp(maximum_size=MAX_CONTENT_WIDTH, child=self._sections_box)
@@ -44,12 +58,7 @@ class DiskPage(Gtk.Box):
         clamp.set_margin_start(PAGE_MARGIN)
         clamp.set_margin_end(PAGE_MARGIN)
         scroller.set_child(clamp)
-        self._stack = Gtk.Stack(vexpand=True)
-        self._stack.add_named(self._waiting, STATE_WAITING)
-        self._stack.add_named(scroller, STATE_LIST)
-        self.append(self._notice)
-        self.append(self._stack)
-        self._stack.set_visible_child_name(STATE_WAITING)
+        return scroller
 
     def _build_header(self) -> None:
         self._scan_label = Gtk.Label(
@@ -120,6 +129,12 @@ class DiskPage(Gtk.Box):
         self._sync_groups(sections=build_disk_sections(report=report, min_age_days=min_age_days))
         self._set_scanning(scanning=False)
 
+    def set_busy(self, *, busy: bool) -> None:
+        """Disable every action button while a confirmed action runs."""
+        self._busy = busy
+        for group in self._groups.values():
+            group.set_busy(busy=busy)
+
     def show_scan_failed(self) -> None:
         """Keep the last report and say, without blocking, that the scan failed."""
         self._set_scanning(scanning=False)
@@ -137,6 +152,10 @@ class DiskPage(Gtk.Box):
     def _rebuild_boxes(self, *, sections: tuple[DiskSectionView, ...]) -> None:
         for group in self._groups.values():
             self._sections_box.remove(group.group)
-        self._groups = {s.key: SectionGroup(key=s.key, on_action=self._on_action) for s in sections}
+        self._groups = {
+            s.key: SectionGroup(key=s.key, on_action=self._on_action, on_section=self._on_section)
+            for s in sections
+        }
         for group in self._groups.values():
             self._sections_box.append(group.group)
+            group.set_busy(busy=self._busy)

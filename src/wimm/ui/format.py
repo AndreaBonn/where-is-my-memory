@@ -48,7 +48,7 @@ ACTION_LABELS = MappingProxyType(
         ActionKind.COMPOSE_DOWN_VOLUMES: "Spegni e rimuovi i volumi",
         ActionKind.STOP_ALL_IDLE_SAFE: "Ferma tutti gli inattivi sicuri",
         ActionKind.IMAGE_REMOVE: "Rimuovi immagine",
-        ActionKind.IMAGES_PRUNE_DANGLING: "Elimina immagini orfane",
+        ActionKind.IMAGES_PRUNE_DANGLING: "Elimina immagini senza nome",
         ActionKind.IMAGES_PRUNE_UNUSED: "Elimina immagini inutilizzate",
         ActionKind.BUILDER_PRUNE: "Svuota cache di build",
         ActionKind.CONTAINERS_PRUNE_STOPPED: "Elimina container fermi",

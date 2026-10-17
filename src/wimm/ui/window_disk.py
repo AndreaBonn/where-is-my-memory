@@ -5,6 +5,9 @@ from typing import Any, cast
 import gi
 
 from wimm.core.constants import DEVDIRS_MIN_AGE_DAYS
+from wimm.model.actions import ActionRequest
+from wimm.model.enums import ActionKind, TargetId
+from wimm.ui.disk_view import DiskRowView
 from wimm.ui.pages.disk import DiskPage
 from wimm.ui.window_state import SnapshotSource
 
@@ -19,10 +22,21 @@ STARTED_SIGNAL = "disk-scan-started"
 class DiskBinding:
     """Connects the Disco page to a source that has the disk scan; inert on one that has not."""
 
-    def __init__(self, *, source: SnapshotSource, clock: Callable[[], datetime]) -> None:
-        self._source, self._clock = source, clock
+    def __init__(
+        self,
+        *,
+        source: SnapshotSource,
+        clock: Callable[[], datetime],
+        start: Callable[[ActionRequest, str | None], None] | None = None,
+    ) -> None:
+        self._source, self._clock, self._start = source, clock, start
         self._handlers: list[int] = []
-        self.page = DiskPage(on_rescan=self._rescan)
+        acting = start is not None
+        self.page = DiskPage(
+            on_rescan=self._rescan,
+            on_action=self._row_action if acting else None,
+            on_section=self._section_action if acting else None,
+        )
         if self._has_disk_scan():
             self._handlers = [
                 source.connect(REPORT_SIGNAL, self._on_report),
@@ -42,6 +56,17 @@ class DiskBinding:
         rescan = getattr(self._source, "rescan_disk", None)
         if callable(rescan):
             rescan()
+
+    def _row_action(self, row: DiskRowView) -> None:
+        """Plan the row's action; the request is the one the planner reads from the report."""
+        if self._start is None or row.action_kind is None:
+            return
+        target = None if row.target_id is None else TargetId(row.target_id)
+        self._start(ActionRequest(kind=row.action_kind, target_id=target), row.title)
+
+    def _section_action(self, kind: ActionKind) -> None:
+        if self._start is not None:
+            self._start(ActionRequest(kind=kind), None)
 
     def _min_age_days(self) -> int:
         config: Any = getattr(self._source, "config", None)

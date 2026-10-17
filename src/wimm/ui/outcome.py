@@ -65,6 +65,12 @@ def summary_text(*, outcomes: Sequence[StepOutcome]) -> str:
     return DONE_TEXT if statuses <= OK_STATUSES else PARTIAL_TEXT
 
 
+def outcomes_freed_text(*, outcomes: Sequence[StepOutcome]) -> str | None:
+    """ "Liberati 120 MB di disco" from the sizes the executor reported; None when none did."""
+    total = sum(outcome.freed_bytes or 0 for outcome in outcomes)
+    return f"Liberati {format_size(size=total)} di disco" if total > 0 else None
+
+
 def freed_text(*, delta: ReclaimDelta) -> str | None:
     """ "Liberati 1,1 GB di RAM"; None when the measure shows nothing freed."""
     parts = []

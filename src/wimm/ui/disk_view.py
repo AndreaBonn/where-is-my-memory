@@ -16,7 +16,7 @@ from wimm.model.disk import (
     StoppedContainer,
 )
 from wimm.model.enums import ActionKind, Risk
-from wimm.ui.format import RISK_STYLE, RISK_TEXT, format_clock, format_size
+from wimm.ui.format import RISK_STYLE, RISK_TEXT, button_label, format_clock, format_size
 
 NO_SCAN_TEXT = "Nessuna scansione ancora"
 UNKNOWN_SIZE_TEXT = "dimensione non nota"
@@ -45,12 +45,21 @@ class DiskRowView:
 
 
 @dataclass(frozen=True, slots=True)
+class SectionActionView:
+    """A mass action of a section (RF-22); its label already carries the confirm ellipsis."""
+
+    kind: ActionKind
+    label: str
+
+
+@dataclass(frozen=True, slots=True)
 class DiskSectionView:
     key: str
     title: str
     rows: tuple[DiskRowView, ...] = ()
     more_text: str | None = None
     message: str | None = None
+    actions: tuple[SectionActionView, ...] = ()
 
 
 def more_text(*, count: int) -> str | None:
@@ -149,7 +158,8 @@ def _cache_row(*, entry: CacheEntry) -> DiskRowView:
     action = _Action(
         kind=ActionKind.TRASH_EMPTY if trash else ActionKind.CACHE_CLEAN,
         target=RiskTarget(kind="trash" if trash else "cache"),
-        target_id=entry.kind.value,
+        # trash_empty takes no target (the planner finds the trash); a cache is named by kind.
+        target_id=None if trash else entry.kind.value,
     )
     return _row(title=CACHE_TITLES[entry.kind], subtitle=entry.path, size=entry.size, action=action)
 
@@ -175,6 +185,40 @@ def _build_cache_row(*, docker: DockerDisk) -> DiskRowView:
     )
 
 
+def _image_level(*, image: DockerImage) -> Risk:
+    target = RiskTarget(
+        kind="image", has_repo_digests=not image.local_build, dangling=image.dangling
+    )
+    return assess_risk(target=target, action=ActionKind.IMAGE_REMOVE).level
+
+
+def _prune_action(*, kind: ActionKind, level: Risk) -> SectionActionView:
+    return SectionActionView(kind=kind, label=button_label(kind=kind, risk=level))
+
+
+def _image_actions(*, images: tuple[DockerImage, ...]) -> tuple[SectionActionView, ...]:
+    """Prune buttons for the images that have candidates; the unused one only if it adds some."""
+    unused = [i for i in images if not i.in_use]
+    dangling = [i for i in unused if i.dangling]
+    actions = []
+    if dangling:
+        level = max(_image_level(image=i) for i in dangling)
+        actions.append(_prune_action(kind=ActionKind.IMAGES_PRUNE_DANGLING, level=level))
+    if len(unused) > len(dangling):
+        level = max(_image_level(image=i) for i in unused)
+        actions.append(_prune_action(kind=ActionKind.IMAGES_PRUNE_UNUSED, level=level))
+    return tuple(actions)
+
+
+def _container_actions(*, docker: DockerDisk) -> tuple[SectionActionView, ...]:
+    if not docker.stopped_containers:
+        return ()
+    level = assess_risk(
+        target=RiskTarget(kind="container", is_running=False), action=ActionKind.CONTAINER_REMOVE
+    ).level
+    return (_prune_action(kind=ActionKind.CONTAINERS_PRUNE_STOPPED, level=level),)
+
+
 def _capped(*, rows: tuple[DiskRowView, ...], hidden: int) -> tuple[tuple[DiskRowView, ...], int]:
     shown = rows[:DISK_SECTION_CAP]
     return shown, hidden + len(rows) - len(shown)
@@ -190,13 +234,18 @@ def _docker_sections(*, report: DiskReport) -> tuple[DiskSectionView, ...]:
     volumes = tuple(_volume_row(volume=v) for v in docker.volumes)
     return (
         DiskSectionView(
-            "images", "Immagini Docker", images, more_text(count=docker.images_truncated)
+            "images",
+            "Immagini Docker",
+            images,
+            more_text(count=docker.images_truncated),
+            actions=_image_actions(images=docker.images),
         ),
         DiskSectionView(
             "containers",
             "Container fermi",
             containers,
             more_text(count=docker.containers_truncated),
+            actions=_container_actions(docker=docker),
         ),
         DiskSectionView(
             "volumes", "Volumi Docker", volumes, more_text(count=docker.volumes_truncated)
