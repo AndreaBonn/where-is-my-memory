@@ -7,6 +7,7 @@ from time import monotonic
 from gi.repository import GLib
 
 from tests.core.assemble_helpers import build_input
+from wimm.config import Config
 from wimm.core.assemble import assemble_snapshot
 from wimm.model.snapshot import Snapshot
 
@@ -35,9 +36,12 @@ class FakeSampler:
         self.calls = 0
         self.fail = False
         self.current: Snapshot | None = None
+        self.cycle_threads: list[int] = []
+        self.configs: list[tuple[Config, int]] = []
 
     def run_cycle(self) -> Snapshot:
         self.calls += 1
+        self.cycle_threads.append(threading.get_ident())
         self.entered.set()
         # Captured on entry: what a real sample reads is fixed when the cycle starts.
         result = self.current or assemble_snapshot(inputs=build_input([]))
@@ -45,6 +49,9 @@ class FakeSampler:
         if self.fail:
             raise RuntimeError("sample failed")
         return result
+
+    def apply_config(self, *, config: Config) -> None:
+        self.configs.append((config, threading.get_ident()))
 
 
 class FixedClock:

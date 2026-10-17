@@ -6,7 +6,15 @@ from typing import Any
 
 import pytest
 
-from wimm.config import RANGES, Config, config_to_raw, load_config, parse_config, save_config
+from wimm.config import (
+    RANGES,
+    Config,
+    config_to_raw,
+    load_config,
+    parse_config,
+    save_config,
+    update_config,
+)
 from wimm.core import constants as c
 from wimm.model import Category
 from wimm.paths import UserPaths
@@ -185,3 +193,92 @@ def test_relative_existing_root_is_rejected(
     result = parse_config(raw={"devdirs_roots": [root]}, home=tmp_path)
     assert "devdirs_roots" in result.field_errors
     assert result.config.devdirs_roots == (tmp_path / "Documenti/00_Lavoro",)
+
+
+def test_sample_interval_below_range_gives_field_error_and_default(tmp_path: Path) -> None:
+    result = parse_config(raw={"sample_interval_s": 5, "activity_window_s": 600}, home=tmp_path)
+    assert result.config.sample_interval_s == c.SAMPLE_INTERVAL_S
+    assert set(result.field_errors) == {"sample_interval_s"}
+    assert result.config.activity_window_s == 600
+
+
+def test_unknown_key_logs_warning_and_is_ignored(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level("WARNING"):
+        result = parse_config(raw={"bogus_key": 1}, home=tmp_path)
+    assert result.config == parse_config(raw={}, home=tmp_path).config
+    assert [r.levelname for r in caplog.records] == ["WARNING"]
+    assert "bogus_key" in caplog.text
+
+
+def test_update_config_returns_new_config_without_mutating_inputs(tmp_path: Path) -> None:
+    config = Config(sample_interval_s=60)
+    changes = {"sample_interval_s": 120, "terminate_timeout_s": 9}
+    snapshot = dict(changes)
+    result = update_config(config=config, changes=changes, home=tmp_path)
+    assert result.field_errors == {}
+    assert result.config.sample_interval_s == 120
+    assert result.config.terminate_timeout_s == 9
+    assert config.sample_interval_s == 60
+    assert changes == snapshot
+
+
+def test_update_config_invalid_field_keeps_previous_value(tmp_path: Path) -> None:
+    config = Config(sample_interval_s=60)
+    result = update_config(
+        config=config, changes={"sample_interval_s": 5, "terminate_timeout_s": 9}, home=tmp_path
+    )
+    assert set(result.field_errors) == {"sample_interval_s"}
+    assert result.config.sample_interval_s == 60
+    assert result.config.terminate_timeout_s == 9
+
+
+def test_update_config_pressure_conflict_keeps_previous_pair(tmp_path: Path) -> None:
+    config = Config(pressure_warning_pct=20, pressure_critical_pct=8)
+    result = update_config(config=config, changes={"pressure_warning_pct": 6}, home=tmp_path)
+    assert "pressure_critical_pct" in result.field_errors
+    assert (result.config.pressure_warning_pct, result.config.pressure_critical_pct) == (20, 8)
+
+
+def test_update_config_unknown_key_ignored_with_warning(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    result = update_config(config=Config(), changes={"nope": 1}, home=tmp_path)
+    assert result.config == Config()
+    assert result.field_errors == {}
+    assert "nope" in caplog.text
+
+
+def test_saved_update_is_read_back(paths: UserPaths, tmp_path: Path) -> None:
+    result = update_config(config=Config(), changes={"sample_interval_s": 45}, home=tmp_path)
+    save_config(paths=paths, config=result.config)
+    assert load_config(paths=paths, home=tmp_path).config.sample_interval_s == 45
+
+
+def test_malformed_json_gives_defaults_with_warning(
+    paths: UserPaths, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    paths.config_dir.mkdir(exist_ok=True)
+    (paths.config_dir / "config.json").write_text('{"sample_interval_s": ', encoding="utf-8")
+    with caplog.at_level("WARNING"):
+        result = load_config(paths=paths, home=tmp_path)
+    assert result.config == parse_config(raw={}, home=tmp_path).config
+    assert any(r.levelname == "WARNING" for r in caplog.records)
+
+
+def test_failed_write_keeps_old_file_and_leaves_no_temporary(
+    paths: UserPaths, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    save_config(paths=paths, config=Config(sample_interval_s=60))
+    target = paths.config_dir / "config.json"
+    before = target.read_bytes()
+
+    def fail(*, src: object, dst: object) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("wimm.paths.os.replace", fail)
+    with pytest.raises(OSError):
+        save_config(paths=paths, config=Config(sample_interval_s=120))
+    assert target.read_bytes() == before
+    assert [p.name for p in paths.config_dir.iterdir()] == ["config.json"]

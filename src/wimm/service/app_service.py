@@ -1,17 +1,19 @@
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
 from datetime import datetime, timedelta
 from functools import partial
+from pathlib import Path
 from typing import ClassVar, Protocol
 
 from gi.repository import GLib, GObject
 
-from wimm.config import Config
+from wimm.config import Config, ConfigParseResult, save_config, update_config
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import PlanId
 from wimm.model.snapshot import Snapshot
+from wimm.paths import UserPaths
 from wimm.service.actions import ActionExecutor, ActionSetup
 from wimm.service.control_protocols import StepOutcome
 from wimm.service.errors import ControlFailed, InvalidRequest, WimmError
@@ -24,6 +26,8 @@ _ActionResult = tuple[tuple[StepOutcome, ...], Snapshot | None]
 
 
 class CycleSampler(Protocol):
+    def apply_config(self, *, config: Config) -> None: ...
+
     def run_cycle(self) -> Snapshot: ...
 
 
@@ -85,6 +89,43 @@ class AppService(GObject.Object):
     def config(self) -> Config:
         return self._config
 
+    def update_config(
+        self, *, changes: Mapping[str, object], paths: UserPaths, home: Path
+    ) -> ConfigParseResult:
+        """Validate, persist and apply preference changes; invalid fields keep their value.
+
+        A new sample interval reschedules the running timer. The sampler and the action
+        executor adopt the new values on the worker, so never in the middle of a cycle or
+        of a plan.
+
+        Raises
+        ------
+        OSError
+            When the file cannot be written; the running configuration is unchanged.
+        """
+        if self._stopped:
+            # The worker is gone: saving now would change a file nothing applies.
+            raise InvalidRequest("The service is stopped")
+        result = update_config(config=self._config, changes=changes, home=home)
+        if result.config == self._config:
+            return result
+        save_config(paths=paths, config=result.config)
+        interval_changed = result.config.sample_interval_s != self._config.sample_interval_s
+        self._config = result.config
+        self._executor.submit(self._apply_config, result.config)
+        # Sample right away, so a protected name added or removed shows in the window now.
+        self.request_cycle()
+        if interval_changed:
+            self._reschedule_timer()
+        return result
+
+    def _reschedule_timer(self) -> None:
+        if self._timer:
+            GLib.source_remove(self._timer)
+            self._timer = GLib.timeout_add_seconds(
+                self._config.sample_interval_s, self.request_cycle
+            )
+
     @property
     def notifications_muted_until(self) -> datetime | None:
         """Wall-clock end of the mute, or None when not muted or already elapsed."""
@@ -116,6 +157,15 @@ class AppService(GObject.Object):
         """Worker side: also remember the sample, the baseline of an action that follows."""
         self._last_sampled = self._sampler.run_cycle()
         return self._last_sampled
+
+    def _apply_config(self, config: Config) -> None:
+        """Worker side: the sampler's history is not thread-safe, so it changes only here."""
+        try:
+            self._sampler.apply_config(config=config)
+            if self._actions is not None:
+                self._actions.executor.apply_config(config=config)
+        except Exception:
+            LOGGER.exception("Cannot apply the new configuration")
 
     def _run_action(
         self, executor: ActionExecutor, plan: Plan

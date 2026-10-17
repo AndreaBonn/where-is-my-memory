@@ -21,6 +21,14 @@ class SampleHistory:
         self._samples: dict[EntityKey, deque[EntitySample]] = {}
         self._missed: dict[EntityKey, int] = {}
 
+    def resize(self, *, window_s: int, interval_s: int) -> None:
+        """Adopt new ring dimensions, keeping the latest samples that still fit."""
+        maxlen = window_s // interval_s + 1
+        if maxlen == self._maxlen:
+            return
+        self._maxlen = maxlen
+        self._samples = {key: deque(ring, maxlen=maxlen) for key, ring in self._samples.items()}
+
     def append(self, *, cycle_samples: Mapping[EntityKey, EntitySample]) -> None:
         """Record one cycle: store the new samples and age out the absent entities."""
         for key, entity_sample in cycle_samples.items():

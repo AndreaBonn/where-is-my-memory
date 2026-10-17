@@ -43,6 +43,9 @@ class FakeExecutor:
     plans: list[Plan] = field(default_factory=list)
     threads: list[int] = field(default_factory=list)
 
+    def apply_config(self, *, config: Config) -> None:
+        return None
+
     def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:
         self.started.set()
         self.threads.append(threading.get_ident())

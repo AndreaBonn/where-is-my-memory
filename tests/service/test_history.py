@@ -105,3 +105,35 @@ def test_new_connection_with_flat_cpu_in_stored_samples_is_active() -> None:
         history.append(cycle_samples={PROCESS_KEY: flat})
     prev, curr = history.history_for(key=PROCESS_KEY)
     assert sample_is_active(prev=prev, curr=curr, kind=EntityKind.SERVER, config=CONFIG)
+
+
+def test_resize_to_a_smaller_ring_keeps_the_latest_samples() -> None:
+    history = new_history()
+    for cycle in range(61):
+        history.append(cycle_samples={PROCESS_KEY: sample(cycle)})
+    history.resize(window_s=300, interval_s=30)
+    stored = history.history_for(key=PROCESS_KEY)
+    assert len(stored) == 11
+    assert (stored[0].cpu_time_s, stored[-1].cpu_time_s) == (50.0, 60.0)
+
+
+def test_resize_to_a_larger_ring_keeps_samples_and_grows_capacity() -> None:
+    history = SampleHistory(window_s=60, interval_s=30)
+    for cycle in range(3):
+        history.append(cycle_samples={PROCESS_KEY: sample(cycle)})
+    history.resize(window_s=300, interval_s=30)
+    for cycle in range(3, 20):
+        history.append(cycle_samples={PROCESS_KEY: sample(cycle)})
+    stored = history.history_for(key=PROCESS_KEY)
+    assert len(stored) == 11
+    assert (stored[0].cpu_time_s, stored[-1].cpu_time_s) == (9.0, 19.0)
+
+
+def test_resize_with_the_same_dimensions_changes_nothing() -> None:
+    history = new_history()
+    for cycle in range(5):
+        history.append(cycle_samples={PROCESS_KEY: sample(cycle)})
+    before = history.history_for(key=PROCESS_KEY)
+    history.resize(window_s=1800, interval_s=30)
+    assert history.history_for(key=PROCESS_KEY) == before
+    assert len(before) == 5

@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from itertools import groupby
 
+from wimm.config import Config
 from wimm.core.constants import CONTAINER_STOP_WORKERS, TERMINATE_TIMEOUT_S
 from wimm.model.actions import Plan, PlanStep, ProcessFingerprint
 from wimm.model.enums import ActionKind
@@ -30,7 +31,7 @@ from .executor_docker import run_container_step
 from .executor_process import TerminationRequest, close_root, terminate_tree
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclass(slots=True, kw_only=True)
 class PlanExecutor:
     """Run a plan whose confirmation was already verified by the service.
 
@@ -44,6 +45,14 @@ class PlanExecutor:
     owner_uid: int
     compose: ComposeControl | None = None
     terminate_timeout_s: float = TERMINATE_TIMEOUT_S
+
+    def apply_config(self, *, config: Config) -> None:
+        """Adopt the terminate timeout and protected names of a new configuration.
+
+        Called on the worker that runs plans, so it never lands in the middle of one.
+        """
+        self.terminate_timeout_s = config.terminate_timeout_s
+        self.processes.set_extra_protected_names(names=config.extra_protected_names)
 
     def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:
         rules = ProcessRules(owner_uid=self.owner_uid, lineage=self.processes.self_lineage())

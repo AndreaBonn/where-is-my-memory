@@ -119,7 +119,11 @@ def _build_actions(*, config: Any, owner_uid: int) -> Any:
         owner_uid=owner_uid, extra_protected_names=config.extra_protected_names
     )
     executor = PlanExecutor(
-        processes=processes, containers=containers, compose=compose, owner_uid=owner_uid
+        processes=processes,
+        containers=containers,
+        compose=compose,
+        owner_uid=owner_uid,
+        terminate_timeout_s=config.terminate_timeout_s,
     )
     return ActionSetup(executor=executor, owner_uid=owner_uid)
 

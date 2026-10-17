@@ -69,6 +69,10 @@ class ProcessControl(Protocol):
         """Return the live process, or None if it no longer exists."""
         ...
 
+    def set_extra_protected_names(self, *, names: tuple[str, ...]) -> None:
+        """Replace the user's extra protected process names, effective at the next inspect."""
+        ...
+
     def self_lineage(self) -> frozenset[int]:
         """Return the pid of wimm and of all its ancestors."""
         ...

@@ -2,7 +2,7 @@ import json
 import logging
 import math
 from collections.abc import Mapping
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -32,6 +32,7 @@ RANGES: Mapping[str, tuple[int | float, int | float | None]] = MappingProxyType(
 )
 FLOAT_FIELDS = frozenset({"cpu_active_threshold_pct"})
 SECONDS_SUFFIX = "_s"
+_PRESSURE_FIELDS = frozenset({"pressure_warning_pct", "pressure_critical_pct"})
 
 
 def _default_roots(home: Path) -> tuple[Path, ...]:
@@ -207,6 +208,34 @@ def _restore_pressure_defaults(values: dict[str, Any], errors: dict[str, str]) -
             pressure_critical_pct=c.PRESSURE_CRITICAL_PCT,
         )
         errors["pressure_critical_pct"] = "Deve essere minore della soglia di avviso"
+
+
+def update_config(config: Config, changes: Mapping[str, object], home: Path) -> ConfigParseResult:
+    """Apply ``changes`` to ``config`` without mutating either argument.
+
+    Parameters
+    ----------
+    config : Config
+        Current preferences.
+    changes : Mapping[str, object]
+        Raw new values; unknown keys are logged and discarded.
+    home : Path
+        Home used for tilde expansion and directory containment.
+
+    Returns
+    -------
+    ConfigParseResult
+        New preferences where every invalid field keeps its previous value, and
+        messages for the invalid fields the caller tried to change.
+    """
+    parsed = parse_config(raw={**config_to_raw(config=config), **changes}, home=home)
+    invalid = set(parsed.field_errors)
+    if "pressure_critical_pct" in invalid:
+        invalid |= _PRESSURE_FIELDS
+    restored = replace(parsed.config, **{name: getattr(config, name) for name in invalid})
+    touched = {*changes, *(_PRESSURE_FIELDS if _PRESSURE_FIELDS & set(changes) else ())}
+    errors = {name: text for name, text in parsed.field_errors.items() if name in touched}
+    return ConfigParseResult(config=restored, field_errors=MappingProxyType(errors))
 
 
 def config_to_raw(config: Config) -> dict[str, object]:

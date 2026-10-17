@@ -1,7 +1,7 @@
 import logging
 import os
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from functools import partial
 from pathlib import Path
@@ -13,10 +13,9 @@ from wimm.collectors.disk import collect_disk_usage
 from wimm.collectors.docker_source import DockerSample, DockerSource
 from wimm.collectors.meminfo import collect_meminfo
 from wimm.collectors.processes import collect_processes
-from wimm.collectors.project_roots import ProjectRootResolver
 from wimm.collectors.sockets import collect_sockets
 from wimm.config import Config
-from wimm.core.activity import ActivityConfig, ActivityInputs, EntitySample, assess_activity
+from wimm.core.activity import ActivityInputs, EntitySample, assess_activity
 from wimm.core.assemble import (
     AssemblyInput,
     Entities,
@@ -26,7 +25,7 @@ from wimm.core.assemble import (
     assemble_snapshot,
 )
 from wimm.core.categorize import CategorizationContext, categorize_process
-from wimm.core.grouping import GroupDraft, GroupingInput, build_groups
+from wimm.core.grouping import GroupDraft
 from wimm.model.enums import Category, MetricsSource
 from wimm.model.memory import DiskUsage
 from wimm.model.raw import MemInfo, RawProcess, RawSocket
@@ -34,6 +33,8 @@ from wimm.model.snapshot import ActivityAssessment, DockerStatus, Snapshot
 from wimm.paths import UserPaths
 
 from .history import EntityKey, SampleHistory
+from .sampler_environment import SamplerEnvironment as SamplerEnvironment
+from .sampler_environment import activity_config, group_entities
 from .sampler_steps import ListenPorts, ProcessCycle, ProcessSamples, identity
 
 LOGGER = logging.getLogger(__name__)
@@ -48,15 +49,6 @@ class Collectors:
     meminfo: Callable[[], CollectorResult[MemInfo | None]]
     disks: Callable[[], CollectorResult[tuple[DiskUsage, ...]]]
     desktop: Callable[[], CollectorResult[Mapping[str, DesktopEntry]]]
-
-
-@dataclass(frozen=True)
-class SamplerEnvironment:
-    paths: UserPaths
-    own_pid: int
-    uid: int
-    home: Path
-    persisted_last_active: Mapping[EntityKey, datetime] = field(default_factory=dict)
 
 
 def default_collectors(*, environment: SamplerEnvironment) -> Collectors:
@@ -76,28 +68,6 @@ def wall_clock() -> datetime:
 
 def default_environment(*, paths: UserPaths) -> SamplerEnvironment:
     return SamplerEnvironment(paths=paths, own_pid=os.getpid(), uid=os.getuid(), home=Path.home())
-
-
-def group_entities(
-    *, entities: Entities, environment: SamplerEnvironment, desktop: Mapping[str, DesktopEntry]
-) -> tuple[GroupDraft, ...]:
-    resolver = ProjectRootResolver(is_marker=Path.exists, home=environment.home)
-    roots = {
-        proc.cwd: str(resolver.resolve(cwd=Path(proc.cwd)))
-        for proc, _ in entities.processes.values()
-        if proc.cwd is not None
-    }
-    return build_groups(
-        grouping=GroupingInput(
-            pairs=tuple(entities.processes.values()),
-            containers=tuple(entities.containers.values()),
-            project_root_by_cwd=roots,
-            desktop_name_by_appid={key: item.name for key, item in desktop.items()},
-            own_home=str(environment.home),
-            own_uid=environment.uid,
-            listen_ports_by_pid=entities.listen_ports_by_pid,
-        )
-    )
 
 
 class Sampler:
@@ -124,12 +94,17 @@ class Sampler:
         self._ports = ListenPorts()
         self._mem: MemInfo | None = None
         self._disks: tuple[DiskUsage, ...] = ()
-        self._activity = ActivityConfig(
-            window_s=config.activity_window_s,
-            interval_s=config.sample_interval_s,
-            cpu_threshold_pct=config.cpu_active_threshold_pct,
-            net_threshold_bps=config.net_active_threshold_bps,
-        )
+        self._activity = activity_config(config=config)
+
+    def apply_config(self, *, config: Config) -> None:
+        """Adopt a new configuration from the next cycle on.
+
+        Runs on the sampler worker: the history is not thread-safe, so it must not be
+        resized while a cycle reads it.
+        """
+        self.settings = config
+        self._activity = activity_config(config=config)
+        self.history.resize(window_s=config.activity_window_s, interval_s=config.sample_interval_s)
 
     def run_cycle(self) -> Snapshot:
         started = monotonic()

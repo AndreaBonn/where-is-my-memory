@@ -2,7 +2,7 @@
 
 import signal
 from collections.abc import Callable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
 
 from wimm.core.planning import cmdline_hash
@@ -36,11 +36,18 @@ class FakeProcesses:
     crashing: frozenset[int] = frozenset()
     broken_trees: frozenset[int] = frozenset()
     on_wait: Callable[[], None] = lambda: None
+    extra_protected: tuple[str, ...] = ()
     signals: list[tuple[int, signal.Signals]] = field(default_factory=list)
     waits: list[tuple[tuple[int, ...], float]] = field(default_factory=list)
 
     def inspect(self, *, pid: int) -> LiveProcess | None:
-        return self.live.get(pid)
+        live = self.live.get(pid)
+        if live is not None and live.cmdline[:1] and live.cmdline[0] in self.extra_protected:
+            return replace(live, protected=True)
+        return live
+
+    def set_extra_protected_names(self, *, names: tuple[str, ...]) -> None:
+        self.extra_protected = names
 
     def self_lineage(self) -> frozenset[int]:
         return self.lineage

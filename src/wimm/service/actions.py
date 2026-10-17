@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Protocol
 
+from wimm.config import Config
 from wimm.model.actions import Plan
 
 from .control_protocols import StepOutcome
@@ -11,6 +12,10 @@ RECLAIM_MEASURE_DELAY_S = 3.0
 
 
 class ActionExecutor(Protocol):
+    def apply_config(self, *, config: Config) -> None:
+        """Adopt a new configuration; called on the worker, between two plans."""
+        ...
+
     def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:
         """Run a confirmed plan; raise a `WimmError` to reject it as a whole."""
         ...

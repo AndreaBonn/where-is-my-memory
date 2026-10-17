@@ -50,6 +50,9 @@ class PsutilProcessControl:
         self._extra_protected_names = extra_protected_names
         self._known: dict[int, psutil.Process] = {}
 
+    def set_extra_protected_names(self, *, names: tuple[str, ...]) -> None:
+        self._extra_protected_names = names
+
     def inspect(self, *, pid: int) -> LiveProcess | None:
         try:
             process = psutil.Process(pid)
