@@ -5,6 +5,7 @@ from gi.repository import Adw, GLib, Gtk
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, SectionActionView
 from wimm.ui.format import button_label
+from wimm.ui.widgets import color_primary
 from wimm.ui.widgets.risk_badge import make_risk_badge
 
 SPINNER_SIZE = 16
@@ -53,6 +54,7 @@ def build_disk_row(
     widget.add_suffix(suffix)
     if on_action is not None and row.action_kind is not None and row.risk is not None:
         button = Gtk.Button(label=button_label(kind=row.action_kind), halign=Gtk.Align.END)
+        color_primary(button=button, risk=row.risk)
         button.connect("clicked", lambda *_a: on_action(row))
         suffix.append(button)
         if buttons is not None:

@@ -5,7 +5,7 @@ from gi.repository import Adw, Gtk
 
 from wimm.ui.views import GroupRow, MemberRow
 
-from . import ACTIONS_UNAVAILABLE_TOOLTIP, NARROW_CLASS
+from . import ACTIONS_UNAVAILABLE_TOOLTIP, NARROW_CLASS, ROW_CLASS, color_primary
 from .group_controls import GroupControlHandlers, GroupControls
 from .member_row import MemberEntry
 from .risk_badge import make_risk_badge, update_risk_badge
@@ -42,6 +42,7 @@ class GroupRowWidget(Adw.ExpanderRow):
             title_lines=TITLE_LINES,
             subtitle_lines=SUBTITLE_LINES,
         )
+        self.add_css_class(ROW_CLASS)
         self._on_action = on_action
         self._handlers = controls
         self._controls: GroupControls | None = None
@@ -103,6 +104,7 @@ class GroupRowWidget(Adw.ExpanderRow):
             return
         self._action = Gtk.Button(label=row.primary_action.label, valign=Gtk.Align.CENTER)
         self._action.set_name(PRIMARY_ACTION_NAME)
+        color_primary(button=self._action, risk=row.primary_action.risk)
         if self._on_action is None:
             self._action.set_sensitive(False)
             self._action.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)

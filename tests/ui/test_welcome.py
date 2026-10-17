@@ -5,7 +5,13 @@ from pathlib import Path
 import pytest
 from gi.repository import Adw, Gtk
 
-from tests.ui.conftest import FakeSource, WindowFactory, descendants, main_context_iterate
+from tests.ui.conftest import (
+    FakeSource,
+    WindowFactory,
+    descendants,
+    main_context_iterate,
+    wait_until,
+)
 from wimm.first_run import is_first_run
 from wimm.model.snapshot import Snapshot
 
@@ -25,9 +31,8 @@ def test_the_first_window_welcomes_once(
     assert dialog.get_response_label("close") == "Ho capito"
 
     dialog.force_close()
-    main_context_iterate()
-
-    assert not is_first_run(state_dir=tmp_path / "state")
+    # "closed" arrives at the end of the close animation, not on the next iteration.
+    wait_until(lambda: not is_first_run(state_dir=tmp_path / "state"), description="marker")
     again = window_factory(FakeSource(snapshot=snapshot))
     again.show_group(group_id=None)
     main_context_iterate()
@@ -48,5 +53,4 @@ def test_showing_the_window_again_does_not_stack_a_second_welcome(
 
     assert window.get_visible_dialog() is first
     first.force_close()
-    main_context_iterate()
-    assert window.get_visible_dialog() is None
+    wait_until(lambda: window.get_visible_dialog() is None, description="welcome closed")

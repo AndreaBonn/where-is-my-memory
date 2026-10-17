@@ -2,7 +2,9 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Gdk, Gtk
+from gi.repository import Adw, Gdk, Gtk
+
+from wimm.model.enums import Risk
 
 ACTIONS_UNAVAILABLE_TOOLTIP = "Disponibile con le azioni (fase 3)"
 NARROW_CLASS = "wimm-narrow"
@@ -11,6 +13,9 @@ NARROW_CLASS = "wimm-narrow"
 # label as a Python attribute on the wrapper, so tests can assert none is missing. PyGObject
 # keeps a wrapper that carries Python state alive for the widget's lifetime, parenting included.
 ACCESSIBLE_LABEL_ATTR = "wimm_accessible_label"
+SUGGESTED_CLASS = "suggested-action"
+SECONDARY_CLASS = "wimm-secondary"
+ROW_CLASS = "wimm-row"
 
 _STYLE = """
 .wimm-bar { border-radius: 7px; background: alpha(currentColor, 0.08); }
@@ -40,7 +45,15 @@ _STYLE = """
 .wimm-status.error { background: alpha(@error_color, 0.16); }
 .wimm-warning { background: alpha(@warning_color, 0.14); border-radius: 8px; padding: 8px 12px; }
 .wimm-facts { background: alpha(currentColor, 0.06); border-radius: 8px; padding: 8px 12px; }
+/* S2: the lines that explain a decision; pt follows the system text size, px would not. */
+.wimm-secondary, .wimm-row .subtitle { font-size: 10pt; }
 """
+# S2: Adwaita dims these lines to 0.55; its high contrast mode already sets 0.9, so this
+# stronger value is installed only outside it, never lowering a contrast the user chose.
+_CONTRAST_STYLE = ".wimm-secondary.dim-label, .wimm-row .subtitle { opacity: 0.75; }"
+_contrast = Gtk.CssProvider()
+_contrast.load_from_string(_CONTRAST_STYLE)
+_contrast_on: set[Gdk.Display] = set()
 
 _installed_displays: set[Gdk.Display] = set()
 
@@ -56,6 +69,31 @@ def install_style() -> None:
         display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
     )
     _installed_displays.add(display)
+    manager = Adw.StyleManager.get_default()
+    sync_contrast(high_contrast=manager.get_high_contrast())
+    manager.connect(
+        "notify::high-contrast", lambda m, *_a: sync_contrast(high_contrast=m.get_high_contrast())
+    )
+
+
+def sync_contrast(*, high_contrast: bool) -> None:
+    """S2: the stronger secondary text only when the system is not in high contrast."""
+    display = Gdk.Display.get_default()
+    if display is None:
+        return
+    if high_contrast and display in _contrast_on:
+        Gtk.StyleContext.remove_provider_for_display(display, _contrast)
+        _contrast_on.discard(display)
+    elif not high_contrast and display not in _contrast_on:
+        Gtk.StyleContext.add_provider_for_display(
+            display, _contrast, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION
+        )
+        _contrast_on.add(display)
+
+
+def contrast_installed() -> bool:
+    """True while the stronger secondary text is in effect on the default display."""
+    return Gdk.Display.get_default() in _contrast_on
 
 
 def name_icon_button(*, button: Gtk.Button | Gtk.MenuButton, label: str) -> None:
@@ -68,6 +106,12 @@ def name_icon_button(*, button: Gtk.Button | Gtk.MenuButton, label: str) -> None
 def icon_only_label(*, button: Gtk.Button | Gtk.MenuButton) -> str | None:
     """The accessible name given through name_icon_button, if any."""
     return getattr(button, ACCESSIBLE_LABEL_ATTR, None)
+
+
+def color_primary(*, button: Gtk.Button, risk: Risk) -> None:
+    """S3: the next step of a row is blue when nothing is lost; otherwise it stays grey."""
+    if risk is Risk.SAFE:
+        button.add_css_class(SUGGESTED_CLASS)
 
 
 def clear_children(*, container: Gtk.Box | Gtk.Grid) -> None:

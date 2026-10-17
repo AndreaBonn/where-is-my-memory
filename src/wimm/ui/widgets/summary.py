@@ -4,7 +4,8 @@ from gi.repository import Gtk
 
 from wimm.ui.views import SummaryView
 
-from . import ACTIONS_UNAVAILABLE_TOOLTIP
+from . import ACTIONS_UNAVAILABLE_TOOLTIP, SECONDARY_CLASS
+from .help_button import titled_with_help
 from .memory_bar import MemoryBar
 
 MARGIN = 12
@@ -15,6 +16,18 @@ LINE_SPACING = 2
 STATUS_ICON_SIZE = 32
 RAM_TITLE = "Memoria (RAM)"
 DISK_TITLE = "Spazio sul disco"
+RAM_QUESTION = "Cos'è la memoria (RAM)?"
+RAM_ANSWER = (
+    "La memoria (RAM) è lo spazio dove lavorano i programmi aperti. Quando è piena il "
+    "computer rallenta. Chiudere un programma la libera subito: i file salvati restano, il "
+    "lavoro non salvato in quel programma si perde."
+)
+DISK_QUESTION = "Cos'è lo spazio sul disco?"
+DISK_ANSWER = (
+    "Il disco è dove restano i file anche a computer spento. Quando è quasi pieno non si "
+    "riesce più a salvare né ad aggiornare. Dalla scheda Disco puoi liberare spazio: prima di "
+    "ogni cancellazione ti diciamo cosa si perde."
+)
 STATUS_ICONS = {
     "success": "emblem-ok-symbolic",
     "warning": "dialog-warning-symbolic",
@@ -26,6 +39,10 @@ def _section_title(*, text: str) -> Gtk.Label:
     label = Gtk.Label(label=text, xalign=0)
     label.add_css_class("heading")
     return label
+
+
+def _help_title(*, text: str, question: str, answer: str) -> Gtk.Box:
+    return titled_with_help(title=_section_title(text=text), question=question, answer=answer)
 
 
 def _detail_label() -> Gtk.Label:
@@ -42,6 +59,7 @@ def _dim_caption() -> Gtk.Label:
     label = _detail_label()
     label.add_css_class("caption")
     label.add_css_class("dim-label")
+    label.add_css_class(SECONDARY_CLASS)
     return label
 
 
@@ -66,7 +84,7 @@ class SummaryPanel(Gtk.Box):
         self._ram_details = _dim_caption()
         self._bar = MemoryBar()
         self._note = _dim_caption()
-        self._disk_title = _section_title(text=DISK_TITLE)
+        self._disk_title = _help_title(text=DISK_TITLE, question=DISK_QUESTION, answer=DISK_ANSWER)
         self._disk_text = _headline_label()
         self._disk_bar = Gtk.ProgressBar()
         self._reclaim = _detail_label()
@@ -78,7 +96,7 @@ class SummaryPanel(Gtk.Box):
         self._busy = False
         for widget in (
             self._build_status(),
-            _section_title(text=RAM_TITLE),
+            _help_title(text=RAM_TITLE, question=RAM_QUESTION, answer=RAM_ANSWER),
             self._ram_text,
             self._ram_details,
             self._bar,
