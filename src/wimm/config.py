@@ -8,6 +8,7 @@ from types import MappingProxyType
 from typing import Any
 
 from wimm.config_messages import field_message, pressure_order_message, range_message
+from wimm.config_roots import decode_roots, default_roots, validate_roots
 from wimm.core import constants as c
 from wimm.i18n import LANGUAGES
 from wimm.model import Category, Protection, protection_of
@@ -36,18 +37,6 @@ FLOAT_FIELDS = frozenset({"cpu_active_threshold_pct"})
 _PRESSURE_FIELDS = frozenset({"pressure_warning_pct", "pressure_critical_pct"})
 
 
-def _default_roots(home: Path) -> tuple[Path, ...]:
-    return tuple(_expand_root(value=value, home=home) for value in c.DEVDIRS_ROOTS)
-
-
-def _expand_root(value: str, home: Path) -> Path:
-    path = home / value.removeprefix("~/") if value.startswith("~/") else Path(value)
-    path = home if value == "~" else path
-    if not value or not path.is_absolute():
-        raise ValueError("Expected an absolute directory path")
-    return path.resolve()
-
-
 @dataclass(frozen=True)
 class Config:
     """Validated application preferences; paths are stored as absolute paths."""
@@ -63,9 +52,7 @@ class Config:
     pressure_critical_pct: int = c.PRESSURE_CRITICAL_PCT
     max_notifications_per_hour: int = c.MAX_NOTIFICATIONS_PER_HOUR
     terminate_timeout_s: int = c.TERMINATE_TIMEOUT_S
-    devdirs_roots: tuple[Path, ...] = field(
-        default_factory=lambda: _default_roots(home=Path.home())
-    )
+    devdirs_roots: tuple[Path, ...] = field(default_factory=lambda: default_roots(home=Path.home()))
     devdirs_min_age_days: int = c.DEVDIRS_MIN_AGE_DAYS
     devdirs_max_depth: int = c.DEVDIRS_MAX_DEPTH
     disk_scan_interval_s: int = c.DISK_SCAN_INTERVAL_S
@@ -121,14 +108,7 @@ def _validate_collections(config: Config) -> None:
         type(item) is not str or not item for item in config.extra_protected_names
     ):
         raise ValueError("extra_protected_names must be a tuple of strings")
-    if (
-        type(config.devdirs_roots) is not tuple
-        or not config.devdirs_roots
-        or any(
-            not isinstance(item, Path) or not item.is_absolute() for item in config.devdirs_roots
-        )
-    ):
-        raise ValueError("devdirs_roots must be a tuple of absolute paths")
+    validate_roots(roots=config.devdirs_roots)
 
 
 def _decode_field(name: str, value: object, home: Path) -> Any:
@@ -154,12 +134,7 @@ def _decode_field(name: str, value: object, home: Path) -> Any:
         if any(not item for item in value):
             raise ValueError("Expected nonempty process names")
         return tuple(value)
-    if not value:
-        raise ValueError("Expected at least one directory")
-    roots = tuple(_expand_root(value=item, home=home) for item in value)
-    if any(not root.is_relative_to(home.resolve()) or not root.is_dir() for root in roots):
-        raise ValueError("Expected existing directories within home")
-    return roots
+    return decode_roots(value=value, home=home)
 
 
 def _field_error(name: str) -> str:
@@ -184,7 +159,7 @@ def parse_config(raw: Mapping[str, object], home: Path) -> ConfigParseResult:
     ConfigParseResult
         Validated preferences and messages keyed by invalid field.
     """
-    values: dict[str, Any] = {"devdirs_roots": _default_roots(home=home)}
+    values: dict[str, Any] = {"devdirs_roots": default_roots(home=home)}
     errors: dict[str, str] = {}
     names = {item.name for item in fields(Config)}
     for name, value in raw.items():
