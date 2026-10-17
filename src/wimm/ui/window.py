@@ -13,6 +13,9 @@ from wimm import __version__
 from wimm.model.actions import ActionRequest
 from wimm.paths import default_user_paths
 from wimm.ui.action_flow import can_act
+from wimm.ui.dialogs.tray_help import TRAY_MISSING_TEXT as TRAY_MISSING_TEXT
+from wimm.ui.dialogs.tray_help import tray_banner
+from wimm.ui.dialogs.welcome import welcome_if_first_run
 from wimm.ui.pages.overview import OverviewPage
 from wimm.ui.widgets import install_style, name_icon_button
 from wimm.ui.window_actions import build_action_flow
@@ -36,7 +39,6 @@ FAILURE_LIMIT = 3
 FAILURE_POLL_SECONDS = 2
 SAVE_DELAY_MS = 500
 ACTION_REFRESH = "win.refresh"
-TRAY_MISSING_TEXT = "L'icona nella barra richiede l'estensione AppIndicator di Ubuntu"
 ABOUT_COMMENTS = "Mostra dove va la memoria e cosa si può liberare."
 
 
@@ -54,7 +56,7 @@ class MainWindow(Adw.Window):
         super().__init__(title=WINDOW_TITLE)
         install_style()
         self._source, self._clock = source, clock
-        self._state_path = state_dir / STATE_FILE
+        self._state_dir, self._state_path = state_dir, state_dir / STATE_FILE
         self._dirty = False
         self._last_failures = -1
         self._save_timer = self._poll_timer = 0
@@ -128,7 +130,7 @@ class MainWindow(Adw.Window):
         header.pack_end(self._refresh_button())
         toolbar = Adw.ToolbarView(content=stack)
         toolbar.add_top_bar(header)
-        self.tray_banner = Adw.Banner(title=TRAY_MISSING_TEXT, revealed=False)
+        self.tray_banner = tray_banner(parent=self)
         toolbar.add_top_bar(self.tray_banner)
         toolbar.add_bottom_bar(bar)
         self.toasts = Adw.ToastOverlay(child=toolbar)
@@ -210,6 +212,7 @@ class MainWindow(Adw.Window):
         if group_id is not None:
             self.view_stack.set_visible_child_name("overview")
             self.overview.expand_group(group_id=group_id)
+        welcome_if_first_run(parent=self, state_dir=self._state_dir)
 
     def _on_snapshot_updated(self, *_args: object) -> None:
         # A hidden window is rebuilt when it is shown again, not on every sample.

@@ -153,15 +153,24 @@ def test_background_service_two_cycles_do_not_import_gtk_or_adw() -> None:
 
 
 @pytest.mark.parametrize(
-    "options,expected",
-    [({}, [None]), ({"group": "example"}, ["example"]), ({"background": True}, [])],
+    "options,welcomed,expected",
+    [
+        ({}, True, [None]),
+        ({"group": "example"}, True, ["example"]),
+        ({"background": True}, True, []),
+        ({"background": True}, False, [None]),
+    ],
 )
 def test_command_line_routes_window_requests(
-    options: dict[str, str | bool], expected: list[str | None]
+    options: dict[str, str | bool], welcomed: bool, expected: list[str | None], tmp_path: Path
 ) -> None:
     from gi.repository import GLib
 
     from wimm.app import _activate, _command_line
+    from wimm.first_run import mark_welcomed
+
+    if welcomed:
+        mark_welcomed(state_dir=tmp_path)
 
     presented: list[str | None] = []
     variants = {
@@ -173,6 +182,7 @@ def test_command_line_routes_window_requests(
     )
     application = SimpleNamespace(
         _service=object(),
+        _state_dir=tmp_path,
         _window_host=SimpleNamespace(present=lambda group_id: presented.append(group_id)),
     )
     application.activate = lambda: _activate(application=application)

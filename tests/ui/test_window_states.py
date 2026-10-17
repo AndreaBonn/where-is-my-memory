@@ -33,7 +33,7 @@ def test_error_state_appears_at_three_failures_and_not_at_two(
     assert two.overview.visible_state == "content"
     assert three.overview.visible_state == "error"
     titles = [w.get_title() for w in descendants(three.overview) if hasattr(w, "get_title")]
-    assert "Il monitor non risponde" in titles
+    assert "Non riesco a leggere i dati del computer" in titles
 
 
 def test_restart_button_is_enabled_only_when_the_app_action_exists(
@@ -44,7 +44,7 @@ def test_restart_button_is_enabled_only_when_the_app_action_exists(
     (button,) = [
         w
         for w in descendants(window.overview)
-        if isinstance(w, Gtk.Button) and w.get_label() == "Riavvia monitor"
+        if isinstance(w, Gtk.Button) and w.get_label() == "Riprova adesso"
     ]
     assert not button.get_sensitive()
 

@@ -11,6 +11,7 @@ from wimm.service.notifier import (
 from wimm.service.user_state import SNOOZE_GROUP_S
 
 LOGGER = logging.getLogger(__name__)
+RESTART_MONITOR_ACTION = "restart-monitor"
 
 
 def _open_group(application: Any, target: str) -> None:
@@ -46,3 +47,22 @@ def register_group_actions(*, application: Any) -> None:
             "activate", lambda _a, parameter, h=handler: h(application, parameter.get_string())
         )
         application.add_action(action=action)
+
+
+def register_monitor_action(*, application: Any) -> None:
+    """A2: ``app.restart-monitor`` asks the service to read the system again at once.
+
+    The error page's "Riprova adesso" names it; before this action existed GTK kept
+    that button disabled forever.
+    """
+    from gi.repository import Gio
+
+    def retry(*_args: object) -> None:
+        if application._service is None:
+            LOGGER.warning("Retry ignored: no service")
+            return
+        application._service.retry_now()
+
+    action = Gio.SimpleAction.new(name=RESTART_MONITOR_ACTION, parameter_type=None)
+    action.connect("activate", retry)
+    application.add_action(action=action)

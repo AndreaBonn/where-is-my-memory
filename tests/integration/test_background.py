@@ -1,11 +1,13 @@
 import os
 import subprocess
 import sys
+from pathlib import Path
 from time import monotonic
 
 import pytest
 
 from tests.service.test_inspector_dbus import private_bus_address as private_bus_address
+from wimm.first_run import mark_welcomed
 
 STARTUP_TIMEOUT_S = 10
 RSS_LIMIT_KIB = 120 * 1024
@@ -51,6 +53,8 @@ raise SystemExit(exit_code)
 @pytest.mark.integration
 @pytest.mark.dbus
 def test_background_startup_and_two_real_cycles_do_not_load_gtk(private_bus_address: str) -> None:
+    # Not the first run: that one opens the window with the welcome (A1).
+    mark_welcomed(state_dir=Path(os.environ["XDG_STATE_HOME"]) / "where-is-my-memory")
     started = monotonic()
     result = subprocess.run(
         args=[sys.executable, "-"],

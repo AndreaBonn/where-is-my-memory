@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from tests.service.test_inspector_dbus import private_bus_address as private_bus_address
+from wimm.first_run import mark_welcomed
 
 TIMEOUT_S = 15
 PROBE = """
@@ -36,6 +37,7 @@ def test_existing_state_reaches_the_sampler_and_is_saved_on_exit(
     state_home = tmp_path / "xdg-state"
     state_dir = state_home / "where-is-my-memory"
     state_dir.mkdir(parents=True)
+    mark_welcomed(state_dir=state_dir)  # not the first run, which opens the window (A1)
     seeded = datetime.now(tz=UTC) - timedelta(hours=1)
     entry = {"container": "seeded-container", "at": seeded.isoformat()}
     (state_dir / "state.json").write_text(json.dumps({"version": 1, "last_active": [entry]}))

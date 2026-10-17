@@ -4,8 +4,8 @@ from wimm.ui.views import EmptyKind, EmptyStateView
 
 LOADING_TITLE = "Raccolta dati in corso…"
 SLOW_LOADING_TEXT = "Ci sta mettendo più del previsto"
-ERROR_TITLE = "Il monitor non risponde"
-RESTART_LABEL = "Riavvia monitor"
+ERROR_TITLE = "Non riesco a leggere i dati del computer"
+RESTART_LABEL = "Riprova adesso"
 RESTART_ACTION = "app.restart-monitor"
 SPINNER_SIZE = 32
 # Inside the scrolled Panoramica a status page takes only its minimum height otherwise.
@@ -20,8 +20,8 @@ EMPTY_ICONS = {
 def failure_cause(*, failures: int) -> str:
     """Describe why the monitor is considered unresponsive."""
     return (
-        f"Il campionamento è fallito per {failures} cicli di fila. "
-        "I dettagli sono nel registro dell'applicazione."
+        f"Ho provato {failures} volte di fila senza riuscirci. Di solito basta riprovare; "
+        "se non passa, i dettagli sono nel registro dell'applicazione."
     )
 
 

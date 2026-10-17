@@ -137,6 +137,11 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
             self._executor.submit(self._state_saver.save)
         return GLib.SOURCE_CONTINUE
 
+    def retry_now(self) -> None:
+        """A2: read the system at once and restart the periodic timer from now."""
+        self._reschedule_timer()
+        self.request_cycle()
+
     def request_cycle(self) -> bool:
         # A request during a running cycle is kept: that cycle predates the change.
         self._cycle_pending = self._busy and not self._stopped

@@ -242,7 +242,7 @@ def test_application_exports_only_its_three_actions_and_handles_remote_group(
         try:
             client = private_connections[1]
             actions = wait_for_actions(connection=client)
-            assert set(actions) == {"quit", "open-group", "snooze-group"}
+            assert set(actions) == {"quit", "open-group", "snooze-group", "restart-monitor"}
             remote = subprocess.run(
                 args=[sys.executable, "-m", "wimm", "--group", "example"],
                 env=environment,

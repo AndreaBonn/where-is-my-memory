@@ -233,14 +233,14 @@ def test_loading_view_adds_the_slow_text_only_when_marked(display: None) -> None
     assert not view.page.get_description()
 
 
-def test_error_view_names_the_monitor_and_the_cause(display: None) -> None:
+def test_error_view_says_in_plain_words_what_failed_and_offers_a_retry(display: None) -> None:
     view = ErrorView()
     view.show_cause(failures=4)
 
-    assert view.page.get_title() == "Il monitor non risponde"
+    assert view.page.get_title() == "Non riesco a leggere i dati del computer"
     assert view.page.get_description() == failure_cause(failures=4)
-    assert "4 cicli" in failure_cause(failures=4)
-    assert view.restart.get_label() == "Riavvia monitor"
+    assert "4 volte di fila" in failure_cause(failures=4)
+    assert view.restart.get_label() == "Riprova adesso"
     assert view.restart.get_action_name() == "app.restart-monitor"
 
 

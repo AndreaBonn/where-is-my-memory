@@ -5,7 +5,7 @@ from gi.repository import Gio, GLib
 
 from wimm.app import create_application
 from wimm.model.enums import GroupId
-from wimm.service.group_actions import register_group_actions
+from wimm.service.group_actions import register_group_actions, register_monitor_action
 
 
 class FakeHost:
@@ -73,3 +73,32 @@ def test_actions_require_a_string_parameter() -> None:
     application = make_application()
     parameter_type = application.lookup_action("open-group").get_parameter_type()
     assert parameter_type.dup_string() == "s"
+
+
+class RetryService:
+    def __init__(self) -> None:
+        self.retries = 0
+
+    def retry_now(self) -> None:
+        self.retries += 1
+
+
+def test_restart_monitor_is_registered_and_asks_the_service_to_retry() -> None:
+    assert create_application().lookup_action("restart-monitor") is not None
+    application: Any = Gio.Application(application_id="io.github.wimm.RetryTest")
+    application._service = RetryService()
+    register_monitor_action(application=application)
+
+    application.lookup_action("restart-monitor").activate(None)
+
+    assert application._service.retries == 1
+
+
+def test_restart_monitor_without_a_service_only_logs(caplog: pytest.LogCaptureFixture) -> None:
+    application: Any = Gio.Application(application_id="io.github.wimm.RetryTest2")
+    application._service = None
+    register_monitor_action(application=application)
+
+    application.lookup_action("restart-monitor").activate(None)
+
+    assert "Retry ignored" in caplog.text

@@ -1,5 +1,5 @@
 import pytest
-from gi.repository import Gtk
+from gi.repository import Adw, Gtk
 
 from tests.ui.conftest import FakeSource, WindowFactory, descendants, present_and_settle
 from wimm.model.snapshot import Snapshot
@@ -55,3 +55,23 @@ def test_the_window_menu_has_the_quit_entry(
     entries = menu_entries(window)
     assert entries["Esci"] == "app.quit"
     assert "Voce inesistente" not in entries
+
+
+def test_the_banner_explains_step_by_step_how_to_bring_the_icon_back(
+    window_factory: WindowFactory, snapshot: Snapshot
+) -> None:
+    window = window_factory(FakeSource(snapshot=snapshot))
+    present_and_settle(window)
+    window.set_tray_missing(True)
+    assert window.tray_banner.get_button_label() == "Come si attiva"
+
+    window.tray_banner.emit("button-clicked")
+
+    dialog = window.get_visible_dialog()
+    assert isinstance(dialog, Adw.AlertDialog)
+    labels = [w for w in descendants(dialog) if isinstance(w, Gtk.Label)]
+    texts = "\n".join(label.get_label() for label in labels)
+    assert "1. Apri l'app «Estensioni»" in texts
+    assert "«Ubuntu AppIndicators»" in texts
+    (command,) = [label for label in labels if label.get_selectable()]
+    assert command.get_label() == "gnome-extensions enable ubuntu-appindicators@ubuntu.com"

@@ -5,9 +5,11 @@ import sys
 from collections.abc import Callable, Mapping
 from dataclasses import replace
 from functools import partial
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import TYPE_CHECKING, Any
 
 from wimm import __version__
+from wimm.window_host import PresentableWindow as PresentableWindow
+from wimm.window_host import WindowHost as WindowHost
 
 if TYPE_CHECKING:
     from gi.repository import Gio
@@ -18,41 +20,6 @@ APPLICATION_ID = "io.github.wimm.WhereIsMyMemory"
 LOGGER = logging.getLogger(__name__)
 # Read by the preferences: following the foreground window needs X11 (R5).
 SESSION_TYPE_VARIABLE = "XDG_SESSION_TYPE"
-
-
-class PresentableWindow(Protocol):
-    def show_group(self, group_id: str | None) -> None: ...
-
-    def set_tray_missing(self, missing: bool) -> None: ...
-
-
-class WindowHost:
-    """Owns the panel window, built on the first request so GTK loads only then."""
-
-    def __init__(self, *, factory: Callable[[], PresentableWindow]) -> None:
-        self._factory = factory
-        self._window: PresentableWindow | None = None
-        self._tray_missing = False
-
-    def set_tray_missing(self, *, missing: bool) -> None:
-        """Remember whether the icon has no host; a window not built yet is not created."""
-        self._tray_missing = missing
-        if self._window is not None:
-            self._window.set_tray_missing(missing)
-
-    def present(self, group_id: str | None) -> None:
-        if group_id is not None:
-            LOGGER.info("Window requested for group %s", group_id)
-        if self._window is None:
-            try:
-                self._window = self._factory()
-            except Exception:
-                # No display (session gone, SSH, tests): monitoring and notifications go on.
-                LOGGER.exception("Cannot open the window")
-                return
-            if self._tray_missing:
-                self._window.set_tray_missing(True)
-        self._window.show_group(group_id=group_id)
 
 
 # The GL renderer maps Mesa and LLVM into a process that stays resident all day: with it
@@ -156,7 +123,7 @@ def _start_service(application: Any) -> None:
     )
     saver = StateSaver(paths=paths, state=state, last_active=sampler.export_last_active)
     service.attach_state_saver(saver=saver)
-    application._service = service
+    application._service, application._state_dir = service, paths.state_dir
     application._notifications = attach_notifications(
         service=service, sink=application, saver=saver, state=state
     )
@@ -235,12 +202,15 @@ def _shutdown(application: Any) -> None:
 
 
 def _command_line(application: Any, command_line: Any) -> int:
+    from wimm.first_run import opens_window
+
     if application._service is None:
         return STARTUP_FAILED
     options = command_line.get_options_dict()
     group = options.lookup_value("group", None)
     background = options.lookup_value("background", None)
-    if background is None or not background.get_boolean():
+    in_background = background is not None and background.get_boolean()
+    if opens_window(background=in_background, state_dir=application._state_dir):
         if group is None:
             application.activate()
         else:
@@ -255,6 +225,7 @@ def create_application() -> "Gio.Application":
         _window_host: WindowHost
         _held: bool = False
         _service: Any = None
+        _state_dir: Any = None
         _notifications: Any = None
         _inspector: Any = None
         _tray: Any = None
@@ -276,7 +247,7 @@ def create_application() -> "Gio.Application":
 def _configure_options(application: "Gio.Application") -> None:
     from gi.repository import Gio, GLib
 
-    from wimm.service.group_actions import register_group_actions
+    from wimm.service.group_actions import register_group_actions, register_monitor_action
 
     for name, kind, description, argument in (
         ("background", GLib.OptionArg.NONE, "Avvia senza aprire la finestra", None),
@@ -288,6 +259,7 @@ def _configure_options(application: "Gio.Application") -> None:
     action.connect("activate", lambda *_: _quit(application=application))
     application.add_action(action=action)
     register_group_actions(application=application)
+    register_monitor_action(application=application)
 
 
 def main(argv: list[str] | None = None) -> int:
