@@ -24,6 +24,10 @@ def isolate_user_directories(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
         target.mkdir()
         monkeypatch.setenv(name=variable, value=str(target))
     monkeypatch.setenv(name="WIMM_TEST", value="1")
+    # The app exports the chosen language here for GTK: restore it after every test.
+    # setenv first: delenv of an absent variable records nothing to undo.
+    monkeypatch.setenv(name="LANGUAGE", value="")
+    monkeypatch.delenv(name="LANGUAGE")
 
 
 @pytest.fixture(autouse=True)

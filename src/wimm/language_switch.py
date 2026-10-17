@@ -26,7 +26,11 @@ def apply_startup_language() -> None:
         saved = load_config(paths=default_user_paths(), home=Path.home()).config.language
     finally:
         config_logger.disabled = False
-    i18n.set_language(language=saved or i18n.resolve_default(environ=os.environ))
+    language = saved or i18n.resolve_default(environ=os.environ)
+    i18n.set_language(language=language)
+    # Created now, while only the main thread runs: a later switch only replaces the
+    # entry, which glibc does without reallocating the environment other threads read.
+    _export_for_gtk(language=language)
 
 
 def switch_language(*, application: Any, language: str) -> None:
@@ -44,9 +48,15 @@ def switch_language(*, application: Any, language: str) -> None:
         return
     _save_choice(application=application, language=language)
     i18n.set_language(language=language)
+    _export_for_gtk(language=language)
     if id(application) not in _PENDING:
         _PENDING.add(id(application))
         GLib.idle_add(_refresh_views, application)
+
+
+def _export_for_gtk(*, language: str) -> None:
+    """GTK and libadwaita translate their own texts (search, dialogs) through LANGUAGE."""
+    os.environ["LANGUAGE"] = language
 
 
 def _save_choice(*, application: Any, language: str) -> None:

@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 
 import pytest
@@ -68,3 +69,25 @@ def test_startup_language_with_a_broken_config_stays_quiet(
         apply_startup_language()
     assert i18n.current_language() == i18n.ENGLISH
     assert caplog.records == []
+
+
+def test_startup_language_is_exported_for_gtk_own_texts(monkeypatch: pytest.MonkeyPatch) -> None:
+    for name in i18n.LOCALE_VARIABLES:
+        monkeypatch.delenv(name=name, raising=False)
+    monkeypatch.setenv(name="LANG", value="it_IT.UTF-8")
+    apply_startup_language()
+    # Created here, while only the main thread runs: later switches only replace it.
+    assert os.environ["LANGUAGE"] == "it"
+
+
+def test_language_exported_by_a_test_never_reaches_the_next(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # tests/conftest.py removes LANGUAGE around each test, even when it was absent before.
+    assert "LANGUAGE" not in os.environ
+    apply_startup_language()
+    assert "LANGUAGE" in os.environ
+
+
+def test_language_is_absent_again_in_the_next_test() -> None:
+    assert "LANGUAGE" not in os.environ

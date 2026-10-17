@@ -1,3 +1,4 @@
+import os
 from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
@@ -215,3 +216,12 @@ def test_a_failing_rebuild_still_asks_for_a_new_sample() -> None:
         language_switch._refresh_views(application)
 
     assert application._service is not None and application._service.retries == 1
+
+
+def test_switch_exports_the_language_for_gtk_own_texts(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv(name="LANGUAGE", value="it")
+    application = FakeApplication(host=make_host()[0], service=FakeService())
+
+    switch_language(application=application, language="en")
+
+    assert os.environ["LANGUAGE"] == "en"
