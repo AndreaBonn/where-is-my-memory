@@ -66,8 +66,14 @@ def spoken_duration(*, seconds: float) -> str:
     return _counted(count=int(seconds // SECONDS_PER_DAY), one="giorno", many="giorni")
 
 
+# The UI reads these prefixes back to tell "observing" and "at least" apart.
+OBSERVING_PREFIX = "in osservazione"
+AT_LEAST_MARK = "da almeno"
+NO_CONNECTIONS_MARK = "nessuna connessione"
+
+
 def reason_observing(*, elapsed_s: float) -> str:
-    return f"in osservazione da {format_duration(seconds=elapsed_s)}"
+    return f"{OBSERVING_PREFIX} da {format_duration(seconds=elapsed_s)}"
 
 
 def reason_unmeasurable(*, category: Category) -> str:
@@ -92,7 +98,9 @@ def _idle_detail(*, facts: IdleFacts) -> str:
     cpu = f"CPU media {format_decimal(value=facts.cpu_avg_pct)}%"
     if facts.watches_connections:
         connections = (
-            "nessuna connessione nuova" if facts.open_port else "nessuna connessione in ingresso"
+            f"{NO_CONNECTIONS_MARK} nuova"
+            if facts.open_port
+            else f"{NO_CONNECTIONS_MARK} in ingresso"
         )
         detail = f"{connections} e {cpu} negli ultimi {window}"
     elif facts.net_avg_bps is not None:
@@ -111,7 +119,7 @@ def _idle_detail(*, facts: IdleFacts) -> str:
 def reason_idle(*, idle_for_s: float, facts: IdleFacts, from_monitor_start: bool) -> str:
     duration = format_duration(seconds=idle_for_s)
     if from_monitor_start:
-        prefix = f"inattivo da almeno {duration}, cioè da quando il monitor è partito"
+        prefix = f"inattivo {AT_LEAST_MARK} {duration}, cioè da quando il monitor è partito"
     else:
         prefix = f"inattivo da {duration}"
     return f"{prefix}; {_idle_detail(facts=facts)}"
@@ -120,7 +128,7 @@ def reason_idle(*, idle_for_s: float, facts: IdleFacts, from_monitor_start: bool
 def reason_foreground_idle(*, idle_for_s: float, window_s: float, from_monitor_start: bool) -> str:
     duration = format_duration(seconds=idle_for_s)
     if from_monitor_start:
-        prefix = f"inattivo da almeno {duration}, cioè da quando il monitor è partito"
+        prefix = f"inattivo {AT_LEAST_MARK} {duration}, cioè da quando il monitor è partito"
     else:
         prefix = f"inattivo da {duration}"
     return f"{prefix}; mai in primo piano negli ultimi {format_duration(seconds=window_s)}"
@@ -134,7 +142,7 @@ def reason_idle_persisted(*, idle_for_s: float, observed_s: float) -> str:
     return (
         f"inattivo da {format_duration(seconds=idle_for_s)}; "
         "ultima attività registrata prima del riavvio, "
-        f"in osservazione da {format_duration(seconds=observed_s)}"
+        f"{OBSERVING_PREFIX} da {format_duration(seconds=observed_s)}"
     )
 
 

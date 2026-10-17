@@ -17,19 +17,6 @@ pytestmark = pytest.mark.ui
 MAIN_MENU_LABEL = "Menu principale"
 
 
-def test_system_page_lists_the_protected_summary_read_only(
-    window_factory: WindowFactory, snapshot: Snapshot
-) -> None:
-    window = window_factory(FakeSource(snapshot=snapshot))
-
-    texts = {w.get_title() for w in descendants(window.system) if hasattr(w, "get_title")}
-
-    assert "Sessione GNOME" in texts
-    assert not [w for w in descendants(window.system) if isinstance(w, Gtk.Button)]
-    subtitles = {w.get_subtitle() for w in descendants(window.system) if hasattr(w, "get_subtitle")}
-    assert "componente del desktop" in subtitles
-
-
 def test_every_icon_only_button_has_a_tooltip_and_an_accessible_name(
     window_factory: WindowFactory, snapshot: Snapshot
 ) -> None:
@@ -47,7 +34,7 @@ def test_every_icon_only_button_has_a_tooltip_and_an_accessible_name(
         and w.get_mapped()
     ]
 
-    assert len(buttons) >= 4  # menu, refresh, group menu, two member menus
+    assert len(buttons) >= 4  # menu, refresh, two member menus
     for button in buttons:
         assert icon_only_label(button=button) == button.get_tooltip_text(), (
             f"unlabelled icon button {button}"

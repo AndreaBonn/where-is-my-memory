@@ -21,6 +21,7 @@ from .format import (
     format_clock,
     format_size,
 )
+from .plain import friendly_container_name, friendly_process_name, plain_reason
 from .summary import build_summary as build_summary
 from .views import (
     ActionButton,
@@ -34,8 +35,13 @@ from .views import (
 
 NEUTRAL_STYLE = "dim-label"
 NO_ACTION_BADGE = "Nessuna azione"
-NOTHING_IDLE_MESSAGE = "Niente da liberare: tutto ciò che è acceso risulta in uso."
+NOTHING_IDLE_MESSAGE = "Niente da liberare: il resto è in uso o ancora in osservazione."
 NO_RESULTS_MESSAGE = "Nessun programma corrisponde ai filtri."
+ALL_CLEAR_MESSAGE = "Tutto in ordine"
+ALL_CLEAR_DESCRIPTION = (
+    "Non c'è niente acceso che si possa chiudere. "
+    "Ti avvisiamo noi se qualcosa resta acceso senza motivo."
+)
 PORTS_SEPARATOR = ", "
 DETAIL_SEPARATOR = " · "
 
@@ -65,12 +71,18 @@ def _mount_text(*, member: ContainerMember) -> tuple[str, ...]:
     return tuple(f"{m.type}: {m.source} -> {m.destination}" for m in member.mounts)
 
 
+def _titled(*, name: str, friendly: str | None) -> str:
+    """P11: the name of use first, the technical name in brackets."""
+    return name if friendly is None else f"{friendly} ({name})"
+
+
 def _process_row(*, member: ProcessMember, now: datetime) -> MemberRow:
     started = datetime.fromtimestamp(member.create_time, tz=now.tzinfo)
     return MemberRow(
         key=str(member.pid),
         kind="process",
         name=member.name,
+        title=_titled(name=member.name, friendly=friendly_process_name(name=member.name)),
         command=shlex.join(member.cmdline) if member.cmdline else None,
         cwd=member.cwd,
         ports=ports_text(ports=member.listen_ports),
@@ -89,6 +101,7 @@ def _container_row(*, member: ContainerMember, now: datetime) -> MemberRow:
         key=member.id,
         kind="container",
         name=member.name,
+        title=_titled(name=member.name, friendly=friendly_container_name(image=member.image)),
         command=None,
         cwd=None,
         ports="",
@@ -151,7 +164,9 @@ def _group_row(*, group: Group, now: datetime) -> GroupRow:
         id=group.id,
         title=group.name,
         subtitle=f"{CATEGORY_LABELS[group.category]} · {_activity(member_or_group=group, now=now)}",
-        detail=_detail(group=group),
+        detail=plain_reason(activity=group.activity, now=now),
+        technical=_detail(group=group),
+        is_idle=group.activity.state is ActivityState.IDLE,
         reclaimable=format_size(size=group.memory.reclaimable),
         memory=format_size(size=group.memory.used),
         risk=risk,
@@ -197,15 +212,22 @@ def _select_groups(*, snapshot: Snapshot, filters: RowFilters) -> list[Group]:
         for group in snapshot.groups
         if group.protection is Protection.ACTIONABLE and _matches(group=group, filters=filters)
     ]
-    # Ties fall back to used memory, name and id so the order never flickers.
+    # P9: what the user can free comes first. Ties fall back to used memory, name and id
+    # so the order never flickers.
     chosen.sort(
-        key=lambda g: (-g.memory.reclaimable, -g.memory.used, g.name.casefold(), g.id),
+        key=lambda g: (
+            g.activity.state is not ActivityState.IDLE,
+            -g.memory.reclaimable,
+            -g.memory.used,
+            g.name.casefold(),
+            g.id,
+        ),
     )
     return chosen
 
 
 def build_rows(*, snapshot: Snapshot, filters: RowFilters, now: datetime) -> tuple[GroupRow, ...]:
-    """Filter and order the groups by reclaimable memory (RF-03), then build their rows.
+    """Filter and order the groups, unused ones first (P9), then build their rows.
 
     Parameters
     ----------
@@ -219,10 +241,17 @@ def build_rows(*, snapshot: Snapshot, filters: RowFilters, now: datetime) -> tup
     Returns
     -------
     tuple[GroupRow, ...]
-        Rows sorted by reclaimable memory, largest first.
+        Idle rows first, then the others; each part by reclaimable memory, largest first.
     """
     groups = _select_groups(snapshot=snapshot, filters=filters)
     return tuple(_group_row(group=group, now=now) for group in groups)
+
+
+def filter_counts(*, snapshot: Snapshot) -> tuple[int, int]:
+    """How many programs "Da liberare" and "Tutto" list, before the other filters (P5)."""
+    everything = _select_groups(snapshot=snapshot, filters=RowFilters())
+    idle = sum(group.activity.state is ActivityState.IDLE for group in everything)
+    return idle, len(everything)
 
 
 def build_system_rows(*, snapshot: Snapshot) -> tuple[SystemRow, ...]:
@@ -240,6 +269,10 @@ def empty_state(*, snapshot: Snapshot, filters: RowFilters) -> EmptyStateView | 
         return None
     if filters.categories or filters.risks or filters.query.strip():
         return EmptyStateView(kind=EmptyKind.NO_RESULTS, message=NO_RESULTS_MESSAGE)
+    if not _select_groups(snapshot=snapshot, filters=RowFilters()):
+        return EmptyStateView(
+            kind=EmptyKind.ALL_CLEAR, message=ALL_CLEAR_MESSAGE, description=ALL_CLEAR_DESCRIPTION
+        )
     if filters.only_idle:
         return EmptyStateView(kind=EmptyKind.NOTHING_IDLE, message=NOTHING_IDLE_MESSAGE)
     return None

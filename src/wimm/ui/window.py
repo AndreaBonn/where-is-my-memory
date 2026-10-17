@@ -14,7 +14,6 @@ from wimm.model.actions import ActionRequest
 from wimm.paths import default_user_paths
 from wimm.ui.action_flow import can_act
 from wimm.ui.pages.overview import OverviewPage
-from wimm.ui.pages.system import SystemPage
 from wimm.ui.widgets import install_style, name_icon_button
 from wimm.ui.window_actions import build_action_flow
 from wimm.ui.window_disk import DiskBinding
@@ -76,7 +75,7 @@ class MainWindow(Adw.Window):
             on_action=self._start_action if can_act(source=self._source) else None,
             controls=group_controls(source=self._source),
         )
-        self.system = SystemPage()
+        self.system = self.overview.system
         start = self._start_action if can_act(source=self._source) else None
         self._disk = DiskBinding(source=self._source, clock=self._clock, start=start)
         self.disk = self._disk.page
@@ -121,7 +120,6 @@ class MainWindow(Adw.Window):
         stack = Adw.ViewStack()
         stack.add_titled_with_icon(self.overview, "overview", "Panoramica", "view-list-symbolic")
         stack.add_titled_with_icon(self.disk, "disk", "Disco", "drive-harddisk-symbolic")
-        stack.add_titled_with_icon(self.system, "system", "Sistema", "computer-symbolic")
         self.view_stack = stack
         switcher = Adw.ViewSwitcher(stack=stack, policy=Adw.ViewSwitcherPolicy.WIDE)
         bar = Adw.ViewSwitcherBar(stack=stack)

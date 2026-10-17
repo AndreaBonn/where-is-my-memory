@@ -110,7 +110,7 @@ def test_cancel_removes_the_pending_scroll_restore(
     monkeypatch.setattr("wimm.ui.pages.overview.SLICE_BUDGET_S", FIRST_SLICE_BUDGET_S)
     page.show_snapshot(snapshot=snapshot_of(snapshot, [1, 2, 3]), now=now)
     assert not page.is_syncing
-    restore_id = page._restore_source
+    restore_id = page._scroll.source
     assert restore_id
     assert source_alive(restore_id)
 
@@ -225,7 +225,7 @@ def test_a_reused_pid_updates_the_member_row_in_place(
     show(page, with_groups(snapshot, group))
     widget = page.group_widgets[group.id]
     widget.set_expanded(True)
-    before = member_row(widget, process.name)
+    before = member_row(widget, f"Server web ({process.name})")
     old_started = (
         build_rows(snapshot=with_groups(snapshot, group), filters=page._filters.filters, now=now)[0]
         .members[0]

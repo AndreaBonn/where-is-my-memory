@@ -23,6 +23,7 @@ from wimm.ui.viewmodel import (
     build_summary,
     build_system_rows,
     empty_state,
+    filter_counts,
 )
 from wimm.ui.views import EmptyKind, RowFilters
 
@@ -103,9 +104,11 @@ def test_fixture_group_row_reads_like_the_spec_mockup(snapshot: Snapshot, now: d
 
     assert row.title == "whitebox"
     assert row.subtitle == "Progetto · non in uso da 5 h"
-    assert row.detail == (
+    assert row.detail == "Non lo usi da 5 ore: nessuno ci si collega."
+    assert row.technical == (
         "nessuna connessione in ingresso e CPU media 0,1% negli ultimi 30 minuti · porte 8000, 8080"
     )
+    assert row.is_idle
     assert (row.reclaimable, row.memory) == ("1,1 GB", "1,1 GB")
     assert (row.risk_text, row.risk_style) == ("Sicuro: non perdi nulla", "success")
     assert row.primary_action is not None
@@ -124,6 +127,7 @@ def test_fixture_members_show_command_cwd_ports_image_and_mounts(
         "container",
         "whitebox-keycloak",
     )
+    assert container.title == "Accesso utenti (whitebox-keycloak)"
     assert container.image == "quay.io/keycloak/keycloak:26.0.8"
     assert container.state == "running"
     assert container.mounts == (
@@ -134,6 +138,7 @@ def test_fixture_members_show_command_cwd_ports_image_and_mounts(
     assert [a.label for a in container.actions] == ["Ferma"]
 
     assert (process.key, process.kind, process.name) == ("941149", "process", "uvicorn")
+    assert process.title == "Server web (uvicorn)"
     assert process.command == "uvicorn app:main --port 8000"
     assert process.cwd == "/home/bonn/projects/ai-whitebox-core"
     assert process.ports == "8000"
@@ -181,9 +186,9 @@ def test_group_without_ports_does_not_mention_ports(snapshot: Snapshot, now: dat
         )
     }
 
-    assert rows["quiet"].detail == "CPU sotto soglia"
-    assert rows["noisy"].detail == "CPU sotto soglia · porta 3000"
-    assert rows["multi"].detail == "CPU sotto soglia · porte 3000, 8000"
+    assert rows["quiet"].technical == "CPU sotto soglia"
+    assert rows["noisy"].technical == "CPU sotto soglia · porta 3000"
+    assert rows["multi"].technical == "CPU sotto soglia · porte 3000, 8000"
 
 
 def test_long_name_arrives_untruncated(snapshot: Snapshot, now: datetime) -> None:
@@ -201,6 +206,19 @@ def test_rows_sorted_by_reclaimable_descending(snapshot: Snapshot, now: datetime
         make_group("mid", reclaimable=500),
     )
     assert titles(with_groups(snapshot, *groups), now) == ["big", "mid", "small"]
+
+
+def test_unused_programs_come_before_the_ones_in_use(snapshot: Snapshot, now: datetime) -> None:
+    groups = (
+        make_group("browser", reclaimable=900, state=ActivityState.UNKNOWN, since=None),
+        make_group("busy", reclaimable=800, state=ActivityState.ACTIVE),
+        make_group("idle-small", reclaimable=10),
+        make_group("idle-big", reclaimable=500),
+    )
+    rows = build_rows(snapshot=with_groups(snapshot, *groups), filters=RowFilters(), now=now)
+
+    assert [r.title for r in rows] == ["idle-big", "idle-small", "browser", "busy"]
+    assert [r.is_idle for r in rows] == [True, True, False, False]
 
 
 def test_ties_break_on_used_then_name_then_id(snapshot: Snapshot, now: datetime) -> None:
@@ -467,7 +485,12 @@ def test_summary_headlines_use_round_numbers_and_plain_words(snapshot: Snapshot)
     summary = build_summary(snapshot=snapshot)
 
     assert summary.ram_headline == "33 GB usati su 42 GB"
-    assert summary.ram_details == "disponibili 8,8 GB · swap 120 MB su 4,3 GB · memoria quasi piena"
+    # In the fixture the disk (7% free) drives the pressure, not the RAM (21% free).
+    assert summary.ram_details == "disponibili 8,8 GB · swap 120 MB su 4,3 GB"
+    ram_tight = build_summary(snapshot=roomy_disk(snapshot))
+    assert (
+        ram_tight.ram_details == "disponibili 8,8 GB · swap 120 MB su 4,3 GB · memoria quasi piena"
+    )
     calm = build_summary(snapshot=replace(snapshot, pressure=Pressure.OK))
     assert calm.ram_details == "disponibili 8,8 GB · swap 120 MB su 4,3 GB"
     assert summary.disk_headline == "28 GB liberi su 376 GB"
@@ -577,12 +600,20 @@ def test_empty_state_for_idle_filter_uses_spec_text(snapshot: Snapshot) -> None:
 
     assert view is not None
     assert view.kind is EmptyKind.NOTHING_IDLE
-    assert view.message == "Niente da liberare: tutto ciò che è acceso risulta in uso."
+    assert view.message == "Niente da liberare: il resto è in uso o ancora in osservazione."
+
+
+def test_empty_state_without_any_program_says_all_is_well(snapshot: Snapshot) -> None:
+    for filters in (RowFilters(), RowFilters(only_idle=True)):
+        view = empty_state(snapshot=with_groups(snapshot), filters=filters)
+        assert view is not None
+        assert view.kind is EmptyKind.ALL_CLEAR
+        assert view.message == "Tutto in ordine"
+        assert "Ti avvisiamo" in view.description
 
 
 def test_empty_state_is_none_when_rows_exist_or_unfiltered(snapshot: Snapshot) -> None:
     assert empty_state(snapshot=snapshot, filters=RowFilters()) is None
-    assert empty_state(snapshot=with_groups(snapshot), filters=RowFilters()) is None
     idle_shot = with_groups(snapshot, make_group(state=ActivityState.IDLE))
     assert empty_state(snapshot=idle_shot, filters=RowFilters(only_idle=True)) is None
 
@@ -621,3 +652,82 @@ def test_building_hundreds_of_groups_is_fast(snapshot: Snapshot, now: datetime) 
 
     assert len(rows) == PERF_GROUPS
     assert elapsed < PERF_BUDGET_S, f"process_time {elapsed:.4f}s exceeds {PERF_BUDGET_S}s"
+
+
+def roomy_disk(snapshot: Snapshot) -> Snapshot:
+    """The fixture with half the disk free, so the RAM drives the pressure."""
+    half = snapshot.disk.total // 2
+    return replace(snapshot, disk=replace(snapshot.disk, used=half, free=half))
+
+
+def test_status_follows_the_pressure_and_offers_the_safe_amount(snapshot: Snapshot) -> None:
+    ram_tight = roomy_disk(snapshot)
+    warning = build_summary(snapshot=ram_tight)
+    critical = build_summary(snapshot=replace(ram_tight, pressure=Pressure.CRITICAL))
+    calm = build_summary(snapshot=replace(ram_tight, pressure=Pressure.OK))
+
+    assert (warning.status_title, warning.status_level) == (
+        "La memoria si sta riempiendo",
+        "warning",
+    )
+    assert (critical.status_title, critical.status_level) == ("La memoria è quasi finita", "error")
+    assert (calm.status_title, calm.status_level) == ("Il computer sta bene", "success")
+    assert warning.status_text == (
+        "Puoi liberare 4,2 GB chiudendo programmi che non usi. "
+        "Niente si chiude senza il tuo consenso."
+    )
+
+
+def test_status_without_anything_safe_to_close_does_not_offer_an_amount(
+    snapshot: Snapshot,
+) -> None:
+    nothing = replace(snapshot, reclaimable_now=replace(snapshot.reclaimable_now, ram=0))
+
+    summary = build_summary(snapshot=roomy_disk(nothing))
+
+    assert summary.status_text == "Non c'è niente da chiudere senza rischi."
+    assert summary.safe_label == "Niente da liberare senza rischi"
+    assert summary.safe_text == ""
+
+
+def test_safe_button_names_the_programs_it_stops(snapshot: Snapshot) -> None:
+    groups = tuple(
+        make_group(name, reclaimable=size)
+        for name, size in (("a", 3), ("b", 9), ("c", 5), ("d", 1))
+    )
+    shot = replace(
+        with_groups(snapshot, *groups), reclaimable_now=replace(snapshot.reclaimable_now, ram=18)
+    )
+    unsafe = make_group("risky", reclaimable=99, risk=Risk.CAUTION)
+    busy = make_group("busy", reclaimable=99, state=ActivityState.ACTIVE)
+
+    summary = build_summary(snapshot=replace(shot, groups=(*groups, unsafe, busy)))
+
+    assert summary.safe_label == "Libera 18 B senza rischi"
+    assert summary.safe_text == "Ferma b, c, a e un altro: non li usi e non perdi nulla."
+
+
+def test_filter_counts_count_actionable_idle_and_all(snapshot: Snapshot) -> None:
+    groups = (
+        make_group("idle"),
+        make_group("busy", state=ActivityState.ACTIVE),
+        make_group("gnome", category=Category.SESSION, risk=None),
+    )
+    assert filter_counts(snapshot=with_groups(snapshot, *groups)) == (1, 2)
+
+
+def test_status_and_button_agree_when_no_group_is_safe_to_stop(snapshot: Snapshot) -> None:
+    # A reclaimable total with no group behind it must not be offered by either.
+    summary = build_summary(snapshot=roomy_disk(with_groups(snapshot)))
+
+    assert summary.status_text == "Non c'è niente da chiudere senza rischi."
+    assert summary.safe_label == "Niente da liberare senza rischi"
+
+
+def test_status_names_the_disk_when_the_disk_drives_the_pressure(snapshot: Snapshot) -> None:
+    warning = build_summary(snapshot=snapshot)
+    critical = build_summary(snapshot=replace(snapshot, pressure=Pressure.CRITICAL))
+
+    assert (warning.status_title, warning.status_level) == ("Il disco si sta riempiendo", "warning")
+    assert critical.status_title == "Il disco è quasi pieno"
+    assert warning.status_text == "Fai spazio dalla scheda Disco: lì trovi cosa si può cancellare."

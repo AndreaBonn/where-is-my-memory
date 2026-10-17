@@ -4,12 +4,12 @@ from datetime import datetime
 from types import MappingProxyType
 
 from wimm.core.sizes import format_size as format_size
+from wimm.core.text import OBSERVING_PREFIX
 from wimm.model.enums import ActionKind, ActivityState, Category, Pressure, Risk
 
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
-OBSERVING_PREFIX = "in osservazione"
 ROUND_FROM_BYTES = 10_000_000_000
 BYTES_PER_GB = 1_000_000_000
 
@@ -72,7 +72,7 @@ ACTION_LABELS = MappingProxyType(
         ActionKind.GROUP_STOP: "Ferma",
         ActionKind.COMPOSE_DOWN: "Spegni il progetto",
         ActionKind.COMPOSE_DOWN_VOLUMES: "Spegni e rimuovi i volumi",
-        ActionKind.STOP_ALL_IDLE_SAFE: "Ferma tutti gli inattivi sicuri",
+        ActionKind.STOP_ALL_IDLE_SAFE: "Libera la memoria",
         ActionKind.IMAGE_REMOVE: "Rimuovi immagine",
         ActionKind.IMAGES_PRUNE_DANGLING: "Elimina immagini senza nome",
         ActionKind.IMAGES_PRUNE_UNUSED: "Elimina immagini inutilizzate",

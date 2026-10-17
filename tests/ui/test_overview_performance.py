@@ -39,8 +39,11 @@ def visible_order(page: OverviewPage) -> list[str]:
     order = []
     child = listing.get_first_child()
     while child is not None:
-        assert isinstance(child, GroupRowWidget)
-        order.append(child.group_id)
+        # Section titles (P9) are list children too: only the rows carry an order.
+        if isinstance(child, GroupRowWidget):
+            order.append(child.group_id)
+        else:
+            assert isinstance(child, Gtk.Label)
         child = child.get_next_sibling()
     return order
 

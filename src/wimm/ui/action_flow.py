@@ -29,7 +29,7 @@ from wimm.ui.outcome import (
 )
 
 LOGGER = logging.getLogger(__name__)
-NOTHING_TO_STOP_TEXT = "Non c'è nessun gruppo inattivo e sicuro da fermare"
+NOTHING_TO_STOP_TEXT = "Non c'è niente da fermare senza rischi"
 REPLAN_TEXT = "La situazione è cambiata, ricalcolo…"
 DETAILS_LABEL = "Dettagli"
 REPLANNED_ERRORS = (PlanExpired, TargetChanged)

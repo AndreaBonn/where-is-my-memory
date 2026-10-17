@@ -102,7 +102,9 @@ def test_copy_pid_from_the_member_menu_fills_the_clipboard(
     wait_until(lambda: row.get_expanded(), description="row expanded")
     settle(window_or_page=window)
     uvicorn = next(
-        w for w in descendants(row) if isinstance(w, Adw.ActionRow) and w.get_title() == "uvicorn"
+        w
+        for w in descendants(row)
+        if isinstance(w, Adw.ActionRow) and w.get_title() == "Server web (uvicorn)"
     )
 
     assert uvicorn.activate_action("ctx.copy-pid", None)

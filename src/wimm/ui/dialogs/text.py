@@ -15,7 +15,7 @@ TITLES = MappingProxyType(
         ActionKind.GROUP_STOP: "Fermare {subject}?",
         ActionKind.COMPOSE_DOWN: "Spegnere il progetto {subject}?",
         ActionKind.COMPOSE_DOWN_VOLUMES: "Spegnere il progetto {subject} e rimuovere i volumi?",
-        ActionKind.STOP_ALL_IDLE_SAFE: "Fermare tutti gli inattivi sicuri?",
+        ActionKind.STOP_ALL_IDLE_SAFE: "Fermare i programmi che non usi?",
         ActionKind.IMAGE_REMOVE: "Rimuovere l'immagine {subject}?",
         ActionKind.IMAGES_PRUNE_DANGLING: "Eliminare le immagini senza nome?",
         ActionKind.IMAGES_PRUNE_UNUSED: "Eliminare le immagini inutilizzate?",

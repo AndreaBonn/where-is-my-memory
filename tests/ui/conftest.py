@@ -134,9 +134,19 @@ def descendants(widget: Gtk.Widget) -> Iterator[Gtk.Widget]:
         child = child.get_next_sibling()
 
 
-def idle_filter(overview: Gtk.Widget) -> Gtk.ToggleButton:
+def _toggle(overview: Gtk.Widget, *, prefix: str) -> Gtk.ToggleButton:
     toggles = (w for w in descendants(overview) if isinstance(w, Gtk.ToggleButton))
-    return next(t for t in toggles if t.get_label() == "Inattivi")
+    return next(t for t in toggles if (t.get_label() or "").startswith(prefix))
+
+
+def idle_filter(overview: Gtk.Widget) -> Gtk.ToggleButton:
+    """The "Da liberare" choice of the filter bar, active when the page opens (P6)."""
+    return _toggle(overview, prefix="Da liberare")
+
+
+def all_filter(overview: Gtk.Widget) -> Gtk.ToggleButton:
+    """The "Tutto" choice of the filter bar."""
+    return _toggle(overview, prefix="Tutto")
 
 
 class WindowFactory(Protocol):

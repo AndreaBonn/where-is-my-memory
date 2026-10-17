@@ -211,7 +211,8 @@ def test_stop_all_lists_entries_grouped_by_group_with_one_total(display: None) -
     assert extra is not None
 
     titles = [w.get_title() for w in descendants(extra) if isinstance(w, Adw.PreferencesGroup)]
-    assert dialog.get_heading() == "Fermare tutti gli inattivi sicuri?"
+    assert dialog.get_heading() == "Fermare i programmi che non usi?"
+    assert dialog.get_response_label(CONFIRM_RESPONSE) == "Libera la memoria"
     assert titles == ["alfa", "beta"]
     assert "600 B" in dialog.get_body()
 

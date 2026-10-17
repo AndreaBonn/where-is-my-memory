@@ -13,11 +13,11 @@ from wimm.ui.views import (
 )
 from wimm.ui.widgets import icon_only_label, install_style
 from wimm.ui.widgets.context_menu import MenuTarget
-from wimm.ui.widgets.group_row import (
-    PRIMARY_ACTION_NAME,
-    GroupRowWidget,
-    group_target,
+from wimm.ui.widgets.group_row import PRIMARY_ACTION_NAME, GroupRowWidget
+from wimm.ui.widgets.member_row import (
+    DETAILS_BUTTON_NAME,
     member_subtitle,
+    member_summary,
     target_of,
 )
 
@@ -98,7 +98,7 @@ def test_two_hundred_character_name_is_ellipsized_not_wrapped(group_row: GroupRo
 
 def test_members_are_built_only_when_the_row_is_expanded(group_row: GroupRow) -> None:
     widget = GroupRowWidget(row=group_row)
-    names = {m.name for m in group_row.members}
+    names = {m.title for m in group_row.members}
     before = {label.get_label() for label in labels_under(widget)}
     assert names.isdisjoint(before)
 
@@ -130,32 +130,44 @@ def test_container_subtitle_shows_image_state_and_mounts(group_row: GroupRow) ->
     assert not any("PID" in line or line.startswith("comando") for line in lines)
 
 
-def test_context_targets_use_the_first_process_and_skip_containers(group_row: GroupRow) -> None:
-    assert group_target(row=group_row) == MenuTarget(
-        command="uvicorn app:main --port 8000",
-        pid="941149",
-        cwd="/home/bonn/projects/ai-whitebox-core",
-    )
+def test_container_has_no_menu_target(group_row: GroupRow) -> None:
     container = next(m for m in group_row.members if m.kind == "container")
+    process = next(m for m in group_row.members if m.kind == "process")
     assert target_of(member=container) == MenuTarget(command=None, pid=None, cwd=None)
+    assert target_of(member=process).pid == "941149"
 
 
-def test_context_actions_are_enabled_only_when_the_data_exists(group_row: GroupRow) -> None:
+def test_group_row_has_no_menu_of_its_own(group_row: GroupRow) -> None:
+    # P10: copy and open live on the members, where the data is; the row stays plain.
     widget = GroupRowWidget(row=group_row)
-    actions = widget.context_actions
-    assert all(
-        actions.get_action_enabled(name) for name in ("copy-command", "copy-pid", "open-folder")
+    assert not [w for w in descendants(widget) if isinstance(w, Gtk.MenuButton)]
+    widget.set_expanded(True)
+    assert len([w for w in descendants(widget) if isinstance(w, Gtk.MenuButton)]) == len(
+        group_row.members
     )
 
-    from dataclasses import replace
 
-    containers = tuple(m for m in group_row.members if m.kind == "container")
-    widget.update(row=replace(group_row, members=containers))
+def test_member_shows_a_short_line_and_the_technical_one_on_request(group_row: GroupRow) -> None:
+    widget = GroupRowWidget(row=group_row)
+    widget.set_expanded(True)
+    process = next(m for m in group_row.members if m.kind == "process")
+    row = member_row_named(widget, process.title)
+    toggle = next(w for w in descendants(row) if w.get_name() == DETAILS_BUTTON_NAME)
+    assert isinstance(toggle, Gtk.ToggleButton)
 
-    actions = widget.context_actions
-    assert not any(
-        actions.get_action_enabled(name) for name in ("copy-command", "copy-pid", "open-folder")
-    )
+    assert row.get_subtitle() == member_summary(member=process)
+    assert "PID" not in (row.get_subtitle() or "")
+
+    toggle.set_active(True)
+    assert member_subtitle(member=process) in (row.get_subtitle() or "")
+
+    widget.update(row=with_first_member_memory(group_row, "3 GB"))
+    assert "PID" in (row.get_subtitle() or "")
+
+
+def test_member_summary_reads_memory_start_and_use(group_row: GroupRow) -> None:
+    process = next(m for m in group_row.members if m.kind == "process")
+    assert member_summary(member=process) == "180 MB · avviato 16/10 06:46 · non in uso da 5 h"
 
 
 def test_update_with_an_identical_row_keeps_the_expanded_state(group_row: GroupRow) -> None:
@@ -173,13 +185,13 @@ def test_update_rebuilds_the_members_of_an_expanded_row(group_row: GroupRow) -> 
     widget = GroupRowWidget(row=group_row)
     widget.set_expanded(True)
     process = next(m for m in group_row.members if m.kind == "process")
-    renamed: MemberRow = replace(process, name="renamed-process")
+    renamed: MemberRow = replace(process, name="renamed-process", title="renamed-process")
 
     widget.update(row=replace(group_row, members=(renamed,)))
 
     texts = {label.get_label() for label in labels_under(widget)}
     assert "renamed-process" in texts
-    assert "whitebox-keycloak" not in texts
+    assert "Accesso utenti (whitebox-keycloak)" not in texts
 
 
 def test_icon_only_buttons_register_their_accessible_label(group_row: GroupRow) -> None:
@@ -192,7 +204,7 @@ def test_icon_only_buttons_register_their_accessible_label(group_row: GroupRow) 
         if isinstance(w, Gtk.MenuButton) and w.get_icon_name() is not None
     ]
 
-    assert len(icon_buttons) == 1 + len(group_row.members)
+    assert len(icon_buttons) == len(group_row.members)
     for button in icon_buttons:
         assert (icon_only_label(button=button) or "").startswith("Altre azioni: ")
         assert button.get_tooltip_text() == icon_only_label(button=button)
@@ -237,7 +249,7 @@ def test_update_keeps_member_widgets_and_the_open_menu(group_row: GroupRow) -> N
     widget = GroupRowWidget(row=group_row)
     window = open_in_window(widget)
     widget.set_expanded(True)
-    name = group_row.members[0].name
+    name = group_row.members[0].title
     member_row = member_row_named(widget, name)
     menu = member_menu(member_row)
     menu.popup()
@@ -262,7 +274,7 @@ def test_update_keeps_the_focus_on_a_member_button(group_row: GroupRow) -> None:
     widget = GroupRowWidget(row=group_row)
     window = open_in_window(widget)
     widget.set_expanded(True)
-    button = member_menu(member_row_named(widget, group_row.members[0].name))
+    button = member_menu(member_row_named(widget, group_row.members[0].title))
     assert button.grab_focus()
     assert focus_is_inside(window=window, button=button)
 
@@ -272,25 +284,32 @@ def test_update_keeps_the_focus_on_a_member_button(group_row: GroupRow) -> None:
     window.destroy()
 
 
-def test_set_of_members_changing_rebuilds_the_member_rows(group_row: GroupRow) -> None:
+def test_set_of_members_changing_keeps_the_members_that_stay(group_row: GroupRow) -> None:
     from dataclasses import replace
 
     widget = GroupRowWidget(row=group_row)
     widget.set_expanded(True)
-    old_row = member_row_named(widget, group_row.members[0].name)
-    extra = replace(group_row.members[0], key="424242", name="extra-process")
+    old_row = member_row_named(widget, group_row.members[0].title)
+    opened = next(w for w in descendants(old_row) if w.get_name() == DETAILS_BUTTON_NAME)
+    assert isinstance(opened, Gtk.ToggleButton)
+    opened.set_active(True)
+    extra = replace(group_row.members[0], key="424242", name="extra-process", title="extra-process")
 
     widget.update(row=replace(group_row, members=(*group_row.members, extra)))
 
     assert member_row_named(widget, "extra-process") is not None
-    assert member_row_named(widget, group_row.members[0].name) is not old_row
+    # The member that stayed keeps its widget, with its details still open.
+    assert member_row_named(widget, group_row.members[0].title) is old_row
+    toggle = next(w for w in descendants(old_row) if w.get_name() == DETAILS_BUTTON_NAME)
+    assert isinstance(toggle, Gtk.ToggleButton)
+    assert toggle.get_active()
 
 
 def test_collapsed_row_skips_member_work_and_catches_up_when_reopened(group_row: GroupRow) -> None:
     widget = GroupRowWidget(row=group_row)
     widget.set_expanded(True)
     widget.set_expanded(False)
-    member_row = member_row_named(widget, group_row.members[0].name)
+    member_row = member_row_named(widget, group_row.members[0].title)
     old_subtitle = member_row.get_subtitle()
 
     widget.update(row=with_first_member_memory(group_row, "7 GB"))
@@ -299,3 +318,20 @@ def test_collapsed_row_skips_member_work_and_catches_up_when_reopened(group_row:
     widget.set_expanded(True)
 
     assert "7 GB" in (member_row.get_subtitle() or "")
+
+
+def test_a_new_member_does_not_steal_the_focus_from_one_that_stays(group_row: GroupRow) -> None:
+    from dataclasses import replace
+
+    widget = GroupRowWidget(row=group_row)
+    window = open_in_window(widget)
+    widget.set_expanded(True)
+    button = member_menu(member_row_named(widget, group_row.members[0].title))
+    assert button.grab_focus()
+    extra = replace(group_row.members[0], key="424242", name="extra", title="extra")
+
+    widget.update(row=replace(group_row, members=(*group_row.members, extra)))
+
+    assert member_row_named(widget, "extra") is not None
+    assert focus_is_inside(window=window, button=button)
+    window.destroy()

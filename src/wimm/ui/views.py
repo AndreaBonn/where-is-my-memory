@@ -16,12 +16,14 @@ class RowFilters:
 class EmptyKind(Enum):
     NOTHING_IDLE = "nothing_idle"
     NO_RESULTS = "no_results"
+    ALL_CLEAR = "all_clear"
 
 
 @dataclass(frozen=True, slots=True)
 class EmptyStateView:
     kind: EmptyKind
     message: str
+    description: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,6 +59,11 @@ class SummaryView:
     pressure_text: str
     segments: tuple[BarSegment, ...]
     kernel_cache_note: str
+    status_title: str
+    status_text: str
+    status_level: str
+    safe_label: str
+    safe_text: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -71,6 +78,7 @@ class MemberRow:
     key: str
     kind: str
     name: str
+    title: str
     command: str | None
     cwd: str | None
     ports: str
@@ -89,6 +97,8 @@ class GroupRow:
     title: str
     subtitle: str
     detail: str
+    technical: str
+    is_idle: bool
     reclaimable: str
     memory: str
     risk: Risk | None

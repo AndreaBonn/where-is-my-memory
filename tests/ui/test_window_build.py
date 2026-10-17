@@ -1,4 +1,5 @@
 import time
+from dataclasses import replace
 
 import pytest
 from gi.repository import Gio, GLib, Gtk
@@ -6,6 +7,7 @@ from gi.repository import Gio, GLib, Gtk
 from tests.ui.conftest import (
     FakeSource,
     WindowFactory,
+    all_filter,
     descendants,
     idle_filter,
     make_group,
@@ -21,7 +23,7 @@ from wimm.ui.window_state import DEFAULT_HEIGHT, DEFAULT_WIDTH, MIN_HEIGHT, MIN_
 pytestmark = pytest.mark.ui
 MANY_GROUPS = 300
 LONG_NAME = "x" * 200
-IDLE_MESSAGE = "Niente da liberare: tutto ciò che è acceso risulta in uso."
+IDLE_MESSAGE = "Niente da liberare: il resto è in uso o ancora in osservazione."
 BUILD_BUDGET_S = 1.0
 # RNF-03: no main-loop slice of row work may exceed 50 ms.
 SLICE_BUDGET_S = 0.050
@@ -110,8 +112,11 @@ def test_three_hundred_groups_build_in_slices_and_end_in_viewmodel_order(
     order = []
     child = listing.get_first_child()
     while child is not None:
-        assert isinstance(child, GroupRowWidget)
-        order.append(child.group_id)
+        # Section titles (P9) are list children too: only the rows carry an order.
+        if isinstance(child, GroupRowWidget):
+            order.append(child.group_id)
+        else:
+            assert isinstance(child, Gtk.Label)
         child = child.get_next_sibling()
     assert order == [f"id-group-{i:03d}" for i in reversed(range(MANY_GROUPS))]
     assert len(primary_buttons(window.overview)) == MANY_GROUPS
@@ -152,16 +157,21 @@ def test_a_two_hundred_character_name_is_ellipsized_in_the_window(
     assert title.get_ellipsize().value_nick == "end"
 
 
-def test_idle_filter_reduces_the_rows(window_factory: WindowFactory, snapshot: Snapshot) -> None:
+def test_the_list_opens_on_what_can_be_freed_and_tutto_shows_the_rest(
+    window_factory: WindowFactory, snapshot: Snapshot
+) -> None:
     idle = make_group("idle-one")
     busy = make_group("busy-one", state=ActivityState.ACTIVE)
     window = window_factory(FakeSource(snapshot=with_groups(snapshot, idle, busy)))
-    assert set(window.overview.group_widgets) == {"id-idle-one", "id-busy-one"}
+    assert idle_filter(window.overview).get_active()
+    assert idle_filter(window.overview).get_label() == "Da liberare (1)"
+    assert set(window.overview.group_widgets) == {"id-idle-one"}
 
-    idle_filter(window.overview).set_active(True)
+    all_filter(window.overview).set_active(True)
     settle(window_or_page=window)
 
-    assert set(window.overview.group_widgets) == {"id-idle-one"}
+    assert all_filter(window.overview).get_label() == "Tutto (2)"
+    assert set(window.overview.group_widgets) == {"id-idle-one", "id-busy-one"}
 
 
 def test_empty_state_shows_the_verbatim_text_when_nothing_is_idle(
@@ -176,3 +186,30 @@ def test_empty_state_shows_the_verbatim_text_when_nothing_is_idle(
     titles = {w.get_title() for w in descendants(window.overview) if hasattr(w, "get_title")}
     assert IDLE_MESSAGE in titles
     assert not window.overview.group_widgets
+
+
+def header_text(widget: Gtk.ListBoxRow) -> str | None:
+    header = widget.get_header()
+    return header.get_label() if isinstance(header, Gtk.Label) else None
+
+
+def test_section_titles_mark_where_idle_and_in_use_rows_start(
+    window_factory: WindowFactory, snapshot: Snapshot
+) -> None:
+    idle = make_group("idle-one", reclaimable=10)
+    busy = make_group("busy-one", reclaimable=900, state=ActivityState.ACTIVE)
+    source = FakeSource(snapshot=with_groups(snapshot, idle, busy))
+    window = window_factory(source)
+    present_and_settle(window)
+    all_filter(window.overview).set_active(True)
+    settle(window_or_page=window)
+    rows = window.overview.group_widgets
+
+    assert header_text(rows["id-idle-one"]) == "Da liberare · non li usi da tempo"
+    assert header_text(rows["id-busy-one"]) == "In uso adesso o non misurabile"
+
+    source.publish(with_groups(snapshot, replace(idle, activity=busy.activity), busy))
+    present_and_settle(window)
+
+    titles = [header_text(rows[gid]) for gid in ("id-busy-one", "id-idle-one")]
+    assert titles == ["In uso adesso o non misurabile", None]

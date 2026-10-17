@@ -2,7 +2,9 @@ from gi.repository import Gtk
 
 BADGE_CLASS = "wimm-badge"
 # The badge says the consequence too (P8): it wraps instead of crushing the row title.
-BADGE_MAX_CHARS = 18
+BADGE_MAX_CHARS = 24
+# Without a minimum a suffix gets one word per line even where there is room.
+BADGE_MIN_CHARS = 12
 
 
 def make_risk_badge(*, text: str, style: str) -> Gtk.Label:
@@ -12,6 +14,7 @@ def make_risk_badge(*, text: str, style: str) -> Gtk.Label:
         valign=Gtk.Align.CENTER,
         wrap=True,
         max_width_chars=BADGE_MAX_CHARS,
+        width_chars=BADGE_MIN_CHARS,
         justify=Gtk.Justification.CENTER,
     )
     badge.add_css_class(BADGE_CLASS)

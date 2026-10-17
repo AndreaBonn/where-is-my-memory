@@ -9,13 +9,16 @@ from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind
 from wimm.model.snapshot import Snapshot
 from wimm.ui.requests import request_for_row
-from wimm.ui.viewmodel import build_rows, build_summary, empty_state
+from wimm.ui.viewmodel import build_rows, build_summary, empty_state, filter_counts
 from wimm.ui.views import GroupRow, RowFilters
+from wimm.ui.widgets.filter_bar import FilterBar
 from wimm.ui.widgets.group_controls import GroupControlHandlers
 from wimm.ui.widgets.group_list import build_list
 from wimm.ui.widgets.group_row import GroupRowWidget
+from wimm.ui.widgets.scroll_restore import ScrollRestore
 from wimm.ui.widgets.state_views import EmptyView, ErrorView, LoadingView
-from wimm.ui.widgets.summary import FilterBar, SummaryPanel
+from wimm.ui.widgets.summary import SummaryPanel
+from wimm.ui.widgets.system_section import SystemSection
 
 LOGGER = logging.getLogger(__name__)
 SLOW_LOADING_MS = 15_000
@@ -56,13 +59,13 @@ class OverviewPage(Gtk.Stack):
         self._job_source = 0
         self._sort_dirty = False
         self._scroll_position = 0.0
-        self._restore_source = 0
         self._loading = LoadingView()
         self._error = ErrorView()
         self._empty = EmptyView()
         self._summary = SummaryPanel(on_stop_all=None if on_action is None else self._on_stop_all)
         self._filters = FilterBar(on_changed=self._on_filters_changed)
         self._list = build_list()
+        self.system = SystemSection()
         self._build_pages()
         self.show_loading()
 
@@ -72,6 +75,7 @@ class OverviewPage(Gtk.Stack):
         self._list_stack.add_named(self._empty.page, EMPTY_PAGE)
         self._scroller = Gtk.ScrolledWindow(hscrollbar_policy=Gtk.PolicyType.NEVER)
         self._scroller.set_child(self._build_content())
+        self._scroll = ScrollRestore(scroller=self._scroller)
         self.add_named(self._loading.page, STATE_LOADING)
         self.add_named(self._error.page, STATE_ERROR)
         self.add_named(self._scroller, STATE_CONTENT)
@@ -85,7 +89,7 @@ class OverviewPage(Gtk.Stack):
             margin_start=PAGE_MARGIN,
             margin_end=PAGE_MARGIN,
         )
-        for child in (self._summary, self._filters, self._list_stack):
+        for child in (self._summary, self._filters, self._list_stack, self.system):
             box.append(child)
         return Adw.Clamp(maximum_size=MAX_CONTENT_WIDTH, child=box)
 
@@ -183,6 +187,8 @@ class OverviewPage(Gtk.Stack):
     def _render(self) -> None:
         if self._snapshot is None or self._now is None:
             return
+        idle, total = filter_counts(snapshot=self._snapshot)
+        self._filters.set_counts(idle=idle, total=total)
         filters = self._filters.filters
         rows = build_rows(snapshot=self._snapshot, filters=filters, now=self._now)
         self._summary.update(view=build_summary(snapshot=self._snapshot))
@@ -197,26 +203,13 @@ class OverviewPage(Gtk.Stack):
     def cancel(self) -> None:
         """Drop the running sync, the pending scroll restore and the loading timer."""
         self._cancel_rows()
-        self._cancel_restore()
+        self._scroll.cancel()
         self._cancel_slow()
-
-    def _restore_scroll(self, position: float, expected: float) -> bool:
-        self._restore_source = 0
-        adjustment = self._scroller.get_vadjustment()
-        # A moved value means something else (the user, a focus change) scrolled meanwhile.
-        if adjustment.get_value() == expected:
-            adjustment.set_value(position)
-        return GLib.SOURCE_REMOVE
-
-    def _cancel_restore(self) -> None:
-        if self._restore_source:
-            GLib.source_remove(self._restore_source)
-            self._restore_source = 0
 
     def _start_sync(self, *, rows: tuple[GroupRow, ...], scroll_position: float) -> None:
         """Replace any running sync with one for ``rows``; the first slice runs now."""
         self._cancel_rows()
-        self._cancel_restore()
+        self._scroll.cancel()
         self._job = self._sync_steps(rows=rows)
         self._scroll_position = scroll_position
         if not self._advance(budget_s=SLICE_BUDGET_S, restore=True):
@@ -248,13 +241,8 @@ class OverviewPage(Gtk.Stack):
             return True
         self._job = None
         if restore:
-            self._queue_restore()
+            self._scroll.queue(position=self._scroll_position)
         return True
-
-    def _queue_restore(self) -> None:
-        self._cancel_restore()
-        expected = self._scroller.get_vadjustment().get_value()
-        self._restore_source = GLib.idle_add(self._restore_scroll, self._scroll_position, expected)
 
     def _cancel_rows(self) -> None:
         if self._job_source:
@@ -296,3 +284,5 @@ class OverviewPage(Gtk.Stack):
         if self._sort_dirty:
             self._sort_dirty = False
             self._list.invalidate_sort()
+        # A row moving between "in use" and "idle" changes where the titles go.
+        self._list.invalidate_headers()

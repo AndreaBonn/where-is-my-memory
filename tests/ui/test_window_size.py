@@ -109,7 +109,7 @@ def test_closing_saves_the_size_and_a_new_window_reads_it(
     assert second.get_default_size() == (700, 500)
 
 
-def test_narrow_layout_hides_the_secondary_column_and_restores_it(
+def test_narrow_layout_stacks_size_badge_and_button_and_restores_them(
     window_factory: WindowFactory, snapshot: Snapshot
 ) -> None:
     window = window_factory(FakeSource(snapshot=snapshot))
@@ -119,13 +119,17 @@ def test_narrow_layout_hides_the_secondary_column_and_restores_it(
         for w in descendants(widget)
         if isinstance(w, Gtk.Label) and w.has_css_class("wimm-reclaim")
     )
-    assert reclaim.get_visible()
+    suffix = reclaim.get_parent()
+    assert isinstance(suffix, Gtk.Box)
+    assert suffix.get_orientation() is Gtk.Orientation.HORIZONTAL
 
     window.overview.set_narrow(narrow=True)
-    assert not reclaim.get_visible()
+    # P14: the amount stays visible, stacked over the badge and the button.
+    assert reclaim.get_visible()
+    assert suffix.get_orientation() is Gtk.Orientation.VERTICAL
 
     window.overview.set_narrow(narrow=False)
-    assert reclaim.get_visible()
+    assert suffix.get_orientation() is Gtk.Orientation.HORIZONTAL
 
 
 def test_narrow_window_layout_emits_no_gtk_warnings(
@@ -154,5 +158,9 @@ def test_breakpoint_switches_to_one_column_below_600_px(
         if isinstance(w, Gtk.Label) and w.has_css_class("wimm-reclaim")
     )
 
-    wait_until(lambda: not reclaim.get_visible(), description="narrow layout")
+    suffix = reclaim.get_parent()
+    assert isinstance(suffix, Gtk.Box)
+    wait_until(
+        lambda: suffix.get_orientation() is Gtk.Orientation.VERTICAL, description="narrow layout"
+    )
     assert window.get_width() < 600

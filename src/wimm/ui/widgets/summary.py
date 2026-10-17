@@ -2,9 +2,7 @@ from collections.abc import Callable
 
 from gi.repository import Gtk
 
-from wimm.model.enums import ActionKind, Category, Protection, Risk, protection_of
-from wimm.ui.format import ACTION_LABELS, CATEGORY_LABELS, RISK_TEXT
-from wimm.ui.views import RowFilters, SummaryView
+from wimm.ui.views import SummaryView
 
 from . import ACTIONS_UNAVAILABLE_TOOLTIP
 from .memory_bar import MemoryBar
@@ -13,21 +11,15 @@ MARGIN = 12
 SECTION_SPACING = 8
 STATUS_COLUMNS = 2
 STATUS_COLUMN_SPACING = 12
-FILTER_COLUMNS = 3
-FILTER_COLUMN_SPACING = 8
-FILTER_ROW_SPACING = 6
 LINE_SPACING = 2
-SEARCH_PLACEHOLDER = "Cerca…"
-SEARCH_LABEL = "Cerca tra i programmi"
+STATUS_ICON_SIZE = 32
 RAM_TITLE = "Memoria (RAM)"
 DISK_TITLE = "Spazio sul disco"
-FILTER_ALL = "Tutti"
-FILTER_IDLE = "Inattivi"
-CATEGORY_MENU = "Categoria"
-RISK_MENU = "Rischio"
-FILTERABLE_CATEGORIES = tuple(
-    category for category in Category if protection_of(category=category) is Protection.ACTIONABLE
-)
+STATUS_ICONS = {
+    "success": "emblem-ok-symbolic",
+    "warning": "dialog-warning-symbolic",
+    "error": "dialog-error-symbolic",
+}
 
 
 def _section_title(*, text: str) -> Gtk.Label:
@@ -54,7 +46,8 @@ def _dim_caption() -> Gtk.Label:
 
 
 def _build_stop_all(*, on_stop_all: Callable[[], None] | None) -> Gtk.Button:
-    button = Gtk.Button(label=ACTION_LABELS[ActionKind.STOP_ALL_IDLE_SAFE])
+    button = Gtk.Button()
+    button.add_css_class("suggested-action")
     if on_stop_all is None:
         button.set_sensitive(False)
         button.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
@@ -79,8 +72,12 @@ class SummaryPanel(Gtk.Box):
         self._reclaim = _detail_label()
         self._reclaim.add_css_class("wimm-reclaim")
         self._stop_all = _build_stop_all(on_stop_all=on_stop_all)
+        self._safe_text = _dim_caption()
         self._can_stop_all = on_stop_all is not None
+        self._has_safe = False
+        self._busy = False
         for widget in (
+            self._build_status(),
             _section_title(text=RAM_TITLE),
             self._ram_text,
             self._ram_details,
@@ -95,7 +92,35 @@ class SummaryPanel(Gtk.Box):
 
     def set_busy(self, *, busy: bool) -> None:
         """Disable "stop all" while an action runs, so a second plan cannot start over it."""
-        self._stop_all.set_sensitive(self._can_stop_all and not busy)
+        self._busy = busy
+        self._sync_stop_all()
+
+    def _sync_stop_all(self) -> None:
+        # Off with nothing safe to free too: a button that can only say "nothing" is noise.
+        self._stop_all.set_sensitive(self._can_stop_all and self._has_safe and not self._busy)
+
+    def _build_status(self) -> Gtk.Box:
+        """P1: one sentence in the style of the memory pressure, first thing on the page."""
+        self._status_icon = Gtk.Image(pixel_size=STATUS_ICON_SIZE, valign=Gtk.Align.CENTER)
+        self._status_icon.set_accessible_role(Gtk.AccessibleRole.PRESENTATION)
+        self._status_title = _section_title(text="")
+        self._status_text = _detail_label()
+        texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING, hexpand=True)
+        texts.append(self._status_title)
+        texts.append(self._status_text)
+        self._status = Gtk.Box(spacing=STATUS_COLUMN_SPACING)
+        self._status.add_css_class("wimm-status")
+        self._status.append(self._status_icon)
+        self._status.append(texts)
+        return self._status
+
+    def _update_status(self, *, view: SummaryView) -> None:
+        self._status_title.set_label(view.status_title)
+        self._status_text.set_label(view.status_text)
+        self._status_icon.set_from_icon_name(STATUS_ICONS[view.status_level])
+        for level in STATUS_ICONS:
+            self._status.remove_css_class(level)
+        self._status.add_css_class(view.status_level)
 
     def _build_reclaim_row(self) -> Gtk.FlowBox:
         row = Gtk.FlowBox(
@@ -104,12 +129,21 @@ class SummaryPanel(Gtk.Box):
             homogeneous=False,
             column_spacing=STATUS_COLUMN_SPACING,
         )
+        action = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING)
+        action.append(self._stop_all)
+        action.append(self._safe_text)
         row.append(self._reclaim)
-        row.append(self._stop_all)
+        row.append(action)
         return row
 
     def update(self, *, view: SummaryView) -> None:
         """Show a new SummaryView."""
+        self._update_status(view=view)
+        self._stop_all.set_label(view.safe_label)
+        self._safe_text.set_label(view.safe_text)
+        self._safe_text.set_visible(bool(view.safe_text))
+        self._has_safe = bool(view.safe_text)
+        self._sync_stop_all()
         self._ram_text.set_label(view.ram_headline)
         self._ram_details.set_label(view.ram_details)
         self._bar.update(segments=view.segments)
@@ -123,96 +157,3 @@ class SummaryPanel(Gtk.Box):
         self._reclaim.set_label(
             f"Liberabile ora: {view.reclaimable_ram} di RAM · {view.reclaimable_disk} di disco"
         )
-
-
-class FilterBar(Gtk.Box):
-    """All/idle toggle, category and risk check popovers, and the search entry."""
-
-    def __init__(self, *, on_changed: Callable[[RowFilters], None]) -> None:
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=SECTION_SPACING)
-        self._on_changed = on_changed
-        self._muted = False
-        self._all = Gtk.ToggleButton(label=FILTER_ALL, active=True)
-        self._idle = Gtk.ToggleButton(label=FILTER_IDLE, group=self._all)
-        self._categories: dict[Category, Gtk.CheckButton] = {}
-        self._risks: dict[Risk, Gtk.CheckButton] = {}
-        self._category_menu = self._check_menu(
-            title=CATEGORY_MENU,
-            choices=[(c, CATEGORY_LABELS[c]) for c in FILTERABLE_CATEGORIES],
-            store=self._categories,
-        )
-        self._risk_menu = self._check_menu(
-            title=RISK_MENU,
-            choices=[(r, RISK_TEXT[r]) for r in Risk],
-            store=self._risks,
-        )
-        self.search = Gtk.SearchEntry(placeholder_text=SEARCH_PLACEHOLDER, hexpand=True)
-        self.search.update_property([Gtk.AccessibleProperty.LABEL], [SEARCH_LABEL])
-        self._all.connect("toggled", self._changed)
-        self._idle.connect("toggled", self._changed)
-        self.search.connect("search-changed", self._changed)
-        self.append(self._build_buttons())
-        self.append(self.search)
-
-    def _build_buttons(self) -> Gtk.FlowBox:
-        toggles = Gtk.Box()
-        toggles.add_css_class("linked")
-        toggles.append(self._all)
-        toggles.append(self._idle)
-        flow = Gtk.FlowBox(
-            selection_mode=Gtk.SelectionMode.NONE,
-            max_children_per_line=FILTER_COLUMNS,
-            homogeneous=False,
-            column_spacing=FILTER_COLUMN_SPACING,
-            row_spacing=FILTER_ROW_SPACING,
-        )
-        for widget in (toggles, self._category_menu, self._risk_menu):
-            flow.append(widget)
-        return flow
-
-    def _check_menu[K](
-        self, *, title: str, choices: list[tuple[K, str]], store: dict[K, Gtk.CheckButton]
-    ) -> Gtk.MenuButton:
-        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING)
-        for key, text in choices:
-            check = Gtk.CheckButton(label=text)
-            check.connect("toggled", self._changed)
-            store[key] = check
-            box.append(check)
-        button = Gtk.MenuButton(label=title, popover=Gtk.Popover(child=box))
-        button.set_name(title)
-        return button
-
-    @property
-    def filters(self) -> RowFilters:
-        """Current filter state."""
-        return RowFilters(
-            only_idle=self._idle.get_active(),
-            categories=frozenset(c for c, check in self._categories.items() if check.get_active()),
-            risks=frozenset(r for r, check in self._risks.items() if check.get_active()),
-            query=self.search.get_text(),
-        )
-
-    def reset(self) -> None:
-        """Clear every filter and notify once."""
-        self._muted = True
-        self._all.set_active(True)
-        self.search.set_text("")
-        for check in (*self._categories.values(), *self._risks.values()):
-            check.set_active(False)
-        self._muted = False
-        self._changed()
-
-    def _changed(self, *_args: object) -> None:
-        if self._muted:
-            return
-        filters = self.filters
-        self._category_menu.set_label(
-            _menu_label(title=CATEGORY_MENU, count=len(filters.categories))
-        )
-        self._risk_menu.set_label(_menu_label(title=RISK_MENU, count=len(filters.risks)))
-        self._on_changed(filters)
-
-
-def _menu_label(*, title: str, count: int) -> str:
-    return f"{title} ({count})" if count else title

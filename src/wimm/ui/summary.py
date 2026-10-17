@@ -9,6 +9,7 @@ from .format import (
     format_round_size,
     format_size,
 )
+from .summary_status import ram_drives_pressure, safe_fields, status_fields
 from .views import BarSegment, SummaryView
 
 KERNEL_CACHE_NOTE = "La memoria di appoggio del sistema si libera da sola quando serve."
@@ -74,6 +75,12 @@ def _segments(*, snapshot: Snapshot) -> tuple[BarSegment, ...]:
     return tuple(segments)
 
 
+def _pressure_suffix(*, snapshot: Snapshot) -> str:
+    """The pressure in words after the RAM details, only when the RAM is what drives it."""
+    plain = PRESSURE_PLAIN[snapshot.pressure]
+    return f" · {plain}" if plain and ram_drives_pressure(snapshot=snapshot) else ""
+
+
 def _headlines(*, snapshot: Snapshot) -> dict[str, str]:
     """P2: memory and disk as round numbers in words, the details for whoever wants them."""
     memory, disk = snapshot.memory, snapshot.disk
@@ -84,11 +91,7 @@ def _headlines(*, snapshot: Snapshot) -> dict[str, str]:
         "ram_details": (
             f"disponibili {format_size(size=memory.available)} · swap "
             f"{format_size(size=memory.swap_used)} su {format_size(size=memory.swap_total)}"
-            + (
-                f" · {PRESSURE_PLAIN[snapshot.pressure]}"
-                if PRESSURE_PLAIN[snapshot.pressure]
-                else ""
-            )
+            + _pressure_suffix(snapshot=snapshot)
         ),
         "disk_headline": (
             f"{format_round_size(size=disk.free)} liberi su {format_round_size(size=disk.total)}"
@@ -118,4 +121,6 @@ def build_summary(*, snapshot: Snapshot) -> SummaryView:
         pressure_text=PRESSURE_TEXT[snapshot.pressure],
         segments=_segments(snapshot=snapshot),
         kernel_cache_note=KERNEL_CACHE_NOTE,
+        **status_fields(snapshot=snapshot),
+        **safe_fields(snapshot=snapshot),
     )

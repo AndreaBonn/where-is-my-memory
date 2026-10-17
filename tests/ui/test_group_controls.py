@@ -15,7 +15,7 @@ from tests.ui.conftest import (
 )
 from wimm.model.enums import GroupId
 from wimm.model.snapshot import Snapshot
-from wimm.ui.widgets.group_controls import IGNORE_BUTTON_NAME, SNOOZE_BUTTON_NAME
+from wimm.ui.widgets.group_controls import IGNORE_BUTTON_NAME, SNOOZE_BUTTON_PREFIX
 from wimm.ui.window import MainWindow
 
 pytestmark = pytest.mark.ui
@@ -47,26 +47,33 @@ def model_buttons(popover: Gtk.Widget) -> dict[str, Gtk.Widget]:
     return result
 
 
-def pick_snooze(window: MainWindow, label: str) -> None:
-    button = named(window, SNOOZE_BUTTON_NAME)
-    assert isinstance(button, Gtk.MenuButton)
-    button.popup()
-    popover = button.get_popover()
-    assert popover is not None
-    wait_until(popover.get_mapped, description="snooze popover mapped")
-    choices = model_buttons(popover)
-    assert list(choices) == ["1 h", "24 h", "7 giorni"]
-    choices[label].emit("clicked")
+def snooze_buttons(window: MainWindow) -> dict[str, Gtk.Button]:
+    found = [
+        w
+        for w in descendants(window)
+        if isinstance(w, Gtk.Button) and w.get_name().startswith(SNOOZE_BUTTON_PREFIX)
+    ]
+    return {button.get_label() or "": button for button in found}
 
 
-def test_snooze_24h_calls_the_service_with_the_group_and_86400(
+def test_controls_say_what_they_do_in_plain_words(window_factory: WindowFactory) -> None:
+    window = window_factory(FakeActionService(snapshot=one_group()))
+    open_group(window)
+
+    assert list(snooze_buttons(window)) == ["1 ora", "1 giorno", "7 giorni"]
+    texts = [w.get_label() for w in descendants(window) if isinstance(w, Gtk.Label)]
+    assert "Non avvisarmi per questo" in texts
+    assert "Resta in lista, smetti solo di ricevere avvisi" in texts
+
+
+def test_snooze_one_day_calls_the_service_with_the_group_and_86400(
     window_factory: WindowFactory, snapshot: Snapshot
 ) -> None:
     service = FakeActionService(snapshot=one_group())
     window = window_factory(service)
     open_group(window)
 
-    pick_snooze(window, "24 h")
+    snooze_buttons(window)["1 giorno"].emit("clicked")
 
     assert service.snoozed == [(GROUP, 86400)]
 
@@ -76,8 +83,8 @@ def test_snooze_durations_are_one_hour_one_day_seven_days(window_factory: Window
     window = window_factory(service)
     open_group(window)
 
-    for label in ("1 h", "7 giorni"):
-        pick_snooze(window, label)
+    for label in ("1 ora", "7 giorni"):
+        snooze_buttons(window)[label].emit("clicked")
 
     assert service.snoozed == [(GROUP, 3600), (GROUP, 604800)]
 
@@ -90,7 +97,7 @@ def test_ignore_calls_set_ignored_true_and_an_ignored_snapshot_offers_to_undo(
     open_group(window)
     button = named(window, IGNORE_BUTTON_NAME)
     assert isinstance(button, Gtk.Button)
-    assert button.get_label() == "Ignora"
+    assert button.get_label() == "Mai più"
 
     button.emit("clicked")
     assert service.ignored == [(GROUP, True)]
@@ -99,7 +106,8 @@ def test_ignore_calls_set_ignored_true_and_an_ignored_snapshot_offers_to_undo(
 
     button = named(window, IGNORE_BUTTON_NAME)
     assert isinstance(button, Gtk.Button)
-    assert button.get_label() == "Non ignorare più"
+    assert button.get_label() == "Riattiva gli avvisi"
+    assert not any(b.get_visible() for b in snooze_buttons(window).values())
     button.emit("clicked")
     assert service.ignored[-1] == (GROUP, False)
 
@@ -118,7 +126,7 @@ def test_the_row_shows_ignored_and_snoozed_state_from_the_snapshot(
     present_and_settle(window)
 
     assert "senza avvisi" in widget.get_subtitle()
-    assert "silenziato" not in widget.get_subtitle()
+    assert "avvisi in pausa" not in widget.get_subtitle()
 
 
 def test_controls_are_disabled_with_a_source_without_the_service_methods(
@@ -129,7 +137,8 @@ def test_controls_are_disabled_with_a_source_without_the_service_methods(
     group_id = next(iter(window.overview.group_widgets))
     assert window.overview.expand_group(group_id=group_id)
 
-    assert not named(window, SNOOZE_BUTTON_NAME).get_sensitive()
+    assert len(snooze_buttons(window)) == 3
+    assert not any(b.get_sensitive() for b in snooze_buttons(window).values())
     assert not named(window, IGNORE_BUTTON_NAME).get_sensitive()
 
 

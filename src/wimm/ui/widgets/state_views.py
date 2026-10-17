@@ -8,9 +8,12 @@ ERROR_TITLE = "Il monitor non risponde"
 RESTART_LABEL = "Riavvia monitor"
 RESTART_ACTION = "app.restart-monitor"
 SPINNER_SIZE = 32
+# Inside the scrolled Panoramica a status page takes only its minimum height otherwise.
+EMPTY_MIN_HEIGHT = 280
 EMPTY_ICONS = {
     EmptyKind.NOTHING_IDLE: "emblem-ok-symbolic",
     EmptyKind.NO_RESULTS: "system-search-symbolic",
+    EmptyKind.ALL_CLEAR: "emblem-ok-symbolic",
 }
 
 
@@ -64,9 +67,10 @@ class EmptyView:
     """Empty list message, shown verbatim from the view model (spec 10.3)."""
 
     def __init__(self) -> None:
-        self.page = Adw.StatusPage()
+        self.page = Adw.StatusPage(height_request=EMPTY_MIN_HEIGHT)
 
     def show_state(self, *, state: EmptyStateView) -> None:
         """Show the message of an EmptyStateView."""
         self.page.set_icon_name(EMPTY_ICONS[state.kind])
         self.page.set_title(state.message)
+        self.page.set_description(state.description)
