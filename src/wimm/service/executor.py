@@ -9,6 +9,7 @@ from wimm.model.actions import Plan, PlanStep, ProcessFingerprint
 from wimm.model.enums import ActionKind
 
 from .control_protocols import (
+    ComposeControl,
     DockerControl,
     ProcessControl,
     StepOutcome,
@@ -24,6 +25,7 @@ from .executor_checks import (
     check_process,
     check_supported,
 )
+from .executor_compose import COMPOSE_KINDS, check_compose, run_compose_step
 from .executor_docker import run_container_step
 from .executor_process import TerminationRequest, close_root, terminate_tree
 
@@ -40,6 +42,7 @@ class PlanExecutor:
     processes: ProcessControl
     containers: DockerControl | None
     owner_uid: int
+    compose: ComposeControl | None = None
     terminate_timeout_s: float = TERMINATE_TIMEOUT_S
 
     def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:
@@ -57,18 +60,31 @@ class PlanExecutor:
         containers = self.containers
         if containers is None and any(s.kind in CONTAINER_KINDS for s in plan.steps):
             raise DockerUnavailable()
+        compose = self.compose
+        if compose is None and any(s.kind in COMPOSE_KINDS for s in plan.steps):
+            raise DockerUnavailable()
         for step in plan.steps:
             if step.kind in PROCESS_KINDS:
                 check_process(step=step, control=self.processes, rules=rules)
+            elif step.kind in COMPOSE_KINDS and compose is not None:
+                check_compose(step=step, control=compose)
             elif containers is not None:
                 check_container(step=step, control=containers)
 
     def _run_batch(self, *, steps: tuple[PlanStep, ...], rules: ProcessRules) -> list[StepOutcome]:
         if steps[0].kind in PROCESS_KINDS:
             return [self._terminate(step=s, rules=rules) for s in steps]
+        if steps[0].kind in COMPOSE_KINDS:
+            return self._run_compose(steps=steps)
         if steps[0].kind is ActionKind.CONTAINER_STOP:
             return self._run_containers(steps=steps, parallel=True)
         return self._run_containers(steps=steps, parallel=False)
+
+    def _run_compose(self, *, steps: tuple[PlanStep, ...]) -> list[StepOutcome]:
+        control = self.compose
+        if control is None:
+            raise DockerUnavailable()
+        return [run_compose_step(control=control, step=s) for s in steps]
 
     def _run_containers(self, *, steps: tuple[PlanStep, ...], parallel: bool) -> list[StepOutcome]:
         control = self.containers

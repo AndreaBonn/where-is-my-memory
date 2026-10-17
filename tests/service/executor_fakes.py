@@ -20,6 +20,9 @@ from wimm.service.errors import ControlFailed
 OWNER_UID = 1000
 WIMM_PID = 900
 CREATED_AT = 1_700_000_000.0
+GROUP_TARGET_KINDS = frozenset(
+    {ActionKind.APP_CLOSE, ActionKind.COMPOSE_DOWN, ActionKind.COMPOSE_DOWN_VOLUMES}
+)
 CMDLINE = ("python3", "-m", "http.server")
 
 
@@ -117,13 +120,14 @@ def container_step(
 
 
 def make_plan(*, steps: Sequence[PlanStep]) -> Plan:
-    if len(steps) == 1 and steps[0].kind is ActionKind.APP_CLOSE:
-        request = ActionRequest(kind=ActionKind.APP_CLOSE, group_id=GroupId("g_test"))
+    if len(steps) == 1 and steps[0].kind in GROUP_TARGET_KINDS:
+        request = ActionRequest(kind=steps[0].kind, group_id=GroupId("g_test"))
     elif len(steps) == 1:
         request = ActionRequest(kind=steps[0].kind, target_id=TargetId("target"))
     else:
         request = ActionRequest(kind=ActionKind.GROUP_STOP, group_id=GroupId("g_test"))
     now = datetime.now(UTC)
+    danger = [step.target_label for step in steps if step.risk is Risk.DANGER]
     return Plan(
         plan_id=PlanId("plan-test"),
         request=request,
@@ -133,4 +137,5 @@ def make_plan(*, steps: Sequence[PlanStep]) -> Plan:
         consequences=(),
         estimated_reclaim_ram=0,
         estimated_reclaim_disk=0,
+        confirm_phrase=danger[0] if danger else None,
     )

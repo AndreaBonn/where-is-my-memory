@@ -9,10 +9,11 @@ from wimm.model.enums import ActionKind
 
 from .control_protocols import DockerControl, LiveProcess, ProcessControl
 from .errors import InvalidRequest, ProtectedTarget, TargetChanged
+from .executor_compose import COMPOSE_KINDS
 
 PROCESS_KINDS = frozenset({ActionKind.PROCESS_TERMINATE, ActionKind.APP_CLOSE})
 CONTAINER_KINDS = frozenset({ActionKind.CONTAINER_STOP, ActionKind.CONTAINER_REMOVE})
-SUPPORTED_KINDS = PROCESS_KINDS | CONTAINER_KINDS
+SUPPORTED_KINDS = PROCESS_KINDS | CONTAINER_KINDS | COMPOSE_KINDS
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)

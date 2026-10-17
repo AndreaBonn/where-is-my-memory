@@ -94,10 +94,12 @@ def group(
     category: Category = Category.PROJECT,
     state: ActivityState = ActivityState.IDLE,
     ignored: bool = False,
+    name: str | None = None,
+    compose_project: str | None = None,
 ) -> Group:
     return Group(
         id=GroupId(gid),
-        name=f"name-{gid}",
+        name=name or f"name-{gid}",
         category=category,
         activity=activity(state),
         memory=MemoryUse(used=0, reclaimable=0),
@@ -106,6 +108,7 @@ def group(
         ignored=ignored,
         snoozed_until=None,
         explanation="",
+        compose_project=compose_project,
         members=members,
     )
 

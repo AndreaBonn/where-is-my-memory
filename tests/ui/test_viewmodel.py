@@ -75,6 +75,7 @@ def make_group(
         ignored=False,
         snoozed_until=None,
         explanation="explanation",
+        compose_project=None,
         members=(),
     )
     return replace(base, **overrides)

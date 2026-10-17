@@ -94,3 +94,13 @@ class DockerControl(Protocol):
     def stop(self, *, container_id: str, timeout_s: int) -> None: ...
 
     def remove(self, *, container_id: str, volumes: bool) -> None: ...
+
+
+class ComposeControl(Protocol):
+    def container_ids(self, *, project: str) -> frozenset[str]:
+        """Return the ids of every container, running or not, labelled with the project."""
+        ...
+
+    def down(self, *, project: str, volumes: bool) -> None:
+        """Run `compose down` (with `-v` if `volumes`); raise `ControlFailed` on any failure."""
+        ...

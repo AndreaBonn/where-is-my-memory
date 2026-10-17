@@ -88,6 +88,20 @@ def test_unknown_activity_nullable_fields_and_timezone_roundtrip(snapshot: m.Sna
     assert snoozed_until.utcoffset() == timedelta(hours=-7)
 
 
+def test_group_compose_project_roundtrips_and_may_be_null(
+    snapshot: m.Snapshot, document: dict[str, Any]
+) -> None:
+    assert snapshot.groups[0].compose_project == "whitebox"
+    plain = replace(snapshot.groups[0], compose_project=None)
+
+    decoded = snapshot_from_json(text=snapshot_to_json(snapshot=replace(snapshot, groups=(plain,))))
+
+    assert decoded.groups[0].compose_project is None
+    del document["groups"][0]["compose_project"]
+    with pytest.raises(ValueError, match="compose_project"):
+        snapshot_from_json(text=json.dumps(document))
+
+
 def set_path(document: dict[str, Any], path: tuple[str | int, ...], value: object) -> None:
     target: Any = document
     for key in path[:-1]:
@@ -122,6 +136,7 @@ def set_path(document: dict[str, Any], path: tuple[str | int, ...], value: objec
         (("groups", 0, "protection"), "bad"),
         (("groups", 0, "protection"), "protected"),
         (("groups", 0, "ignored"), "false"),
+        (("groups", 0, "compose_project"), 1),
         (("groups", 0, "ports", 0), "8000"),
         (("groups", 0, "name"), None),
         (("groups", 0, "activity", "state"), "bad"),

@@ -122,27 +122,40 @@ def container_draft(*, member: ContainerMember, kind: ActionKind) -> Draft:
     )
 
 
-def compose_draft(*, group: Group, kind: ActionKind) -> Draft:
-    """Draft a compose project step covering the group's containers and their volumes."""
-    containers = [m for m in group.members if isinstance(m, ContainerMember)]
-    if not containers:
-        raise InvalidRequest(f"Group {group.id} has no containers")
-    volumes = {
+def _volume_names(*, containers: list[ContainerMember]) -> tuple[str, ...]:
+    names = {
         PurePosixPath(mount.source).parent.name
         for member in containers
         for mount in member.mounts
         if mount.type == VOLUME_MOUNT_TYPE
     }
+    return tuple(sorted(names))
+
+
+def compose_draft(*, group: Group, kind: ActionKind) -> Draft:
+    """Draft a compose project step covering the group's containers and their volumes.
+
+    The project is the compose label, not the displayed name: a project fused with
+    processes is shown under its folder name. The danger phrase is the project name.
+    """
+    project = group.compose_project
+    if project is None:
+        raise InvalidRequest(f"Group {group.id} is not a compose project")
+    containers = [m for m in group.members if isinstance(m, ContainerMember)]
+    if not containers:
+        raise InvalidRequest(f"Group {group.id} has no containers")
     target = RiskTarget(
-        kind="compose_project", category=group.category, volume_names=tuple(sorted(volumes))
+        kind="compose_project",
+        category=group.category,
+        volume_names=_volume_names(containers=containers),
     )
     ids = frozenset(m.id for m in containers)
     return Draft(
         owner_ids=frozenset({group.id}),
         kind=kind,
         label=group.name,
-        name=group.name,
-        fingerprint=ComposeFingerprint(project=group.name, container_ids=ids),
+        name=project,
+        fingerprint=ComposeFingerprint(project=project, container_ids=ids),
         assessed=_assess(target=target, kind=kind),
         reclaim_ram=sum(m.memory.reclaimable for m in containers),
     )

@@ -94,6 +94,7 @@ def make_group(
         ignored=False,
         snoozed_until=None,
         explanation="spiegazione",
+        compose_project=None,
         members=(),
     )
 

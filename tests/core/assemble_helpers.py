@@ -85,6 +85,7 @@ def draft(
     pids: Sequence[int] = (),
     containers: Sequence[str] = (),
     key: str = "k",
+    compose_project: str | None = None,
 ) -> GroupDraft:
     return GroupDraft(
         id=GroupId(gid),
@@ -93,7 +94,7 @@ def draft(
         category=category,
         process_pids=tuple(pids),
         container_ids=tuple(f"id-{item}" for item in containers),
-        compose_project=None,
+        compose_project=compose_project,
         working_dir=None,
         explanation=f"explanation of {name}",
     )

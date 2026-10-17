@@ -37,6 +37,7 @@ def make_group(
         ignored=ignored,
         snoozed_until=None,
         explanation="spiegazione",
+        compose_project=None,
         members=(),
     )
 

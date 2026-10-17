@@ -217,3 +217,27 @@ La §12.3 prevede solo `postinst` e un `prerm` vuoto. Il pacchetto aggiunge due 
 Il warning `no-manual-page` su `/usr/bin/wimm` resta e viene riportato, non è un errore.
 
 BASIS: measured.
+
+## Premessa compose senza file (T-3.6)
+
+La §7.3 lasciava da verificare che `docker compose -p <nome> down` funzioni senza il file compose, usando solo le label. Probe del 2026-10-16, Docker Compose v5.6.0, progetto `wimmprobe` (2 `alpine:3` con `sleep 600`, label `wimm.test=1`), `compose.yaml` cancellato prima di ogni comando e comando lanciato da un'altra directory:
+
+- `docker compose -p wimmprobe stop`: entrambi i container fermati, stato `Exited (137)`. `sleep` come PID 1 ignora SIGTERM e Docker lo uccide allo scadere del timeout.
+- `docker compose -p wimmprobe down`: container rimossi, rete `wimmprobe_default` rimossa.
+- con un volume nominato `data` (volume di progetto `wimmprobe_data`), `docker compose -p wimmprobe down -v` ha rimosso container, volume e rete.
+
+Dopo: nessun container con label `wimm.test=1`, nessun volume o rete con label `com.docker.compose.project=wimmprobe`.
+
+La premessa regge, il ripiego via SDK non serve. Conseguenze nel codice:
+
+- `service/compose.py` lancia il comando con `cwd="/"`, la condizione del probe: da una directory che contiene un `compose.yaml` Compose userebbe quel file invece delle label, e i container fuori dal file resterebbero orfani.
+- `stop` di un progetto non è un `ActionKind` (§8): lo copre `group_stop` con un `container_stop` per container, quindi non c'è un'azione compose separata.
+- Il test di integrazione (`tests/integration/test_compose.py`) ripete il probe con `down` e `down -v` su un progetto creato dal test, con file cancellato prima dell'azione.
+
+BASIS: measured.
+
+## Compose: costi accettati dell'esecuzione (T-3.6)
+
+- `docker compose down` gira sullo stesso worker del campionamento (una sola coda, così un campione non legge a metà azione). Un `down` lento, fino al timeout di 120 s, ferma il campionamento per quella durata: lo snapshot resta quello di prima e la misura del recupero parte dopo. È il costo di serializzare azioni e campioni, scelto in T-3.5.
+- `down` agisce per label di progetto, non per id. L'insieme degli id si ricontrolla subito prima del comando, ma un container con la stessa label creato nei millisecondi successivi viene rimosso con gli altri. È dello stesso utente e dello stesso progetto, quindi il rischio è accettato.
+- La CLI riceve `--context default` e un ambiente senza `DOCKER_CONTEXT` né variabili `COMPOSE_*`: così parla allo stesso daemon che l'SDK ha usato per la rivalidazione (`DOCKER_HOST` o il socket di default) e non legge file o profili scelti nella shell dell'utente.

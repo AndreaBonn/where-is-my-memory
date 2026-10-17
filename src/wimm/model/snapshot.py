@@ -110,6 +110,7 @@ class Group(ImmutableModel):
     ignored: bool
     snoozed_until: datetime | None
     explanation: str
+    compose_project: str | None
     members: tuple[Member, ...]
 
     def __post_init__(self) -> None:

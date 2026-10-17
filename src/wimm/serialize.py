@@ -191,6 +191,7 @@ SCHEMAS: dict[type, Schema] = {
         "ignored": BOOLEAN,
         "snoozed_until": nullable(decoder=timestamp),
         "explanation": TEXT,
+        "compose_project": nullable(decoder=TEXT),
         "members": sequence(decoder=member),
     },
     m.MemorySummary: {

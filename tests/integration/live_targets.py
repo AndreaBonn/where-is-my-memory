@@ -5,6 +5,7 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import psutil
 
@@ -96,3 +97,8 @@ def single_step_plan(*, step: PlanStep) -> Plan:
         estimated_reclaim_ram=0,
         estimated_reclaim_disk=0,
     )
+
+
+def run_argv(*, args: list[str], cwd: Path) -> None:
+    """Run a fixed argv created by the test itself; raise if it fails."""
+    subprocess.run(args, cwd=cwd, check=True, capture_output=True, text=True, timeout=120)

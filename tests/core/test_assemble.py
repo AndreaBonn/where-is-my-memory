@@ -45,6 +45,18 @@ def test_assemble_whitebox_project_is_one_idle_group_with_safe_group_stop() -> N
     assert snapshot.protected_summary == ()
 
 
+def test_assemble_group_carries_the_draft_compose_project() -> None:
+    fused = draft("g1", name="cartella", category=Category.PROJECT, compose_project="whitebox")
+    plain = draft("g2", name="other", category=Category.PROJECT)
+
+    snapshot = assemble_snapshot(inputs=build_input([fused, plain]))
+
+    assert {g.name: g.compose_project for g in snapshot.groups} == {
+        "cartella": "whitebox",
+        "other": None,
+    }
+
+
 def test_assemble_whitebox_splits_project_memory_over_member_categories() -> None:
     breakdown = assemble_snapshot(inputs=whitebox_input()).memory.breakdown
 

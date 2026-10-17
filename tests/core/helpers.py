@@ -94,6 +94,7 @@ def group(**changes: Unpack[GroupChanges]) -> Group:
         ignored=False,
         snoozed_until=None,
         explanation="",
+        compose_project=None,
         members=(),
     )
     return replace(base, **changes)

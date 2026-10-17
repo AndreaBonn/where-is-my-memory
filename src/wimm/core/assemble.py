@@ -214,6 +214,7 @@ def _build_group(*, draft: GroupDraft, inputs: AssemblyInput) -> Group:
         ignored=draft.id in inputs.user.ignored,
         snoozed_until=_snoozed_until(group_id=draft.id, inputs=inputs),
         explanation=draft.explanation,
+        compose_project=draft.compose_project,
         members=members,
     )
 

@@ -144,6 +144,7 @@ def test_plan_compose_down_volumes_is_danger_and_lists_volumes() -> None:
     bind = Mount(type="bind", source="/home/u/code", destination="/app")
     project = group(
         gid="p",
+        compose_project="name-p",
         members=(container(cid="a", mounts=(mount, bind)), container(cid="b")),
     )
     request = ActionRequest(kind=ActionKind.COMPOSE_DOWN_VOLUMES, group_id=GroupId("p"))
@@ -157,6 +158,31 @@ def test_plan_compose_down_volumes_is_danger_and_lists_volumes() -> None:
     assert any("pgdata" in line for line in plan.consequences)
     assert not any("/home/u/code" in line for line in plan.consequences)
     assert plan.estimated_reclaim_ram == 600
+
+
+def test_plan_compose_uses_the_compose_project_not_the_displayed_group_name() -> None:
+    fused = group(
+        gid="f",
+        name="cartella",
+        compose_project="whitebox",
+        members=(container(cid="a"), container(cid="b")),
+    )
+    request = ActionRequest(kind=ActionKind.COMPOSE_DOWN_VOLUMES, group_id=GroupId("f"))
+
+    plan = plan_action(request=request, snapshot=snapshot(fused), context=context())
+
+    assert plan.steps[0].fingerprint == ComposeFingerprint(
+        project="whitebox", container_ids=frozenset({"a", "b"})
+    )
+    assert plan.confirm_phrase == "whitebox"
+
+
+def test_plan_compose_on_a_group_without_compose_project_is_invalid() -> None:
+    plain = group(gid="c", members=(container(cid="a"),))
+    request = ActionRequest(kind=ActionKind.COMPOSE_DOWN, group_id=GroupId("c"))
+
+    with pytest.raises(InvalidRequest, match="compose project"):
+        plan_action(request=request, snapshot=snapshot(plain), context=context())
 
 
 def test_plan_compose_down_on_protected_group_raises() -> None:
