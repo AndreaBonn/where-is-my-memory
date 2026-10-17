@@ -1,0 +1,940 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposte UX</title>
+<style>
+/* ===== 1. Token del prodotto: libadwaita 1.5, variante scura (come gli screenshot) ===== */
+:root{
+  --brand:#3584e4;--brand-hover:#4a90e8;--brand-soft:#3584e433;
+  --n-0:#383838;--n-50:#242424;--n-100:#2e2e2e;--n-200:#ffffff1a;--n-300:#5e5e5e;--n-500:#9a9a9a;--n-600:#b8b8b8;--n-700:#d6d6d6;--n-900:#ffffff;
+  --ok:#8ff0a4;--ok-soft:#26a26933;--warn:#f8e45c;--warn-soft:#cd930933;--bad:#ff7b63;--bad-soft:#c01c2833;--info:#99c1f1;
+  --app-font:'Cantarell','Noto Sans',-apple-system,"Segoe UI",sans-serif;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.3);--shadow-lg:0 12px 28px rgba(20,15,10,.3);
+}
+/* ===== 2. Strumento di scelta (cornice esterna): di norma non va toccato ===== */
+:root{--tool-bg:#EEE8E1;--tool-ink:#1E1915;--tool-muted:#6B5D4E;--tool-line:#D9CFC3;--tool-card:#FFFFFF;--tool-accent:#2F5F7A;--tool-on-accent:#FFFFFF;--tool-accent-bg:#E3EDF2}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--tool-bg:#1B1714;--tool-ink:#F1EBE4;--tool-muted:#B3A08A;--tool-line:#3A322B;--tool-card:#241E1A;--tool-accent:#8FBCD6;--tool-on-accent:#10202A;--tool-accent-bg:#22323B}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{font:400 14px/1.5 -apple-system,"Segoe UI",Inter,sans-serif;background:var(--tool-bg);color:var(--tool-ink)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--tool-accent);outline-offset:2px}
+.tool-bar{position:sticky;top:0;z-index:200;background:var(--tool-card);border-bottom:1px solid var(--tool-line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.tool-bar h1{font-size:15px;font-weight:700;margin:0}
+.tool-bar h1 span{font-weight:500;color:var(--tool-muted)}
+.tabs{display:flex;gap:2px;background:var(--tool-bg);padding:3px;border-radius:9px;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;padding:6px 12px;border-radius:7px;cursor:pointer;font-weight:500;color:var(--tool-muted)}
+.tabs button[aria-selected="true"]{background:var(--tool-card);color:var(--tool-ink);box-shadow:var(--shadow-sm)}
+.seg{display:inline-flex;flex-wrap:wrap;border:1px solid var(--tool-line);border-radius:8px;overflow:hidden}
+.seg button{border:0;background:transparent;padding:5px 10px;cursor:pointer;color:var(--tool-muted);font-size:13px}
+.seg button[aria-pressed="true"]{background:var(--tool-accent-bg);color:var(--tool-ink);font-weight:600}
+.spacer{flex:1}
+.ctrl{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.ctrl-label{font-size:12px;color:var(--tool-muted)}
+.tool-btn{border:1px solid var(--tool-accent);background:var(--tool-accent);color:var(--tool-on-accent);border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600;font-size:13px}
+.tool-btn--ghost{background:var(--tool-card);color:var(--tool-ink);border-color:var(--tool-line)}
+.layout{display:grid;grid-template-columns:minmax(300px,360px) 1fr;min-height:calc(100vh - 56px)}
+.panel{border-right:1px solid var(--tool-line);background:var(--tool-card);padding:16px;overflow:auto;max-height:calc(100vh - 56px);position:sticky;top:56px}
+.stage{padding:20px;overflow:hidden}
+@media (max-width:900px){.layout{grid-template-columns:1fr}.panel{position:static;max-height:52vh;border-right:0;border-bottom:1px solid var(--tool-line)}.stage{padding:12px 0}.tool-bar{position:static}}
+.panel__count{display:flex;align-items:baseline;gap:8px;margin:0 0 4px}
+.panel__count strong{font-size:22px;font-variant-numeric:tabular-nums}
+.panel__intro{font-size:13px;color:var(--tool-muted);margin:0 0 12px}
+.legend{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 14px}
+.group{margin:0 0 18px}
+.group__head{display:flex;justify-content:space-between;align-items:center;margin:0 0 6px}
+.group__title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--tool-muted);margin:0}
+.group__all{border:0;background:none;color:var(--tool-accent);cursor:pointer;font-size:12px;font-weight:600}
+.prop{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;padding:10px;border:1px solid var(--tool-line);border-radius:10px;margin-bottom:6px;transition:border-color .2s,background-color .2s}
+.prop.is-flash{border-color:var(--tool-accent);background:var(--tool-accent-bg)}
+.prop input{margin:3px 0 0;width:18px;height:18px;accent-color:var(--tool-accent);cursor:pointer}
+.prop__head{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap}
+.prop__code{font-weight:700;color:var(--tool-accent);cursor:pointer;border:0;background:none;padding:0;font-size:13px;text-decoration:underline;text-underline-offset:2px}
+.prop__title{font-weight:600;font-size:13.5px;cursor:pointer}
+.prop__why,.prop__tags{grid-column:2}
+.prop__why{margin:0;font-size:12.5px;color:var(--tool-muted)}
+.prop__tags{display:flex;gap:4px;flex-wrap:wrap}
+.chip{font-size:11px;font-weight:600;padding:1px 7px;border-radius:99px;border:1px solid var(--tool-line);color:var(--tool-muted);white-space:nowrap}
+.chip--rapida{border-color:#9CC5A6;color:#2C5A38;background:#E8F3EA}
+.chip--media{border-color:#D8BD79;color:#6E5C2B;background:#FBF6E9}
+.chip--ampia{border-color:#E0A79F;color:#941811;background:#FCEDEB}
+.chip--nota{border-style:dashed}
+.chip--fatta{border-color:var(--tool-accent);color:var(--tool-accent)}
+.frame{margin:0 auto;background:var(--n-50);color:var(--n-900);border-radius:12px;box-shadow:var(--shadow-lg);overflow:hidden;container-type:inline-size;max-width:1280px;position:relative;transition:max-width .25s ease}
+.frame.is-mobile{max-width:390px}
+@media (max-width:900px){.frame{border-radius:0}}
+.screen{display:none}
+.screen.is-active{display:block}
+[data-mark]{position:relative}
+.pin{position:absolute;top:-12px;left:-12px;z-index:40;min-width:26px;min-height:26px;display:inline-grid;place-items:center;font:700 11px/1 -apple-system,"Segoe UI",sans-serif;background:var(--tool-accent);color:var(--tool-on-accent);border:2px solid #fff;border-radius:99px;padding:3px 6px;cursor:pointer}
+.pins-off .pin{display:none}
+.flash-target{animation:flash 1.4s ease}
+@keyframes flash{0%,60%{box-shadow:0 0 0 4px rgba(47,95,122,.55)}100%{box-shadow:0 0 0 4px rgba(47,95,122,0)}}
+@media (prefers-reduced-motion:reduce){.flash-target{animation:none;outline:3px solid var(--tool-accent)}}
+.mock-note{font-size:12px;color:var(--n-600);background:repeating-linear-gradient(-45deg,var(--n-100),var(--n-100) 6px,var(--n-50) 6px,var(--n-50) 12px);border:1px dashed var(--n-300);border-radius:8px;padding:6px 10px;margin:0 0 10px}
+.placeholder{background:#FBF6E9;border:1px dashed #9C833E;color:#6E5C2B;border-radius:6px;padding:0 6px;font-weight:600}
+dialog{border:1px solid var(--tool-line);border-radius:14px;padding:20px;max-width:560px;width:calc(100% - 32px);background:var(--tool-card);color:var(--tool-ink)}
+dialog::backdrop{background:rgba(20,15,10,.5)}
+dialog textarea{width:100%;min-height:220px;border:1px solid var(--tool-line);border-radius:8px;padding:10px;background:var(--tool-bg);font:13px/1.5 ui-monospace,Menlo,monospace}
+dialog h2{margin:0 0 6px;font-size:17px}
+dialog p{margin:0 0 10px;color:var(--tool-muted);font-size:13px}
+.dialog-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+
+/* ===== 3. Stile dell'app ricostruita (libadwaita scuro) ===== */
+.frame{background:var(--n-50)}
+.app{font:400 14px/1.45 var(--app-font);color:var(--n-900);background:var(--n-50);min-height:560px}
+.app *{min-width:0}
+.hb{display:flex;align-items:center;justify-content:center;padding:8px 12px;background:var(--n-100);border-bottom:1px solid #00000066;position:relative;min-height:50px}
+.sw{display:flex;gap:4px}
+.sw span{padding:6px 14px;border-radius:6px;font-weight:700;color:#ffffffdd;display:inline-flex;gap:6px;align-items:center}
+.sw .on{background:var(--n-200)}
+.hb .end{position:absolute;right:14px;top:50%;transform:translateY(-50%);display:flex;gap:14px;color:#ffffffcc;font-size:16px}
+.bb{display:none;justify-content:space-around;background:var(--n-100);border-top:1px solid #00000066;padding:6px 4px;font-size:12px;font-weight:700}
+.bb span{padding:4px 12px;border-radius:6px}.bb .on{background:var(--n-200)}
+.page{padding:20px 24px 32px;max-width:900px;margin:0 auto}
+.h{font-weight:700;margin:14px 0 4px;display:block}
+.line{margin:0 0 6px}
+.big{font-size:20px;font-weight:700;margin:2px 0}
+.bar{display:flex;height:10px;border-radius:5px;overflow:hidden;background:#ffffff26;margin:6px 0 10px}
+.bar i{display:block;height:100%}
+.legend-a{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px 12px;font-size:12px}
+.legend-b{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px 12px;font-size:13px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.dim{color:#ffffff99;font-size:12px}
+.reclaim{display:flex;gap:12px;align-items:center;justify-content:space-between;margin:16px 0 14px;flex-wrap:wrap}
+.btn{display:inline-block;background:var(--n-200);border:0;border-radius:6px;padding:7px 14px;font-weight:700;color:#fff;text-align:center}
+.btn.blue{background:var(--brand)}
+.btn.red{color:var(--bad)}
+.btn.off{opacity:.45}
+.btn.wide{flex:0 1 46%}
+.btn.pill{border-radius:99px;padding:9px 24px}
+.btn.sm{padding:4px 10px;font-size:12.5px}
+.bigbtn{display:block;background:var(--brand);border-radius:10px;padding:10px 16px;color:#fff;flex:0 1 50%}
+.bigbtn b{display:block;font-size:15px}.bigbtn span{font-size:12px;opacity:.9}
+.filters{display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:center;margin-bottom:8px}
+.filters2{display:flex;gap:10px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+.tg{display:inline-flex;border-radius:6px;overflow:hidden}
+.tg span{padding:6px 14px;background:#ffffff14;font-weight:700}
+.tg .on{background:#ffffff38}
+.f-P6 [data-screen=ov] .tg .t-all{background:#ffffff14}
+.f-P6 [data-screen=ov] .tg .t-idle{background:#ffffff38}
+.f-P6 [data-screen=ov] .list .inuse,.f-P6 [data-screen=ov] .list .head-inuse{display:none}
+.drop{background:var(--n-200);border-radius:6px;padding:6px 14px;font-weight:700;text-align:center}
+.search{background:#ffffff14;border-radius:6px;padding:6px 10px;color:#ffffff80;margin-bottom:12px}
+.list{display:flex;flex-direction:column;background:var(--n-0);border-radius:12px}
+.list > :first-child{border-radius:12px 12px 0 0}.list > :last-child{border-radius:0 0 12px 12px}
+.row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 14px;padding:10px 14px;border-top:1px solid #00000059;align-items:center}
+.list > .row:first-child{border-top:0}
+.row .t{font-size:14px;display:block}
+.row .s{font-size:11.5px;color:#ffffff99;display:block}
+.r{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.size{font-weight:700}
+.badge{font-size:12px;padding:1px 8px;border-radius:99px;font-weight:600;white-space:nowrap}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-w{background:var(--warn-soft);color:var(--warn)}.b-d{background:var(--bad-soft);color:var(--bad)}
+.risk{font-size:12px;display:inline-flex;gap:5px;align-items:flex-start;max-width:200px;line-height:1.3;font-weight:600}
+.risk.ok{color:var(--ok)}.risk.w{color:var(--warn)}.risk.d{color:var(--bad)}
+.kebab{color:#ffffffcc;font-weight:700;padding:0 4px}
+.chev{color:#ffffff99;font-size:12px}
+.sub-row{background:#ffffff0a}
+.plain{font-size:13px;color:#ffffffdd;display:block}
+.sect-h{padding:8px 14px 4px;font-size:12px;font-weight:700;color:#ffffffaa;text-transform:uppercase;letter-spacing:.05em;background:var(--n-100)}
+.f-P9 [data-screen=ov] .list .idle{order:1}
+.f-P9 [data-screen=ov] .list .head-inuse{order:2}
+.f-P9 [data-screen=ov] .list .inuse{order:3}
+.head-idle{order:0}
+.status{display:flex;gap:12px;align-items:center;border-radius:12px;padding:12px 14px;margin:0 0 6px}
+.status.warn{background:var(--warn-soft);border:1px solid #cd930966}
+.status .ic{font-size:22px}
+.status b{display:block;font-size:15px}
+.qm{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;background:#ffffff26;font-size:11px;font-weight:700;margin-left:6px;vertical-align:1px}
+.pop{background:#3a3a3a;border:1px solid #ffffff22;border-radius:10px;padding:8px 12px;font-size:12.5px;max-width:420px;margin:4px 0 8px;box-shadow:var(--shadow-lg)}
+.details{font-size:12px;color:#ffffffaa;padding:6px 0 0}
+.details summary{color:var(--info);cursor:pointer}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips span{background:var(--n-200);border-radius:99px;padding:4px 12px;font-weight:700;font-size:12.5px}
+.empty{min-height:70px;background:var(--n-0);border-radius:12px}
+.emptyok{background:var(--n-0);border-radius:12px;padding:24px;text-align:center}
+.emptyok b{display:block;font-size:16px;margin:6px 0 2px}
+/* Disco */
+.disk{display:flex;flex-direction:column;gap:6px}
+.dsec{display:flex;flex-direction:column}
+.dsec .h{margin:10px 0 6px}
+.bulk{display:flex;gap:10px;padding:10px;flex-wrap:wrap;border-bottom:1px solid #00000059}
+.bulk .btn{flex:1 1 220px}
+.amt{font-weight:400;opacity:.85}
+.f-D3 [data-screen=disk] .disk .o1{order:1}.f-D3 [data-screen=disk] .disk .o2{order:2}.f-D3 [data-screen=disk] .disk .o3{order:3}.f-D3 [data-screen=disk] .disk .o4{order:4}.f-D3 [data-screen=disk] .disk .o5{order:5}.f-D3 [data-screen=disk] .disk .o6{order:6}.f-D3 [data-screen=disk] .disk .o7{order:7}.f-D3 [data-screen=disk] .disk .o8{order:8}.f-D3 [data-screen=disk] .disk .o9{order:9}.f-D3 [data-screen=disk] .disk .o10{order:10}
+.tier{font-size:15px;font-weight:700;margin:16px 0 0;padding-top:8px;border-top:1px solid #ffffff22}
+.tier .dim{display:block;font-weight:400}
+.dhead{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+/* Dialoghi */
+.scrim{background:#00000080;padding:28px 16px;min-height:560px}
+.dlg{background:#3a3a3a;border-radius:14px;max-width:560px;margin:0 auto 18px;overflow:hidden;box-shadow:var(--shadow-lg)}
+.dlg .in{padding:22px 28px 16px}
+.dlg h3{margin:0;text-align:center;font-size:19px}
+.dlg .lead{text-align:center;margin:6px 0 14px}
+.tgl{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-top:1px solid #00000059;gap:10px}
+.sw-on{width:42px;height:24px;border-radius:12px;background:var(--brand);position:relative;flex:none}
+.sw-on::after{content:"";position:absolute;right:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#fff}
+.warnbox{background:#5a4c33;border-radius:10px;padding:10px 14px;margin-top:12px;font-size:13.5px}
+.warnbox p{margin:0 0 6px}
+.facts{background:var(--n-0);border-radius:10px;margin-top:12px}
+.facts div{padding:8px 14px;border-top:1px solid #00000059;font-size:13.5px}
+.facts div:first-child{border-top:0}
+.facts b{display:block;font-size:12px;color:#ffffffaa;text-transform:uppercase;letter-spacing:.04em}
+.dlg .acts{display:grid;grid-template-columns:1fr 1fr;border-top:1px solid #00000059}
+.dlg .acts span{padding:12px;text-align:center;font-weight:700}
+.dlg .acts span+span{border-left:1px solid #00000059}
+.entry{background:#ffffff14;border-radius:8px;padding:10px 12px;color:#ffffff80;margin-top:10px}
+.toast{background:#454545;border-radius:99px;padding:8px 10px 8px 18px;display:flex;gap:14px;align-items:center;justify-content:space-between;max-width:440px;margin:0 auto;flex-wrap:wrap}
+/* Preferenze */
+.pref h4{margin:18px 0 2px;font-size:14px}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:9px 14px;border-top:1px solid #00000059}
+.prow:first-child{border-top:0}
+.spin{display:flex;gap:8px;align-items:center}
+.spin i{font-style:normal;display:inline-grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--n-200)}
+.f-R5 [data-screen=pref] .x11{opacity:.55}
+/* Barra in alto e notifiche */
+.topbar{background:#000;color:#fff;display:flex;justify-content:space-between;align-items:center;padding:4px 14px;font-size:13px;font-weight:700}
+.tray{display:inline-flex;gap:6px;align-items:center;background:#ffffff26;border-radius:99px;padding:2px 10px}
+.tray img{width:18px;height:18px}
+.menu{background:#353535;border-radius:12px;width:300px;max-width:100%;margin:6px 0 0 auto;padding:6px;box-shadow:var(--shadow-lg)}
+.menu div{padding:7px 12px;border-radius:6px}
+.menu .dis{color:#ffffff80}
+.menu .sep{height:1px;background:#ffffff1f;padding:0;margin:4px 0}
+.menu .open{font-weight:700}
+.notif{background:#353535;border-radius:14px;max-width:440px;margin:18px auto 0;padding:12px 14px;box-shadow:var(--shadow-lg)}
+.notif .hd{display:flex;gap:10px;align-items:center}
+.notif img{width:28px;height:28px}
+.notif .bt{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:10px}
+.stage2{padding:18px 24px 32px}
+/* Stati */
+.statuspage{text-align:center;padding:36px 20px}
+.statuspage .ico{font-size:64px;color:#ffffff88;line-height:1}
+.statuspage h2{font-size:24px;margin:12px 0 6px}
+.banner{background:#3584e440;padding:8px 14px;display:flex;justify-content:center;gap:14px;align-items:center;flex-wrap:wrap;font-size:13.5px}
+.steps{max-width:560px;margin:10px auto 0;text-align:left;background:var(--n-0);border-radius:12px;padding:12px 16px 12px 34px}
+.welcome{max-width:560px;margin:0 auto;text-align:center;padding:26px 16px}
+.welcome img{width:72px;height:72px}
+.welcome ul{text-align:left;background:var(--n-0);border-radius:12px;padding:12px 16px 12px 34px;margin:16px 0}
+.welcome li{margin:6px 0}
+/* Proposte di solo stile */
+.f-S2 .app .s,.f-S2 .app .dim{font-size:13px;color:#ffffffcc}
+.f-S2 .app .legend-a{font-size:13px}
+.f-S3 .app .primary{background:var(--brand)}
+.f-S3 .app .primary.red{background:#c01c28;color:#fff}
+/* Vista mobile */
+@container (max-width:760px){
+  .page{padding:14px 12px 24px}
+  .stage2{padding:12px}
+  .hb .sw{display:none}
+  .hb{justify-content:flex-start}
+  .bb{display:flex}
+  .legend-a{grid-template-columns:1fr}
+  .legend-b{grid-template-columns:1fr 1fr}
+  .filters{grid-template-columns:1fr 1fr}
+  .filters .tg{grid-column:1 / -1}
+  .btn.wide,.bigbtn{flex:1 1 100%}
+  .row{grid-template-columns:minmax(0,1fr) auto}
+  .row .r{grid-column:1 / -1;justify-content:flex-start}
+  .row .s{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .f-P14 .row .s{white-space:normal}
+  .f-P14 .row .r{grid-column:auto;flex-direction:column;align-items:flex-end;gap:4px}
+  .f-P14 .row .r .kebab,.f-P14 .row .r .chev{display:none}
+  .f-P14 .filters{grid-template-columns:1fr}
+  .scrim{padding:14px 8px}
+  .dlg .in{padding:16px}
+  .prow{grid-template-columns:1fr}
+  .menu{margin:6px auto 0}
+}
+.p14-note{margin-top:10px}
+.prow .t{display:block}
+.prow .s{display:block;font-size:11.5px;color:#ffffff99}
+.dlg .acts .red{color:var(--bad)}
+</style>
+</head>
+<body>
+
+<header class="tool-bar">
+  <h1>Proposte UX <span>· Where Is My Memory</span></h1>
+  <div class="tabs" role="tablist" aria-label="Schermata">
+    <button role="tab" data-tab="ov" aria-selected="true">Panoramica</button>
+    <button role="tab" data-tab="disk" aria-selected="false">Disco</button>
+    <button role="tab" data-tab="sys" aria-selected="false">Sistema</button>
+    <button role="tab" data-tab="conf" aria-selected="false">Conferma</button>
+    <button role="tab" data-tab="pref" aria-selected="false">Preferenze</button>
+    <button role="tab" data-tab="tray" aria-selected="false">Icona e avvisi</button>
+    <button role="tab" data-tab="start" aria-selected="false">Primo avvio e stati</button>
+  </div>
+  <div class="spacer"></div>
+  <div class="ctrl"><span class="ctrl-label">Mostra</span>
+    <div class="seg" id="mode">
+      <button data-mode="sel" aria-pressed="true">La mia selezione</button>
+      <button data-mode="all" aria-pressed="false">Tutte le proposte</button>
+      <button data-mode="none" aria-pressed="false">Com'è oggi</button>
+    </div>
+  </div>
+  <div class="ctrl"><span class="ctrl-label">Vista</span>
+    <div class="seg" id="view">
+      <button data-view="desktop" aria-pressed="true">Desktop</button>
+      <button data-view="mobile" aria-pressed="false">Mobile</button>
+    </div>
+  </div>
+  <label class="ctrl"><input type="checkbox" id="pins" checked><span class="ctrl-label">Etichette</span></label>
+  <button class="tool-btn" id="copy">Copia la selezione</button>
+</header>
+
+<div class="layout">
+  <aside class="panel" aria-label="Proposte">
+    <p class="panel__count"><strong id="sel-count">0</strong><span>proposte tenute</span></p>
+    <p class="panel__intro">Spunta ciò che vuoi tenere: la schermata cambia subito. "Com'è oggi" mostra l'interfaccia attuale, "Tutte le proposte" l'insieme completo. Le etichette blu portano alla proposta. La scelta resta salvata in questo browser.</p>
+    <div class="legend">
+      <span class="chip chip--rapida">Rapida: template, CSS, testi</span>
+      <span class="chip chip--media">Media: anche query o logica</span>
+      <span class="chip chip--ampia">Ampia: funzione nuova</span>
+    </div>
+    <div id="groups"></div>
+  </aside>
+  <main class="stage">
+    <div class="frame" id="frame">
+
+<!-- ===== 4. Schermate: una <section class="screen app" data-screen="..."> per scheda =====
+     Varianti nello stesso markup:
+       data-on="H3"       visibile solo se H3 è attiva (più codici separati da spazio: tutti attivi)
+       data-off="H3"      visibile solo se H3 è spenta (più codici: nascosto se uno qualsiasi è attivo)
+       data-swap="L1|Testo nuovo"   sostituisce il testo dell'elemento quando L1 è attiva
+       data-mark="H3"     mette l'etichetta H3 sulla zona (almeno una per proposta)
+       data-goto="detail" link interno che cambia scheda -->
+<!-- ===================== PANORAMICA ===================== -->
+<section class="screen app is-active" data-screen="ov" aria-label="Panoramica">
+  <header class="hb">
+    <div class="sw"><span class="on">☰ Panoramica</span><span>▣ Disco</span><span data-off="Y1">▭ Sistema</span></div>
+    <div class="end"><span>↻</span><span>≡</span></div>
+  </header>
+  <div class="page">
+    <div class="status warn" data-on="P1" data-mark="P1"><span class="ic">⚠</span><div><b>La memoria si sta riempiendo</b>Puoi liberare 4,2 GB chiudendo programmi che non usi da ore. Niente si chiude senza il tuo consenso.</div></div>
+
+    <div data-off="P2" data-mark="P2">
+      <span class="h">RAM<span class="qm" data-on="S1" data-mark="S1">?</span></span>
+      <p class="line">32,9 GB / 41,7 GB · disponibile 8,8 GB · swap 120 MB / 4,3 GB · pressione Alta</p>
+    </div>
+    <div data-on="P2" data-mark="P2">
+      <span class="h">Memoria (RAM)<span class="qm" data-on="S1">?</span></span>
+      <p class="big">33 GB usati su 42</p>
+    </div>
+    <p class="pop" data-on="S1">La memoria (RAM) è lo spazio dove lavorano i programmi aperti. Quando è piena il computer rallenta. Chiudere un programma la libera subito; i file salvati non si toccano.</p>
+    <div class="bar"><i style="width:23%;background:#33c7de"></i><i style="width:8%;background:#2ec27e"></i><i style="width:6%;background:#e66100"></i><i style="width:5%;background:#9141ac"></i><i style="width:2%;background:#c01c28"></i><i style="width:16%;background:#9a9996"></i><i style="width:4%;background:#5e5c64"></i></div>
+    <div class="legend-a" data-off="P3" data-mark="L2">
+      <span><i class="dot" style="background:#33c7de"></i>Browser: 9,8 GB (23%)</span>
+      <span><i class="dot" style="background:#2ec27e"></i><span data-swap="L2|Altre app">App</span>: 3,2 GB (8%)</span>
+      <span><i class="dot" style="background:#e66100"></i><span data-swap="L2|Assistenti AI">CLI AI</span>: 2,4 GB (6%)</span>
+      <span><i class="dot" style="background:#9141ac"></i><span data-swap="L2|Server di sviluppo">Dev server</span>: 2,1 GB (5%)</span>
+      <span><i class="dot" style="background:#c01c28"></i><span data-swap="L2|Docker">Container</span>: 950 MB (2%)</span>
+      <span><i class="dot" style="background:#9a9996"></i>Cache del kernel: 6,5 GB (16%)</span>
+      <span><i class="dot" style="background:#5e5c64"></i><span data-swap="L2|Altro">Non attribuita</span>: 1,9 GB (4%)</span>
+      <span><i class="dot" style="background:#3d3d3d"></i>Libera: 14,9 GB (36%)</span>
+    </div>
+    <p class="dim" data-off="P3">La cache del kernel si libera da sola quando serve memoria.</p>
+    <div class="legend-b" data-on="P3" data-mark="P3">
+      <span><i class="dot" style="background:#33c7de"></i>Browser 9,8 GB</span>
+      <span><i class="dot" style="background:#2ec27e"></i><span data-swap="L2|Altre app">App</span> 3,2 GB</span>
+      <span><i class="dot" style="background:#e66100"></i><span data-swap="L2|Assistenti AI">CLI AI</span> 2,4 GB</span>
+      <span><i class="dot" style="background:#9141ac"></i><span data-swap="L2|Server di sviluppo">Dev server</span> 2,1 GB</span>
+      <span><i class="dot" style="background:#5e5c64"></i>Altro 2,9 GB</span>
+      <span style="grid-column:1/-1" class="dim"><i class="dot" style="background:#9a9996"></i>21,4 GB liberi o pronti a liberarsi da soli · <u>dettagli</u></span>
+    </div>
+
+    <div data-off="P2">
+      <span class="h">Disco /</span>
+      <p class="line">329,6 GB / 375,8 GB · liberi 27,9 GB</p>
+    </div>
+    <div data-on="P2">
+      <span class="h">Spazio sul disco</span>
+      <p class="big">28 GB liberi su 376</p>
+    </div>
+    <div class="bar"><i style="width:88%;background:#3584e4"></i></div>
+
+    <div class="reclaim" data-mark="P4">
+      <span data-mark="L1"><b data-swap="L1|Liberabile ora">Recuperabile ora</b>: 4,2 GB di RAM · 7,4 GB di disco</span>
+      <span class="btn wide primary" data-off="P4">Ferma tutti gli inattivi sicuri</span>
+      <span class="bigbtn" data-on="P4"><b>Libera 3,4 GB senza rischi</b><span>Ferma jupyter lab, whitebox e luve-agent: non li usi da ore e nulla va perso</span></span>
+    </div>
+
+    <div class="filters" data-off="P5" data-mark="P5">
+      <span class="tg" data-mark="P6"><span class="on t-all">Tutti</span><span class="t-idle" data-swap="L1|Non in uso">Inattivi</span></span>
+      <span class="drop">Categoria ▾</span><span class="drop">Rischio ▾</span>
+    </div>
+    <div class="filters2" data-on="P5" data-mark="P5">
+      <span class="tg"><span class="t-idle on">Da liberare (4)</span><span class="t-all">Tutto (6)</span></span>
+      <span class="drop">Altri filtri ▾</span>
+    </div>
+    <div class="search">🔍 Cerca…</div>
+
+    <div class="list">
+      <div class="sect-h head-idle" data-on="P9" data-mark="P9">Da liberare · non li usi da tempo</div>
+      <div class="row inuse">
+        <div><span class="t">Firefox</span><span class="s" data-mark="S2"><span data-swap="L2|Browser">Browser</span> · attività non misurabile</span>
+          <span class="s" data-off="P7">attività non misurabile per i browser</span><span class="plain" data-on="P7">Non sappiamo se lo stai usando: decidi tu se chiuderlo.</span></div>
+        <div class="r"><span class="size">9,8 GB</span><span class="badge b-w" data-off="P8">Attenzione</span><span class="risk w" data-on="P8">⚠ Perdi le schede non salvate</span><span class="btn primary">Chiudi…</span><span class="kebab" data-off="P10">⋮</span><span class="chev">▾</span></div>
+      </div>
+      <div class="row idle">
+        <div><span class="t">jupyter lab</span><span class="s"><span data-swap="L2|Server di sviluppo">Dev server</span> · <span data-swap="L1|non in uso da 3 h">inattivo da 3 h</span></span>
+          <span class="s" data-off="P7">nessuna connessione in ingresso e CPU media 0,2% negli ultimi 30 minuti · porta 8888</span><span class="plain" data-on="P7" data-mark="P7">Non lo usi da 3 ore: nessuno lo ha aperto nel browser.</span></div>
+        <div class="r"><span class="size">1,4 GB</span><span class="badge b-ok" data-off="P8" data-mark="P8">Sicuro</span><span class="risk ok" data-on="P8" data-mark="P8">✓ Si ferma senza perdere nulla</span><span class="btn primary" data-mark="S3">Ferma</span><span class="kebab" data-off="P10">⋮</span><span class="chev">▾</span></div>
+      </div>
+      <div class="row idle">
+        <div><span class="t">whitebox</span><span class="s"><span data-swap="L2|Progetto">Progetto</span> · <span data-swap="L1|non in uso da 5 h">inattivo da 5 h</span></span>
+          <span class="s" data-off="P7">nessuna connessione in ingresso e CPU media 0,1% negli ultimi 30 minuti · porte 8000, 8080</span><span class="plain" data-on="P7">Non lo usi da 5 ore: nessuno ci si collega.</span></div>
+        <div class="r"><span class="size">1,1 GB</span><span class="badge b-ok" data-off="P8">Sicuro</span><span class="risk ok" data-on="P8">✓ Si ferma senza perdere nulla</span><span class="btn primary">Ferma</span><span class="kebab" data-off="P10">⋮</span><span class="chev">▴</span></div>
+      </div>
+      <div class="row sub-row idle">
+        <div><span class="t"><span data-swap="L1|Liberabile">Recuperabile</span>: 1,1 GB · in uso: 1,1 GB</span><span class="s" data-off="P10">progetto compose 'whitebox' in /home/utente/progetti/whitebox più un processo uvicorn lanciato dal terminale nella stessa cartella</span><span class="s" data-on="P10">Un progetto con 2 parti: un server web e un servizio di accesso.</span></div><div></div>
+      </div>
+      <div class="row sub-row idle" data-off="P12" data-mark="P12">
+        <div><span class="t">Notifiche di questo gruppo</span></div>
+        <div class="r"><span class="btn">Silenzia ▾</span><span class="btn">Ignora</span></div>
+      </div>
+      <div class="row sub-row idle" data-on="P12" data-mark="P12">
+        <div><span class="t">Non avvisarmi per questo</span><span class="s">Resta in lista, smetti solo di ricevere avvisi</span></div>
+        <div class="r chips"><span>1 ora</span><span>1 giorno</span><span>7 giorni</span><span>Mai più</span></div>
+      </div>
+      <div class="row sub-row idle" data-mark="P11">
+        <div><span class="t"><span data-swap="P11|Accesso utenti (keycloak) · contenitore Docker">whitebox-keycloak</span></span>
+          <span class="s" data-off="P10">2c9184903a37 · 682 MB · <span data-swap="L1|non in uso da 5 h">inattivo da 5 h</span></span>
+          <span class="s" data-off="P10">immagine quay.io/keycloak/keycloak:26.0.8 (running)</span>
+          <span class="s" data-off="P10">mount bind: /home/utente/progetti/whitebox/vault -&gt; /opt/keycloak/vault</span>
+          <span class="s" data-on="P10">682 MB · non in uso da 5 h</span>
+          <details class="details" data-on="P10" data-mark="P10"><summary>Dettagli tecnici</summary>2c9184903a37 · immagine quay.io/keycloak/keycloak:26.0.8 · Copia comando · Copia PID</details></div>
+        <div class="r"><span class="kebab" data-off="P10">⋮</span></div>
+      </div>
+      <div class="row sub-row idle">
+        <div><span class="t"><span data-swap="P11|Server web (uvicorn)">uvicorn</span></span>
+          <span class="s" data-off="P10">PID 941149 · avvio 16/10 06:46 · 180 MB · inattivo da 5 h</span>
+          <span class="s" data-off="P10">comando: uvicorn app:main --port 8000</span>
+          <span class="s" data-off="P10">cartella: /home/utente/progetti/whitebox · porte: 8000</span>
+          <span class="s" data-on="P10">180 MB · avviato ieri alle 06:46 · <u>Apri la cartella</u></span>
+          <details class="details" data-on="P10"><summary>Dettagli tecnici</summary>PID 941149 · uvicorn app:main --port 8000 · porta 8000 · Copia comando · Copia PID</details></div>
+        <div class="r"><span class="kebab" data-off="P10">⋮</span></div>
+      </div>
+      <div class="row idle">
+        <div><span class="t">luve-agent</span><span class="s"><span data-swap="L2|Progetto">Progetto</span> · <span data-swap="L1|non in uso da 2 giorni">inattivo da 2 giorni</span></span>
+          <span class="s" data-off="P7">tutti i 3 membri misurabili sono inattivi</span><span class="plain" data-on="P7">Non lo usi da 2 giorni.</span></div>
+        <div class="r"><span class="size">900 MB</span><span class="badge b-ok" data-off="P8">Sicuro</span><span class="risk ok" data-on="P8">✓ Si ferma senza perdere nulla</span><span class="btn primary">Ferma</span><span class="kebab" data-off="P10">⋮</span><span class="chev">▾</span></div>
+      </div>
+      <div class="row idle">
+        <div><span class="t">claude</span><span class="s"><span data-swap="L2|Assistenti AI">CLI AI</span> · <span data-swap="L1|non in uso da 40 minuti">inattivo da 40 minuti</span></span>
+          <span class="s" data-off="P7">CPU media 0,0% e traffico di rete medio 12 B/s negli ultimi 30 minuti</span><span class="plain" data-on="P7">Fermo da 40 minuti in un terminale.</span></div>
+        <div class="r"><span class="size">800 MB</span><span class="badge b-w" data-off="P8">Attenzione</span><span class="risk w" data-on="P8">⚠ Interrompi la conversazione in corso</span><span class="btn primary">Termina…</span><span class="kebab" data-off="P10">⋮</span><span class="chev">▾</span></div>
+      </div>
+      <div class="sect-h head-inuse" data-on="P9">In uso adesso o non misurabile</div>
+      <div class="row inuse">
+        <div><span class="t">frontend (vite)</span><span class="s"><span data-swap="L2|Server di sviluppo">Dev server</span> · in uso</span>
+          <span class="s" data-off="P7">attività rilevata da 25 minuti · porta 5173</span><span class="plain" data-on="P7">Lo stai usando adesso.</span></div>
+        <div class="r"><span class="size">640 MB</span><span class="badge b-w" data-off="P8">Attenzione</span><span class="risk w" data-on="P8">⚠ È in uso: chiudilo solo se hai finito</span><span class="btn">Ferma…</span><span class="kebab" data-off="P10">⋮</span><span class="chev">▾</span></div>
+      </div>
+    </div>
+
+    <div class="list" data-on="Y1" data-mark="Y1" style="margin-top:12px">
+      <div class="row"><div><span class="t">🔒 Parti del sistema · 1,4 GB</span><span class="s">Fanno funzionare il computer: si mostrano, non si chiudono</span></div><div class="r"><span class="chev">▸</span></div></div>
+    </div>
+
+    <p class="mock-note" style="margin-top:18px">Stato vuoto: nessun programma da mostrare (oggi, dati di prova senza gruppi)</p>
+    <div class="empty" data-off="P13" data-mark="P13"></div>
+    <div class="emptyok" data-on="P13" data-mark="P13"><span style="font-size:30px">✓</span><b>Tutto in ordine</b><span class="dim">Non c'è niente acceso che si possa chiudere. Ti avvisiamo noi se qualcosa resta acceso senza motivo.</span></div>
+
+    <p class="mock-note p14-note" data-on="P14" data-mark="P14">Vista stretta (passa a "Mobile"): nome e motivo su una colonna, dimensione e bottone a destra; i filtri stanno su una riga.</p>
+  </div>
+  <nav class="bb"><span class="on">Panoramica</span><span>Disco</span><span data-off="Y1">Sistema</span></nav>
+</section>
+
+<!-- ===================== DISCO ===================== -->
+<section class="screen app" data-screen="disk" aria-label="Disco">
+  <header class="hb">
+    <div class="sw"><span>☰ Panoramica</span><span class="on">▣ Disco</span><span data-off="Y1">▭ Sistema</span></div>
+    <div class="end"><span>↻</span><span>≡</span></div>
+  </header>
+  <div class="page">
+    <div class="dhead" data-off="D1" data-mark="D1"><span class="dim" style="font-size:14px">Ultima scansione: 10:12</span><span class="btn">Scansiona ora</span></div>
+    <div class="dhead" data-on="D1" data-mark="D1"><div><p class="big">Puoi liberare 7,4 GB di spazio</p><span class="dim">Ultimo controllo: oggi alle 10:12</span></div><span class="btn">Controlla di nuovo</span></div>
+
+    <div data-on="D2" data-mark="D2">
+      <span class="bigbtn" style="display:block;max-width:none"><b>Libera 4,4 GB senza rischi</b><span>Pulisce le cache (4,2 GB), l'immagine senza nome (120 MB) e la cache di build (70 MB). Il cestino resta com'è.</span></span>
+      <p class="mock-note" style="margin-top:8px">Funzione nuova: oggi ogni voce si libera con il suo bottone, non esiste un'azione unica sul disco.</p>
+    </div>
+    <p class="dim" data-on="D7" data-mark="D7">Ogni bottone ti mostra prima cosa succede e chiede conferma.</p>
+
+    <div class="disk">
+      <div class="tier o1" data-on="D3" data-mark="D3">Si libera senza pensarci<span class="dim">Si ricreano da sole quando servono</span></div>
+      <div class="dsec o2">
+        <span class="h">Cache<span class="qm" data-on="S1">?</span></span>
+        <span class="dim" data-on="D4" data-mark="D4">File temporanei dei programmi di sviluppo: si ricreano da soli.</span>
+        <div class="list">
+          <div class="row"><div><span class="t">uv</span><span class="s">/home/utente/.cache/uv</span></div><div class="r"><span class="size">3,0 GB</span><span class="badge b-ok">Sicuro</span><span class="btn primary">Pulisci cache</span></div></div>
+          <div class="row"><div><span class="t">npm</span><span class="s">/home/utente/.npm</span></div><div class="r"><span class="size">1,2 GB</span><span class="badge b-ok">Sicuro</span><span class="btn">Pulisci cache</span></div></div>
+        </div>
+      </div>
+      <div class="dsec o3">
+        <span class="h">Cache di build Docker</span>
+        <span class="dim" data-on="D4">Pezzi salvati per costruire più in fretta: si ricreano.</span>
+        <div class="list"><div class="row"><div><span class="t">Cache di build</span><span class="s">liberabili 70 MB</span></div><div class="r"><span class="size">100 MB</span><span class="badge b-ok">Sicuro</span><span class="btn">Svuota cache di build</span></div></div></div>
+      </div>
+      <div class="tier o4" data-on="D3">Da guardare prima<span class="dim">Si possono riscaricare o ricreare, ma con un po' di lavoro</span></div>
+      <div class="dsec o5">
+        <span class="h">Immagini Docker<span class="qm" data-on="S1">?</span></span>
+        <span class="dim" data-on="D4">Copie scaricate per avviare i contenitori. Se servono di nuovo, si riscaricano.</span>
+        <div class="list">
+          <div class="bulk"><span class="btn">Elimina immagini senza nome <span class="amt" data-on="D6" data-mark="D6">(120 MB)</span></span><span class="btn"><span data-swap="D7|Elimina immagini inutilizzate">Elimina immagini inutilizzate…</span> <span class="amt" data-on="D6">(570 MB)</span></span></div>
+          <div class="row"><div><span class="t">myapp:dev</span><span class="s">non in uso · costruita in locale</span></div><div class="r"><span class="size">450 MB</span><span class="badge b-w">Attenzione</span><span class="btn"><span data-swap="D7|Rimuovi immagine">Rimuovi immagine…</span></span></div></div>
+          <div class="row" data-mark="D5"><div><span class="t"><span data-swap="D5|Immagine senza nome">sha256:dddddddddddd</span></span><span class="s">non in uso · senza nome · costruita in locale</span></div><div class="r"><span class="size">120 MB</span><span class="badge b-ok">Sicuro</span><span class="btn">Rimuovi immagine</span></div></div>
+        </div>
+      </div>
+      <div class="dsec o6">
+        <span class="h">Container fermi</span>
+        <span class="dim" data-on="D4">Contenitori spenti che occupano ancora un po' di spazio.</span>
+        <div class="list">
+          <div class="bulk"><span class="btn"><span data-swap="D7|Elimina container fermi">Elimina container fermi…</span> <span class="amt" data-on="D6">(2 kB)</span></span></div>
+          <div class="row"><div><span class="t">old-job</span><span class="s"><span data-swap="D5|fermo">fermo (exited)</span></span></div><div class="r"><span class="size">2 kB</span><span class="badge b-w">Attenzione</span><span class="btn"><span data-swap="D7|Rimuovi">Rimuovi…</span></span></div></div>
+        </div>
+      </div>
+      <div class="dsec o7">
+        <span class="h">Cartelle di dipendenze</span>
+        <span class="dim" data-on="D4">Librerie scaricate per progetti vecchi: si reinstallano se riapri il progetto.</span>
+        <div class="list">
+          <div class="row"><div><span class="t">node_modules</span><span class="s">/home/utente/vecchi/shop · ultima modifica 140 giorni fa</span></div><div class="r"><span class="size">1,6 GB</span><span class="badge b-w">Attenzione</span><span class="btn"><span data-swap="D7|Elimina cartella">Elimina cartella…</span></span></div></div>
+          <div class="row"><div><span class="t">.venv</span><span class="s">/home/utente/prove/scraper · ultima modifica 210 giorni fa</span></div><div class="r"><span class="size">400 MB</span><span class="badge b-w">Attenzione</span><span class="btn"><span data-swap="D7|Elimina cartella">Elimina cartella…</span></span></div></div>
+        </div>
+      </div>
+      <div class="dsec o8">
+        <span class="h">Cestino</span>
+        <span class="dim" data-on="D4">File che hai già cancellato: svuotandolo spariscono per sempre.</span>
+        <div class="list"><div class="row"><div><span class="t">Cestino</span><span class="s">38 elementi</span></div><div class="r"><span class="size">440 MB</span><span class="badge b-w">Attenzione</span><span class="btn"><span data-swap="D7|Svuota cestino">Svuota cestino…</span></span></div></div></div>
+      </div>
+      <div class="tier o9" data-on="D3">Attenzione: cancella dati<span class="dim">Dentro possono esserci database o file che non si recuperano</span></div>
+      <div class="dsec o10">
+        <span class="h">Volumi Docker</span>
+        <span class="dim" data-on="D4">Dati salvati dai contenitori, per esempio un database.</span>
+        <div class="list">
+          <div class="row"><div><span class="t">scratch</span><span class="s">non usato</span></div><div class="r"><span class="size">120 MB</span><span class="badge b-d">Pericolo</span><span class="btn"><span data-swap="D7|Rimuovi volume">Rimuovi volume…</span></span></div></div>
+          <div class="row"><div><span class="t">nosize</span><span class="s"><span data-swap="D5|non sappiamo se un contenitore lo usa">uso non noto</span></span></div><div class="r"><span class="dim" style="font-size:14px"><span data-swap="D5|dimensione sconosciuta">dimensione non nota</span></span></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <nav class="bb"><span>Panoramica</span><span class="on">Disco</span><span data-off="Y1">Sistema</span></nav>
+</section>
+
+<!-- ===================== SISTEMA ===================== -->
+<section class="screen app" data-screen="sys" aria-label="Sistema">
+  <header class="hb">
+    <div class="sw"><span>☰ Panoramica</span><span>▣ Disco</span><span class="on" data-mark="Y1">▭ Sistema</span></div>
+    <div class="end"><span>↻</span><span>≡</span></div>
+  </header>
+  <div class="page">
+    <p class="mock-note" data-on="Y1">Con Y1 questa scheda sparisce: il contenuto finisce in fondo alla Panoramica, chiuso.</p>
+    <p class="dim" style="font-size:14px" data-off="Y2" data-mark="Y2">Questi processi servono al sistema o al desktop e restano fuori dalla Panoramica: qui sono solo elencati, senza azioni.</p>
+    <p data-on="Y2" data-mark="Y2">🔒 Questi programmi fanno funzionare il computer. Da qui non si possono chiudere, quindi non puoi rompere niente.</p>
+    <div class="list">
+      <div class="row"><div><span class="t"><span data-on="Y2">🔒</span> Sessione GNOME</span><span class="s"><span data-swap="Y2|il desktop su cui stai lavorando">componente del desktop</span></span></div><div class="r"><span class="size">1,4 GB</span></div></div>
+    </div>
+  </div>
+  <nav class="bb"><span>Panoramica</span><span>Disco</span><span class="on">Sistema</span></nav>
+</section>
+<!-- ===================== CONFERMA ===================== -->
+<section class="screen app" data-screen="conf" aria-label="Conferma">
+  <div class="scrim">
+    <div class="dlg">
+      <div class="in">
+        <h3 data-mark="C1"><span data-swap="C1|Fermare il progetto whitebox?">Fermare whitebox?</span></h3>
+        <p class="lead" data-off="C1">Totale stimato: libera circa 847 MB di RAM.</p>
+        <p class="lead" data-on="C1"><b>Liberi circa 1,1 GB di memoria</b>, lo stesso numero che vedi nella lista.<br><span class="dim">I file del progetto restano dove sono.</span></p>
+        <b data-off="C2">whitebox</b><b data-on="C2">Si fermano queste 2 parti</b>
+        <div class="list" style="margin-top:8px" data-mark="C2">
+          <div class="tgl" style="border-top:0"><span><span data-swap="C2|Server web (uvicorn) · 180 MB">uvicorn (pid 941149)</span></span><span class="sw-on"></span></div>
+          <div class="tgl"><span><span data-swap="C2|Accesso utenti (keycloak) · 682 MB">whitebox-keycloak</span></span><span class="sw-on"></span></div>
+        </div>
+        <div class="warnbox" data-off="C3" data-mark="C3">
+          <p>È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso.</p>
+          <p>Il server si ferma. Si riavvia con lo stesso comando dalla cartella /home/utente/progetti/whitebox.</p>
+          <p>Il container si ferma; dati e configurazione restano. Si riavvia con docker start o docker compose up.</p>
+          <p style="margin:0">Se il container non si ferma da solo, Docker lo termina dopo 10 secondi.</p>
+        </div>
+        <div class="facts" data-on="C3" data-mark="C3">
+          <div><b>Cosa succede</b>Il server web e il servizio di accesso si spengono. Il server è aperto in un terminale: se lo stavi usando, quel lavoro si interrompe.</div>
+          <div><b>Cosa resta</b>File, dati e impostazioni del progetto.</div>
+          <div><b>Per riaccenderlo</b><span data-off="C4">Dal terminale, nella cartella del progetto, con lo stesso comando di prima.</span><span data-on="C4">Con il pulsante "Riaccendi" che compare dopo, oppure dal terminale come prima.</span></div>
+        </div>
+      </div>
+      <div class="acts"><span>Annulla</span><span class="red">Ferma</span></div>
+    </div>
+    <div class="toast" data-off="C4" data-mark="C4"><span>whitebox fermato, liberati 1,0 GB</span></div>
+    <div data-on="C4" data-mark="C4">
+      <div class="toast"><span>whitebox fermato, liberati 1,0 GB</span><span class="btn sm blue">Riaccendi</span></div>
+      <p class="mock-note" style="max-width:440px;margin:8px auto 0">Funzione nuova: oggi l'app non sa riaccendere ciò che ha fermato; la conferma rimanda a "docker start" e al terminale.</p>
+    </div>
+
+    <p class="mock-note" style="max-width:560px;margin:18px auto 8px">Conferma di un'azione "Pericolo"</p>
+    <div class="dlg">
+      <div class="in">
+        <h3>Rimuovere il volume scratch?</h3>
+        <p class="lead">Recupero stimato: libera circa 120 MB di disco.</p>
+        <p class="dim" data-on="C5" data-mark="C5" style="font-size:13px">Ti chiediamo di scrivere il nome perché questa azione cancella dati in modo definitivo: serve a evitare un clic per sbaglio.</p>
+        <div class="entry" data-mark="C5">Scrivi scratch per confermare</div>
+      </div>
+      <div class="acts"><span>Annulla</span><span class="red btn off" style="background:none">Rimuovi volume</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PREFERENZE ===================== -->
+<section class="screen app" data-screen="pref" aria-label="Preferenze">
+  <div class="scrim">
+    <div class="dlg pref" style="max-width:640px">
+      <div class="in">
+        <h3>Preferenze</h3>
+        <div data-on="R3" data-mark="R3" style="margin-top:14px">
+          <h4>Quanti avvisi vuoi ricevere?</h4>
+          <span class="tg" style="margin-top:6px"><span>Pochi</span><span class="on">Normali</span><span>Tanti</span></span>
+          <p class="dim">Normali: ti avvisiamo se qualcosa resta acceso senza uso per 2 ore e libera almeno 200 MB, al massimo 3 volte all'ora.</p>
+        </div>
+
+        <div data-on="R1" data-mark="R1">
+          <h4>Avvisi</h4>
+          <div class="list" data-mark="R2">
+            <div class="prow"><div><span class="t"><span data-swap="R2|Avvisami se non lo usi da">Notifica dopo (minuti)</span></span><span class="s">Quanto deve restare inattivo un gruppo prima della notifica</span></div><div class="spin"><span data-swap="R2|2 ore">120</span><i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t"><span data-swap="R2|Avvisami solo se libero almeno">Recuperabile minimo (MB)</span></span><span class="s">Sotto questa quantità non si notifica</span></div><div class="spin"><span data-swap="R2|200 MB">200</span><i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t">Categorie notificate</span><span class="s">Scegli per quali categorie ricevere notifiche</span></div><div class="spin">›</div></div>
+          </div>
+          <div class="list" style="margin-top:12px"><div class="prow"><div><span class="t">Impostazioni avanzate</span><span class="s">Come si misura l'attività, soglie di memoria, chiusura e cartelle (14 voci)</span></div><div class="spin">▸</div></div></div>
+        </div>
+
+        <div data-off="R1" data-mark="R1">
+          <h4>Campionamento</h4>
+          <p class="dim" style="margin:0 0 8px">Come si legge il sistema e quando un gruppo conta come inattivo.</p>
+          <div class="list" data-mark="R2">
+            <div class="prow"><div><span class="t"><span data-swap="R2|Controlla ogni">Intervallo di campionamento (secondi)</span></span><span class="s">Ogni quanto si legge la memoria</span></div><div class="spin"><span data-swap="R2|1 minuto">60</span><i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t"><span data-swap="R2|Per decidere se è in uso, guarda gli ultimi">Finestra di osservazione (minuti)</span></span><span class="s">Per quanto tempo si misura l'attività</span></div><div class="spin"><span data-swap="R2|30 minuti">30</span><i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t"><span data-swap="R2|È fermo se usa meno del processore di">Soglia CPU di attività (%)</span></span><span class="s">Sotto questo uso medio un gruppo è inattivo</span></div><div class="spin"><span data-swap="R2|1%">1,0</span><i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t"><span data-swap="R2|…e scambia in rete meno di">Soglia di rete di attività (byte/s)</span></span><span class="s">Sotto questo traffico un gruppo è inattivo</span></div><div class="spin"><span data-swap="R2|0,7 kB al secondo">700</span><i>−</i><i>+</i></div></div>
+            <div class="prow x11" data-mark="R5"><div><span class="t">Segui la finestra in primo piano</span><span class="s"><span data-swap="R5|Non disponibile su questo desktop (funziona solo con X11)">Il gruppo con la finestra in primo piano conta come in uso (solo su X11)</span></span></div><div class="spin"><span class="sw-on"></span></div></div>
+          </div>
+          <h4>Notifiche</h4>
+          <p class="dim" style="margin:0 0 8px">Quando e per quali categorie arriva una notifica.</p>
+          <div class="list">
+            <div class="prow"><div><span class="t"><span data-swap="R2|Avvisami se non lo usi da">Notifica dopo (minuti)</span></span><span class="s">Quanto deve restare inattivo un gruppo prima della notifica</span></div><div class="spin"><span data-swap="R2|2 ore">120</span><i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t"><span data-swap="R2|Avvisami solo se libero almeno">Recuperabile minimo (MB)</span></span><span class="s">Sotto questa quantità non si notifica</span></div><div class="spin"><span data-swap="R2|200 MB">200</span><i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t"><span data-swap="R2|Al massimo, avvisi in un'ora">Notifiche all'ora (massimo)</span></span><span class="s">Oltre questo numero le notifiche aspettano</span></div><div class="spin">3<i>−</i><i>+</i></div></div>
+            <div class="prow"><div><span class="t">Categorie notificate</span><span class="s">Scegli per quali categorie ricevere notifiche</span></div><div class="spin">›</div></div>
+          </div>
+          <p class="mock-note" style="margin-top:12px">Seguono, sempre aperte: Pressione di memoria (2 voci), Chiusura (2), Cartelle (4).</p>
+        </div>
+
+        <div data-on="R4" data-mark="R4" style="margin-top:14px;text-align:center"><span class="btn">Ripristina i valori consigliati</span></div>
+        <div style="margin-top:14px;text-align:center"><span class="btn primary">Applica</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== ICONA E AVVISI ===================== -->
+<section class="screen app" data-screen="tray" aria-label="Icona e avvisi">
+  <div class="topbar"><span>Attività</span><span>17 ott 10:15</span><span class="tray" data-mark="T2"><img src="data:image/png;base64,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" alt=""><span data-swap="T2|4,2 GB da liberare">4,2 GB inattivi</span></span></div>
+  <div class="stage2">
+    <p class="mock-note">Menu che si apre cliccando l'icona in alto a destra</p>
+    <div class="menu">
+      <div class="open" data-on="T1" data-mark="T1">Apri Where Is My Memory</div>
+      <div class="sep" data-on="T1"></div>
+      <div class="dis" data-mark="T4"><span data-swap="T4|Memoria usata: 79%">RAM 32,9/41,7 GB</span></div>
+      <div class="dis"><span data-swap="T4|Disco: 28 GB liberi">Disco 88% occupato</span></div>
+      <div class="sep" data-on="T4"></div>
+      <div class="dis" data-on="T4" style="font-size:12px">Da liberare:</div>
+      <div>jupyter lab (1,4 GB)</div>
+      <div>whitebox (1,1 GB)</div>
+      <div>luve-agent (900 MB)</div>
+      <div>claude (800 MB)</div>
+      <div class="sep"></div>
+      <div>Silenzia notifiche per 1 h</div>
+      <div>Esci</div>
+    </div>
+    <p class="mock-note" style="margin-top:18px">Notifica di GNOME</p>
+    <div class="notif" data-mark="T3">
+      <div class="hd"><img src="data:image/png;base64,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" alt=""><div>
+        <b><span data-swap="T3|whitebox è acceso ma non lo usi da 2 ore">whitebox è inattivo da 2 h</span></b><br>
+        <span class="dim" style="font-size:13px"><span data-swap="T3|Chiudendolo liberi 1,1 GB di memoria. Decidi tu: non si chiude da solo.">1 container, 1 server, 1,1 GB di RAM recuperabile.</span></span>
+      </div></div>
+      <div class="bt"><span class="btn"><span data-swap="T3|Vedi e decidi">Apri</span></span><span class="btn"><span data-swap="T3|Non ora (24 h)">Silenzia 24 h</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== PRIMO AVVIO E STATI ===================== -->
+<section class="screen app" data-screen="start" aria-label="Primo avvio e stati">
+  <header class="hb">
+    <div class="sw"><span class="on">☰ Panoramica</span><span>▣ Disco</span><span data-off="Y1">▭ Sistema</span></div>
+    <div class="end"><span>↻</span><span>≡</span></div>
+  </header>
+  <div class="banner" data-mark="A3"><span>L'icona nella barra richiede l'estensione AppIndicator di Ubuntu</span><span class="btn sm" data-on="A3">Come si attiva</span></div>
+  <ol class="steps" data-on="A3">
+    <li>Apri l'app <b>Estensioni</b> dal menu delle applicazioni.</li>
+    <li>Attiva l'interruttore accanto a <b>Ubuntu AppIndicators</b>.</li>
+    <li>L'icona compare in alto a destra entro pochi secondi.</li>
+  </ol>
+  <p class="mock-note" data-on="A3" style="max-width:560px;margin:8px auto 0">Passi da verificare su Ubuntu 24.04 prima di scriverli nell'app.</p>
+
+  <div class="page">
+    <p class="mock-note">Al primo avvio</p>
+    <p class="dim" data-off="A1" data-mark="A1" style="font-size:14px">Oggi al primo avvio l'app parte chiusa, con la sola icona nella barra: nessuna spiegazione di cosa fa o di dove trovarla.</p>
+    <div class="welcome" data-on="A1" data-mark="A1">
+      <img src="data:image/png;base64,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" alt="">
+      <p class="big">Ciao! Ti aiuto a tenere il computer leggero</p>
+      <ul>
+        <li>Guardo cosa occupa la memoria e lo spazio sul disco.</li>
+        <li>Ti avviso quando qualcosa resta acceso senza che tu lo usi.</li>
+        <li>Non chiudo mai niente da solo: decidi tu, e prima vedi cosa succede.</li>
+        <li>Mi trovi sempre in alto a destra, nell'icona <img src="data:image/png;base64,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" alt="" style="width:16px;height:16px;vertical-align:-3px">.</li>
+      </ul>
+      <span class="btn blue pill">Ho capito</span>
+    </div>
+
+    <p class="mock-note" style="margin-top:22px">Quando l'app non riesce più a leggere i dati</p>
+    <div class="statuspage" data-off="A2" data-mark="A2">
+      <div class="ico">⚠</div>
+      <h2>Il monitor non risponde</h2>
+      <p>Il campionamento è fallito per 5 cicli di fila. I dettagli sono nel registro dell'applicazione.</p>
+      <span class="btn pill off">Riavvia monitor</span>
+    </div>
+    <div class="statuspage" data-on="A2" data-mark="A2">
+      <div class="ico">⚠</div>
+      <h2>Non riesco a leggere i dati del computer</h2>
+      <p>Ho provato 5 volte negli ultimi minuti. Di solito basta riavviare il controllo.</p>
+      <span class="btn pill blue">Riavvia il controllo</span>
+      <p class="mock-note" style="max-width:520px;margin:12px auto 0">Oggi il pulsante è sempre disattivato: l'azione "app.restart-monitor" non è registrata da nessuna parte. Serve il meccanismo di riavvio, non solo il testo.</p>
+    </div>
+  </div>
+  <nav class="bb"><span class="on">Panoramica</span><span>Disco</span><span data-off="Y1">Sistema</span></nav>
+</section>
+
+    </div>
+  </main>
+</div>
+
+<dialog id="copy-dialog" role="dialog" aria-modal="true" aria-labelledby="copy-title">
+  <h2 id="copy-title">La tua selezione</h2>
+  <p id="copy-status">Testo pronto da incollare in chat.</p>
+  <textarea id="copy-text" readonly></textarea>
+  <div class="dialog-actions"><button class="tool-btn tool-btn--ghost" id="copy-close">Chiudi</button><button class="tool-btn" id="copy-again">Copia</button></div>
+</dialog>
+
+<script>
+/* ===== 5. Dati: l'unica parte di script da compilare =====
+   id: codice stabile (lettera area + numero) · g: chiave del gruppo (data-screen, oppure "x" per le trasversali)
+   t: titolo (max 8 parole) · w: problema osservato e proposta, 1-2 frasi · e: "rapida" | "media" | "ampia"
+   src (facoltativo): fonte, es. "riunione del 12/11" · note (facoltativo): conflitto o rischio da valutare
+   done (facoltativo, Fase B): true quando la proposta è già applicata nel codice */
+const PRODUCT = "Where Is My Memory";
+const GROUPS = {ov: "Panoramica", disk: "Disco", sys: "Sistema", conf: "Conferma", pref: "Preferenze", tray: "Icona e avvisi", start: "Primo avvio e stati", x: "Trasversali (tutte le schermate)"};
+const PROPOSALS = [
+  {id: "P1", g: "ov", t: "Frase di stato in cima, a parole", w: "La prima riga è \"32,9 GB / 41,7 GB · disponibile 8,8 GB · swap 120 MB / 4,3 GB · pressione Alta\": chi non sa cosa sono swap e pressione non capisce se deve preoccuparsi né cosa fare.", e: "media"},
+  {id: "P2", g: "ov", t: "Memoria e disco in numeri tondi", w: "\"RAM\" e \"Disco /\" con quattro numeri a un decimale. Proposta: \"Memoria: 33 GB usati su 42\", \"Spazio sul disco: 28 GB liberi su 376\"; swap e dettagli spostati sotto.", e: "rapida"},
+  {id: "P3", g: "ov", t: "Legenda con le 4 voci che contano", w: "Otto voci con percentuali, fra cui \"Cache del kernel\" e \"Non attribuita\", più una nota per spiegarne una. Proposta: le quattro voci più grandi, \"Altro\" e una riga per la memoria che si libera da sola.", e: "rapida"},
+  {id: "P4", g: "ov", t: "Bottone principale che dice quanto libera", w: "\"Ferma tutti gli inattivi sicuri\" non dice cosa ferma né quanto libera, ed è grigio come tutti gli altri. Proposta: \"Libera 3,4 GB senza rischi\" con i nomi dei programmi.", e: "media", note: "il totale dei soli \"sicuri\" oggi non è calcolato: \"Recuperabile ora\" include anche quelli con Attenzione"},
+  {id: "P5", g: "ov", t: "Filtri semplici: Da liberare / Tutto", w: "Tutti/Inattivi più due tendine Categoria e Rischio: quattro controlli prima di vedere la lista, su 390 px occupano tre righe. Proposta: due scelte con il conteggio, il resto in \"Altri filtri\".", e: "rapida"},
+  {id: "P6", g: "ov", t: "La lista si apre su \"Da liberare\"", w: "All'apertura si vede tutto, compreso ciò che è in uso e non va toccato: chi apre l'app vuole sapere cosa può chiudere.", e: "rapida", note: "SPECIFICHE §10.3: la Panoramica parte senza filtri e \"senza filtri non può essere vuota\"; con questa proposta serve lo stato vuoto P13"},
+  {id: "P7", g: "ov", t: "Motivo in una frase comprensibile", w: "\"nessuna connessione in ingresso e CPU media 0,1% negli ultimi 30 minuti · porte 8000, 8080\": vero ma illeggibile per chi non sviluppa. Proposta: \"Non lo usi da 5 ore: nessuno ci si collega\"; la misura resta nei dettagli.", e: "media"},
+  {id: "P8", g: "ov", t: "Rischio spiegato: cosa perdi chiudendo", w: "\"Sicuro\", \"Attenzione\", \"Pericolo\" non dicono cosa succede. Proposta: icona più conseguenza concreta (\"Si ferma senza perdere nulla\", \"Perdi le schede non salvate\").", e: "rapida"},
+  {id: "P9", g: "ov", t: "Due sezioni: da liberare e in uso", w: "Firefox (in uso, non misurabile) è il primo della lista perché è il più grande, sopra i programmi davvero fermi. Proposta: prima ciò che non usi, poi un titolo \"In uso adesso\".", e: "media", note: "SPECIFICHE RF-03: ordinamento per memoria recuperabile"},
+  {id: "P10", g: "ov", t: "Dettagli tecnici richiusi in un riquadro", w: "Riga aperta: PID, hash del container, immagine, mount bind, comando completo. Proposta: dimensione, da quando e \"Apri la cartella\" in vista; il resto, con Copia comando e Copia PID, in \"Dettagli tecnici\".", e: "rapida"},
+  {id: "P11", g: "ov", t: "Parti del progetto con un nome d'uso", w: "\"whitebox-keycloak\" e \"uvicorn\" non dicono cosa sono. Proposta: \"Accesso utenti (keycloak)\", \"Server web (uvicorn)\", con il nome tecnico fra parentesi.", e: "media", note: "serve una tabella di nomi noti (immagini e comandi comuni); per gli sconosciuti resta il nome tecnico"},
+  {id: "P12", g: "ov", t: "\"Non avvisarmi per\" al posto di Silenzia/Ignora", w: "\"Notifiche di questo gruppo: Silenzia ▾ / Ignora\": Ignora sembra togliere il programma dalla lista, invece toglie solo gli avvisi. Proposta: quattro scelte esplicite, da 1 ora a \"Mai più\".", e: "rapida"},
+  {id: "P13", g: "ov", t: "Lista vuota con un messaggio", w: "Con zero programmi da mostrare la lista è un riquadro grigio vuoto, senza testo (osservato con i dati di prova). Proposta: \"Tutto in ordine\" e cosa farà l'app.", e: "rapida"},
+  {id: "P14", g: "ov", t: "Finestra stretta: righe su due colonne", w: "A 390 px i motivi vengono tagliati a metà (\"CPU media 0,1% negli ulti…\") e i filtri occupano tre righe. Proposta: nome e motivo a sinistra, dimensione e bottone impilati a destra.", e: "media"},
+
+  {id: "D1", g: "disk", t: "Testata: quanto spazio puoi liberare", w: "In testa c'è solo \"Ultima scansione: 10:12\". Proposta: \"Puoi liberare 7,4 GB di spazio\" e \"Controlla di nuovo\" al posto di \"Scansiona ora\".", e: "rapida"},
+  {id: "D2", g: "disk", t: "Un bottone per tutto ciò che è sicuro", w: "Per liberare le voci sicure servono quattro clic su quattro sezioni diverse. Proposta: \"Libera 4,4 GB senza rischi\" in testa.", e: "ampia", note: "funzione nuova: oggi non esiste un'azione unica sul disco"},
+  {id: "D3", g: "disk", t: "Sezioni per rischio, non per tecnologia", w: "Le sezioni si chiamano Immagini Docker, Container fermi, Volumi: chi non usa Docker non sa da dove partire. Proposta: \"Si libera senza pensarci\", \"Da guardare prima\", \"Attenzione: cancella dati\".", e: "media", note: "SPECIFICHE §10.2 elenca le sezioni per tipo (Docker, Cache, Cartelle, Cestino)"},
+  {id: "D4", g: "disk", t: "Una riga di spiegazione per sezione", w: "\"Volumi Docker\", \"Cache di build Docker\": nessuna dice cosa contiene né se si può ricreare. Proposta: una frase sotto ogni titolo.", e: "rapida"},
+  {id: "D5", g: "disk", t: "Nomi leggibili al posto di hash e gergo", w: "\"sha256:dddddddddddd\", \"fermo (exited)\", \"uso non noto\". Proposta: \"Immagine senza nome\", \"fermo\", \"non sappiamo se un contenitore lo usa\".", e: "rapida"},
+  {id: "D6", g: "disk", t: "Bottoni di massa con quanto liberano", w: "\"Elimina immagini inutilizzate…\" non dice quanto spazio rende: si clicca alla cieca. Proposta: la quantità fra parentesi.", e: "media"},
+  {id: "D7", g: "disk", t: "Etichette uguali, rischio solo nel badge", w: "Alcuni bottoni finiscono con \"…\" e altri no (\"Rimuovi immagine…\" accanto a \"Rimuovi immagine\"): la convenzione non si legge. Proposta: stessa etichetta e una frase in testa che dice che tutto chiede conferma.", e: "rapida"},
+
+  {id: "Y1", g: "sys", t: "Sistema in fondo alla Panoramica, chiuso", w: "Una scheda intera per una riga che non si può toccare (\"Sessione GNOME 1,4 GB\"). Proposta: un riquadro chiuso in fondo alla Panoramica e due schede invece di tre.", e: "media", note: "SPECIFICHE §10.2 prevede tre schede (Panoramica, Disco, Sistema)"},
+  {id: "Y2", g: "sys", t: "Spiegazione semplice con lucchetto", w: "\"Questi processi servono al sistema o al desktop e restano fuori dalla Panoramica\": parla di processi e di Panoramica. Proposta: \"Fanno funzionare il computer, da qui non si chiudono\".", e: "rapida"},
+
+  {id: "C1", g: "conf", t: "Stessa cifra della lista, detta in chiaro", w: "La riga dice 1,1 GB, la conferma \"libera circa 847 MB di RAM\" (osservato sullo stesso gruppo): due numeri per la stessa azione. Proposta: un numero solo, più \"i file restano dove sono\".", e: "media", note: "le due stime sono calcolate in modo diverso; quale sia quella giusta va deciso nel codice"},
+  {id: "C2", g: "conf", t: "Parti da fermare con nome e peso", w: "\"uvicorn (pid 941149)\", \"whitebox-keycloak\": il PID non serve a chi decide. Proposta: \"Server web (uvicorn) · 180 MB\". Usa la stessa tabella di nomi di P11.", e: "media"},
+  {id: "C3", g: "conf", t: "Conseguenze in tre righe: succede, resta, riaccendi", w: "Quattro paragrafi in un riquadro giallo, con \"docker start o docker compose up\" e \"Docker lo termina dopo 10 secondi\". Proposta: Cosa succede / Cosa resta / Per riaccenderlo.", e: "media"},
+  {id: "C4", g: "conf", t: "Pulsante \"Riaccendi\" dopo lo stop", w: "Per riaccendere ciò che si è fermato la conferma rimanda al terminale (\"docker start\"): chi non lo usa resta bloccato. Proposta: \"Riaccendi\" nel messaggio di esito.", e: "ampia", note: "funzione nuova: oggi l'app non riavvia niente; va valutato con N1 (nessuna azione automatica), qui l'azione la chiede l'utente"},
+  {id: "C5", g: "conf", t: "Perché devi scrivere il nome", w: "\"Scrivi scratch per confermare\" senza motivo sembra un errore o un test. Proposta: una frase che spiega che serve a evitare cancellazioni per sbaglio.", e: "rapida"},
+
+  {id: "R1", g: "pref", t: "Tre impostazioni in vista, il resto in Avanzate", w: "Diciassette voci in cinque sezioni, la prima è \"Intervallo di campionamento (secondi)\". Proposta: in vista solo gli avvisi; misure, soglie, chiusura e cartelle in \"Impostazioni avanzate\".", e: "media"},
+  {id: "R2", g: "pref", t: "Etichette in frasi e unità comprensibili", w: "\"Soglia di rete di attività (byte/s) 700\", \"Notifica dopo (minuti) 120\". Proposta: \"…e scambia in rete meno di 0,7 kB al secondo\", \"Avvisami se non lo usi da 2 ore\".", e: "media"},
+  {id: "R3", g: "pref", t: "Avvisi: Pochi, Normali, Tanti", w: "Per avere meno notifiche oggi bisogna capire e cambiare tre numeri (minuti, MB, notifiche all'ora). Proposta: tre livelli preimpostati, con la frase che dice cosa significano.", e: "media"},
+  {id: "R4", g: "pref", t: "Ripristina i valori consigliati", w: "Dopo aver cambiato soglie che non si capiscono non c'è modo di tornare indietro. Proposta: un bottone per i valori di fabbrica.", e: "media"},
+  {id: "R5", g: "pref", t: "Opzione X11 spenta dove non funziona", w: "\"Segui la finestra in primo piano (solo su X11)\" è accesa e modificabile anche dove X11 non c'è: chi non sa cos'è X11 non capisce se funziona. Proposta: voce disattivata con il motivo.", e: "media"},
+
+  {id: "T1", g: "tray", t: "Voce \"Apri\" in cima al menu", w: "Il menu dell'icona non ha una voce per aprire la finestra: si apre solo cliccando un gruppo o con il clic sinistro, che su alcune versioni di Ubuntu apre invece il menu.", e: "rapida", note: "comportamento del clic sinistro su Ubuntu non verificato in questa analisi"},
+  {id: "T2", g: "tray", t: "Etichetta \"da liberare\" invece di \"inattivi\"", w: "Accanto all'icona compare \"4,2 GB inattivi\": \"inattivi\" riferito a GB non si capisce. Proposta: \"4,2 GB da liberare\".", e: "rapida", note: "SPECIFICHE §10.1 fissa la stringa guida \"88,8 GB inattivi\" per la larghezza: va aggiornata insieme"},
+  {id: "T3", g: "tray", t: "Notifica che dice cosa fare", w: "\"whitebox è inattivo da 2 h · 1 container, 1 server, 1,1 GB di RAM recuperabile\" con \"Apri\" e \"Silenzia 24 h\". Proposta: \"acceso ma non lo usi da 2 ore\", quanto liberi e \"Vedi e decidi\" / \"Non ora\".", e: "rapida"},
+  {id: "T4", g: "tray", t: "Riepilogo del menu in parole", w: "\"RAM 32,9/41,7 GB\" e \"Disco 88% occupato\", poi i nomi senza titolo. Proposta: \"Memoria usata: 79%\", \"Disco: 28 GB liberi\" e un titolo \"Da liberare\" sopra i gruppi.", e: "rapida"},
+
+  {id: "A1", g: "start", t: "Benvenuto al primo avvio, quattro punti", w: "Al primo avvio l'app parte chiusa con la sola icona: nessuno spiega cosa fa, che non chiude niente da sola, dove trovarla. Proposta: una schermata con \"Ho capito\".", e: "media", note: "serve un indicatore di primo avvio nello stato salvato"},
+  {id: "A2", g: "start", t: "Errore con un pulsante che funziona", w: "\"Il monitor non risponde… I dettagli sono nel registro dell'applicazione\" con \"Riavvia monitor\" sempre disattivato: l'azione app.restart-monitor non è registrata nel codice. Proposta: testo semplice e riavvio reale.", e: "ampia", note: "il testo da solo prometterebbe un riavvio che oggi non esiste"},
+  {id: "A3", g: "start", t: "Icona mancante: istruzioni passo passo", w: "Il banner dice \"richiede l'estensione AppIndicator di Ubuntu\" e si ferma lì: chi non è esperto non sa cosa sia né dove si attivi. Proposta: \"Come si attiva\" con tre passi.", e: "media"},
+
+  {id: "L1", g: "x", t: "Un lessico senza gergo", w: "\"Inattivo\", \"Recuperabile\", \"Campionamento\", \"Gruppo\" sono parole del sistema. Proposta: \"non in uso\", \"liberabile\", \"controllo\", \"programma/progetto\" in tutte le schermate.", e: "rapida", note: "SPECIFICHE §3 (glossario) e README usano \"inattivo\": vanno allineati"},
+  {id: "L2", g: "x", t: "Categorie con nomi comprensibili", w: "\"CLI AI\", \"Dev server\", \"Container\", \"Non attribuita\". Proposta: \"Assistenti AI\", \"Server di sviluppo\", \"Docker\", \"Altro\".", e: "rapida"},
+  {id: "S1", g: "x", t: "\"?\" accanto ai termini difficili", w: "RAM, cache, immagini Docker compaiono senza spiegazione. Proposta: un \"?\" che apre due righe in parole semplici.", e: "rapida"},
+  {id: "S2", g: "x", t: "Testi secondari più grandi e chiari", w: "Motivi e dettagli sono a 11-12 px in grigio chiaro su grigio scuro: proprio le righe che spiegano la decisione si leggono peggio. Proposta: 13 px e contrasto più alto.", e: "rapida"},
+  {id: "S3", g: "x", t: "Azione principale colorata, le altre grigie", w: "Tutti i bottoni sono grigi uguali (Ferma, Chiudi…, Pulisci cache, Applica): non si vede quale sia il prossimo passo. Proposta: l'azione principale di ogni riga in blu.", e: "rapida"}
+];
+
+/* ===== Engine: non modificare sotto questa riga ===== */
+const EFFORT = {rapida: "Rapida", media: "Media", ampia: "Ampia"};
+const KEY = "ux-improver:" + PRODUCT;
+function load(){ try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch(e){ return null; } }
+function save(){ try { localStorage.setItem(KEY, JSON.stringify(ui)); } catch(e){} }
+const saved = load();
+const ui = {
+  sel: Object.assign(Object.fromEntries(PROPOSALS.map(p => [p.id, true])), saved && saved.sel || {}),
+  mode: saved && saved.mode || "sel",
+  tab: saved && saved.tab || document.querySelector("[role=tab]").dataset.tab,
+  view: saved && saved.view || "desktop",
+  pins: saved ? saved.pins !== false : true
+};
+if (!document.querySelector(`[data-screen="${ui.tab}"]`)) ui.tab = document.querySelector("[role=tab]").dataset.tab;
+const frame = document.getElementById("frame");
+const isOn = id => ui.mode === "all" ? true : ui.mode === "none" ? false : !!ui.sel[id];
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;"}[c]));
+
+function apply(){
+  document.querySelectorAll("[data-on]").forEach(el => { el.hidden = !el.dataset.on.split(" ").every(isOn); });
+  document.querySelectorAll("[data-off]").forEach(el => { el.hidden = el.dataset.off.split(" ").some(isOn); });
+  document.querySelectorAll("[data-swap]").forEach(el => {
+    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+    const cut = el.dataset.swap.indexOf("|");
+    el.textContent = isOn(el.dataset.swap.slice(0, cut)) ? el.dataset.swap.slice(cut + 1) : el.dataset.orig;
+  });
+  PROPOSALS.forEach(p => frame.classList.toggle("f-" + p.id, isOn(p.id)));
+  document.getElementById("sel-count").textContent = PROPOSALS.filter(p => ui.sel[p.id]).length + " / " + PROPOSALS.length;
+  document.querySelectorAll("#mode button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === ui.mode));
+  document.querySelectorAll("#view button").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === ui.view));
+  document.querySelectorAll("[role=tab]").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === ui.tab));
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("is-active", s.dataset.screen === ui.tab));
+  frame.classList.toggle("is-mobile", ui.view === "mobile");
+  frame.classList.toggle("pins-off", !ui.pins);
+  document.getElementById("pins").checked = ui.pins;
+  renderPanel();
+  save();
+  document.dispatchEvent(new CustomEvent("ux:applied"));
+}
+
+function renderPanel(){
+  const wrap = document.getElementById("groups");
+  const order = [ui.tab, "x"].filter((g, i, a) => GROUPS[g] && a.indexOf(g) === i);
+  wrap.innerHTML = "";
+  order.forEach(g => {
+    const items = PROPOSALS.filter(p => p.g === g);
+    if (!items.length) return;
+    const sec = document.createElement("section");
+    sec.className = "group";
+    const allOn = items.every(p => ui.sel[p.id]);
+    sec.innerHTML = `<div class="group__head"><h2 class="group__title">${esc(GROUPS[g])}</h2><button class="group__all" data-group="${g}">${allOn ? "Togli tutte" : "Tieni tutte"}</button></div>`;
+    items.forEach(p => {
+      const div = document.createElement("div");
+      div.className = "prop";
+      div.id = "prop-" + p.id;
+      div.innerHTML = `<input type="checkbox" id="cb-${p.id}" ${ui.sel[p.id] ? "checked" : ""} aria-describedby="why-${p.id}">
+        <div class="prop__head"><button class="prop__code" data-show="${p.id}" title="Mostra sulla schermata">${p.id}</button><label class="prop__title" for="cb-${p.id}">${esc(p.t)}</label></div>
+        <p class="prop__why" id="why-${p.id}">${esc(p.w)}</p>
+        <div class="prop__tags"><span class="chip chip--${p.e}">${EFFORT[p.e]}</span>${p.src ? `<span class="chip chip--nota">${esc(p.src)}</span>` : ""}${p.note ? `<span class="chip chip--nota" title="${esc(p.note)}">da valutare: ${esc(p.note)}</span>` : ""}${p.done ? '<span class="chip chip--fatta">applicata</span>' : ""}</div>`;
+      sec.appendChild(div);
+    });
+    wrap.appendChild(sec);
+  });
+  const others = Object.keys(GROUPS).filter(g => !order.includes(g));
+  if (others.length){
+    const rest = document.createElement("p");
+    rest.className = "panel__intro";
+    rest.textContent = "Altre schermate: " + others.map(g => `${GROUPS[g]} ${PROPOSALS.filter(p => p.g === g && ui.sel[p.id]).length}/${PROPOSALS.filter(p => p.g === g).length}`).join(" · ");
+    wrap.appendChild(rest);
+  }
+}
+
+function show(id){
+  const p = PROPOSALS.find(x => x.id === id);
+  if (p && p.g !== "x" && p.g !== ui.tab && GROUPS[p.g]){ ui.tab = p.g; apply(); }
+  const target = [...document.querySelectorAll(`.screen.is-active [data-mark="${id}"]`)].find(el => el.offsetParent !== null);
+  if (!target) return;
+  target.scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center"});
+  target.classList.remove("flash-target"); void target.offsetWidth; target.classList.add("flash-target");
+}
+
+function addPins(){
+  document.querySelectorAll("[data-mark]").forEach(el => {
+    const b = document.createElement("button");
+    b.className = "pin"; b.type = "button"; b.textContent = el.dataset.mark;
+    b.setAttribute("aria-label", "Proposta " + el.dataset.mark);
+    b.addEventListener("click", e => {
+      e.preventDefault(); e.stopPropagation();
+      const card = document.getElementById("prop-" + el.dataset.mark);
+      if (!card) return;
+      card.scrollIntoView({behavior: "smooth", block: "center"});
+      card.classList.add("is-flash"); setTimeout(() => card.classList.remove("is-flash"), 1400);
+    });
+    el.appendChild(b);
+  });
+}
+
+function selectionText(){
+  const line = p => `${p.id} ${p.t} [${EFFORT[p.e]}]`;
+  const keep = PROPOSALS.filter(p => ui.sel[p.id]);
+  const drop = PROPOSALS.filter(p => !ui.sel[p.id]);
+  return `Proposte UX ${PRODUCT}: ${keep.length} tenute su ${PROPOSALS.length}\n\nTENERE\n${keep.map(line).join("\n") || "-"}\n\nSCARTARE\n${drop.map(line).join("\n") || "-"}\n`;
+}
+async function copyText(){
+  const txt = selectionText();
+  document.getElementById("copy-text").value = txt;
+  const status = document.getElementById("copy-status");
+  try { await navigator.clipboard.writeText(txt); status.textContent = "Copiato negli appunti."; }
+  catch(e){ status.textContent = "Copia automatica non disponibile: seleziona il testo e copialo a mano."; }
+}
+
+document.getElementById("groups").addEventListener("change", e => {
+  if (e.target.matches("input[type=checkbox]")){ ui.sel[e.target.id.slice(3)] = e.target.checked; ui.mode = "sel"; apply(); }
+});
+document.getElementById("groups").addEventListener("click", e => {
+  const g = e.target.closest("[data-group]");
+  if (g){ const items = PROPOSALS.filter(p => p.g === g.dataset.group); const v = !items.every(p => ui.sel[p.id]); items.forEach(p => ui.sel[p.id] = v); ui.mode = "sel"; apply(); }
+  const s = e.target.closest("[data-show]");
+  if (s) show(s.dataset.show);
+});
+document.querySelectorAll("#mode button").forEach(b => b.addEventListener("click", () => { ui.mode = b.dataset.mode; apply(); }));
+document.querySelectorAll("#view button").forEach(b => b.addEventListener("click", () => { ui.view = b.dataset.view; apply(); }));
+document.querySelectorAll("[role=tab]").forEach(b => b.addEventListener("click", () => { ui.tab = b.dataset.tab; apply(); window.scrollTo({top: 0}); }));
+document.getElementById("pins").addEventListener("change", e => { ui.pins = e.target.checked; apply(); });
+frame.addEventListener("click", e => {
+  const a = e.target.closest("a, button");
+  if (!a || a.classList.contains("pin")) return;
+  if (a.matches("a")) e.preventDefault();
+  if (a.dataset.goto && document.querySelector(`[data-screen="${a.dataset.goto}"]`)){ ui.tab = a.dataset.goto; apply(); frame.scrollIntoView({block: "start"}); }
+});
+const dlg = document.getElementById("copy-dialog");
+document.getElementById("copy").addEventListener("click", () => { copyText(); dlg.showModal(); });
+document.getElementById("copy-again").addEventListener("click", copyText);
+document.getElementById("copy-close").addEventListener("click", () => dlg.close());
+dlg.addEventListener("keydown", e => {
+  if (e.key !== "Tab") return;
+  const items = [...dlg.querySelectorAll("button, textarea, a[href], input")].filter(el => !el.disabled);
+  const first = items[0], last = items[items.length - 1];
+  if (e.shiftKey && document.activeElement === first){ e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last){ e.preventDefault(); first.focus(); }
+});
+
+window.UX = {PRODUCT, PROPOSALS, GROUPS, ui, apply, selectionText};
+document.title = "Proposte UX · " + PRODUCT;
+addPins();
+apply();
+</script>
+</body>
+</html>
