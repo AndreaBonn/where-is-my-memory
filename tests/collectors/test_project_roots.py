@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import pytest
+
 from wimm.collectors.project_roots import ProjectRootResolver
 
 
@@ -61,3 +63,33 @@ def test_outside_home_reaches_filesystem_root(tmp_path: Path) -> None:
         is_marker=lambda path: path == Path("/.git"), home=tmp_path / "home"
     ).resolve(cwd=tmp_path)
     assert result == Path("/")
+
+
+@pytest.mark.parametrize(
+    "marker",
+    [
+        ".git",
+        "pyproject.toml",
+        "package.json",
+        "compose.yaml",
+        "docker-compose.yml",
+        "Cargo.toml",
+        "go.mod",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
+    ],
+)
+def test_resolve_finds_each_marker(tmp_path: Path, marker: str) -> None:
+    project = tmp_path / "project"
+    cwd = project / "src"
+    cwd.mkdir(parents=True)
+    (project / marker).touch()
+    assert resolver(home=tmp_path / "home").resolve(cwd=cwd) == project
+
+
+def test_resolve_ignores_unlisted_file(tmp_path: Path) -> None:
+    cwd = tmp_path / "project" / "src"
+    cwd.mkdir(parents=True)
+    (tmp_path / "project" / "notes.txt").touch()
+    assert resolver(home=tmp_path / "home").resolve(cwd=cwd) == cwd

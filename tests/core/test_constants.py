@@ -99,6 +99,11 @@ def test_execution_and_project_lists_specification() -> None:
         "package.json",
         "compose.yaml",
         "docker-compose.yml",
+        "Cargo.toml",
+        "go.mod",
+        "pom.xml",
+        "build.gradle",
+        "build.gradle.kts",
     )
     assert (
         tuple(

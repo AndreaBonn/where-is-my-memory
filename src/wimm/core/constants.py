@@ -98,6 +98,11 @@ PROJECT_ROOT_MARKERS = (
     "package.json",
     "compose.yaml",
     "docker-compose.yml",
+    "Cargo.toml",
+    "go.mod",
+    "pom.xml",
+    "build.gradle",
+    "build.gradle.kts",
 )
 DB_PROCESS_NAMES = ("postgres", "mysqld", "mariadbd", "mongod", "redis-server")
 

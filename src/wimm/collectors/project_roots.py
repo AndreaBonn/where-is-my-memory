@@ -1,7 +1,7 @@
 from collections.abc import Callable
 from pathlib import Path
 
-PROJECT_MARKERS = (".git", "pyproject.toml", "package.json", "compose.yaml", "docker-compose.yml")
+from wimm.core.constants import PROJECT_ROOT_MARKERS
 
 
 class ProjectRootResolver:
@@ -48,6 +48,6 @@ class ProjectRootResolver:
         for candidate in (cwd, *cwd.parents):
             if inside_home and candidate == self._home:
                 break
-            if any(self._is_marker(candidate / marker) for marker in PROJECT_MARKERS):
+            if any(self._is_marker(candidate / marker) for marker in PROJECT_ROOT_MARKERS):
                 return candidate
         return cwd
