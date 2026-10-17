@@ -37,8 +37,8 @@ def italian_language() -> Iterator[None]:
 
 
 @pytest.fixture
-def english(tmp_path: Path) -> Iterator[None]:
-    """Switch to English, compiling the real po/en.po so tests see the shipped catalog."""
+def english_catalog(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
+    """Compile the real po/en.po and make it the catalog every set_language() call reads."""
     from wimm import i18n
 
     msgfmt = shutil.which("msgfmt")
@@ -50,7 +50,16 @@ def english(tmp_path: Path) -> Iterator[None]:
         [msgfmt, "--check-format", "-o", str(target / f"{i18n.DOMAIN}.mo"), str(EN_CATALOG)],
         check=True,
     )
-    i18n.set_language(language=i18n.ENGLISH, locale_dir=tmp_path / "locale")
+    monkeypatch.setattr(i18n, "LOCALE_DIR", tmp_path / "locale")
+    return tmp_path / "locale"
+
+
+@pytest.fixture
+def english(english_catalog: Path) -> Iterator[None]:
+    """Switch to English with the shipped catalog; the next test starts in Italian again."""
+    from wimm import i18n
+
+    i18n.set_language(language=i18n.ENGLISH)
     yield
     i18n.set_language(language=i18n.ITALIAN)
 

@@ -60,6 +60,7 @@ def _build_window(application: Any) -> PresentableWindow:
 def _install_preferences(*, application: Any, window: Any) -> None:
     from pathlib import Path
 
+    from wimm.language_switch import register_language_action
     from wimm.paths import default_user_paths
     from wimm.ui.window_preferences import PreferencesEnv, install_preferences
 
@@ -69,6 +70,7 @@ def _install_preferences(*, application: Any, window: Any) -> None:
         session_type=os.environ.get(SESSION_TYPE_VARIABLE),
     )
     install_preferences(window=window, source=application._service, env=env)
+    register_language_action(actions=window.window_actions, application=application)
 
 
 def _activate(application: Any) -> None:
@@ -88,24 +90,6 @@ def _quit(application: Any) -> bool:
 def _log_field_errors(*, errors: Mapping[str, Any]) -> None:
     for name, error in errors.items():
         LOGGER.warning("Invalid configuration field %s: %s", name, error)
-
-
-def _set_startup_language() -> None:
-    """Pick the language before the ``--help`` texts exist; the service start applies it again."""
-    from pathlib import Path
-
-    from wimm import i18n
-    from wimm.config import load_config
-    from wimm.paths import default_user_paths
-
-    # No logging yet: a warning would hit stderr; the service start logs it to the file.
-    config_logger = logging.getLogger(load_config.__module__)
-    config_logger.disabled = True
-    try:
-        saved = load_config(paths=default_user_paths(), home=Path.home()).config.language
-    finally:
-        config_logger.disabled = False
-    i18n.set_language(language=saved or i18n.resolve_default(environ=os.environ))
 
 
 def _apply_config(*, loaded: Any) -> None:
@@ -295,6 +279,8 @@ def main(argv: list[str] | None = None) -> int:
     if arguments == ["--version"]:
         print(f"wimm {__version__}")
         return SUCCESS
-    _set_startup_language()
+    from wimm.language_switch import apply_startup_language
+
+    apply_startup_language()
     application = create_application()
     return application.run(argv=["wimm", *arguments])

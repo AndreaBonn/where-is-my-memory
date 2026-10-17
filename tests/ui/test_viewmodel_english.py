@@ -129,7 +129,7 @@ def test_summary_headlines_and_legend_in_english(snapshot: Snapshot) -> None:
     assert summary.segments[-3].label == "System cache memory"
     assert summary.segments[-2].legend == "Unattributed: 1.9 GB"
     assert summary.segments[-1].legend == "Free: 14.9 GB"
-    assert summary.kernel_cache_note == "The system's spare memory frees itself when needed."
+    assert summary.kernel_cache_note == "The system's cache memory frees itself when needed."
     # The keys stay identities: they do not follow the language.
     assert [s.key for s in summary.segments[:2]] == ["BROWSER", "DESKTOP_APP"]
 

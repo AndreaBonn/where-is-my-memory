@@ -18,6 +18,7 @@ from wimm.model.errors import WimmError
 from wimm.paths import UserPaths
 from wimm.ui.dialogs.preferences_alerts import PresetPicker
 from wimm.ui.dialogs.preferences_ignored import IgnoredGroups, can_unignore
+from wimm.ui.dialogs.preferences_language import LanguageGroup, request_language
 from wimm.ui.dialogs.preferences_model import ADVANCED_GROUPS, ESSENTIAL_GROUPS, collect_changes
 from wimm.ui.dialogs.preferences_presets import recommended_values
 from wimm.ui.dialogs.preferences_rows import ERROR_CLASS, Field, build_field
@@ -61,6 +62,10 @@ class PreferencesDialog(Adw.PreferencesDialog):
         self.fields: dict[str, Field] = {}
         self._statuses: list[Gtk.Label] = []
         page = Adw.PreferencesPage()
+        self.language = LanguageGroup(
+            on_choose=lambda language: request_language(widget=self, language=language)
+        )
+        page.add(self.language.group)
         essentials = [self._build_group(group=group) for group in ESSENTIAL_GROUPS]
         self.advanced = self._build_advanced()
         self._presets = PresetPicker(fields=self.fields)

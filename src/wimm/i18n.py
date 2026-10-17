@@ -39,10 +39,11 @@ def resolve_default(*, environ: Mapping[str, str]) -> str:
     return ITALIAN
 
 
-def set_language(*, language: str, locale_dir: Path = LOCALE_DIR) -> None:
+def set_language(*, language: str, locale_dir: Path | None = None) -> None:
     """Make ``language`` the one every later translation call returns.
 
-    A missing catalog is logged and leaves the Italian source text visible.
+    ``locale_dir`` defaults to :data:`LOCALE_DIR`, read at call time. A missing catalog
+    is logged and leaves the Italian source text visible.
 
     Raises
     ------
@@ -55,15 +56,16 @@ def set_language(*, language: str, locale_dir: Path = LOCALE_DIR) -> None:
     if language == ITALIAN:
         _state = (language, gettext.NullTranslations())
         return
+    directory = LOCALE_DIR if locale_dir is None else locale_dir
     try:
         translations = gettext.translation(
-            DOMAIN, localedir=locale_dir, languages=[language], fallback=True
+            DOMAIN, localedir=directory, languages=[language], fallback=True
         )
     except (OSError, UnicodeError) as error:
-        LOGGER.warning("Unreadable %s catalog in %s: %s", language, locale_dir, error)
+        LOGGER.warning("Unreadable %s catalog in %s: %s", language, directory, error)
         translations = gettext.NullTranslations()
     if not isinstance(translations, gettext.GNUTranslations):
-        LOGGER.warning("No %s catalog in %s, showing Italian text", language, locale_dir)
+        LOGGER.warning("No %s catalog in %s, showing Italian text", language, directory)
     _state = (language, translations)
 
 

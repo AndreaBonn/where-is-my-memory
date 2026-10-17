@@ -102,6 +102,15 @@ class RecordingWindow:
     def set_tray_missing(self, missing: bool) -> None:
         self.tray_missing.append(missing)
 
+    def get_visible(self) -> bool:
+        return True
+
+    def save_size(self) -> None:
+        pass
+
+    def destroy(self) -> None:
+        pass
+
 
 def test_window_host_builds_the_window_once_and_reuses_it() -> None:
     from wimm.app import WindowHost

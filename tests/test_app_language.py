@@ -5,6 +5,7 @@ import pytest
 
 from wimm import app, i18n
 from wimm.config import parse_config
+from wimm.language_switch import apply_startup_language
 
 
 def test_apply_config_saved_language_wins_over_system(
@@ -41,7 +42,7 @@ def test_startup_language_reads_the_saved_choice_before_the_service(
 
     monkeypatch.setenv(name="LANG", value="it_IT.UTF-8")
     save_config(paths=default_user_paths(), config=Config(language="en"))
-    app._set_startup_language()
+    apply_startup_language()
     assert i18n.current_language() == i18n.ENGLISH
 
 
@@ -49,7 +50,7 @@ def test_startup_language_without_config_follows_system(monkeypatch: pytest.Monk
     for name in i18n.LOCALE_VARIABLES:
         monkeypatch.delenv(name=name, raising=False)
     monkeypatch.setenv(name="LANG", value="en_US.UTF-8")
-    app._set_startup_language()
+    apply_startup_language()
     assert i18n.current_language() == i18n.ENGLISH
 
 
@@ -64,6 +65,6 @@ def test_startup_language_with_a_broken_config_stays_quiet(
     (paths.config_dir / "config.json").write_text("{broken", encoding="utf-8")
     monkeypatch.setenv(name="LANGUAGE", value="en")
     with caplog.at_level(logging.DEBUG):
-        app._set_startup_language()
+        apply_startup_language()
     assert i18n.current_language() == i18n.ENGLISH
     assert caplog.records == []

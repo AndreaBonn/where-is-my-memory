@@ -12,6 +12,12 @@ class PresentableWindow(Protocol):
 
     def set_tray_missing(self, missing: bool) -> None: ...
 
+    def get_visible(self) -> bool: ...
+
+    def save_size(self) -> None: ...
+
+    def destroy(self) -> None: ...
+
 
 class WindowHost:
     """Owns the panel window, built on the first request so GTK loads only then."""
@@ -40,3 +46,22 @@ class WindowHost:
             if self._tray_missing:
                 self._window.set_tray_missing(True)
         self._window.show_group(group_id=group_id)
+
+    def rebuild(self, *, then: Callable[[PresentableWindow], None] | None = None) -> None:
+        """Build the window again, so every label is created in the active language.
+
+        A hidden window is only dropped: the next request builds the new one. ``then``
+        runs on the new window once it is shown, for example to reopen a dialog.
+        """
+        old = self._window
+        if old is None:
+            return
+        visible = old.get_visible()
+        old.save_size()
+        old.destroy()
+        self._window = None
+        if not visible:
+            return
+        self.present(group_id=None)
+        if self._window is not None and then is not None:
+            then(self._window)

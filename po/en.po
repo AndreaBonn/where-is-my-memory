@@ -11,15 +11,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/wimm/app.py:275
+#: src/wimm/app.py:264
 msgid "Avvia senza aprire la finestra"
 msgstr "Start without opening the window"
 
-#: src/wimm/app.py:276
+#: src/wimm/app.py:265
 msgid "Mostra un gruppo"
 msgstr "Show a group"
 
-#: src/wimm/app.py:277
+#: src/wimm/app.py:266
 msgid "Mostra la versione"
 msgstr "Show the version"
 
@@ -759,53 +759,53 @@ msgstr "Result"
 msgid "Forza chiusura"
 msgstr "Force close"
 
-#: src/wimm/ui/dialogs/preferences.py:26 src/wimm/ui/window_notify.py:65
+#: src/wimm/ui/dialogs/preferences.py:27 src/wimm/ui/window_notify.py:65
 msgid "Preferenze"
 msgstr "Preferences"
 
-#: src/wimm/ui/dialogs/preferences.py:27
+#: src/wimm/ui/dialogs/preferences.py:28
 msgid "Applica"
 msgstr "Apply"
 
-#: src/wimm/ui/dialogs/preferences.py:28
+#: src/wimm/ui/dialogs/preferences.py:29
 msgid "Preferenze applicate."
 msgstr "Preferences applied."
 
-#: src/wimm/ui/dialogs/preferences.py:29
+#: src/wimm/ui/dialogs/preferences.py:30
 msgid "Nessuna modifica."
 msgstr "No changes."
 
-#: src/wimm/ui/dialogs/preferences.py:30
+#: src/wimm/ui/dialogs/preferences.py:31
 msgid "Alcuni valori non sono validi: restano quelli in uso."
 msgstr "Some values are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:31
+#: src/wimm/ui/dialogs/preferences.py:32
 #, python-brace-format
 msgid "Impossibile salvare le preferenze: {reason}. Riprova."
 msgstr "Cannot save the preferences: {reason}. Try again."
 
-#: src/wimm/ui/dialogs/preferences.py:32
+#: src/wimm/ui/dialogs/preferences.py:33
 msgid "Ripristina i valori consigliati"
 msgstr "Restore the recommended values"
 
-#: src/wimm/ui/dialogs/preferences.py:34
+#: src/wimm/ui/dialogs/preferences.py:35
 msgid "Tornano come all'inizio anche i tipi di programma per cui ricevi avvisi; i programmi da non toccare e le cartelle in cui cercare restano come sono."
 msgstr "The kinds of program you get alerts for also go back to how they were at the start; the programs never to touch and the folders to search stay as they are."
 
-#: src/wimm/ui/dialogs/preferences.py:38
+#: src/wimm/ui/dialogs/preferences.py:39
 msgid "Alcuni valori in Impostazioni avanzate non sono validi: restano quelli in uso."
 msgstr "Some values in Advanced settings are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:40
+#: src/wimm/ui/dialogs/preferences.py:41
 msgid "Impostazioni avanzate"
 msgstr "Advanced settings"
 
-#: src/wimm/ui/dialogs/preferences.py:41
+#: src/wimm/ui/dialogs/preferences.py:42
 #, python-brace-format
 msgid "Come si capisce se è in uso, soglie, chiusura e cartelle ({count} voci)"
 msgstr "How to tell if it is in use, thresholds, closing and folders ({count} items)"
 
-#: src/wimm/ui/dialogs/preferences.py:43
+#: src/wimm/ui/dialogs/preferences.py:44
 msgid "Non disponibile su questo desktop: funziona solo con X11"
 msgstr "Not available on this desktop: it only works with X11"
 
@@ -832,6 +832,14 @@ msgstr "Stop ignoring"
 #: src/wimm/ui/dialogs/preferences_ignored.py:18
 msgid "non attivo ora"
 msgstr "not active now"
+
+#: src/wimm/ui/dialogs/preferences_language.py:13
+msgid "Lingua"
+msgstr "Language"
+
+#: src/wimm/ui/dialogs/preferences_language.py:14
+msgid "La lingua di finestra, menu e notifiche. Il cambio vale subito."
+msgstr "The language of the window, menus and notifications. The change applies at once."
 
 #: src/wimm/ui/dialogs/preferences_model.py:58
 msgid "Controlla la memoria ogni (secondi)"
@@ -1802,7 +1810,7 @@ msgstr "You haven't used it for {span}{tail}"
 
 #: src/wimm/ui/summary.py:16
 msgid "La memoria di appoggio del sistema si libera da sola quando serve."
-msgstr "The system's spare memory frees itself when needed."
+msgstr "The system's cache memory frees itself when needed."
 
 #: src/wimm/ui/summary.py:17
 msgid "Memoria di appoggio del sistema"
