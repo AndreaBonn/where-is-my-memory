@@ -252,3 +252,65 @@ L'app è completa: mostra memoria e disco, dice cosa è fermo e lo può chiudere
 - **Complessità:** alta (9 commit)
 - **Stato:** piano completato; RNF-01 non rispettato, controlli manuali all'utente.
 - **Prossimo:** decisione su RNF-01, poi M-5 (installazione) e i controlli manuali.
+
+## 2026-10-17 | Sessione #4 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Il lavoro copre le 45 proposte di miglioramento dell'esperienza d'uso, dal commit `58e64ce` a `27cb52f`. Ogni gruppo di modifiche ha un commit di codice e uno di documentazione che registra in `docs/DEVIATIONS.md` dove l'app si discosta dalla specifica.
+
+### Richiesta
+
+L'utente ha chiesto di proporre miglioramenti perché una persona non esperta possa usare l'app senza barriere d'ingresso. La proposta è un mockup con 45 voci in `docs/ux-proposte/index.html` (skill ux-improver). Poi: "Applica tutte le proposte che hai indicato", con commit atomici su main.
+
+### Azioni Eseguite
+
+**G1, lessico, testi e icona nella barra** (`58e64ce`, `dd1c28c`, `b855402`, `262a879`)
+- L1 L2 P2 P3 P8 D1 D4 D5 D7: parole semplici al posto di quelle tecniche nelle viste.
+- Y2 C5: spiegazione dell'elenco di sistema e della conferma da digitare.
+- T1-T4: menu, etichetta e notifiche dell'icona nella barra in linguaggio comune.
+
+**G2, Panoramica** (`ca82d00`, `c604f36`)
+- P1 P4-P7 P9-P14 Y1: una frase sullo stato della macchina, il pulsante "Libera X senza rischi", filtri semplici, sezioni, motivi in parole comuni, dettagli tecnici nascosti, "Non avvisarmi per".
+- La scheda Sistema è unita alla Panoramica.
+
+**G3, Disco** (`02756c7`, `99f38aa`)
+- D2: tutto lo spazio sicuro si libera con un clic. D3: sezioni per livello di rischio. D6: gli importi compaiono sulle azioni di massa.
+
+**Test** (`dcc5320`)
+- Corretto un test instabile: il confronto con la memoria Docker reale ora ammette un rumore assoluto di 8 MiB.
+
+**G4, conferme** (`1ce3c86`, `be8640a`)
+- C1: la conferma spiega la differenza tra memoria elencata e memoria recuperabile. C2: nomi comprensibili con la dimensione. C3: tre blocchi "Cosa succede / Cosa resta / Per riaccenderlo".
+- C4: nuovo pulsante "Riaccendi" dopo aver fermato dei container. Il piano `restart_stopped` è nuovo, il servizio ricorda gli ultimi 8 piani e l'avvio reale di Docker è stato verificato su un container di prova.
+
+**G5, preferenze** (`6787b2e`, `2b329e8`)
+- R1: in vista solo le impostazioni degli avvisi, le altre 14 sono in "Impostazioni avanzate". R2: frasi e kB/s al posto di sigle. R3: Pochi/Normali/Tanti. R4: ripristino dei valori consigliati, tranne nomi e cartelle. R5: l'opzione sul primo piano è disattivata fuori da X11.
+
+**G6, avvio e errori** (`f90c0ff`, `9e9e4aa`)
+- A1: benvenuto al primo avvio, anche con `--background`, ricordato da un file marcatore "welcomed". A2: "Riprova adesso" ora funziona tramite `app.restart-monitor`. A3: banner "Come si attiva" per l'icona nella barra, con i passi verificati su Ubuntu 24.04.
+
+**G7, stile** (`724aa37`, `4044d1e`)
+- S1: "?" accanto a RAM e disco. S2: righe secondarie a 10 pt che seguono la dimensione del testo di sistema, più scure solo fuori dall'alto contrasto. S3: pulsante principale blu per l'azione sicura.
+
+**Mockup** (`27cb52f`)
+- Tutte le 45 proposte segnate come applicate.
+
+**Verifica**
+- Ogni gruppo ha chiuso con `make lint` e `make test-all` verdi (finale: 2187 test passati). Resa controllata a 375/390 e 1280 px. Il `code-reviewer` ha esaminato ogni gruppo; i rilievi sono stati corretti e ricontrollati.
+
+### Punti aperti
+
+- Il README.md descrive ancora tre schede e i testi precedenti: non è stato modificato senza una richiesta.
+- Lo script di controllo del mockup non è stato eseguito perché Chromium non è installato; la sintassi JavaScript è verificata con `node --check`.
+- Il comportamento di S2 in alto contrasto è provato commutando il provider, non in una sessione reale ad alto contrasto.
+- I passi di A3 sono verificati solo su questa macchina.
+- Nessun push eseguito.
+
+### Note per il Cliente (linguaggio NON tecnico)
+
+L'app ora parla in modo semplice: niente sigle, spiegazioni accanto alle parole difficili e un benvenuto al primo avvio. Dalla schermata iniziale si libera lo spazio sicuro con un solo clic. Prima di ogni azione l'app spiega cosa succede e cosa resta, e dopo aver fermato dei programmi si possono riaccendere con un pulsante. Le impostazioni più rare sono nascoste in una sezione a parte. Il testo del README non è ancora aggiornato: serve una vostra decisione.
+
+### Riepilogo
+
+- **Complessità:** alta (15 commit più i 3 di codice del primo gruppo)
+- **Stato:** 45 proposte applicate
+- **Prossimo:** decidere se aggiornare il README
