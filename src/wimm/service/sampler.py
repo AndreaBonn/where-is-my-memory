@@ -22,7 +22,7 @@ from wimm.core.assemble import (
 )
 from wimm.core.categorize import CategorizationContext, categorize_process
 from wimm.core.grouping import GroupDraft
-from wimm.model.enums import ActivityState, Category, MetricsSource
+from wimm.model.enums import ActivityState, Category
 from wimm.model.memory import DiskUsage
 from wimm.model.raw import MemInfo, RawProcess
 from wimm.model.snapshot import ActivityAssessment, DockerStatus, Snapshot
@@ -30,13 +30,22 @@ from wimm.paths import UserPaths
 
 from .history import EntityKey, LastActiveTracker, SampleHistory
 from .sampler_collectors import Collectors as Collectors
+from .sampler_collectors import ForegroundSource
 from .sampler_collectors import default_collectors as default_collectors
 from .sampler_environment import SamplerEnvironment as SamplerEnvironment
 from .sampler_environment import activity_config, group_entities
-from .sampler_steps import ListenPorts, ProcessCycle, ProcessSamples, identity
+from .sampler_steps import (
+    ListenPorts,
+    ProcessCycle,
+    ProcessSamples,
+    container_sample,
+    docker_status,
+    foreground_group_pids,
+    identity,
+    read_foreground,
+)
 
 LOGGER = logging.getLogger(__name__)
-MICROSECONDS_PER_SECOND = 1_000_000
 
 
 def wall_clock() -> datetime:
@@ -66,6 +75,9 @@ class Sampler:
         self.history = SampleHistory(
             window_s=config.activity_window_s, interval_s=config.sample_interval_s
         )
+        self._foreground: ForegroundSource = collectors.foreground(
+            enabled=config.foreground_tracking
+        )
         self._last_active = LastActiveTracker(persisted=environment.persisted_last_active)
         self._cpu = ProcessSamples()
         self._process_warning = False
@@ -82,6 +94,8 @@ class Sampler:
         Runs on the sampler worker: the history is not thread-safe, so it must not be
         resized while a cycle reads it.
         """
+        if config.foreground_tracking != self.settings.foreground_tracking:
+            self._foreground = self.collectors.foreground(enabled=config.foreground_tracking)
         self.settings = config
         self._activity = activity_config(config=config)
         self.history.resize(window_s=config.activity_window_s, interval_s=config.sample_interval_s)
@@ -119,20 +133,20 @@ class Sampler:
         desktop = self.collectors.desktop().data
         entities = self._entities(processes=processes, ports=ports, docker=docker, desktop=desktop)
         drafts = group_entities(entities=entities, environment=self.environment, desktop=desktop)
+        by_pid = {p.pid: p for p in processes}
+        foreground = foreground_group_pids(
+            state=read_foreground(reader=self._foreground), drafts=drafts, processes=by_pid
+        )
         cycle = ProcessCycle(
-            processes={p.pid: p for p in processes},
+            processes=by_pid,
             ports=ports,
             sockets=None if sockets.error else sockets.data,
             now=now,
+            foreground_pids=foreground,
         )
         verdicts = self._verdicts(entities=entities, cycle=cycle)
-        status = (
-            DockerStatus(available=False, error=docker.error)
-            if docker.error
-            else docker.data.status
-        )
         return self._assemble(
-            drafts=drafts, entities=entities, verdicts=verdicts, system=(now, status)
+            drafts=drafts, entities=entities, verdicts=verdicts, system=(now, docker_status(docker))
         )
 
     def _collect_processes(self) -> tuple[RawProcess, ...]:
@@ -182,13 +196,7 @@ class Sampler:
         }
         samples.update(
             {
-                item.id: EntitySample(
-                    taken_at=cycle.now,
-                    cpu_time_s=None
-                    if item.metrics_source is MetricsSource.UNAVAILABLE
-                    else item.cpu_usage_usec / MICROSECONDS_PER_SECOND,
-                    net_bytes=item.net_bytes,
-                )
+                item.id: container_sample(item=item, now=cycle.now)
                 for item in entities.containers.values()
             }
         )

@@ -20,9 +20,9 @@ def test_kind_table_covers_every_category() -> None:
         Category.DEV_PROCESS: EntityKind.PROCESS,
         Category.AI_CLI: EntityKind.PROCESS,
         Category.CONTAINER: EntityKind.CONTAINER,
-        Category.BROWSER: EntityKind.UNMEASURABLE,
-        Category.DESKTOP_APP: EntityKind.UNMEASURABLE,
-        Category.TERMINAL: EntityKind.UNMEASURABLE,
+        Category.BROWSER: EntityKind.FOREGROUND,
+        Category.DESKTOP_APP: EntityKind.FOREGROUND,
+        Category.TERMINAL: EntityKind.FOREGROUND,
         Category.SYSTEM: EntityKind.NOT_EVALUATED,
         Category.SESSION: EntityKind.NOT_EVALUATED,
         Category.SELF: EntityKind.NOT_EVALUATED,
@@ -32,7 +32,7 @@ def test_kind_table_covers_every_category() -> None:
     assert set(expected) == set(Category)
     assert {c: kind_of(category=c) for c in Category} == expected
     assert is_measurable(category=Category.CONTAINER)
-    assert not is_measurable(category=Category.BROWSER)
+    assert is_measurable(category=Category.BROWSER)
     assert not is_measurable(category=Category.SYSTEM)
 
 
@@ -149,7 +149,7 @@ def test_container_net_counter_going_backwards_is_ignored() -> None:
     assert not sample_is_active(prev=prev, curr=curr, kind=EntityKind.CONTAINER, config=CONFIG)
 
 
-@pytest.mark.parametrize("kind", [EntityKind.UNMEASURABLE, EntityKind.NOT_EVALUATED])
+@pytest.mark.parametrize("kind", [EntityKind.FOREGROUND, EntityKind.NOT_EVALUATED])
 def test_unmeasured_kinds_are_never_active(kind: EntityKind) -> None:
     curr = sample(30, cpu_time_s=99.0, connections=frozenset({QUAD}), foreground=True)
     assert not sample_is_active(prev=sample(0), curr=curr, kind=kind, config=CONFIG)

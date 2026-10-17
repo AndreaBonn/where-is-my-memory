@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import logging
 from collections import deque
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
+from time import monotonic
 
 from wimm.collectors import CollectorResult
+from wimm.collectors.docker_source import DockerSample
+from wimm.collectors.foreground import ForegroundState, ForegroundStatus
 from wimm.collectors.sockets import (
     Quadruple,
     connections_from_index,
@@ -13,9 +17,16 @@ from wimm.collectors.sockets import (
     non_listening_port_index,
 )
 from wimm.core.activity import EntitySample
-from wimm.model.raw import RawProcess, RawSocket
+from wimm.core.grouping import GroupDraft
+from wimm.model.enums import MetricsSource
+from wimm.model.raw import RawContainer, RawProcess, RawSocket
+from wimm.model.snapshot import DockerStatus
 
 from .history import MAX_MISSED_CYCLES, EntityKey
+from .sampler_collectors import ForegroundSource
+
+LOGGER = logging.getLogger(__name__)
+MICROSECONDS_PER_SECOND = 1_000_000
 
 
 def identity(*, proc: RawProcess) -> tuple[int, float] | None:
@@ -87,6 +98,55 @@ def subtree_cpu(
     return totals
 
 
+def docker_status(docker: CollectorResult[DockerSample]) -> DockerStatus:
+    if docker.error:
+        return DockerStatus(available=False, error=docker.error)
+    return docker.data.status
+
+
+def read_foreground(*, reader: ForegroundSource) -> ForegroundState:
+    """Read the foreground window once, logging how long xprop took."""
+    started = monotonic()
+    state = reader.read()
+    LOGGER.debug("Foreground read %.6f s, status %s", monotonic() - started, state.status)
+    return state
+
+
+def container_sample(*, item: RawContainer, now: datetime) -> EntitySample:
+    unavailable = item.metrics_source is MetricsSource.UNAVAILABLE
+    return EntitySample(
+        taken_at=now,
+        cpu_time_s=None if unavailable else item.cpu_usage_usec / MICROSECONDS_PER_SECOND,
+        net_bytes=item.net_bytes,
+    )
+
+
+def foreground_group_pids(
+    *, state: ForegroundState, drafts: Sequence[GroupDraft], processes: Mapping[int, RawProcess]
+) -> frozenset[int] | None:
+    """PIDs of the group owning the foreground window; None when nothing was read.
+
+    The window owner may be a child of a member (``_NET_WM_PID`` is not always the main
+    process), so the parent chain is followed until a grouped process is found. A window of
+    a process in no group yields an empty set: nothing tracked is in the foreground. A pid
+    that is not a known process (a sandbox namespace, e.g. Flatpak) is unknown: None.
+    """
+    if state.status is not ForegroundStatus.ACTIVE or state.pid is None:
+        return None
+    if state.pid not in processes:
+        return None
+    pid: int | None = state.pid
+    seen: set[int] = set()
+    while pid is not None and pid not in seen:
+        seen.add(pid)
+        for draft in drafts:
+            if pid in draft.process_pids:
+                return frozenset(draft.process_pids)
+        owner = processes.get(pid)
+        pid = None if owner is None else owner.ppid
+    return frozenset()
+
+
 def family_ports(*, pids: frozenset[int], ports: Mapping[int, frozenset[int]]) -> frozenset[int]:
     return frozenset(port for pid in pids for port in ports.get(pid, ()))
 
@@ -118,6 +178,7 @@ class ProcessSamples:
         return EntitySample(
             taken_at=cycle.now,
             cpu_time_s=self.cpu_total(proc=proc),
+            foreground=None if cycle.foreground_pids is None else proc.pid in cycle.foreground_pids,
             connections=None
             if cycle.sockets is None
             else connections_from_index(
@@ -144,6 +205,7 @@ class ProcessCycle:
     ports: Mapping[int, frozenset[int]]
     sockets: tuple[RawSocket, ...] | None
     now: datetime
+    foreground_pids: frozenset[int] | None = None
     children: Mapping[int, tuple[int, ...]] = field(init=False)
     order: tuple[int, ...] = field(init=False)
     subtree_ports: Mapping[int, frozenset[int]] = field(init=False)

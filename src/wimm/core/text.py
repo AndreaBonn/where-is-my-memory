@@ -102,6 +102,19 @@ def reason_idle(*, idle_for_s: float, facts: IdleFacts, from_monitor_start: bool
     return f"{prefix}; {_idle_detail(facts=facts)}"
 
 
+def reason_foreground_idle(*, idle_for_s: float, window_s: float, from_monitor_start: bool) -> str:
+    duration = format_duration(seconds=idle_for_s)
+    if from_monitor_start:
+        prefix = f"inattivo da almeno {duration}, cioè da quando il monitor è partito"
+    else:
+        prefix = f"inattivo da {duration}"
+    return f"{prefix}; mai in primo piano negli ultimi {format_duration(seconds=window_s)}"
+
+
+def reason_foreground_active(*, ago_s: float) -> str:
+    return f"in primo piano {format_duration(seconds=ago_s)} fa"
+
+
 def reason_idle_persisted(*, idle_for_s: float, observed_s: float) -> str:
     return (
         f"inattivo da {format_duration(seconds=idle_for_s)}; "

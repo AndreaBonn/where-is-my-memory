@@ -75,6 +75,51 @@ def _assess_short_history(*, inputs: ActivityInputs, config: ActivityConfig) -> 
     return ActivityAssessment(state=ActivityState.IDLE, since=since, reason=reason)
 
 
+def _window_samples(*, inputs: ActivityInputs, config: ActivityConfig) -> list[EntitySample]:
+    cutoff = inputs.now - timedelta(seconds=config.window_s)
+    return [s for s in inputs.history if s.taken_at >= cutoff]
+
+
+def _last_foreground_at(*, inputs: ActivityInputs, config: ActivityConfig) -> datetime | None:
+    seen = [s.taken_at for s in _window_samples(inputs=inputs, config=config) if s.foreground]
+    return max(seen, default=None)
+
+
+def _reason_foreground_idle(*, inputs: ActivityInputs, config: ActivityConfig) -> str:
+    since, from_monitor_start = _idle_since(inputs=inputs)
+    return text.reason_foreground_idle(
+        idle_for_s=(inputs.now - since).total_seconds(),
+        window_s=config.window_s,
+        from_monitor_start=from_monitor_start,
+    )
+
+
+def _assess_foreground(*, inputs: ActivityInputs, config: ActivityConfig) -> ActivityAssessment:
+    """Active if the app was in the foreground within the window, idle if it never was.
+
+    A foreground sample in the window proves activity even when a later read failed;
+    missing data with no such sample (a None anywhere in the window) is never read as idle.
+    """
+    if not inputs.history:
+        return _assess_short_history(inputs=inputs, config=config)
+    last_seen = _last_foreground_at(inputs=inputs, config=config)
+    if last_seen is not None:
+        ago_s = (inputs.now - last_seen).total_seconds()
+        return ActivityAssessment(
+            state=ActivityState.ACTIVE,
+            since=last_seen,
+            reason=text.reason_foreground_active(ago_s=ago_s),
+        )
+    window = _window_samples(inputs=inputs, config=config)
+    if any(s.foreground is None for s in window):
+        return _unknown(reason=text.reason_unmeasurable(category=inputs.category))
+    if not _covers_window(inputs=inputs, config=config):
+        return _assess_short_history(inputs=inputs, config=config)
+    since, _ = _idle_since(inputs=inputs)
+    reason = _reason_foreground_idle(inputs=inputs, config=config)
+    return ActivityAssessment(state=ActivityState.IDLE, since=since, reason=reason)
+
+
 def assess_activity(*, inputs: ActivityInputs, config: ActivityConfig) -> ActivityAssessment:
     """Decide active / idle / unknown for one entity (5.4, state rules).
 
@@ -86,8 +131,8 @@ def assess_activity(*, inputs: ActivityInputs, config: ActivityConfig) -> Activi
     kind = kind_of(category=inputs.category)
     if kind is EntityKind.NOT_EVALUATED:
         return _unknown(reason=text.reason_not_evaluated())
-    if kind is EntityKind.UNMEASURABLE:
-        return _unknown(reason=text.reason_unmeasurable(category=inputs.category))
+    if kind is EntityKind.FOREGROUND:
+        return _assess_foreground(inputs=inputs, config=config)
     steps = build_steps(inputs=inputs, kind=kind, config=config)
     run_start = current_run_start(steps=steps)
     if run_start is not None:
@@ -105,8 +150,10 @@ def last_active_at(*, inputs: ActivityInputs, config: ActivityConfig) -> datetim
     instant the activity actually stopped, which an idle ``since`` must count from.
     """
     kind = kind_of(category=inputs.category)
-    if kind in (EntityKind.NOT_EVALUATED, EntityKind.UNMEASURABLE):
+    if kind is EntityKind.NOT_EVALUATED:
         return None
+    if kind is EntityKind.FOREGROUND:
+        return _last_foreground_at(inputs=inputs, config=config)
     steps = build_steps(inputs=inputs, kind=kind, config=config)
     latest = next((step for step in reversed(steps) if step.active), None)
     return None if latest is None else latest.curr.taken_at

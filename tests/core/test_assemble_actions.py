@@ -4,7 +4,7 @@ from wimm.core.assemble import assemble_snapshot
 from wimm.model.enums import ActionKind, ActivityState, Category, Risk
 from wimm.model.snapshot import ActionOffer, ProcessMember
 
-from .assemble_helpers import build_input, container, draft, pair
+from .assemble_helpers import UNKNOWN, build_input, container, draft, pair
 from .helpers import process
 
 CLOSE = ActionOffer(kind=ActionKind.APP_CLOSE, risk=Risk.CAUTION)
@@ -12,16 +12,26 @@ TERMINATE_CAUTION = ActionOffer(kind=ActionKind.PROCESS_TERMINATE, risk=Risk.CAU
 GROUP_STOP_SAFE = ActionOffer(kind=ActionKind.GROUP_STOP, risk=Risk.SAFE)
 
 
-def test_assemble_firefox_group_is_unknown_and_closes_as_caution() -> None:
+def test_assemble_firefox_group_without_foreground_data_is_unknown_and_closes_as_caution() -> None:
     firefox = [pair(pid, Category.BROWSER, name="firefox", pss=100, uss=60) for pid in (10, 11, 12)]
     drafts = [draft("g_f", name="Firefox", category=Category.BROWSER, pids=[10, 11, 12])]
+    unknown = {item[0].pid: UNKNOWN for item in firefox}
 
-    (group,) = assemble_snapshot(inputs=build_input(drafts, pairs=firefox)).groups
+    (group,) = assemble_snapshot(inputs=build_input(drafts, pairs=firefox, verdicts=unknown)).groups
 
     assert group.activity.state is ActivityState.UNKNOWN
     assert group.primary_action == CLOSE
     assert len(group.members) == 3
     assert all(member.actions == (TERMINATE_CAUTION,) for member in group.members)
+
+
+def test_assemble_firefox_group_never_in_foreground_is_idle() -> None:
+    firefox = [pair(pid, Category.BROWSER, name="firefox") for pid in (10, 11, 12)]
+    drafts = [draft("g_f", name="Firefox", category=Category.BROWSER, pids=[10, 11, 12])]
+
+    (group,) = assemble_snapshot(inputs=build_input(drafts, pairs=firefox)).groups
+
+    assert group.activity.state is ActivityState.IDLE
 
 
 def test_assemble_shell_member_has_no_actions_while_terminal_group_closes() -> None:

@@ -15,7 +15,7 @@ class EntityKind(Enum):
     SERVER = "server"
     PROCESS = "process"
     CONTAINER = "container"
-    UNMEASURABLE = "unmeasurable"
+    FOREGROUND = "foreground"
     NOT_EVALUATED = "not_evaluated"
 
 
@@ -26,9 +26,9 @@ KIND_BY_CATEGORY: Mapping[Category, EntityKind] = MappingProxyType(
         Category.DEV_PROCESS: EntityKind.PROCESS,
         Category.AI_CLI: EntityKind.PROCESS,
         Category.CONTAINER: EntityKind.CONTAINER,
-        Category.BROWSER: EntityKind.UNMEASURABLE,
-        Category.DESKTOP_APP: EntityKind.UNMEASURABLE,
-        Category.TERMINAL: EntityKind.UNMEASURABLE,
+        Category.BROWSER: EntityKind.FOREGROUND,
+        Category.DESKTOP_APP: EntityKind.FOREGROUND,
+        Category.TERMINAL: EntityKind.FOREGROUND,
         Category.SYSTEM: EntityKind.NOT_EVALUATED,
         Category.SESSION: EntityKind.NOT_EVALUATED,
         Category.SELF: EntityKind.NOT_EVALUATED,
@@ -36,7 +36,12 @@ KIND_BY_CATEGORY: Mapping[Category, EntityKind] = MappingProxyType(
         Category.PROJECT: EntityKind.NOT_EVALUATED,
     }
 )
+# Kinds whose activity comes from CPU, connections or network deltas.
 MEASURABLE_KINDS = frozenset({EntityKind.SERVER, EntityKind.PROCESS, EntityKind.CONTAINER})
+# Categories judged by being in the foreground; the sampler tracks them via the X11 window.
+FOREGROUND_CATEGORIES = frozenset(
+    category for category, kind in KIND_BY_CATEGORY.items() if kind is EntityKind.FOREGROUND
+)
 
 
 def kind_of(*, category: Category) -> EntityKind:
@@ -44,7 +49,8 @@ def kind_of(*, category: Category) -> EntityKind:
 
 
 def is_measurable(*, category: Category) -> bool:
-    return kind_of(category=category) in MEASURABLE_KINDS
+    kind = kind_of(category=category)
+    return kind in MEASURABLE_KINDS or kind is EntityKind.FOREGROUND
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,8 +59,9 @@ class EntitySample(ImmutableModel):
 
     ``cpu_time_s`` is cumulative CPU seconds (process plus children, or the container's
     ``cpu_usage_usec`` converted); ``connections`` holds the non-LISTEN quadruples on the
-    server's ports (None: not measured this cycle); ``foreground`` is reserved for T-5.5
-    and is None until then.
+    server's ports (None: not measured this cycle); ``foreground`` tells whether the
+    entity's app group was in the foreground this cycle (None: not measurable, as on
+    Wayland or with tracking off).
     """
 
     taken_at: datetime
