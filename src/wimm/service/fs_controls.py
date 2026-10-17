@@ -41,6 +41,9 @@ class CwdSource(Protocol):
         ...
 
 
+NEUTRAL_CWD = "/"
+
+
 class SubprocessRunner:
     """Real runner: argument list, no shell, no stdin, captured output."""
 
@@ -55,6 +58,8 @@ class SubprocessRunner:
             done = self._run(
                 list(argv),
                 stdin=subprocess.DEVNULL,
+                # A neutral directory: these tools read config files from the cwd.
+                cwd=NEUTRAL_CWD,
                 env=None if env is None else dict(env),
                 capture_output=True,
                 text=True,

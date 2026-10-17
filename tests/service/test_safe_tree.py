@@ -203,3 +203,15 @@ def test_a_trash_child_on_another_device_is_skipped_and_its_content_survives(
     again = empty_directory(fingerprint=fingerprint, subdirs=("files", "info"))
     assert again.skipped_mounts == ()
     assert list((base / "files").iterdir()) == [] and list((base / "info").iterdir()) == []
+
+
+def test_the_real_runner_runs_in_the_root_not_in_the_service_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # npm, pip and uv read config files from the working directory (.npmrc, uv.toml).
+    monkeypatch.chdir(tmp_path)
+    shown = SubprocessRunner().run(
+        argv=[sys.executable, "-c", "import os; print(os.getcwd())"], timeout_s=30
+    )
+    assert shown.output == "/"
+    assert Path.cwd() == tmp_path
