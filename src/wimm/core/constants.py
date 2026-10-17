@@ -18,7 +18,10 @@ COMPOSE_TIMEOUT_S = 120
 # SPECIFICHE 8.4: `POST /build/prune` with `all` can take minutes on a large cache; the
 # client default (60 s) would report a failure while the daemon is still freeing space.
 BUILD_PRUNE_TIMEOUT_S = 600
-DEVDIRS_ROOTS = ("~/Documenti/00_Lavoro",)
+# Filesystems the root detection never probes (also any "fuse" or "fuse.*"): a stale mount blocks.
+NETWORK_FSTYPES = frozenset(
+    ("nfs", "nfs4", "cifs", "smb3", "smbfs", "afs", "ceph", "glusterfs", "9p", "autofs")
+)
 DEVDIRS_MIN_AGE_DAYS = 90
 DEVDIRS_MAX_DEPTH = 6
 DISK_SCAN_INTERVAL_S = 21600

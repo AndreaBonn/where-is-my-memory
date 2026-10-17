@@ -94,7 +94,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         result = update_config(config=self._config, changes=changes, home=home)
         if result.config == self._config:
             return result
-        save_config(paths=paths, config=result.config)
+        save_config(paths=paths, config=result.config, home=home)
         previous, self._config = self._config, result.config
         self._executor.submit(self._apply_config, result.config)
         # Sample right away, so a protected name added or removed shows in the window now.

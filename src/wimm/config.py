@@ -8,7 +8,7 @@ from types import MappingProxyType
 from typing import Any
 
 from wimm.config_messages import field_message, pressure_order_message, range_message
-from wimm.config_roots import decode_roots, default_roots, validate_roots
+from wimm.config_roots import decode_roots, default_roots, missing_roots, validate_roots
 from wimm.core import constants as c
 from wimm.i18n import LANGUAGES
 from wimm.model import Category, Protection, protection_of
@@ -71,6 +71,11 @@ class Config:
             raise ValueError("language must be a supported language code")
         if self.pressure_critical_pct >= self.pressure_warning_pct:
             raise ValueError("pressure_critical_pct must be below pressure_warning_pct")
+
+    @property
+    def missing_roots(self) -> tuple[Path, ...]:
+        """Return the configured roots that do not exist now (checked at each access)."""
+        return missing_roots(roots=self.devdirs_roots)
 
     @property
     def protected_names(self) -> frozenset[str]:
@@ -250,7 +255,7 @@ def load_config(paths: UserPaths, home: Path) -> ConfigParseResult:
     return parse_config(raw=raw, home=home)
 
 
-def save_config(paths: UserPaths, config: Config) -> None:
+def save_config(paths: UserPaths, config: Config, home: Path) -> None:
     """Atomically save private preferences as indented, sorted JSON.
 
     Parameters
@@ -259,7 +264,13 @@ def save_config(paths: UserPaths, config: Config) -> None:
         Explicit configuration directory.
     config : Config
         Validated preferences to persist.
+    home : Path
+        Home the roots are detected in: roots equal to the detected ones are left out, so
+        saving another preference does not freeze the detection.
     """
     ensure_private_dir(path=paths.config_dir)
-    data = json.dumps(config_to_raw(config=config), indent=2, sort_keys=True).encode("utf-8")
+    raw = config_to_raw(config=config)
+    if config.devdirs_roots == default_roots(home=home):
+        del raw["devdirs_roots"]
+    data = json.dumps(raw, indent=2, sort_keys=True).encode("utf-8")
     write_private_atomic(path=paths.config_dir / CONFIG_FILE, data=data)

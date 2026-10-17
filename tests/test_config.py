@@ -31,7 +31,7 @@ def test_defaults_and_protected_union(tmp_path: Path) -> None:
     result = parse_config(raw={}, home=tmp_path)
     assert result.field_errors == {}
     assert result.config.sample_interval_s == c.SAMPLE_INTERVAL_S
-    assert result.config.devdirs_roots == (tmp_path / "Documenti/00_Lavoro",)
+    assert result.config.devdirs_roots == ()
     config = replace(result.config, extra_protected_names=("custom",))
     assert config.protected_names == frozenset((*c.PROTECTED_PROCESS_NAMES, "custom"))
     assert result.config.extra_protected_names == ()
@@ -88,10 +88,77 @@ def test_roots_expand_and_reject_escape(tmp_path: Path) -> None:
     link.symlink_to(target=tmp_path.parent, target_is_directory=True)
     result = parse_config(raw={"devdirs_roots": ["~/project"]}, home=tmp_path)
     assert result.config.devdirs_roots == (root,)
-    for value in ([str(link)], ["~/missing"], ["relative"], [42], "~/project", [], [""]):
+    for value in ([str(link)], ["/nonexistent/x"], ["relative"], [42], "~/project", [], [""]):
         result = parse_config(raw={"devdirs_roots": value}, home=tmp_path)
         assert "devdirs_roots" in result.field_errors
-        assert result.config.devdirs_roots == (tmp_path / "Documenti/00_Lavoro",)
+        assert result.config.devdirs_roots == ()
+
+
+def test_parse_config_keeps_a_missing_root_and_flags_it(tmp_path: Path) -> None:
+    (tmp_path / "code").mkdir()
+    gone = tmp_path / "gone"
+    result = parse_config(raw={"devdirs_roots": ["~/gone", "~/code"]}, home=tmp_path)
+    assert result.field_errors == {}
+    assert result.config.devdirs_roots == (gone, tmp_path / "code")
+    assert result.config.missing_roots == (gone,)
+
+
+def test_parse_config_with_only_existing_roots_has_no_missing_root(tmp_path: Path) -> None:
+    (tmp_path / "code").mkdir()
+    result = parse_config(raw={"devdirs_roots": ["~/code"]}, home=tmp_path)
+    assert result.config.devdirs_roots == (tmp_path / "code",)
+    assert result.config.missing_roots == ()
+
+
+def test_missing_root_survives_a_save_and_load_round_trip(tmp_path: Path, paths: UserPaths) -> None:
+    gone = tmp_path / "gone"
+    save_config(paths=paths, config=Config(devdirs_roots=(gone,)), home=tmp_path)
+    loaded = load_config(paths=paths, home=tmp_path)
+    assert loaded.config.devdirs_roots == (gone,)
+    assert loaded.config.missing_roots == (gone,)
+
+
+def test_default_roots_come_from_detection(tmp_path: Path) -> None:
+    (tmp_path / "code" / "app" / ".git").mkdir(parents=True)
+    result = parse_config(raw={}, home=tmp_path)
+    assert result.field_errors == {}
+    assert result.config.devdirs_roots == ((tmp_path / "code").resolve(),)
+
+
+def test_config_accepts_an_empty_detection_but_not_an_empty_saved_list(tmp_path: Path) -> None:
+    assert Config(devdirs_roots=()).devdirs_roots == ()
+    (tmp_path / "code" / "app" / ".git").mkdir(parents=True)
+    result = parse_config(raw={"devdirs_roots": []}, home=tmp_path)
+    assert "devdirs_roots" in result.field_errors
+    assert result.config.devdirs_roots == ((tmp_path / "code").resolve(),)
+
+
+def test_detected_roots_are_not_written_to_disk(tmp_path: Path, paths: UserPaths) -> None:
+    (tmp_path / "code" / "app" / ".git").mkdir(parents=True)
+    load_config(paths=paths, home=tmp_path)
+    assert not (paths.config_dir / "config.json").exists()
+
+
+def test_saving_another_preference_keeps_the_roots_detected(
+    tmp_path: Path, paths: UserPaths
+) -> None:
+    config = load_config(paths=paths, home=tmp_path).config
+    save_config(paths=paths, config=replace(config, foreground_tracking=False), home=tmp_path)
+    assert "devdirs_roots" not in json.loads((paths.config_dir / "config.json").read_text())
+    (tmp_path / "code" / "app" / ".git").mkdir(parents=True)
+    reloaded = load_config(paths=paths, home=tmp_path)
+    assert reloaded.field_errors == {}
+    assert reloaded.config.devdirs_roots == (tmp_path / "code",)
+    assert reloaded.config.foreground_tracking is False
+
+
+def test_roots_chosen_by_the_user_are_saved(tmp_path: Path, paths: UserPaths) -> None:
+    chosen = tmp_path / "mine"
+    chosen.mkdir()
+    config = replace(Config(), devdirs_roots=(chosen,))
+    save_config(paths=paths, config=config, home=tmp_path)
+    saved = json.loads((paths.config_dir / "config.json").read_text())
+    assert saved["devdirs_roots"] == [str(chosen)]
 
 
 def test_collections_and_boolean_validation(tmp_path: Path) -> None:
@@ -119,7 +186,7 @@ def test_save_load_round_trip(paths: UserPaths, tmp_path: Path) -> None:
     config = parse_config(
         raw={"devdirs_roots": [str(root)], "sample_interval_s": 60}, home=tmp_path
     ).config
-    save_config(paths=paths, config=config)
+    save_config(paths=paths, config=config, home=tmp_path)
     assert load_config(paths=paths, home=tmp_path).config == config
     assert load_config(paths=paths, home=tmp_path).field_errors == {}
     assert stat.S_IMODE((paths.config_dir / "config.json").stat().st_mode) == 0o600
@@ -154,7 +221,7 @@ def test_missing_file_defaults(paths: UserPaths, tmp_path: Path) -> None:
         {"extra_protected_names": ["custom"]},
         {"extra_protected_names": (1,)},
         {"extra_protected_names": ("",)},
-        {"devdirs_roots": ()},
+        {"devdirs_roots": []},
         {"devdirs_roots": [Path("/home")]},
         {"devdirs_roots": (Path("relative"),)},
     ],
@@ -192,7 +259,7 @@ def test_relative_existing_root_is_rejected(
     monkeypatch.chdir(path=tmp_path)
     result = parse_config(raw={"devdirs_roots": [root]}, home=tmp_path)
     assert "devdirs_roots" in result.field_errors
-    assert result.config.devdirs_roots == (tmp_path / "Documenti/00_Lavoro",)
+    assert result.config.devdirs_roots == ()
 
 
 def test_sample_interval_below_range_gives_field_error_and_default(tmp_path: Path) -> None:
@@ -252,7 +319,7 @@ def test_update_config_unknown_key_ignored_with_warning(
 
 def test_saved_update_is_read_back(paths: UserPaths, tmp_path: Path) -> None:
     result = update_config(config=Config(), changes={"sample_interval_s": 45}, home=tmp_path)
-    save_config(paths=paths, config=result.config)
+    save_config(paths=paths, config=result.config, home=tmp_path)
     assert load_config(paths=paths, home=tmp_path).config.sample_interval_s == 45
 
 
@@ -270,7 +337,7 @@ def test_malformed_json_gives_defaults_with_warning(
 def test_failed_write_keeps_old_file_and_leaves_no_temporary(
     paths: UserPaths, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    save_config(paths=paths, config=Config(sample_interval_s=60))
+    save_config(paths=paths, config=Config(sample_interval_s=60), home=tmp_path)
     target = paths.config_dir / "config.json"
     before = target.read_bytes()
 
@@ -279,6 +346,6 @@ def test_failed_write_keeps_old_file_and_leaves_no_temporary(
 
     monkeypatch.setattr("wimm.paths.os.replace", fail)
     with pytest.raises(OSError):
-        save_config(paths=paths, config=Config(sample_interval_s=120))
+        save_config(paths=paths, config=Config(sample_interval_s=120), home=tmp_path)
     assert target.read_bytes() == before
     assert [p.name for p in paths.config_dir.iterdir()] == ["config.json"]

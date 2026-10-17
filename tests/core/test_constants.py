@@ -17,7 +17,6 @@ def test_configuration_defaults() -> None:
         c.MAX_NOTIFICATIONS_PER_HOUR,
         c.TERMINATE_TIMEOUT_S,
     ) == (15, 10, 3, 5)
-    assert c.DEVDIRS_ROOTS == ("~/Documenti/00_Lavoro",)
     assert (c.DEVDIRS_MIN_AGE_DAYS, c.DEVDIRS_MAX_DEPTH, c.DISK_SCAN_INTERVAL_S) == (90, 6, 21600)
     assert c.EXTRA_PROTECTED_NAMES == ()
     assert c.FOREGROUND_TRACKING is True

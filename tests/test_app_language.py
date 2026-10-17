@@ -42,7 +42,7 @@ def test_startup_language_reads_the_saved_choice_before_the_service(
     from wimm.paths import default_user_paths
 
     monkeypatch.setenv(name="LANG", value="it_IT.UTF-8")
-    save_config(paths=default_user_paths(), config=Config(language="en"))
+    save_config(paths=default_user_paths(), config=Config(language="en"), home=Path.home())
     apply_startup_language()
     assert i18n.current_language() == i18n.ENGLISH
 

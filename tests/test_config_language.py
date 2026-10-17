@@ -46,5 +46,5 @@ def test_language_constructor_rejects_unknown() -> None:
 
 def test_language_survives_save_and_load(paths: UserPaths, tmp_path: Path) -> None:
     changed = update_config(config=Config(), changes={"language": "en"}, home=tmp_path)
-    save_config(paths=paths, config=changed.config)
+    save_config(paths=paths, config=changed.config, home=tmp_path)
     assert load_config(paths=paths, home=tmp_path).config.language == "en"

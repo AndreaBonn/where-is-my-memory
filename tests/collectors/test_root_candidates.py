@@ -7,7 +7,9 @@ from wimm.collectors.root_candidates import (
     detect_dev_roots,
     documents_dir,
     has_git_repo,
+    is_network_path,
     is_safe_candidate,
+    parse_mountinfo,
 )
 
 
@@ -139,3 +141,74 @@ def test_is_safe_candidate_rejects_intermediate_symlink_leaving_home(tmp_path: P
     assert not is_safe_candidate(path=home / "link" / "x" / "Docs", home=home)
     (home / "Docs").mkdir()
     assert is_safe_candidate(path=home / "Docs", home=home)
+
+
+MOUNTINFO = (
+    "22 1 8:1 / / rw,relatime shared:1 - ext4 /dev/sda1 rw\n"
+    "36 22 0:40 / /mnt/nas rw,relatime shared:2 - nfs4 srv:/export rw\n"
+    "37 22 0:41 / /mnt/My\\040Share rw - cifs //srv/x rw\n"
+    "38 36 0:42 / /mnt/nas/local rw - ext4 /dev/sdb1 rw\n"
+    "39 22 0:43 / /mnt/ntfs rw - fuseblk /dev/sdc1 rw\n"
+    "40 22 0:44 / /mnt/ssh rw - fuse.sshfs me@host:/ rw\n"
+    "41 22 0:45 / /mnt/auto rw - autofs systemd-1 rw\n"
+    "garbage line\n"
+)
+
+
+def test_parse_mountinfo_reads_mountpoint_and_fstype_and_unescapes_spaces() -> None:
+    mounts = dict(parse_mountinfo(text=MOUNTINFO))
+    assert mounts[Path("/")] == "ext4"
+    assert mounts[Path("/mnt/nas")] == "nfs4"
+    assert mounts[Path("/mnt/My Share")] == "cifs"
+    assert len(mounts) == 7
+
+
+@pytest.mark.parametrize(
+    ("path", "expected"),
+    [
+        ("/mnt/nas/projects", True),
+        ("/mnt/My Share/code", True),
+        ("/mnt/ssh/code", True),
+        ("/mnt/auto/code", True),
+        ("/mnt/nas/local/code", False),
+        ("/mnt/ntfs/code", False),
+        ("/home/me/code", False),
+        ("/mnt/nas2/code", False),
+    ],
+)
+def test_is_network_path_uses_the_longest_matching_mount(path: str, expected: bool) -> None:
+    mounts = parse_mountinfo(text=MOUNTINFO)
+    assert is_network_path(path=Path(path), mounts=mounts) is expected
+
+
+def test_is_network_path_without_mounts_is_false() -> None:
+    assert not is_network_path(path=Path("/mnt/nas/x"), mounts=())
+
+
+def test_detect_dev_roots_skips_candidates_on_network_filesystems(tmp_path: Path) -> None:
+    make_repo(tmp_path / "code" / "a")
+    make_repo(tmp_path / "projects" / "b")
+    line = f"50 22 0:60 / {tmp_path / 'code'} rw - nfs4 srv:/x rw\n"
+    roots = detect_dev_roots(home=tmp_path, read_mounts=lambda: line)
+    assert roots == (tmp_path / "projects",)
+
+
+def test_detect_dev_roots_keeps_candidates_when_mountinfo_is_unreadable(tmp_path: Path) -> None:
+    make_repo(tmp_path / "code" / "a")
+    assert detect_dev_roots(home=tmp_path, read_mounts=lambda: "") == (tmp_path / "code",)
+
+
+def test_detect_dev_roots_logs_nothing_for_absent_candidates(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    make_repo(tmp_path / "code" / "a")
+    with caplog.at_level("DEBUG"):
+        assert detect_dev_roots(home=tmp_path, read_mounts=lambda: "") == (tmp_path / "code",)
+    assert caplog.records == []
+
+
+def test_is_network_path_lets_the_last_mount_on_a_point_win() -> None:
+    over_local = ((Path("/mnt/data"), "nfs4"), (Path("/mnt/data"), "ext4"))
+    over_network = ((Path("/mnt/data"), "ext4"), (Path("/mnt/data"), "nfs4"))
+    assert not is_network_path(path=Path("/mnt/data/code"), mounts=over_local)
+    assert is_network_path(path=Path("/mnt/data/code"), mounts=over_network)
