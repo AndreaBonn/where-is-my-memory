@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
+from wimm.i18n import _
 from wimm.model.actions import (
     ComposeFingerprint,
     ContainerFingerprint,
@@ -100,7 +101,7 @@ def process_draft(*, member: ProcessMember, kind: ActionKind) -> Draft:
     return Draft(
         owner_ids=frozenset({str(member.pid)}),
         kind=kind,
-        label=f"{member.name} (pid {member.pid})",
+        label=_("{name} (pid {pid})").format(name=member.name, pid=member.pid),
         name=member.name,
         fingerprint=fingerprint,
         assessed=assess_draft(target=target, kind=kind),
@@ -212,7 +213,7 @@ def app_close_draft(*, group: Group, root: ProcessMember) -> Draft:
     return Draft(
         owner_ids=frozenset({group.id}),
         kind=ActionKind.APP_CLOSE,
-        label=f"{group.name} (pid {root.pid})",
+        label=_("{name} (pid {pid})").format(name=group.name, pid=root.pid),
         name=group.name,
         fingerprint=_fingerprint(member=root),
         assessed=assess_draft(target=target, kind=ActionKind.APP_CLOSE),

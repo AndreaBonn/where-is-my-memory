@@ -7,6 +7,7 @@ from wimm.config import Config
 from wimm.core import constants as c
 from wimm.core.sizes import format_size
 from wimm.core.text import spoken_duration
+from wimm.i18n import _, ngettext
 from wimm.model.enums import ActivityState, Category, GroupId, Protection
 from wimm.model.snapshot import ContainerMember, Group, ProcessMember, Snapshot
 
@@ -83,7 +84,7 @@ def _idle_candidates(*, request: NotifyRequest) -> list[Group]:
 def _join(*, parts: list[str]) -> str:
     if len(parts) < 2:
         return "".join(parts)
-    return f"{', '.join(parts[:-1])} e {parts[-1]}"
+    return _("{head} e {last}").format(head=", ".join(parts[:-1]), last=parts[-1])
 
 
 def _member_summary(*, group: Group) -> str:
@@ -92,9 +93,15 @@ def _member_summary(*, group: Group) -> str:
     servers = sum(m.category is Category.DEV_SERVER for m in procs)
     others = len(procs) - servers
     parts = [
-        f"{containers} container" if containers else "",
-        f"{servers} server" if servers else "",
-        f"{others} {'processo' if others == 1 else 'processi'}" if others else "",
+        ngettext("{count} container", "{count} container", containers).format(count=containers)
+        if containers
+        else "",
+        ngettext("{count} server", "{count} server", servers).format(count=servers)
+        if servers
+        else "",
+        ngettext("{count} processo", "{count} processi", others).format(count=others)
+        if others
+        else "",
     ]
     return _join(parts=[p for p in parts if p])
 
@@ -102,15 +109,17 @@ def _member_summary(*, group: Group) -> str:
 def _idle_intent(*, group: Group, now: datetime) -> NotificationIntent:
     since = group.activity.since
     elapsed = spoken_duration(seconds=(now - since).total_seconds()) if since else ""
-    body = (
-        f"Chiudendolo liberi {format_size(size=group.memory.reclaimable)} di memoria. "
-        "Decidi tu: non si chiude da solo."
+    body = _("Chiudendolo liberi {size} di memoria. Decidi tu: non si chiude da solo.").format(
+        size=format_size(size=group.memory.reclaimable)
     )
     members = _member_summary(group=group)
+    inside = _("Dentro: {members}.").format(members=members)
     return NotificationIntent(
         id=f"idle-{group.id}",
-        title=f"{group.name} è acceso ma non lo usi da {elapsed}",
-        body=f"{body} Dentro: {members}." if members else body,
+        title=_("{name} è acceso ma non lo usi da {elapsed}").format(
+            name=group.name, elapsed=elapsed
+        ),
+        body=f"{body} {inside}" if members else body,
         group_id=group.id,
     )
 
@@ -118,16 +127,15 @@ def _idle_intent(*, group: Group, now: datetime) -> NotificationIntent:
 def _aggregate_intent(*, groups: list[Group]) -> NotificationIntent:
     count = len(groups)
     size = format_size(size=sum(g.memory.reclaimable for g in groups))
-    if count == 1:
-        title, verb, pronoun = "1 programma acceso che non usi", "Chiudendolo", "vederlo"
-    else:
-        title, verb, pronoun = f"{count} programmi accesi che non usi", "Chiudendoli", "vederli"
-    return NotificationIntent(
-        id=AGGREGATE_ID,
-        title=title,
-        body=f"{verb} liberi {size} di memoria. Apri il pannello per {pronoun}.",
-        group_id=None,
-    )
+    title = ngettext(
+        "{count} programma acceso che non usi", "{count} programmi accesi che non usi", count
+    ).format(count=count)
+    body = ngettext(
+        "Chiudendolo liberi {size} di memoria. Apri il pannello per vederlo.",
+        "Chiudendoli liberi {size} di memoria. Apri il pannello per vederli.",
+        count,
+    ).format(size=size)
+    return NotificationIntent(id=AGGREGATE_ID, title=title, body=body, group_id=None)
 
 
 def _free_pct(*, free: int, total: int) -> int | None:
@@ -144,10 +152,11 @@ def _ram_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
     listed = ", ".join(f"{g.name} {format_size(size=g.memory.reclaimable)}" for g in top)
     return NotificationIntent(
         id="pressure-ram",
-        title=f"Memoria quasi piena ({pct}% libera)",
-        body=f"Puoi liberare subito: {listed}."
+        # xgettext: no-python-format
+        title=_("Memoria quasi piena ({pct}% libera)").format(pct=pct),
+        body=_("Puoi liberare subito: {listed}.").format(listed=listed)
         if top
-        else "Apri il pannello per vedere cosa chiudere.",
+        else _("Apri il pannello per vedere cosa chiudere."),
         group_id=None,
     )
 
@@ -155,12 +164,16 @@ def _ram_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
 def _disk_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
     size = snapshot.reclaimable_now.disk
     body = (
-        f"Puoi liberare subito {format_size(size=size)} sul disco."
+        _("Puoi liberare subito {size} sul disco.").format(size=format_size(size=size))
         if size > 0
-        else "Apri il pannello per vedere cosa occupa spazio."
+        else _("Apri il pannello per vedere cosa occupa spazio.")
     )
     return NotificationIntent(
-        id="pressure-disk", title=f"Disco quasi pieno ({pct}% libero)", body=body, group_id=None
+        id="pressure-disk",
+        # xgettext: no-python-format
+        title=_("Disco quasi pieno ({pct}% libero)").format(pct=pct),
+        body=body,
+        group_id=None,
     )
 
 
@@ -223,11 +236,11 @@ def evaluate_notifications(*, request: NotifyRequest) -> NotifyResult:
     pressure = _pressure_intents(request=request)
     slots = request.config.max_notifications_per_hour - len(recent) - len(pressure)
     shown, overflow = _split_idle(candidates=_idle_candidates(request=request), slots=slots)
-    intents = [i for _, i in pressure] + [_idle_intent(group=g, now=request.now) for g in shown]
+    intents = [i for _kind, i in pressure] + [_idle_intent(group=g, now=request.now) for g in shown]
     if overflow:
         intents.append(_aggregate_intent(groups=overflow))
     marked = {(g.id, g.activity.since) for g in (*shown, *overflow) if g.activity.since}
-    sent = {**request.state.pressure_sent, **{kind: request.now for kind, _ in pressure}}
+    sent = {**request.state.pressure_sent, **{kind: request.now for kind, _intent in pressure}}
     state = NotificationState(
         episodes | frozenset(marked),
         MappingProxyType(sent),

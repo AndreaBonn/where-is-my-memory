@@ -4,6 +4,7 @@ from dataclasses import dataclass, replace
 from itertools import chain
 from pathlib import PurePosixPath
 
+from wimm.i18n import N_, _
 from wimm.model.enums import Category, GroupId
 from wimm.model.raw import RawContainer, RawProcess
 
@@ -21,11 +22,12 @@ KEY_CLASS_ROOT_PROCESS = "root_process"
 KEY_CLASS_PROTECTED = "protected"
 AUDIO_PROCESS_NAMES = frozenset({"pipewire", "pipewire-pulse", "wireplumber", "pulseaudio"})
 ROOT_UID = 0
-# RF-07 labels of the System view: (key, display name).
-LABEL_AUDIO = ("session-audio", "Audio")
-LABEL_SESSION = ("session-gnome", "Sessione GNOME")
-LABEL_OTHER_USERS = ("other-users", "Altri utenti")
-LABEL_SYSTEM = ("system-services", "Servizi di sistema")
+# RF-07 labels of the System view: (key, display name to translate with ``_`` where shown).
+# The key is the identity (it feeds the group id); only the name is user text.
+LABEL_AUDIO = ("session-audio", N_("Audio"))
+LABEL_SESSION = ("session-gnome", N_("Sessione GNOME"))
+LABEL_OTHER_USERS = ("other-users", N_("Altri utenti"))
+LABEL_SYSTEM = ("system-services", N_("Servizi di sistema"))
 LABEL_SELF = ("self", "where-is-my-memory")
 # Apps that already contain their children: an integrated shell is not a terminal one.
 SHELL_EXEMPT_CATEGORIES = frozenset({Category.DESKTOP_APP, Category.BROWSER})
@@ -96,7 +98,7 @@ def app_identity(*, proc: RawProcess, decision: CategoryDecision) -> str:
 def nearest_terminal(*, proc: RawProcess, by_pid: Mapping[int, Pair]) -> Pair | None:
     """Closest ancestor categorized as TERMINAL, or None."""
     current = proc
-    for _ in by_pid:
+    for _hop in by_pid:
         parent = by_pid.get(current.ppid)
         if parent is None:
             return None
@@ -109,7 +111,7 @@ def nearest_terminal(*, proc: RawProcess, by_pid: Mapping[int, Pair]) -> Pair | 
 def root_process(*, proc: RawProcess, members: Mapping[int, RawProcess]) -> RawProcess:
     """Topmost ancestor still inside ``members`` (rule 6: group per root process)."""
     current = proc
-    for _ in members:
+    for _hop in members:
         parent = members.get(current.ppid)
         if parent is None:
             return current
@@ -231,5 +233,7 @@ def protected_label(*, proc: RawProcess, category: Category, own_uid: int) -> tu
     if category is Category.SELF:
         return LABEL_SELF
     if category is Category.SESSION:
-        return LABEL_AUDIO if proc.name in AUDIO_PROCESS_NAMES else LABEL_SESSION
-    return LABEL_SYSTEM if proc.uid in {ROOT_UID, own_uid} else LABEL_OTHER_USERS
+        key, name = LABEL_AUDIO if proc.name in AUDIO_PROCESS_NAMES else LABEL_SESSION
+    else:
+        key, name = LABEL_SYSTEM if proc.uid in {ROOT_UID, own_uid} else LABEL_OTHER_USERS
+    return key, _(name)

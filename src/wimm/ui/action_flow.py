@@ -10,6 +10,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk
 
+from wimm.i18n import _
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import ActionKind, PlanId, TargetId
 from wimm.model.errors import InvalidRequest, WimmError
@@ -129,10 +130,10 @@ class ActionFlow:
         try:
             plan = self._source.plan(request=request)
         except InvalidRequest as error:
-            self._notify(NOTHING_LEFT_TEXTS.get(request.kind, error.user_message))
+            self._notify(NOTHING_LEFT_TEXTS.get(request.kind, _(error.user_message)))
             return
         except WimmError as error:
-            self._notify(error.user_message)
+            self._notify(_(error.user_message))
             return
         session = ConfirmSession(
             plan=plan,
@@ -244,7 +245,7 @@ class ActionFlow:
             self._notify(REPLAN_TEXT)
             self._begin(request=pending.plan.request, subject=pending.subject, may_replan=False)
             return
-        self._notify(error.user_message)
+        self._notify(_(error.user_message))
 
 
 def _stopped_containers(*, plan: Plan | None, outcomes: Sequence[StepOutcome]) -> bool:

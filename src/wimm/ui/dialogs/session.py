@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from wimm.core.planning_disk import BUILD_CACHE_ID
+from wimm.i18n import _
 from wimm.model.actions import (
     EXCLUDABLE_ACTIONS,
     ActionRequest,
@@ -117,7 +118,7 @@ class ConfirmSession:
             return
         except WimmError as error:
             LOGGER.warning("Plan refused after changing the entries: %s", error.message)
-            self.plan, self.notice = None, error.user_message
+            self.plan, self.notice = None, _(error.user_message)
             return
         # The service plans on the latest snapshot: a target the list never showed must not
         # be confirmed through it.

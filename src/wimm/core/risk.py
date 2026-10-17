@@ -3,6 +3,7 @@ from typing import Literal
 
 from wimm.core.constants import DB_PROCESS_NAMES
 from wimm.core.risk_table import CONSEQUENCES, STATIC_ASSESSMENTS, ConsequenceKey
+from wimm.i18n import _
 from wimm.model.enums import ActionKind, ActivityState, Category, Protection, Risk, protection_of
 from wimm.model.snapshot import ActionOffer
 
@@ -76,7 +77,7 @@ class RiskAssessment:
 
 
 def _assessment(level: Risk, key: ConsequenceKey) -> RiskAssessment:
-    return RiskAssessment(level=level, consequences=(CONSEQUENCES[key],))
+    return RiskAssessment(level=level, consequences=(_(CONSEQUENCES[key]),))
 
 
 def _app_assessment(target: RiskTarget) -> RiskAssessment:
@@ -103,7 +104,7 @@ def _process_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessmen
     if target.is_foreground_on_tty:
         return RiskAssessment(
             level=max(Risk.CAUTION, result.level),
-            consequences=(CONSEQUENCES[ConsequenceKey.FOREGROUND], *result.consequences),
+            consequences=(_(CONSEQUENCES[ConsequenceKey.FOREGROUND]), *result.consequences),
         )
     return result
 
@@ -158,10 +159,10 @@ def assess_risk(target: RiskTarget, action: ActionKind) -> RiskAssessment:
 
 def _resource_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessment:
     if action is ActionKind.COMPOSE_DOWN_VOLUMES:
-        volumes = ", ".join(target.volume_names) or "associati al progetto"
+        volumes = ", ".join(target.volume_names) or _("associati al progetto")
         return RiskAssessment(
             level=Risk.DANGER,
-            consequences=(CONSEQUENCES[ConsequenceKey.DOWN_VOLUMES].format(volumes=volumes),),
+            consequences=(_(CONSEQUENCES[ConsequenceKey.DOWN_VOLUMES]).format(volumes=volumes),),
         )
     if action is ActionKind.IMAGE_REMOVE:
         if target.dangling:
@@ -173,8 +174,8 @@ def _resource_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessme
         return RiskAssessment(
             level=Risk.SAFE,
             consequences=(
-                CONSEQUENCES[ConsequenceKey.STOP],
-                CONSEQUENCES[ConsequenceKey.STOP_TIMEOUT],
+                _(CONSEQUENCES[ConsequenceKey.STOP]),
+                _(CONSEQUENCES[ConsequenceKey.STOP_TIMEOUT]),
             ),
         )
     level, key = STATIC_ASSESSMENTS[action]

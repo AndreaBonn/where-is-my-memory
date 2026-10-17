@@ -3,6 +3,7 @@
 from datetime import datetime
 
 from wimm.core.text import AT_LEAST_MARK, NO_CONNECTIONS_MARK, OBSERVING_PREFIX, spoken_duration
+from wimm.i18n import _
 from wimm.model.enums import ActivityState
 from wimm.model.snapshot import ActivityAssessment
 
@@ -52,14 +53,14 @@ def plain_reason(*, activity: ActivityAssessment, now: datetime) -> str:
     if activity.state is ActivityState.ACTIVE:
         return ACTIVE_TEXT
     if activity.state is not ActivityState.IDLE:
-        return OBSERVING_TEXT if activity.reason.startswith(OBSERVING_PREFIX) else UNKNOWN_TEXT
+        return OBSERVING_TEXT if activity.reason.startswith(_(OBSERVING_PREFIX)) else UNKNOWN_TEXT
     # An idle assessment always carries its start (ActivityAssessment validates it).
     since = activity.since or now
     span = spoken_duration(seconds=(now - since).total_seconds())
     # Only when the core judged connections (a server) does "nobody connects" hold.
-    tail = NOBODY_CONNECTS if NO_CONNECTIONS_MARK in activity.reason else "."
+    tail = NOBODY_CONNECTS if _(NO_CONNECTIONS_MARK) in activity.reason else "."
     # Idle since the monitor started is a lower bound, and the sentence says so.
-    at_least = "almeno " if AT_LEAST_MARK in activity.reason else ""
+    at_least = "almeno " if _(AT_LEAST_MARK) in activity.reason else ""
     return f"Non lo usi da {at_least}{span}{tail}"
 
 

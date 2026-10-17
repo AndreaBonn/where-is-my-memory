@@ -3,6 +3,7 @@
 from collections.abc import Mapping
 from dataclasses import dataclass
 
+from wimm.i18n import _
 from wimm.model.actions import ActionRequest, ContainerFingerprint
 from wimm.model.enums import ActionKind, Risk
 from wimm.model.errors import InvalidRequest
@@ -23,6 +24,11 @@ class StoppedContainer:
     label: str
 
 
+def _start_assessment() -> RiskAssessment:
+    consequence = _(CONSEQUENCES[ConsequenceKey.START])
+    return RiskAssessment(level=Risk.SAFE, consequences=(consequence,))
+
+
 def plan_restart(
     *, request: ActionRequest, stopped: Mapping[str, tuple[StoppedContainer, ...]]
 ) -> list[Draft]:
@@ -40,7 +46,7 @@ def plan_restart(
     containers = stopped.get(request.target_id or "", ())
     if not containers:
         raise InvalidRequest(f"Plan {request.target_id} stopped no container to start again")
-    assessed = RiskAssessment(level=Risk.SAFE, consequences=(CONSEQUENCES[ConsequenceKey.START],))
+    assessed = _start_assessment()
     return [
         Draft(
             owner_ids=frozenset({item.id}),

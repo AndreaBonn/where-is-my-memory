@@ -1,6 +1,8 @@
-"""Byte counts as Italian text, shared by the UI, the tray and the notifications."""
+"""Byte counts as text in the active language, shared by the UI, the tray and the notifications."""
 
 import math
+
+from wimm.i18n import decimal_separator
 
 SI_UNITS = ("B", "kB", "MB", "GB", "TB")
 SI_BASE = 1000
@@ -15,7 +17,7 @@ def _scaled(*, size: int, index: int) -> tuple[int, int]:
 
 
 def format_size(*, size: int) -> str:
-    """Format a byte count in SI units with the Italian decimal comma.
+    """Format a byte count in SI units with the decimal separator of the active language.
 
     Below 1 GB no decimals are shown, from 1 GB on one decimal. Integer
     arithmetic keeps the result independent of locale and float rounding.
@@ -28,7 +30,7 @@ def format_size(*, size: int) -> str:
     Returns
     -------
     str
-        For example ``"980 MB"`` or ``"1,1 GB"``.
+        For example ``"980 MB"`` or ``"1,1 GB"`` (``"1.1 GB"`` in English).
     """
     if not math.isfinite(size) or size < 0:
         raise ValueError(f"size must be a finite non-negative byte count, got {size!r}")
@@ -40,4 +42,4 @@ def format_size(*, size: int) -> str:
         scaled, scale = _scaled(size=size, index=index)
     whole, fraction = divmod(scaled, scale)
     unit = SI_UNITS[index]
-    return f"{whole},{fraction} {unit}" if scale > 1 else f"{whole} {unit}"
+    return f"{whole}{decimal_separator()}{fraction} {unit}" if scale > 1 else f"{whole} {unit}"

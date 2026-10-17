@@ -13,6 +13,7 @@ from gi.repository import Adw, Gtk
 
 from wimm.collectors.foreground import X11_SESSION
 from wimm.config import config_to_raw
+from wimm.i18n import _
 from wimm.model.errors import WimmError
 from wimm.paths import UserPaths
 from wimm.ui.dialogs.preferences_alerts import PresetPicker
@@ -188,7 +189,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
             self._save_failed(reason=str(error.strerror or error))
             return
         except WimmError as error:
-            self._save_failed(reason=error.user_message)
+            self._save_failed(reason=_(error.user_message))
             return
         self._config = result.config
         self._load_all()

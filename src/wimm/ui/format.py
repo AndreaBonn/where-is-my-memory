@@ -5,6 +5,7 @@ from types import MappingProxyType
 
 from wimm.core.sizes import format_size as format_size
 from wimm.core.text import OBSERVING_PREFIX
+from wimm.i18n import _
 from wimm.model.enums import ActionKind, ActivityState, Category, Pressure, Risk
 
 SECONDS_PER_MINUTE = 60
@@ -111,7 +112,7 @@ def allocate_percents(*, sizes: tuple[int, ...]) -> tuple[int, ...]:
     """
     total = sum(sizes)
     if total <= 0:
-        return tuple(0 for _ in sizes)
+        return tuple(0 for _size in sizes)
     points = [size * 100 // total for size in sizes]
     remainders = [size * 100 % total for size in sizes]
     ranked = sorted(range(len(sizes)), key=lambda i: (-remainders[i], i))
@@ -142,7 +143,9 @@ def activity_text(*, state: ActivityState, reason: str, elapsed_s: float | None)
         return "in uso"
     if state is ActivityState.IDLE:
         return f"non in uso {format_elapsed(seconds=elapsed_s or 0)}"
-    return OBSERVING_PREFIX if reason.startswith(OBSERVING_PREFIX) else "attività non misurabile"
+    return (
+        _(OBSERVING_PREFIX) if reason.startswith(_(OBSERVING_PREFIX)) else "attività non misurabile"
+    )
 
 
 def button_label(*, kind: ActionKind) -> str:

@@ -8,6 +8,7 @@ one removal step per id read from the report, so the executor can recheck each o
 from dataclasses import replace
 from typing import Protocol
 
+from wimm.i18n import N_, _
 from wimm.model.actions import (
     ActionRequest,
     ContainerFingerprint,
@@ -30,9 +31,9 @@ __all__ = [
     "plan_image_remove",
 ]
 
-TRASH_PHRASE = "Cestino"
+TRASH_PHRASE = N_("Cestino")
 BUILD_CACHE_ID = "build_cache"
-TRUNCATED_NOTE = (
+TRUNCATED_NOTE = N_(
     "Il report mostra le {shown} voci più grandi: altre {hidden} restano "
     "e serve una nuova scansione dopo la pulizia."
 )
@@ -82,7 +83,7 @@ def _pruned(
     kept = [d for d in drafts if not d.owner_ids & request.excluded_ids]
     if kept and truncated:
         first = kept[0].assessed
-        note = TRUNCATED_NOTE.format(shown=shown, hidden=truncated)
+        note = _(TRUNCATED_NOTE).format(shown=shown, hidden=truncated)
         kept[0] = replace(
             kept[0], assessed=replace(first, consequences=(*first.consequences, note))
         )
@@ -141,8 +142,8 @@ def plan_builder_prune(*, request: ActionRequest, report: DiskReport | None) -> 
         Draft(
             owner_ids=frozenset({BUILD_CACHE_ID}),
             kind=ActionKind.BUILDER_PRUNE,
-            label="Build cache",
-            name="Build cache",
+            label=_("Build cache"),
+            name=_("Build cache"),
             fingerprint=None,
             assessed=assess_draft(
                 target=RiskTarget(kind="build_cache"), kind=ActionKind.BUILDER_PRUNE
@@ -207,7 +208,7 @@ def _cache_draft(*, entry: CacheEntry | None, kind: ActionKind) -> list[Draft]:
     if entry is None:
         raise InvalidRequest(f"Action {kind.value} has no matching cache in the report")
     fingerprint = DirFingerprint(realpath=entry.path, st_ino=entry.st_ino, st_dev=entry.st_dev)
-    name = TRASH_PHRASE if entry.kind is CacheKind.TRASH else entry.path
+    name = _(TRASH_PHRASE) if entry.kind is CacheKind.TRASH else entry.path
     return [_dir_draft(fingerprint=fingerprint, size=entry.size, kind=kind, name=name)]
 
 

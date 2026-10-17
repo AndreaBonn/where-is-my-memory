@@ -10,3 +10,550 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: src/wimm/core/assemble.py:57
+msgid "audio e media del desktop"
+msgstr "desktop audio and media"
+
+#: src/wimm/core/assemble.py:58
+msgid "componente del desktop"
+msgstr "desktop component"
+
+#: src/wimm/core/assemble.py:59
+msgid "processi di altri utenti, non modificabili da qui"
+msgstr "processes of other users, which cannot be changed from here"
+
+#: src/wimm/core/assemble.py:60
+msgid "servizio di sistema"
+msgstr "system service"
+
+#: src/wimm/core/assemble.py:61
+msgid "questa applicazione"
+msgstr "this application"
+
+#: src/wimm/core/grouping_keys.py:27
+msgid "Audio"
+msgstr "Audio"
+
+#: src/wimm/core/grouping_keys.py:28
+msgid "Sessione GNOME"
+msgstr "GNOME session"
+
+#: src/wimm/core/grouping_keys.py:29
+msgid "Altri utenti"
+msgstr "Other users"
+
+#: src/wimm/core/grouping_keys.py:30
+msgid "Servizi di sistema"
+msgstr "System services"
+
+#: src/wimm/core/notify_rules.py:87 src/wimm/core/text_groups.py:52
+#, python-brace-format
+msgid "{head} e {last}"
+msgstr "{head} and {last}"
+
+#: src/wimm/core/notify_rules.py:96
+#, python-brace-format
+msgid "{count} container"
+msgid_plural "{count} container"
+msgstr[0] "{count} container"
+msgstr[1] "{count} containers"
+
+#: src/wimm/core/notify_rules.py:99
+#, python-brace-format
+msgid "{count} server"
+msgid_plural "{count} server"
+msgstr[0] "{count} server"
+msgstr[1] "{count} servers"
+
+#: src/wimm/core/notify_rules.py:102
+#, python-brace-format
+msgid "{count} processo"
+msgid_plural "{count} processi"
+msgstr[0] "{count} process"
+msgstr[1] "{count} processes"
+
+#: src/wimm/core/notify_rules.py:112
+#, python-brace-format
+msgid "Chiudendolo liberi {size} di memoria. Decidi tu: non si chiude da solo."
+msgstr "Closing it frees {size} of memory. You decide: it won't close on its own."
+
+#: src/wimm/core/notify_rules.py:116
+#, python-brace-format
+msgid "Dentro: {members}."
+msgstr "Inside: {members}."
+
+#: src/wimm/core/notify_rules.py:119
+#, python-brace-format
+msgid "{name} è acceso ma non lo usi da {elapsed}"
+msgstr "{name} is running but you haven't used it for {elapsed}"
+
+#: src/wimm/core/notify_rules.py:131
+#, python-brace-format
+msgid "{count} programma acceso che non usi"
+msgid_plural "{count} programmi accesi che non usi"
+msgstr[0] "{count} running program you don't use"
+msgstr[1] "{count} running programs you don't use"
+
+#: src/wimm/core/notify_rules.py:134
+#, python-brace-format
+msgid "Chiudendolo liberi {size} di memoria. Apri il pannello per vederlo."
+msgid_plural "Chiudendoli liberi {size} di memoria. Apri il pannello per vederli."
+msgstr[0] "Closing it frees {size} of memory. Open the panel to see it."
+msgstr[1] "Closing them frees {size} of memory. Open the panel to see them."
+
+#: src/wimm/core/notify_rules.py:156
+#, no-python-format, python-brace-format
+msgid "Memoria quasi piena ({pct}% libera)"
+msgstr "Memory almost full ({pct}% free)"
+
+#: src/wimm/core/notify_rules.py:157
+#, python-brace-format
+msgid "Puoi liberare subito: {listed}."
+msgstr "You can free up right away: {listed}."
+
+#: src/wimm/core/notify_rules.py:159
+msgid "Apri il pannello per vedere cosa chiudere."
+msgstr "Open the panel to see what to close."
+
+#: src/wimm/core/notify_rules.py:167
+#, python-brace-format
+msgid "Puoi liberare subito {size} sul disco."
+msgstr "You can free up {size} on the disk right away."
+
+#: src/wimm/core/notify_rules.py:169
+msgid "Apri il pannello per vedere cosa occupa spazio."
+msgstr "Open the panel to see what takes up space."
+
+#: src/wimm/core/notify_rules.py:174
+#, no-python-format, python-brace-format
+msgid "Disco quasi pieno ({pct}% libero)"
+msgstr "Disk almost full ({pct}% free)"
+
+#: src/wimm/core/planning_disk.py:34
+msgid "Cestino"
+msgstr "Trash"
+
+#: src/wimm/core/planning_disk.py:37
+#, python-brace-format
+msgid "Il report mostra le {shown} voci più grandi: altre {hidden} restano e serve una nuova scansione dopo la pulizia."
+msgstr "The report shows the {shown} largest items: {hidden} more remain, and a new scan is needed after the cleanup."
+
+#: src/wimm/core/planning_disk.py:145 src/wimm/core/planning_disk.py:146
+msgid "Build cache"
+msgstr "Build cache"
+
+#: src/wimm/core/planning_drafts.py:104 src/wimm/core/planning_drafts.py:216
+#, python-brace-format
+msgid "{name} (pid {pid})"
+msgstr "{name} (pid {pid})"
+
+#: src/wimm/core/risk.py:162
+msgid "associati al progetto"
+msgstr "linked to the project"
+
+#: src/wimm/core/risk_table.py:34
+msgid "Il server si ferma."
+msgstr "The server stops."
+
+#: src/wimm/core/risk_table.py:35
+msgid "È in uso adesso: chi lo sta usando perde la connessione."
+msgstr "It is in use right now: whoever is using it loses the connection."
+
+#: src/wimm/core/risk_table.py:37
+msgid "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
+msgstr "It is running in the foreground in a terminal: you might interrupt work in progress."
+
+#: src/wimm/core/risk_table.py:40
+msgid "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
+msgstr "The agent session closes: unsaved work in the conversation is lost."
+
+#: src/wimm/core/risk_table.py:45
+msgid "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede dal salvataggio automatico, che può essere indietro di qualche secondo."
+msgstr "The browser closes without a normal shutdown: when reopened it restores the tabs from its automatic save, which may be a few seconds behind."
+
+#: src/wimm/core/risk_table.py:48
+msgid "Eventuali file non salvati possono andare persi."
+msgstr "Any unsaved files may be lost."
+
+#: src/wimm/core/risk_table.py:50
+msgid "Il programma si ferma: ciò che ha in memoria e non ha salvato va perso. Se è un servizio, potrebbe riavviarsi da solo."
+msgstr "The program stops: whatever it holds in memory and has not saved is lost. If it is a service, it might restart on its own."
+
+#: src/wimm/core/risk_table.py:53
+msgid "L'applicazione si chiude."
+msgstr "The application closes."
+
+#: src/wimm/core/risk_table.py:55
+msgid "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
+msgstr "All the terminal windows and tabs close, along with the programs inside them."
+
+#: src/wimm/core/risk_table.py:57
+msgid "Chiusura immediata senza salvataggio."
+msgstr "Immediate shutdown without saving."
+
+#: src/wimm/core/risk_table.py:58
+msgid "Il container si ferma; dati e configurazione restano."
+msgstr "The container stops; its data and configuration remain."
+
+#: src/wimm/core/risk_table.py:60
+msgid "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
+msgstr "If the container does not stop by itself, Docker ends it after 10 seconds."
+
+#: src/wimm/core/risk_table.py:62
+msgid "Il container riparte con la configurazione di prima."
+msgstr "The container starts again with its previous configuration."
+
+#: src/wimm/core/risk_table.py:64
+msgid "Le modifiche fatte dentro il container fuori dai volumi si perdono."
+msgstr "Changes made inside the container outside its volumes are lost."
+
+#: src/wimm/core/risk_table.py:66
+msgid "I container vengono rimossi; i volumi con i dati restano."
+msgstr "The containers are removed; the volumes with the data remain."
+
+#: src/wimm/core/risk_table.py:68
+#, python-brace-format
+msgid "I dati dei volumi {volumes} vengono cancellati in modo definitivo."
+msgstr "The data in the volumes {volumes} is permanently deleted."
+
+#: src/wimm/core/risk_table.py:70
+msgid "Si riscarica dal registry quando serve."
+msgstr "It is downloaded again from the registry when needed."
+
+#: src/wimm/core/risk_table.py:72
+msgid "Immagine costruita in locale, non è su un registry: per riaverla serve ricostruirla."
+msgstr "Image built locally, not on a registry: to get it back you have to build it again."
+
+#: src/wimm/core/risk_table.py:74
+msgid "Le prossime build saranno più lente."
+msgstr "The next builds will be slower."
+
+#: src/wimm/core/risk_table.py:75
+msgid "I dati del volume vengono cancellati in modo definitivo."
+msgstr "The volume data is permanently deleted."
+
+#: src/wimm/core/risk_table.py:76
+msgid "I pacchetti si riscaricano quando servono."
+msgstr "Packages are downloaded again when needed."
+
+#: src/wimm/core/risk_table.py:77
+msgid "I file nel cestino vengono eliminati in modo definitivo."
+msgstr "The files in the trash are permanently deleted."
+
+#: src/wimm/core/risk_table.py:79
+msgid "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
+msgstr "You need to reinstall the dependencies (npm install or uv sync) before using the project."
+
+#: src/wimm/core/text.py:17
+msgid "i browser"
+msgstr "browsers"
+
+#: src/wimm/core/text.py:18
+msgid "le app desktop"
+msgstr "desktop apps"
+
+#: src/wimm/core/text.py:19
+msgid "i terminali"
+msgstr "terminals"
+
+#: src/wimm/core/text.py:45
+#, python-brace-format
+msgid "{count} minuto"
+msgid_plural "{count} minuti"
+msgstr[0] "{count} minute"
+msgstr[1] "{count} minutes"
+
+#: src/wimm/core/text.py:51 src/wimm/core/text.py:66
+msgid "meno di 1 minuto"
+msgstr "less than 1 minute"
+
+#: src/wimm/core/text.py:55
+#, python-brace-format
+msgid "{count} h"
+msgstr "{count} h"
+
+#: src/wimm/core/text.py:60
+#, python-brace-format
+msgid "{count} giorno"
+msgid_plural "{count} giorni"
+msgstr[0] "{count} day"
+msgstr[1] "{count} days"
+
+#: src/wimm/core/text.py:71
+#, python-brace-format
+msgid "{count} ora"
+msgid_plural "{count} ore"
+msgstr[0] "{count} hour"
+msgstr[1] "{count} hours"
+
+#: src/wimm/core/text.py:76
+msgid "in osservazione"
+msgstr "observing"
+
+#: src/wimm/core/text.py:77
+msgid "da almeno"
+msgstr "for at least"
+
+#: src/wimm/core/text.py:78
+msgid "nessuna connessione"
+msgstr "no connection"
+
+#: src/wimm/core/text.py:82
+#, python-brace-format
+msgid "{prefix} da {duration}"
+msgstr "{prefix} for {duration}"
+
+#: src/wimm/core/text.py:90
+msgid "attività non misurabile"
+msgstr "activity cannot be measured"
+
+#: src/wimm/core/text.py:91
+#, python-brace-format
+msgid "attività non misurabile per {label}"
+msgstr "activity cannot be measured for {label}"
+
+#: src/wimm/core/text.py:95
+msgid "attività non valutata per questa categoria"
+msgstr "activity not evaluated for this category"
+
+#: src/wimm/core/text.py:99
+msgid "CPU non misurabile negli ultimi campioni"
+msgstr "CPU could not be measured in the latest samples"
+
+#: src/wimm/core/text.py:103
+#, python-brace-format
+msgid "attività rilevata da {duration}"
+msgstr "activity detected for {duration}"
+
+#: src/wimm/core/text.py:109
+#, python-brace-format
+msgid "{mark} in ingresso"
+msgstr "{mark} coming in"
+
+#: src/wimm/core/text.py:109
+#, python-brace-format
+msgid "{mark} nuova"
+msgstr "{mark} opened recently"
+
+#: src/wimm/core/text.py:115
+#, python-brace-format
+msgid "CPU media {value}%"
+msgstr "average CPU {value}%"
+
+#: src/wimm/core/text.py:118
+#, python-brace-format
+msgid "{connections} e {cpu} negli ultimi {window}"
+msgstr "{connections} and {cpu} in the last {window}"
+
+#: src/wimm/core/text.py:122
+#, python-brace-format
+msgid "traffico di rete medio {rate} B/s"
+msgstr "average network traffic {rate} B/s"
+
+#: src/wimm/core/text.py:123
+#, python-brace-format
+msgid "{cpu} e {net} negli ultimi {window}"
+msgstr "{cpu} and {net} in the last {window}"
+
+#: src/wimm/core/text.py:125
+#, python-brace-format
+msgid "{cpu} negli ultimi {window}"
+msgstr "{cpu} in the last {window}"
+
+#: src/wimm/core/text.py:128
+#, python-brace-format
+msgid "c'è una connessione aperta da un browser (probabile scheda dimenticata su localhost:{port})"
+msgstr "a browser has an open connection (probably a forgotten tab on localhost:{port})"
+
+#: src/wimm/core/text.py:136
+#, python-brace-format
+msgid "inattivo {at_least} {duration}, cioè da quando il monitor è partito"
+msgstr "idle {at_least} {duration}, that is since the monitor started"
+
+#: src/wimm/core/text.py:139
+#, python-brace-format
+msgid "inattivo da {duration}"
+msgstr "idle for {duration}"
+
+#: src/wimm/core/text.py:151
+#, python-brace-format
+msgid "mai in primo piano negli ultimi {window}"
+msgstr "not in the foreground in the last {window}"
+
+#: src/wimm/core/text.py:158
+#, python-brace-format
+msgid "in primo piano {duration} fa"
+msgstr "in the foreground {duration} ago"
+
+#: src/wimm/core/text.py:163
+#, python-brace-format
+msgid "inattivo da {idle}; ultima attività registrata prima del riavvio, {prefix} da {observed}"
+msgstr "idle for {idle}; last activity recorded before the restart, {prefix} for {observed}"
+
+#: src/wimm/core/text.py:173
+msgid "l'unico membro misurabile è attivo"
+msgstr "the only measurable member is active"
+
+#: src/wimm/core/text.py:175
+#, python-brace-format
+msgid "{active} membro attivo su {measurable} misurabili"
+msgid_plural "{active} membri attivi su {measurable} misurabili"
+msgstr[0] "{active} active member out of {measurable} measurable"
+msgstr[1] "{active} active members out of {measurable} measurable"
+
+#: src/wimm/core/text.py:183
+msgid "l'unico membro misurabile è inattivo"
+msgstr "the only measurable member is idle"
+
+#: src/wimm/core/text.py:185
+msgid "entrambi i membri misurabili sono inattivi"
+msgstr "both measurable members are idle"
+
+#: src/wimm/core/text.py:186
+#, python-brace-format
+msgid "tutti i {measurable} membri misurabili sono inattivi"
+msgstr "all {measurable} measurable members are idle"
+
+#: src/wimm/core/text.py:191
+msgid "nessun membro misurabile"
+msgstr "no measurable members"
+
+#: src/wimm/core/text.py:193
+msgid "attività dell'unico membro misurabile ancora non determinata"
+msgstr "activity of the only measurable member is not yet determined"
+
+#: src/wimm/core/text.py:195
+#, python-brace-format
+msgid "attività di almeno uno dei {measurable} membri misurabili ancora non determinata"
+msgstr "activity of at least one of the {measurable} measurable members is not yet determined"
+
+#: src/wimm/core/text_groups.py:13
+#, python-brace-format
+msgid "browser {name} con {processes} (schede, estensioni e servizi)"
+msgstr "browser {name} with {processes} (tabs, extensions and services)"
+
+#: src/wimm/core/text_groups.py:14
+#, python-brace-format
+msgid "app desktop {name} con {processes}"
+msgstr "desktop app {name} with {processes}"
+
+#: src/wimm/core/text_groups.py:15
+#, python-brace-format
+msgid "terminale {name} con {processes}, shell comprese"
+msgstr "terminal {name} with {processes}, shells included"
+
+#: src/wimm/core/text_groups.py:18
+msgid "non modificabile da qui"
+msgstr "cannot be changed from here"
+
+#: src/wimm/core/text_groups.py:19
+#, python-brace-format
+msgid "in ascolto sulla porta {port}"
+msgstr "listening on port {port}"
+
+#: src/wimm/core/text_groups.py:20
+#, python-brace-format
+msgid "in ascolto sulle porte {ports}"
+msgstr "listening on ports {ports}"
+
+#: src/wimm/core/text_groups.py:44
+msgid "un processo"
+msgstr "one process"
+
+#: src/wimm/core/text_groups.py:44
+#, python-brace-format
+msgid "un processo {lead}"
+msgstr "one {lead} process"
+
+#: src/wimm/core/text_groups.py:45
+#, python-brace-format
+msgid "{count} processi"
+msgstr "{count} processes"
+
+#: src/wimm/core/text_groups.py:65
+#, python-brace-format
+msgid "in {folder}"
+msgstr "in {folder}"
+
+#: src/wimm/core/text_groups.py:70
+#, python-brace-format
+msgid "container '{name}' senza progetto compose"
+msgstr "container '{name}' with no compose project"
+
+#: src/wimm/core/text_groups.py:72
+#, python-brace-format
+msgid "progetto compose '{project}' con {count} container"
+msgid_plural "progetto compose '{project}' con {count} container"
+msgstr[0] "compose project '{project}' with {count} container"
+msgstr[1] "compose project '{project}' with {count} containers"
+
+#: src/wimm/core/text_groups.py:81
+#, python-brace-format
+msgid "{container}, più {processes} nella stessa cartella"
+msgstr "{container}, plus {processes} in the same folder"
+
+#: src/wimm/core/text_groups.py:90
+#, python-brace-format
+msgid "nella cartella {folder}"
+msgstr "in the folder {folder}"
+
+#: src/wimm/core/text_groups.py:100
+#, python-brace-format
+msgid "{sentence} lanciato dal terminale"
+msgid_plural "{sentence} lanciati dal terminale"
+msgstr[0] "{sentence} started from the terminal"
+msgstr[1] "{sentence} started from the terminal"
+
+#: src/wimm/core/text_groups.py:113
+#, python-brace-format
+msgid "{shown} e altri {hidden}"
+msgstr "{shown} and {hidden} more"
+
+#: src/wimm/core/text_groups.py:119
+#, python-brace-format
+msgid "{processes} non riconducibile a un progetto o a un'app"
+msgid_plural "{processes} non riconducibili a un progetto o a un'app"
+msgstr[0] "{processes} not tied to a project or an app"
+msgstr[1] "{processes} not tied to a project or an app"
+
+#: src/wimm/core/text_groups.py:145
+#, python-brace-format
+msgid "{name}: {names}, {note}"
+msgstr "{name}: {names}, {note}"
+
+#: src/wimm/model/errors.py:12 src/wimm/service/errors.py:40
+msgid "L'operazione non è riuscita"
+msgstr "The operation failed"
+
+#: src/wimm/model/errors.py:22
+msgid "L'elemento è protetto e non può essere modificato"
+msgstr "This item is protected and cannot be changed"
+
+#: src/wimm/model/errors.py:28
+msgid "La richiesta non è valida"
+msgstr "The request is not valid"
+
+#: src/wimm/service/errors.py:10
+msgid "Il piano è scaduto. Richiedi una nuova anteprima"
+msgstr "The plan has expired. Ask for a new preview"
+
+#: src/wimm/service/errors.py:16
+msgid "Il piano richiesto non è disponibile"
+msgstr "The requested plan is not available"
+
+#: src/wimm/service/errors.py:22
+msgid "L'elemento è cambiato. Richiedi una nuova anteprima"
+msgstr "The item has changed. Ask for a new preview"
+
+#: src/wimm/service/errors.py:28
+msgid "Il testo di conferma non corrisponde"
+msgstr "The confirmation text does not match"
+
+#: src/wimm/service/errors.py:34
+msgid "Docker non è disponibile"
+msgstr "Docker is not available"
+
+#: src/wimm/service/errors.py:46
+msgid "L'elemento non esiste più"
+msgstr "The item no longer exists"

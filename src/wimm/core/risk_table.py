@@ -1,5 +1,6 @@
 from enum import StrEnum
 
+from wimm.i18n import N_
 from wimm.model.enums import ActionKind, Risk
 
 
@@ -30,51 +31,51 @@ class ConsequenceKey(StrEnum):
 
 
 CONSEQUENCES: dict[ConsequenceKey, str] = {
-    ConsequenceKey.IDLE: "Il server si ferma.",
-    ConsequenceKey.ACTIVE: "È in uso adesso: chi lo sta usando perde la connessione.",
-    ConsequenceKey.FOREGROUND: (
+    ConsequenceKey.IDLE: N_("Il server si ferma."),
+    ConsequenceKey.ACTIVE: N_("È in uso adesso: chi lo sta usando perde la connessione."),
+    ConsequenceKey.FOREGROUND: N_(
         "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
     ),
-    ConsequenceKey.AGENT: (
+    ConsequenceKey.AGENT: N_(
         "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
     ),
-    ConsequenceKey.BROWSER: (
+    ConsequenceKey.BROWSER: N_(
         # Measured in T-3.8b (docs/DEVIATIONS.md): SIGTERM is not a clean quit, the tabs
         # come back from the periodic crash-recovery file.
         "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede "
         "dal salvataggio automatico, che può essere indietro di qualche secondo."
     ),
-    ConsequenceKey.DOCUMENTS: "Eventuali file non salvati possono andare persi.",
-    ConsequenceKey.OTHER: (
+    ConsequenceKey.DOCUMENTS: N_("Eventuali file non salvati possono andare persi."),
+    ConsequenceKey.OTHER: N_(
         "Il programma si ferma: ciò che ha in memoria e non ha salvato va perso. "
         "Se è un servizio, potrebbe riavviarsi da solo."
     ),
-    ConsequenceKey.APP: "L'applicazione si chiude.",
-    ConsequenceKey.TERMINAL: (
+    ConsequenceKey.APP: N_("L'applicazione si chiude."),
+    ConsequenceKey.TERMINAL: N_(
         "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
     ),
-    ConsequenceKey.KILL: "Chiusura immediata senza salvataggio.",
-    ConsequenceKey.STOP: "Il container si ferma; dati e configurazione restano.",
-    ConsequenceKey.STOP_TIMEOUT: (
+    ConsequenceKey.KILL: N_("Chiusura immediata senza salvataggio."),
+    ConsequenceKey.STOP: N_("Il container si ferma; dati e configurazione restano."),
+    ConsequenceKey.STOP_TIMEOUT: N_(
         "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
     ),
-    ConsequenceKey.START: "Il container riparte con la configurazione di prima.",
-    ConsequenceKey.CONTAINER_REMOVE: (
+    ConsequenceKey.START: N_("Il container riparte con la configurazione di prima."),
+    ConsequenceKey.CONTAINER_REMOVE: N_(
         "Le modifiche fatte dentro il container fuori dai volumi si perdono."
     ),
-    ConsequenceKey.DOWN: "I container vengono rimossi; i volumi con i dati restano.",
-    ConsequenceKey.DOWN_VOLUMES: (
+    ConsequenceKey.DOWN: N_("I container vengono rimossi; i volumi con i dati restano."),
+    ConsequenceKey.DOWN_VOLUMES: N_(
         "I dati dei volumi {volumes} vengono cancellati in modo definitivo."
     ),
-    ConsequenceKey.REGISTRY: "Si riscarica dal registry quando serve.",
-    ConsequenceKey.LOCAL_IMAGE: (
+    ConsequenceKey.REGISTRY: N_("Si riscarica dal registry quando serve."),
+    ConsequenceKey.LOCAL_IMAGE: N_(
         "Immagine costruita in locale, non è su un registry: per riaverla serve ricostruirla."
     ),
-    ConsequenceKey.BUILD: "Le prossime build saranno più lente.",
-    ConsequenceKey.VOLUME: "I dati del volume vengono cancellati in modo definitivo.",
-    ConsequenceKey.CACHE: "I pacchetti si riscaricano quando servono.",
-    ConsequenceKey.TRASH: "I file nel cestino vengono eliminati in modo definitivo.",
-    ConsequenceKey.DEVDIR: (
+    ConsequenceKey.BUILD: N_("Le prossime build saranno più lente."),
+    ConsequenceKey.VOLUME: N_("I dati del volume vengono cancellati in modo definitivo."),
+    ConsequenceKey.CACHE: N_("I pacchetti si riscaricano quando servono."),
+    ConsequenceKey.TRASH: N_("I file nel cestino vengono eliminati in modo definitivo."),
+    ConsequenceKey.DEVDIR: N_(
         "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
     ),
 }

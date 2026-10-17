@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from itertools import chain
 
+from wimm.i18n import N_, _
 from wimm.model.enums import (
     ActionKind,
     ActivityState,
@@ -53,11 +54,11 @@ APP_TARGET_KINDS: Mapping[Category, TargetKind] = {
     Category.TERMINAL: "terminal",
 }
 PROTECTED_REASONS: Mapping[str, str] = {
-    LABEL_AUDIO[0]: "audio e media del desktop",
-    LABEL_SESSION[0]: "componente del desktop",
-    LABEL_OTHER_USERS[0]: "processi di altri utenti, non modificabili da qui",
-    LABEL_SYSTEM[0]: "servizio di sistema",
-    LABEL_SELF[0]: "questa applicazione",
+    LABEL_AUDIO[0]: N_("audio e media del desktop"),
+    LABEL_SESSION[0]: N_("componente del desktop"),
+    LABEL_OTHER_USERS[0]: N_("processi di altri utenti, non modificabili da qui"),
+    LABEL_SYSTEM[0]: N_("servizio di sistema"),
+    LABEL_SELF[0]: N_("questa applicazione"),
 }
 
 
@@ -234,7 +235,7 @@ def _worst_pressure(*, inputs: AssemblyInput) -> Pressure:
 
 def _protected_item(*, draft: GroupDraft, group: Group) -> ProtectedSummaryItem:
     return ProtectedSummaryItem(
-        label=draft.name, memory=group.memory.used, reason=PROTECTED_REASONS[draft.key]
+        label=draft.name, memory=group.memory.used, reason=_(PROTECTED_REASONS[draft.key])
     )
 
 
@@ -279,7 +280,7 @@ def assemble_snapshot(*, inputs: AssemblyInput) -> Snapshot:
     return Snapshot(
         taken_at=inputs.taken_at,
         monitor_started_at=inputs.monitor_started_at,
-        memory=memory_summary(mem=inputs.system.mem, groups=[group for _, group in built]),
+        memory=memory_summary(mem=inputs.system.mem, groups=[group for _key, group in built]),
         disk=inputs.system.disks[0],
         reclaimable_now=reclaimable_now(
             groups=actionable, disk_bytes=inputs.system.reclaimable_disk
