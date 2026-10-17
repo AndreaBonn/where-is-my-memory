@@ -34,6 +34,10 @@ class UserStateMixin:
         """Wall-clock end of the global mute, or None when not muted or already elapsed."""
         return self._user.muted_until
 
+    def ignored_group_ids(self) -> frozenset[GroupId]:
+        """Every ignored group id, also those no longer in the snapshot."""
+        return self._user.user_state().ignored
+
     def snooze(self, *, group_id: GroupId, duration_s: float) -> None:
         """Silence one group's notifications; persisted, visible in the next snapshot."""
         self._user.snooze(group_id=group_id, duration_s=duration_s)

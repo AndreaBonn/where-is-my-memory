@@ -81,9 +81,21 @@ def _build_window(application: Any) -> PresentableWindow:
     from wimm.service.sampler import wall_clock
     from wimm.ui.window import create_main_window
 
-    return create_main_window(
+    window = create_main_window(
         application=application, source=application._service, clock=wall_clock
     )
+    _install_preferences(application=application, window=window)
+    return window
+
+
+def _install_preferences(*, application: Any, window: Any) -> None:
+    from pathlib import Path
+
+    from wimm.paths import default_user_paths
+    from wimm.ui.window_preferences import PreferencesEnv, install_preferences
+
+    env = PreferencesEnv(paths=default_user_paths(), home=Path.home())
+    install_preferences(window=window, source=application._service, env=env)
 
 
 def _activate(application: Any) -> None:

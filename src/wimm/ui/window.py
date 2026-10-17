@@ -79,6 +79,11 @@ class MainWindow(Adw.Window):
         self._actions = Gio.SimpleActionGroup()
         self.insert_action_group("win", self._actions)
 
+    @property
+    def window_actions(self) -> Gio.SimpleActionGroup:
+        """The ``win`` action group (the preferences action is added by the application shell)."""
+        return self._actions
+
     def _connect_signals(self) -> None:
         self.connect("close-request", self._on_close_request)
         self.connect("map", self._on_map)

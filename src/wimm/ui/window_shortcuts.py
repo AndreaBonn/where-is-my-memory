@@ -5,7 +5,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 from gi.repository import Gtk
 
-ACTION_PREFERENCES = "app.preferences"
+ACTION_PREFERENCES = "win.preferences"
 
 
 def shortcut_controller(

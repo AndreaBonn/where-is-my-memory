@@ -137,7 +137,7 @@ def test_menu_items_are_disabled_when_the_application_lacks_the_actions(
     present_and_settle(window)
 
     before = menu_item_states(window)
-    application.add_action(Gio.SimpleAction.new("preferences", None))
+    window.window_actions.add_action(Gio.SimpleAction.new("preferences", None))
     after = menu_item_states(window)
 
     assert before == {"Preferenze": False, "Silenzia 1 h": False, "Info": True, "Esci": False}
@@ -146,14 +146,14 @@ def test_menu_items_are_disabled_when_the_application_lacks_the_actions(
     assert after["Esci"] is False
 
 
-def test_ctrl_comma_activates_app_preferences(
+def test_ctrl_comma_activates_win_preferences(
     window_factory: WindowFactory, snapshot: Snapshot, application: Gio.Application
 ) -> None:
     opened: list[str] = []
     action = Gio.SimpleAction.new("preferences", None)
     action.connect("activate", lambda *_a: opened.append("preferences"))
-    application.add_action(action)
     window = window_factory(FakeSource(snapshot=snapshot))
+    window.window_actions.add_action(action)
     shortcut = next(
         s
         for c in window.observe_controllers()

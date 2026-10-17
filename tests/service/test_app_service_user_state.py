@@ -174,3 +174,15 @@ def test_restoring_the_user_state_after_attaching_the_saver_is_refused(tmp_path:
 
     with pytest.raises(InvalidRequest):
         service.restore_user_state(state=PersistedState())
+
+
+def test_ignored_group_ids_come_from_the_user_state_even_without_a_snapshot() -> None:
+    service, _, _ = make_service()
+    try:
+        assert service.ignored_group_ids() == frozenset()
+        service.set_ignored(group_id=GROUP, ignored=True)
+        assert service.ignored_group_ids() == frozenset({GROUP})
+        service.set_ignored(group_id=GROUP, ignored=False)
+        assert service.ignored_group_ids() == frozenset()
+    finally:
+        service.stop()

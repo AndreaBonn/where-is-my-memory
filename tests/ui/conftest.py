@@ -2,19 +2,19 @@ from collections.abc import Callable, Iterator
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path
-from typing import ClassVar, Protocol
+from typing import Protocol
 
 import gi
 import pytest
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gio, GLib, GObject, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk
 
-from wimm.core.planning import PlanningContext, plan_action
-from wimm.model.actions import ActionRequest, Plan
-from wimm.model.enums import ActionKind, ActivityState, Category, GroupId, PlanId, Risk
-from wimm.model.errors import WimmError
+from tests.ui.fakes import FakeActionService as FakeActionService
+from tests.ui.fakes import FakeSource as FakeSource
+from tests.ui.fakes import RefreshableSource as RefreshableSource
+from wimm.model.enums import ActionKind, ActivityState, Category, GroupId, Risk
 from wimm.model.memory import MemoryUse
 from wimm.model.snapshot import (
     ActionOffer,
@@ -32,95 +32,6 @@ WAIT_TIMEOUT_S = 5.0
 POLL_INTERVAL_US = 5000
 SETTLE_MAX_ITERATIONS = 1000
 IDLE_SINCE = datetime.fromisoformat("2026-10-16T05:12:00+02:00")
-
-
-class FakeSource(GObject.Object):
-    """Stands in for AppService: a snapshot, a failure counter and the update signal."""
-
-    __gsignals__: ClassVar = {"snapshot-updated": (GObject.SignalFlags.RUN_LAST, None, ())}
-
-    def __init__(self, *, snapshot: Snapshot | None, failures: int = 0) -> None:
-        super().__init__()
-        self._snapshot = snapshot
-        self.consecutive_failures = failures
-
-    def snapshot(self) -> Snapshot | None:
-        return self._snapshot
-
-    def publish(self, snapshot: Snapshot) -> None:
-        self._snapshot = snapshot
-        self.emit("snapshot-updated")
-
-
-class FakeActionService(GObject.Object):
-    """Stands in for AppService with actions: real planner, recorded execute calls."""
-
-    __gsignals__: ClassVar = {
-        "snapshot-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
-        "action-finished": (
-            GObject.SignalFlags.RUN_LAST,
-            None,
-            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
-        ),
-        "action-rejected": (
-            GObject.SignalFlags.RUN_LAST,
-            None,
-            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
-        ),
-        "reclaim-measured": (
-            GObject.SignalFlags.RUN_LAST,
-            None,
-            (GObject.TYPE_STRING, GObject.TYPE_PYOBJECT),
-        ),
-    }
-
-    def __init__(self, *, snapshot: Snapshot, plan_error: WimmError | None = None) -> None:
-        super().__init__()
-        self._snapshot = snapshot
-        self.consecutive_failures = 0
-        self.plan_error = plan_error
-        self.planned: list[ActionRequest] = []
-        self.executed: list[tuple[PlanId, str | None]] = []
-        self.last_plan: Plan | None = None
-        self.snoozed: list[tuple[GroupId, float]] = []
-        self.ignored: list[tuple[GroupId, bool]] = []
-        self.snoozed_all: list[float] = []
-        self.notifications_muted_until: datetime | None = None
-
-    def snapshot(self) -> Snapshot:
-        return self._snapshot
-
-    def publish(self, snapshot: Snapshot) -> None:
-        self._snapshot = snapshot
-        self.emit("snapshot-updated")
-
-    def snooze(self, *, group_id: GroupId, duration_s: float) -> None:
-        self.snoozed.append((group_id, duration_s))
-
-    def set_ignored(self, *, group_id: GroupId, ignored: bool) -> None:
-        self.ignored.append((group_id, ignored))
-
-    def snooze_all(self, *, duration_s: float) -> None:
-        self.snoozed_all.append(duration_s)
-
-    def plan(self, *, request: ActionRequest) -> Plan:
-        self.planned.append(request)
-        if self.plan_error is not None:
-            raise self.plan_error
-        self.last_plan = plan_action(
-            request=request, snapshot=self._snapshot, context=PlanningContext(owner_uid=1000)
-        )
-        return self.last_plan
-
-    def execute(self, *, plan_id: PlanId, typed_confirmation: str | None) -> None:
-        self.executed.append((plan_id, typed_confirmation))
-
-
-class RefreshableSource(FakeSource):
-    refreshes = 0
-
-    def request_refresh(self) -> None:
-        self.refreshes += 1
 
 
 @pytest.fixture(scope="session")
@@ -223,7 +134,7 @@ def descendants(widget: Gtk.Widget) -> Iterator[Gtk.Widget]:
 
 
 def idle_filter(overview: Gtk.Widget) -> Gtk.ToggleButton:
-    toggles = [w for w in descendants(overview) if isinstance(w, Gtk.ToggleButton)]
+    toggles = (w for w in descendants(overview) if isinstance(w, Gtk.ToggleButton))
     return next(t for t in toggles if t.get_label() == "Inattivi")
 
 
