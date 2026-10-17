@@ -10,6 +10,7 @@ gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
 from wimm.ui.dialogs.preferences_model import (
     CATEGORIES_KEY,
     LIST_KEYS,
@@ -27,17 +28,20 @@ PAGE_STEP_FACTOR = 10
 # R2: titles as sentences, subtitles that say what changes for the user.
 TEXTS = {
     "foreground_tracking": (
-        "Conta come in uso il programma in primo piano",
-        "Il programma della finestra che stai usando non viene proposto",
+        N_("Conta come in uso il programma in primo piano"),
+        N_("Il programma della finestra che stai usando non viene proposto"),
     ),
-    CATEGORIES_KEY: ("Avvisami per questi tipi di programma", "Gli altri non mandano avvisi"),
+    CATEGORIES_KEY: (
+        N_("Avvisami per questi tipi di programma"),
+        N_("Gli altri non mandano avvisi"),
+    ),
     "extra_protected_names": (
-        "Programmi da non toccare mai",
-        "Nomi dei processi separati da virgola, in aggiunta a quelli già protetti",
+        N_("Programmi da non toccare mai"),
+        N_("Nomi dei processi separati da virgola, in aggiunta a quelli già protetti"),
     ),
     "devdirs_roots": (
-        "Cartelle in cui cercare",
-        "Percorsi nella tua cartella personale, separati da virgola",
+        N_("Cartelle in cui cercare"),
+        N_("Percorsi nella tua cartella personale, separati da virgola"),
     ),
 }
 
@@ -75,9 +79,8 @@ def _number_field(*, spec: NumberField) -> Field:
         step_increment=spec.step,
         page_increment=spec.step * PAGE_STEP_FACTOR,
     )
-    row = Adw.SpinRow(
-        title=spec.title, subtitle=spec.subtitle, adjustment=adjustment, digits=spec.digits
-    )
+    title, subtitle = _(spec.title), _(spec.subtitle)
+    row = Adw.SpinRow(title=title, subtitle=subtitle, adjustment=adjustment, digits=spec.digits)
 
     def read() -> object:
         row.update()
@@ -86,14 +89,14 @@ def _number_field(*, spec: NumberField) -> Field:
     return Field(
         key=spec.key,
         row=row,
-        subtitle=spec.subtitle,
+        subtitle=subtitle,
         read=read,
         load=lambda raw: row.set_value(display_value(field=spec, raw=raw)),
     )
 
 
 def _switch_field(*, key: str) -> Field:
-    title, subtitle = TEXTS[key]
+    title, subtitle = (_(text) for text in TEXTS[key])
     row = Adw.SwitchRow(title=title, subtitle=subtitle)
     return Field(
         key=key,
@@ -105,7 +108,7 @@ def _switch_field(*, key: str) -> Field:
 
 
 def _text_field(*, key: str) -> Field:
-    title, subtitle = TEXTS[key]
+    title, subtitle = (_(text) for text in TEXTS[key])
     row = Adw.ActionRow(title=title, subtitle=subtitle)
     entry = Gtk.Entry(valign=Gtk.Align.CENTER, width_chars=ENTRY_WIDTH_CHARS)
     entry.update_property([Gtk.AccessibleProperty.LABEL], [title])
@@ -121,7 +124,7 @@ def _text_field(*, key: str) -> Field:
 
 
 def _categories_field() -> Field:
-    title, subtitle = TEXTS[CATEGORIES_KEY]
+    title, subtitle = (_(text) for text in TEXTS[CATEGORIES_KEY])
     row = Adw.ExpanderRow(title=title, subtitle=subtitle)
     checks: dict[str, Gtk.CheckButton] = {}
     for category in actionable_categories():

@@ -5,7 +5,7 @@ from types import MappingProxyType
 
 from wimm.core.sizes import format_size as format_size
 from wimm.core.text import OBSERVING_PREFIX
-from wimm.i18n import _
+from wimm.i18n import N_, _
 from wimm.model.enums import ActionKind, ActivityState, Category, Pressure, Risk
 
 SECONDS_PER_MINUTE = 60
@@ -65,27 +65,27 @@ PRESSURE_TEXT = MappingProxyType(
 )
 ACTION_LABELS = MappingProxyType(
     {
-        ActionKind.PROCESS_TERMINATE: "Termina",
-        ActionKind.PROCESS_KILL: "Forza chiusura",
-        ActionKind.APP_CLOSE: "Chiudi",
-        ActionKind.CONTAINER_STOP: "Ferma",
-        ActionKind.CONTAINER_REMOVE: "Rimuovi",
-        ActionKind.GROUP_STOP: "Ferma",
-        ActionKind.COMPOSE_DOWN: "Spegni il progetto",
-        ActionKind.COMPOSE_DOWN_VOLUMES: "Spegni e rimuovi i volumi",
-        ActionKind.STOP_ALL_IDLE_SAFE: "Libera la memoria",
-        ActionKind.IMAGE_REMOVE: "Rimuovi immagine",
-        ActionKind.IMAGES_PRUNE_DANGLING: "Elimina immagini senza nome",
-        ActionKind.IMAGES_PRUNE_UNUSED: "Elimina immagini inutilizzate",
-        ActionKind.BUILDER_PRUNE: "Svuota cache di build",
-        ActionKind.CONTAINERS_PRUNE_STOPPED: "Elimina container fermi",
-        ActionKind.VOLUME_REMOVE: "Rimuovi volume",
-        ActionKind.CACHE_CLEAN: "Pulisci cache",
-        ActionKind.TRASH_EMPTY: "Svuota cestino",
-        ActionKind.DEVDIR_DELETE: "Elimina cartella",
-        ActionKind.DISK_FREE_SAFE: "Libera spazio",
-        ActionKind.CONTAINER_START: "Riaccendi",
-        ActionKind.RESTART_STOPPED: "Riaccendi",
+        ActionKind.PROCESS_TERMINATE: N_("Termina"),
+        ActionKind.PROCESS_KILL: N_("Forza chiusura"),
+        ActionKind.APP_CLOSE: N_("Chiudi"),
+        ActionKind.CONTAINER_STOP: N_("Ferma"),
+        ActionKind.CONTAINER_REMOVE: N_("Rimuovi"),
+        ActionKind.GROUP_STOP: N_("Ferma"),
+        ActionKind.COMPOSE_DOWN: N_("Spegni il progetto"),
+        ActionKind.COMPOSE_DOWN_VOLUMES: N_("Spegni e rimuovi i volumi"),
+        ActionKind.STOP_ALL_IDLE_SAFE: N_("Libera la memoria"),
+        ActionKind.IMAGE_REMOVE: N_("Rimuovi immagine"),
+        ActionKind.IMAGES_PRUNE_DANGLING: N_("Elimina immagini senza nome"),
+        ActionKind.IMAGES_PRUNE_UNUSED: N_("Elimina immagini inutilizzate"),
+        ActionKind.BUILDER_PRUNE: N_("Svuota cache di build"),
+        ActionKind.CONTAINERS_PRUNE_STOPPED: N_("Elimina container fermi"),
+        ActionKind.VOLUME_REMOVE: N_("Rimuovi volume"),
+        ActionKind.CACHE_CLEAN: N_("Pulisci cache"),
+        ActionKind.TRASH_EMPTY: N_("Svuota cestino"),
+        ActionKind.DEVDIR_DELETE: N_("Elimina cartella"),
+        ActionKind.DISK_FREE_SAFE: N_("Libera spazio"),
+        ActionKind.CONTAINER_START: N_("Riaccendi"),
+        ActionKind.RESTART_STOPPED: N_("Riaccendi"),
     }
 )
 
@@ -150,7 +150,7 @@ def activity_text(*, state: ActivityState, reason: str, elapsed_s: float | None)
 
 def button_label(*, kind: ActionKind) -> str:
     """Return the button label, the same for every risk: every action asks first (D7)."""
-    return ACTION_LABELS[kind]
+    return _(ACTION_LABELS[kind])
 
 
 def format_round_size(*, size: int) -> str:

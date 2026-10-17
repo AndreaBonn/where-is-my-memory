@@ -5,7 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from wimm.core.planning_disk import BUILD_CACHE_ID
-from wimm.i18n import _
+from wimm.i18n import N_, _
 from wimm.model.actions import (
     EXCLUDABLE_ACTIONS,
     ActionRequest,
@@ -22,7 +22,7 @@ from wimm.model.snapshot import ContainerMember, Group, ProcessMember, Snapshot
 from wimm.ui.dialogs.facts import entry_label, members_by_id
 
 LOGGER = logging.getLogger(__name__)
-CHANGED_NOTICE = "La situazione è cambiata: chiudi e riapri per vedere l'elenco aggiornato."
+CHANGED_NOTICE = N_("La situazione è cambiata: chiudi e riapri per vedere l'elenco aggiornato.")
 
 
 @dataclass(frozen=True, slots=True)
@@ -125,7 +125,7 @@ class ConfirmSession:
         if self._shows_every_step(plan=plan):
             self.plan, self.notice = plan, None
         else:
-            self.plan, self.notice = None, CHANGED_NOTICE
+            self.plan, self.notice = None, _(CHANGED_NOTICE)
 
     def _shows_every_step(self, *, plan: Plan) -> bool:
         shown = {entry.step_id for entry in self.entries}

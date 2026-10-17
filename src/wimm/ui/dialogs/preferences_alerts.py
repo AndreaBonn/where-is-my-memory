@@ -8,6 +8,7 @@ gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
 from wimm.ui.dialogs.preferences_model import NUMBER_FIELDS, raw_value
 from wimm.ui.dialogs.preferences_presets import (
     PRESET_KEYS,
@@ -18,7 +19,7 @@ from wimm.ui.dialogs.preferences_presets import (
 )
 from wimm.ui.dialogs.preferences_rows import Field
 
-TITLE = "Quanti avvisi vuoi ricevere?"
+TITLE = N_("Quanti avvisi vuoi ricevere?")
 LINE_SPACING = 8
 
 
@@ -34,14 +35,14 @@ class PresetPicker:
         row = Gtk.Box(halign=Gtk.Align.START)
         row.add_css_class("linked")
         for preset in PRESETS:
-            toggle = Gtk.ToggleButton(label=preset.name)
+            toggle = Gtk.ToggleButton(label=_(preset.name))
             toggle.connect("toggled", self._on_toggled, preset)
             self._toggles[preset.name] = toggle
             row.append(toggle)
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING)
         box.append(row)
         box.append(self.sentence)
-        self.group = Adw.PreferencesGroup(title=TITLE)
+        self.group = Adw.PreferencesGroup(title=_(TITLE))
         self.group.add(box)
         for key in PRESET_KEYS:
             fields[key].row.connect("notify::value", lambda *_a: self.refresh())

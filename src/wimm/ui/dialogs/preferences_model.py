@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 
 from wimm.config import FLOAT_FIELDS, RANGES
+from wimm.i18n import N_
 from wimm.model.enums import Category, Protection, protection_of
 
 SECONDS_PER_MINUTE = 60
@@ -54,77 +55,77 @@ class FieldGroup:
 _NUMBERS = (
     NumberField(
         "sample_interval_s",
-        "Controlla la memoria ogni (secondi)",
-        "Più spesso è più preciso, ma usa un po' più di processore",
+        N_("Controlla la memoria ogni (secondi)"),
+        N_("Più spesso è più preciso, ma usa un po' più di processore"),
     ),
     NumberField(
         "activity_window_s",
-        "Per decidere se è in uso, guarda gli ultimi (minuti)",
-        "Un programma è in uso se ha lavorato in questo tempo",
+        N_("Per decidere se è in uso, guarda gli ultimi (minuti)"),
+        N_("Un programma è in uso se ha lavorato in questo tempo"),
         factor=SECONDS_PER_MINUTE,
     ),
     NumberField(
         "cpu_active_threshold_pct",
-        "È fermo se usa meno del processore di (%)",
-        "Media sul tempo osservato",
+        N_("È fermo se usa meno del processore di (%)"),
+        N_("Media sul tempo osservato"),
         digits=1,
         step=0.1,
     ),
     NumberField(
         "net_active_threshold_bps",
-        "È fermo se scambia in rete meno di (kB al secondo)",
-        "Media sul tempo osservato",
+        N_("È fermo se scambia in rete meno di (kB al secondo)"),
+        N_("Media sul tempo osservato"),
         factor=BYTES_PER_KB,
         digits=1,
         step=0.1,
     ),
     NumberField(
         "notify_after_s",
-        "Avvisami se non lo usi da (minuti)",
-        "Prima di questo tempo non arriva nessun avviso",
+        N_("Avvisami se non lo usi da (minuti)"),
+        N_("Prima di questo tempo non arriva nessun avviso"),
         factor=SECONDS_PER_MINUTE,
     ),
     NumberField(
         "notify_min_bytes",
-        "Avvisami solo se libero almeno (MB)",
-        "Per i programmi più piccoli non arriva nessun avviso",
+        N_("Avvisami solo se libero almeno (MB)"),
+        N_("Per i programmi più piccoli non arriva nessun avviso"),
         factor=BYTES_PER_MIB,
         step=50,
     ),
     NumberField(
         "max_notifications_per_hour",
-        "Avvisi singoli in un'ora",
-        "Gli altri arrivano insieme in uno solo; memoria o disco pieni si segnalano sempre",
+        N_("Avvisi singoli in un'ora"),
+        N_("Gli altri arrivano insieme in uno solo; memoria o disco pieni si segnalano sempre"),
     ),
     NumberField(
         "pressure_warning_pct",
-        "Quasi pieno quando resta libero meno del (%)",
-        "Vale per la memoria e per il disco: da qui compare l'avviso",
+        N_("Quasi pieno quando resta libero meno del (%)"),
+        N_("Vale per la memoria e per il disco: da qui compare l'avviso"),
     ),
     NumberField(
         "pressure_critical_pct",
-        "Pieno quando resta libero meno del (%)",
-        "Deve essere minore della soglia precedente",
+        N_("Pieno quando resta libero meno del (%)"),
+        N_("Deve essere minore della soglia precedente"),
     ),
     NumberField(
         "terminate_timeout_s",
-        "Se non si chiude, proponi la chiusura forzata dopo (secondi)",
-        "Il tempo che un programma ha per chiudersi da solo",
+        N_("Se non si chiude, proponi la chiusura forzata dopo (secondi)"),
+        N_("Il tempo che un programma ha per chiudersi da solo"),
     ),
     NumberField(
         "devdirs_min_age_days",
-        "Proponi le cartelle non usate da almeno (giorni)",
-        "Le cartelle node_modules e .venv più recenti restano fuori",
+        N_("Proponi le cartelle non usate da almeno (giorni)"),
+        N_("Le cartelle node_modules e .venv più recenti restano fuori"),
     ),
     NumberField(
         "devdirs_max_depth",
-        "Cerca fino a questi livelli di sottocartelle",
-        "Più livelli trovano di più, ma la ricerca dura di più",
+        N_("Cerca fino a questi livelli di sottocartelle"),
+        N_("Più livelli trovano di più, ma la ricerca dura di più"),
     ),
     NumberField(
         "disk_scan_interval_s",
-        "Ricontrolla il disco ogni (ore)",
-        "Il controllo calcola quanto occupano cartelle e cache",
+        N_("Ricontrolla il disco ogni (ore)"),
+        N_("Il controllo calcola quanto occupano cartelle e cache"),
         factor=SECONDS_PER_HOUR,
     ),
 )
@@ -133,15 +134,15 @@ NUMBER_FIELDS: Mapping[str, NumberField] = {field.key: field for field in _NUMBE
 # R1: in view only what a non-expert changes; the rest behind "Impostazioni avanzate".
 ESSENTIAL_GROUPS = (
     FieldGroup(
-        "Avvisi",
-        "Quando ti avvisiamo di un programma acceso che non usi.",
+        N_("Avvisi"),
+        N_("Quando ti avvisiamo di un programma acceso che non usi."),
         ("notify_after_s", "notify_min_bytes", CATEGORIES_KEY),
     ),
 )
 ADVANCED_GROUPS = (
     FieldGroup(
-        "Come si capisce se un programma è in uso",
-        "Quanto spesso si controlla e quando un programma conta come fermo.",
+        N_("Come si capisce se un programma è in uso"),
+        N_("Quanto spesso si controlla e quando un programma conta come fermo."),
         (
             "sample_interval_s",
             "activity_window_s",
@@ -151,23 +152,23 @@ ADVANCED_GROUPS = (
         ),
     ),
     FieldGroup(
-        "Quanti avvisi",
-        "Il limite di avvisi, oltre a quanto scelto in Avvisi.",
+        N_("Quanti avvisi"),
+        N_("Il limite di avvisi, oltre a quanto scelto in Avvisi."),
         ("max_notifications_per_hour",),
     ),
     FieldGroup(
-        "Memoria e disco quasi pieni",
-        "Le soglie in percentuale di spazio libero.",
+        N_("Memoria e disco quasi pieni"),
+        N_("Le soglie in percentuale di spazio libero."),
         ("pressure_warning_pct", "pressure_critical_pct"),
     ),
     FieldGroup(
-        "Chiusura dei programmi",
-        "Quanto si aspetta e quali programmi non si toccano mai.",
+        N_("Chiusura dei programmi"),
+        N_("Quanto si aspetta e quali programmi non si toccano mai."),
         ("terminate_timeout_s", "extra_protected_names"),
     ),
     FieldGroup(
-        "Cartelle di sviluppo",
-        "Dove cercare node_modules e .venv e ogni quanto.",
+        N_("Cartelle di sviluppo"),
+        N_("Dove cercare node_modules e .venv e ogni quanto."),
         ("devdirs_roots", "devdirs_min_age_days", "devdirs_max_depth", "disk_scan_interval_s"),
     ),
 )

@@ -8,13 +8,14 @@ gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
 from wimm.model.enums import GroupId
 
-TITLE = "Programmi senza avvisi"
-DESCRIPTION = "Non ricevi avvisi per questi programmi. Il cambiamento vale subito."
-EMPTY_TEXT = "Nessun programma senza avvisi"
-UNIGNORE_LABEL = "Non ignorare più"
-INACTIVE_TEXT = "non attivo ora"
+TITLE = N_("Programmi senza avvisi")
+DESCRIPTION = N_("Non ricevi avvisi per questi programmi. Il cambiamento vale subito.")
+EMPTY_TEXT = N_("Nessun programma senza avvisi")
+UNIGNORE_LABEL = N_("Non ignorare più")
+INACTIVE_TEXT = N_("non attivo ora")
 
 
 class IgnoredGroups:
@@ -22,9 +23,9 @@ class IgnoredGroups:
 
     def __init__(self, *, source: Any) -> None:
         self._source = source
-        self.group = Adw.PreferencesGroup(title=TITLE, description=DESCRIPTION)
+        self.group = Adw.PreferencesGroup(title=_(TITLE), description=_(DESCRIPTION))
         self._rows: dict[GroupId, Adw.ActionRow] = {}
-        self._empty = Adw.ActionRow(title=EMPTY_TEXT, use_markup=False)
+        self._empty = Adw.ActionRow(title=_(EMPTY_TEXT), use_markup=False)
         snapshot = source.snapshot()
         names = {g.id: g.name for g in (() if snapshot is None else snapshot.groups)}
         for group_id in sorted(source.ignored_group_ids(), key=lambda gid: names.get(gid, gid)):
@@ -36,9 +37,10 @@ class IgnoredGroups:
         label = group_id if name is None else name
         row = Adw.ActionRow(title=label, use_markup=False)
         if name is None:
-            row.set_subtitle(INACTIVE_TEXT)
-        button = Gtk.Button(label=UNIGNORE_LABEL, valign=Gtk.Align.CENTER)
-        button.update_property([Gtk.AccessibleProperty.LABEL], [f"{UNIGNORE_LABEL}: {label}"])
+            row.set_subtitle(_(INACTIVE_TEXT))
+        unignore = _(UNIGNORE_LABEL)
+        button = Gtk.Button(label=unignore, valign=Gtk.Align.CENTER)
+        button.update_property([Gtk.AccessibleProperty.LABEL], [f"{unignore}: {label}"])
         button.connect("clicked", lambda *_a: self._unignore(group_id=group_id))
         row.add_suffix(button)
         self._rows[group_id] = row

@@ -6,6 +6,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk
 
+from wimm.i18n import _
 from wimm.model.actions import Plan
 from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import Snapshot
@@ -66,10 +67,10 @@ class ConfirmDialog(Adw.AlertDialog):
         self._phrase_box = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
         self._phrase_box.add_css_class("boxed-list")
         self._phrase_box.append(self._phrase)
-        self._phrase_hint = Gtk.Label(label=PHRASE_HINT, xalign=0, wrap=True)
+        self._phrase_hint = Gtk.Label(label=_(PHRASE_HINT), xalign=0, wrap=True)
         self._phrase_hint.add_css_class("dim-label")
         self.set_heading(dialog_title(kind=session.kind, subject=session.subject))
-        self.add_response(CANCEL_RESPONSE, CANCEL_LABEL)
+        self.add_response(CANCEL_RESPONSE, _(CANCEL_LABEL))
         self.add_response(CONFIRM_RESPONSE, confirm_label(kind=session.kind))
         self.set_close_response(CANCEL_RESPONSE)
         self.set_default_response(CANCEL_RESPONSE)
@@ -133,9 +134,9 @@ class ConfirmDialog(Adw.AlertDialog):
 
     def _body_text(self, *, plan: Plan | None) -> str:
         if plan is None:
-            return self._session.notice or EMPTY_TEXT
+            return self._session.notice or _(EMPTY_TEXT)
         if plan.request.kind is ActionKind.RESTART_STOPPED:
-            return RESTART_TEXT
+            return _(RESTART_TEXT)
         text = reclaim_text(
             ram=plan.estimated_reclaim_ram,
             disk=plan.estimated_reclaim_disk,

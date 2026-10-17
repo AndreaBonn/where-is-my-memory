@@ -557,3 +557,663 @@ msgstr "Docker is not available"
 #: src/wimm/service/errors.py:46
 msgid "L'elemento non esiste più"
 msgstr "The item no longer exists"
+
+#: src/wimm/ui/dialogs/facts.py:19
+msgid "Cosa succede"
+msgstr "What happens"
+
+#: src/wimm/ui/dialogs/facts.py:20
+msgid "Cosa resta"
+msgstr "What stays"
+
+#: src/wimm/ui/dialogs/facts.py:21
+msgid "Per riaccenderlo"
+msgstr "To start it again"
+
+#: src/wimm/ui/dialogs/facts.py:22
+msgid "I file salvati, i dati e le impostazioni."
+msgstr "Saved files, data and settings."
+
+#: src/wimm/ui/dialogs/facts.py:24
+msgid "I contenitori: con «Riaccendi» nel messaggio che compare dopo, se tutto va a buon fine."
+msgstr "Containers: with \"Start again\" in the message that appears afterwards, if all goes well."
+
+#: src/wimm/ui/dialogs/facts.py:26
+#, python-brace-format
+msgid "I programmi del terminale: con lo stesso comando, nella cartella {cwd}."
+msgstr "Terminal programs: with the same command, in the folder {cwd}."
+
+#: src/wimm/ui/dialogs/facts.py:27
+msgid "I programmi del terminale: con lo stesso comando di prima."
+msgstr "Terminal programs: with the same command as before."
+
+#: src/wimm/ui/dialogs/facts.py:28
+msgid "Le applicazioni: dal menu delle applicazioni, come al solito."
+msgstr "Applications: from the applications menu, as usual."
+
+#: src/wimm/ui/dialogs/facts.py:29
+msgid "Cache di build Docker"
+msgstr "Docker build cache"
+
+#: src/wimm/ui/dialogs/facts.py:30
+#, python-brace-format
+msgid "Immagine senza nome ({short})"
+msgstr "Unnamed image ({short})"
+
+#: src/wimm/ui/dialogs/facts.py:78
+#, python-brace-format
+msgid "Cache {name}"
+msgstr "{name} cache"
+
+#: src/wimm/ui/dialogs/outcome.py:14 src/wimm/ui/format.py:70
+msgid "Chiudi"
+msgstr "Close"
+
+#: src/wimm/ui/dialogs/outcome.py:15
+msgid "Esito"
+msgstr "Result"
+
+#: src/wimm/ui/dialogs/outcome.py:16 src/wimm/ui/format.py:69
+msgid "Forza chiusura"
+msgstr "Force close"
+
+#: src/wimm/ui/dialogs/preferences.py:26
+msgid "Preferenze"
+msgstr "Preferences"
+
+#: src/wimm/ui/dialogs/preferences.py:27
+msgid "Applica"
+msgstr "Apply"
+
+#: src/wimm/ui/dialogs/preferences.py:28
+msgid "Preferenze applicate."
+msgstr "Preferences applied."
+
+#: src/wimm/ui/dialogs/preferences.py:29
+msgid "Nessuna modifica."
+msgstr "No changes."
+
+#: src/wimm/ui/dialogs/preferences.py:30
+msgid "Alcuni valori non sono validi: restano quelli in uso."
+msgstr "Some values are not valid: the ones in use stay."
+
+#: src/wimm/ui/dialogs/preferences.py:31
+#, python-brace-format
+msgid "Impossibile salvare le preferenze: {reason}. Riprova."
+msgstr "Cannot save the preferences: {reason}. Try again."
+
+#: src/wimm/ui/dialogs/preferences.py:32
+msgid "Ripristina i valori consigliati"
+msgstr "Restore the recommended values"
+
+#: src/wimm/ui/dialogs/preferences.py:34
+msgid "Tornano come all'inizio anche i tipi di programma per cui ricevi avvisi; i programmi da non toccare e le cartelle in cui cercare restano come sono."
+msgstr "The kinds of program you get alerts for also go back to how they were at the start; the programs never to touch and the folders to search stay as they are."
+
+#: src/wimm/ui/dialogs/preferences.py:38
+msgid "Alcuni valori in Impostazioni avanzate non sono validi: restano quelli in uso."
+msgstr "Some values in Advanced settings are not valid: the ones in use stay."
+
+#: src/wimm/ui/dialogs/preferences.py:40
+msgid "Impostazioni avanzate"
+msgstr "Advanced settings"
+
+#: src/wimm/ui/dialogs/preferences.py:41
+#, python-brace-format
+msgid "Come si capisce se è in uso, soglie, chiusura e cartelle ({count} voci)"
+msgstr "How to tell if it is in use, thresholds, closing and folders ({count} items)"
+
+#: src/wimm/ui/dialogs/preferences.py:43
+msgid "Non disponibile su questo desktop: funziona solo con X11"
+msgstr "Not available on this desktop: it only works with X11"
+
+#: src/wimm/ui/dialogs/preferences_alerts.py:22
+msgid "Quanti avvisi vuoi ricevere?"
+msgstr "How many alerts do you want?"
+
+#: src/wimm/ui/dialogs/preferences_ignored.py:14
+msgid "Programmi senza avvisi"
+msgstr "Programs without alerts"
+
+#: src/wimm/ui/dialogs/preferences_ignored.py:15
+msgid "Non ricevi avvisi per questi programmi. Il cambiamento vale subito."
+msgstr "You get no alerts for these programs. The change takes effect at once."
+
+#: src/wimm/ui/dialogs/preferences_ignored.py:16
+msgid "Nessun programma senza avvisi"
+msgstr "No program without alerts"
+
+#: src/wimm/ui/dialogs/preferences_ignored.py:17
+msgid "Non ignorare più"
+msgstr "Stop ignoring"
+
+#: src/wimm/ui/dialogs/preferences_ignored.py:18
+msgid "non attivo ora"
+msgstr "not active now"
+
+#: src/wimm/ui/dialogs/preferences_model.py:58
+msgid "Controlla la memoria ogni (secondi)"
+msgstr "Check the memory every (seconds)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:59
+msgid "Più spesso è più preciso, ma usa un po' più di processore"
+msgstr "More often is more precise, but uses a bit more processor"
+
+#: src/wimm/ui/dialogs/preferences_model.py:63
+msgid "Per decidere se è in uso, guarda gli ultimi (minuti)"
+msgstr "To decide if it is in use, look at the last (minutes)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:64
+msgid "Un programma è in uso se ha lavorato in questo tempo"
+msgstr "A program is in use if it has worked during this time"
+
+#: src/wimm/ui/dialogs/preferences_model.py:69
+msgid "È fermo se usa meno del processore di (%)"
+msgstr "It is idle if it uses less processor than (%)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:70
+#: src/wimm/ui/dialogs/preferences_model.py:77
+msgid "Media sul tempo osservato"
+msgstr "Average over the observed time"
+
+#: src/wimm/ui/dialogs/preferences_model.py:76
+msgid "È fermo se scambia in rete meno di (kB al secondo)"
+msgstr "It is idle if it exchanges less over the network than (kB per second)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:84
+msgid "Avvisami se non lo usi da (minuti)"
+msgstr "Alert me if you have not used it for (minutes)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:85
+msgid "Prima di questo tempo non arriva nessun avviso"
+msgstr "No alert arrives before this time"
+
+#: src/wimm/ui/dialogs/preferences_model.py:90
+msgid "Avvisami solo se libero almeno (MB)"
+msgstr "Alert me only if it frees at least (MB)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:91
+msgid "Per i programmi più piccoli non arriva nessun avviso"
+msgstr "No alert arrives for smaller programs"
+
+#: src/wimm/ui/dialogs/preferences_model.py:97
+msgid "Avvisi singoli in un'ora"
+msgstr "Single alerts in an hour"
+
+#: src/wimm/ui/dialogs/preferences_model.py:98
+msgid "Gli altri arrivano insieme in uno solo; memoria o disco pieni si segnalano sempre"
+msgstr "The others arrive together in one; full memory or disk is always reported"
+
+#: src/wimm/ui/dialogs/preferences_model.py:102
+msgid "Quasi pieno quando resta libero meno del (%)"
+msgstr "Almost full when less than (%) is left free"
+
+#: src/wimm/ui/dialogs/preferences_model.py:103
+msgid "Vale per la memoria e per il disco: da qui compare l'avviso"
+msgstr "Applies to memory and disk: the alert appears from here"
+
+#: src/wimm/ui/dialogs/preferences_model.py:107
+msgid "Pieno quando resta libero meno del (%)"
+msgstr "Full when less than (%) is left free"
+
+#: src/wimm/ui/dialogs/preferences_model.py:108
+msgid "Deve essere minore della soglia precedente"
+msgstr "Must be lower than the previous threshold"
+
+#: src/wimm/ui/dialogs/preferences_model.py:112
+msgid "Se non si chiude, proponi la chiusura forzata dopo (secondi)"
+msgstr "If it does not close, offer a forced close after (seconds)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:113
+msgid "Il tempo che un programma ha per chiudersi da solo"
+msgstr "The time a program has to close by itself"
+
+#: src/wimm/ui/dialogs/preferences_model.py:117
+msgid "Proponi le cartelle non usate da almeno (giorni)"
+msgstr "Offer the folders not used for at least (days)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:118
+msgid "Le cartelle node_modules e .venv più recenti restano fuori"
+msgstr "The most recent node_modules and .venv folders are left out"
+
+#: src/wimm/ui/dialogs/preferences_model.py:122
+msgid "Cerca fino a questi livelli di sottocartelle"
+msgstr "Search down to this many levels of subfolders"
+
+#: src/wimm/ui/dialogs/preferences_model.py:123
+msgid "Più livelli trovano di più, ma la ricerca dura di più"
+msgstr "More levels find more, but the search takes longer"
+
+#: src/wimm/ui/dialogs/preferences_model.py:127
+msgid "Ricontrolla il disco ogni (ore)"
+msgstr "Check the disk again every (hours)"
+
+#: src/wimm/ui/dialogs/preferences_model.py:128
+msgid "Il controllo calcola quanto occupano cartelle e cache"
+msgstr "The check works out how much folders and caches take up"
+
+#: src/wimm/ui/dialogs/preferences_model.py:137
+msgid "Avvisi"
+msgstr "Alerts"
+
+#: src/wimm/ui/dialogs/preferences_model.py:138
+msgid "Quando ti avvisiamo di un programma acceso che non usi."
+msgstr "When we alert you about a running program you do not use."
+
+#: src/wimm/ui/dialogs/preferences_model.py:144
+msgid "Come si capisce se un programma è in uso"
+msgstr "How to tell if a program is in use"
+
+#: src/wimm/ui/dialogs/preferences_model.py:145
+msgid "Quanto spesso si controlla e quando un programma conta come fermo."
+msgstr "How often to check and when a program counts as idle."
+
+#: src/wimm/ui/dialogs/preferences_model.py:155
+msgid "Quanti avvisi"
+msgstr "How many alerts"
+
+#: src/wimm/ui/dialogs/preferences_model.py:156
+msgid "Il limite di avvisi, oltre a quanto scelto in Avvisi."
+msgstr "The alert limit, on top of what you chose in Alerts."
+
+#: src/wimm/ui/dialogs/preferences_model.py:160
+msgid "Memoria e disco quasi pieni"
+msgstr "Memory and disk almost full"
+
+#: src/wimm/ui/dialogs/preferences_model.py:161
+msgid "Le soglie in percentuale di spazio libero."
+msgstr "The thresholds as a percentage of free space."
+
+#: src/wimm/ui/dialogs/preferences_model.py:165
+msgid "Chiusura dei programmi"
+msgstr "Closing programs"
+
+#: src/wimm/ui/dialogs/preferences_model.py:166
+msgid "Quanto si aspetta e quali programmi non si toccano mai."
+msgstr "How long to wait and which programs are never touched."
+
+#: src/wimm/ui/dialogs/preferences_model.py:170
+msgid "Cartelle di sviluppo"
+msgstr "Development folders"
+
+#: src/wimm/ui/dialogs/preferences_model.py:171
+msgid "Dove cercare node_modules e .venv e ogni quanto."
+msgstr "Where to look for node_modules and .venv, and how often."
+
+#: src/wimm/ui/dialogs/preferences_presets.py:17
+msgid "Personalizzati: valgono i valori scelti qui sotto e nelle impostazioni avanzate."
+msgstr "Custom: the values chosen below and in the advanced settings apply."
+
+#: src/wimm/ui/dialogs/preferences_presets.py:36
+msgid "Pochi"
+msgstr "Few"
+
+#: src/wimm/ui/dialogs/preferences_presets.py:44
+msgid "Normali"
+msgstr "Normal"
+
+#: src/wimm/ui/dialogs/preferences_presets.py:52
+msgid "Tanti"
+msgstr "Many"
+
+#: src/wimm/ui/dialogs/preferences_presets.py:69
+#, python-brace-format
+msgid "{name}: ti avvisiamo se qualcosa resta acceso senza uso per {duration} e libera almeno {size} MB, fino a {times} avviso all'ora (gli altri insieme in uno solo)."
+msgid_plural "{name}: ti avvisiamo se qualcosa resta acceso senza uso per {duration} e libera almeno {size} MB, fino a {times} avvisi all'ora (gli altri insieme in uno solo)."
+msgstr[0] "{name}: we alert you if something stays on unused for {duration} and frees at least {size} MB, up to {times} alert an hour (the others together in one)."
+msgstr[1] "{name}: we alert you if something stays on unused for {duration} and frees at least {size} MB, up to {times} alerts an hour (the others together in one)."
+
+#: src/wimm/ui/dialogs/preferences_rows.py:31
+msgid "Conta come in uso il programma in primo piano"
+msgstr "Count the foreground program as in use"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:32
+msgid "Il programma della finestra che stai usando non viene proposto"
+msgstr "The program of the window you are using is not offered"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:35
+msgid "Avvisami per questi tipi di programma"
+msgstr "Alert me for these kinds of program"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:36
+msgid "Gli altri non mandano avvisi"
+msgstr "The others send no alerts"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:39
+msgid "Programmi da non toccare mai"
+msgstr "Programs never to touch"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:40
+msgid "Nomi dei processi separati da virgola, in aggiunta a quelli già protetti"
+msgstr "Process names separated by commas, in addition to the ones already protected"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:43
+msgid "Cartelle in cui cercare"
+msgstr "Folders to search"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:44
+msgid "Percorsi nella tua cartella personale, separati da virgola"
+msgstr "Paths inside your home folder, separated by commas"
+
+#: src/wimm/ui/dialogs/session.py:25
+msgid "La situazione è cambiata: chiudi e riapri per vedere l'elenco aggiornato."
+msgstr "Things have changed: close and reopen to see the updated list."
+
+#: src/wimm/ui/dialogs/text.py:11
+#, python-brace-format
+msgid "Terminare {subject}?"
+msgstr "Terminate {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:12
+#, python-brace-format
+msgid "Forzare la chiusura di {subject}?"
+msgstr "Force {subject} to close?"
+
+#: src/wimm/ui/dialogs/text.py:13
+#, python-brace-format
+msgid "Chiudere {subject}?"
+msgstr "Close {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:14 src/wimm/ui/dialogs/text.py:16
+#, python-brace-format
+msgid "Fermare {subject}?"
+msgstr "Stop {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:15
+#, python-brace-format
+msgid "Rimuovere {subject}?"
+msgstr "Remove {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:17
+#, python-brace-format
+msgid "Spegnere il progetto {subject}?"
+msgstr "Shut down the project {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:18
+#, python-brace-format
+msgid "Spegnere il progetto {subject} e rimuovere i volumi?"
+msgstr "Shut down the project {subject} and remove the volumes?"
+
+#: src/wimm/ui/dialogs/text.py:19
+msgid "Fermare i programmi che non usi?"
+msgstr "Stop the programs you do not use?"
+
+#: src/wimm/ui/dialogs/text.py:20
+#, python-brace-format
+msgid "Rimuovere l'immagine {subject}?"
+msgstr "Remove the image {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:21
+msgid "Eliminare le immagini senza nome?"
+msgstr "Delete the unnamed images?"
+
+#: src/wimm/ui/dialogs/text.py:22
+msgid "Eliminare le immagini inutilizzate?"
+msgstr "Delete the unused images?"
+
+#: src/wimm/ui/dialogs/text.py:23
+msgid "Svuotare la cache di build?"
+msgstr "Empty the build cache?"
+
+#: src/wimm/ui/dialogs/text.py:24
+msgid "Eliminare i container fermi?"
+msgstr "Delete the stopped containers?"
+
+#: src/wimm/ui/dialogs/text.py:25
+#, python-brace-format
+msgid "Rimuovere il volume {subject}?"
+msgstr "Remove the volume {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:26
+#, python-brace-format
+msgid "Pulire la cache {subject}?"
+msgstr "Clean the {subject} cache?"
+
+#: src/wimm/ui/dialogs/text.py:27
+msgid "Svuotare il cestino?"
+msgstr "Empty the trash?"
+
+#: src/wimm/ui/dialogs/text.py:28
+#, python-brace-format
+msgid "Eliminare la cartella {subject}?"
+msgstr "Delete the folder {subject}?"
+
+#: src/wimm/ui/dialogs/text.py:29
+msgid "Liberare lo spazio che si ricrea da solo?"
+msgstr "Free the space that is recreated by itself?"
+
+#: src/wimm/ui/dialogs/text.py:30
+#, python-brace-format
+msgid "Riaccendere {subject}?"
+msgstr "Start {subject} again?"
+
+#: src/wimm/ui/dialogs/text.py:31
+msgid "Riaccendere i contenitori appena fermati?"
+msgstr "Start the containers you just stopped again?"
+
+#: src/wimm/ui/dialogs/text.py:34
+msgid "Annulla"
+msgstr "Cancel"
+
+#: src/wimm/ui/dialogs/text.py:35
+msgid "Nessuna voce selezionata: non c'è nulla da eseguire."
+msgstr "No item selected: there is nothing to run."
+
+#: src/wimm/ui/dialogs/text.py:37
+msgid "Ripartono come prima e tornano a usare la loro memoria."
+msgstr "They start as before and use their memory again."
+
+#: src/wimm/ui/dialogs/text.py:38
+msgid "Quanto si libera non si può stimare prima."
+msgstr "How much is freed cannot be estimated beforehand."
+
+#: src/wimm/ui/dialogs/text.py:39
+msgid "In tutto liberi circa"
+msgstr "In total you free about"
+
+#: src/wimm/ui/dialogs/text.py:40
+msgid "Liberi circa"
+msgstr "You free about"
+
+#: src/wimm/ui/dialogs/text.py:43
+msgid "questi elementi"
+msgstr "these items"
+
+#: src/wimm/ui/dialogs/text.py:45
+msgid "Ti chiediamo di scrivere il nome perché questa azione cancella dati in modo definitivo: serve a evitare un clic per sbaglio."
+msgstr "We ask you to type the name because this action deletes data for good: it avoids a click by mistake."
+
+#: src/wimm/ui/dialogs/text.py:62
+#, python-brace-format
+msgid "Scrivi {phrase} per confermare"
+msgstr "Type {phrase} to confirm"
+
+#: src/wimm/ui/dialogs/text.py:70
+#, python-brace-format
+msgid "{prefix} {ram} di memoria e {disk} di spazio sul disco."
+msgstr "{prefix} {ram} of memory and {disk} of disk space."
+
+#: src/wimm/ui/dialogs/text.py:73
+#, python-brace-format
+msgid "{prefix} {ram} di memoria."
+msgstr "{prefix} {ram} of memory."
+
+#: src/wimm/ui/dialogs/text.py:75
+#, python-brace-format
+msgid "{prefix} {disk} di spazio sul disco."
+msgstr "{prefix} {disk} of disk space."
+
+#: src/wimm/ui/dialogs/text.py:83
+#, python-brace-format
+msgid "Nella lista conta {listed}: il resto è di parti che non si fermano da qui."
+msgstr "The list counts {listed}: the rest belongs to parts that cannot be stopped from here."
+
+#: src/wimm/ui/dialogs/tray_help.py:7
+msgid "L'icona nella barra richiede l'estensione AppIndicator di Ubuntu"
+msgstr "The icon in the bar needs the Ubuntu AppIndicator extension"
+
+#: src/wimm/ui/dialogs/tray_help.py:8
+msgid "Come si attiva"
+msgstr "How to turn it on"
+
+#: src/wimm/ui/dialogs/tray_help.py:9
+msgid "Come far comparire l'icona"
+msgstr "How to make the icon appear"
+
+#: src/wimm/ui/dialogs/tray_help.py:13
+msgid ""
+"1. Apri l'app «Estensioni» dal menu delle applicazioni.\n"
+"2. Attiva l'interruttore accanto a «Ubuntu AppIndicators».\n"
+"3. L'icona compare in alto a destra entro pochi secondi.\n"
+"\n"
+"Se l'app «Estensioni» non c'è, scrivi nel Terminale:"
+msgstr ""
+"1. Open the \"Extensions\" app from the applications menu.\n"
+"2. Turn on the switch next to \"Ubuntu AppIndicators\".\n"
+"3. The icon appears at the top right within a few seconds.\n"
+"\n"
+"If the \"Extensions\" app is not there, type this in the Terminal:"
+
+#: src/wimm/ui/dialogs/tray_help.py:21 src/wimm/ui/dialogs/welcome.py:19
+msgid "Ho capito"
+msgstr "Got it"
+
+#: src/wimm/ui/dialogs/welcome.py:10
+msgid "Ciao! Ti aiuto a tenere il computer leggero"
+msgstr "Hi! I help you keep your computer light"
+
+#: src/wimm/ui/dialogs/welcome.py:13
+msgid ""
+"• Guardo cosa occupa la memoria e lo spazio sul disco.\n"
+"• Ti avviso quando qualcosa resta acceso senza che tu lo usi.\n"
+"• Non chiudo mai niente da solo: decidi tu, e prima vedi cosa succede.\n"
+"• Di solito mi trovi in alto a destra, nella mia icona."
+msgstr ""
+"• I look at what takes up memory and disk space.\n"
+"• I alert you when something stays on without you using it.\n"
+"• I never close anything by myself: you decide, and you see what will happen first.\n"
+"• You can usually find me at the top right, in my icon."
+
+#: src/wimm/ui/format.py:68
+msgid "Termina"
+msgstr "End"
+
+#: src/wimm/ui/format.py:71 src/wimm/ui/format.py:73
+msgid "Ferma"
+msgstr "Stop"
+
+#: src/wimm/ui/format.py:72
+msgid "Rimuovi"
+msgstr "Remove"
+
+#: src/wimm/ui/format.py:74
+msgid "Spegni il progetto"
+msgstr "Shut down the project"
+
+#: src/wimm/ui/format.py:75
+msgid "Spegni e rimuovi i volumi"
+msgstr "Shut down and remove the volumes"
+
+#: src/wimm/ui/format.py:76
+msgid "Libera la memoria"
+msgstr "Free the memory"
+
+#: src/wimm/ui/format.py:77
+msgid "Rimuovi immagine"
+msgstr "Remove image"
+
+#: src/wimm/ui/format.py:78
+msgid "Elimina immagini senza nome"
+msgstr "Delete unnamed images"
+
+#: src/wimm/ui/format.py:79
+msgid "Elimina immagini inutilizzate"
+msgstr "Delete unused images"
+
+#: src/wimm/ui/format.py:80
+msgid "Svuota cache di build"
+msgstr "Empty the build cache"
+
+#: src/wimm/ui/format.py:81
+msgid "Elimina container fermi"
+msgstr "Delete stopped containers"
+
+#: src/wimm/ui/format.py:82
+msgid "Rimuovi volume"
+msgstr "Remove volume"
+
+#: src/wimm/ui/format.py:83
+msgid "Pulisci cache"
+msgstr "Clean the cache"
+
+#: src/wimm/ui/format.py:84
+msgid "Svuota cestino"
+msgstr "Empty the trash"
+
+#: src/wimm/ui/format.py:85
+msgid "Elimina cartella"
+msgstr "Delete folder"
+
+#: src/wimm/ui/format.py:86
+msgid "Libera spazio"
+msgstr "Free up space"
+
+#: src/wimm/ui/format.py:87 src/wimm/ui/format.py:88
+msgid "Riaccendi"
+msgstr "Start again"
+
+#: src/wimm/ui/outcome.py:14
+msgid "Fatto"
+msgstr "Done"
+
+#: src/wimm/ui/outcome.py:15
+msgid "Alcune operazioni non sono riuscite"
+msgstr "Some operations failed"
+
+#: src/wimm/ui/outcome.py:16
+msgid "Un processo non ha risposto alla chiusura"
+msgstr "A process did not answer the close request"
+
+#: src/wimm/ui/outcome.py:17
+#, python-brace-format
+msgid "Passo {order}"
+msgstr "Step {order}"
+
+#: src/wimm/ui/outcome.py:20
+msgid "Chiuso"
+msgstr "Closed"
+
+#: src/wimm/ui/outcome.py:21
+msgid "Già chiuso"
+msgstr "Already closed"
+
+#: src/wimm/ui/outcome.py:22
+msgid "Non risponde"
+msgstr "Not responding"
+
+#: src/wimm/ui/outcome.py:23
+msgid "Non riuscito"
+msgstr "Failed"
+
+#: src/wimm/ui/outcome.py:28
+msgid "Già acceso"
+msgstr "Already running"
+
+#: src/wimm/ui/outcome.py:28
+msgid "Riacceso"
+msgstr "Started again"
+
+#: src/wimm/ui/outcome.py:79 src/wimm/ui/outcome.py:91
+#, python-brace-format
+msgid "Liberati {size} di disco"
+msgstr "Freed {size} of disk"
+
+#: src/wimm/ui/outcome.py:87
+#, python-brace-format
+msgid "Liberati {ram} di RAM e {disk} di disco"
+msgstr "Freed {ram} of RAM and {disk} of disk"
+
+#: src/wimm/ui/outcome.py:89
+#, python-brace-format
+msgid "Liberati {size} di RAM"
+msgstr "Freed {size} of RAM"
