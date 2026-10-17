@@ -52,7 +52,7 @@ def test_last_scan_text_in_english() -> None:
     today = datetime(2026, 10, 16, 15, 0, tzinfo=LOCAL)
     later = datetime(2026, 10, 18, 15, 0, tzinfo=LOCAL)
     assert last_scan_text(report=report(), now=today) == "Last check at 14:00"
-    assert last_scan_text(report=report(), now=later) == "Last check on 16/10 at 14:00"
+    assert last_scan_text(report=report(), now=later) == "Last check on 10/16 at 14:00"
     assert last_scan_text(report=None, now=today) == "No check yet"
 
 

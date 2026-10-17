@@ -11,15 +11,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/wimm/app.py:264
+#: src/wimm/app.py:265
 msgid "Avvia senza aprire la finestra"
 msgstr "Start without opening the window"
 
-#: src/wimm/app.py:265
+#: src/wimm/app.py:266
 msgid "Mostra un gruppo"
 msgstr "Show a group"
 
-#: src/wimm/app.py:266
+#: src/wimm/app.py:267
 msgid "Mostra la versione"
 msgstr "Show the version"
 
@@ -188,8 +188,8 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:34 src/wimm/ui/disk_view.py:21
-#: src/wimm/ui/disk_view.py:95
+#: src/wimm/core/planning_disk.py:34 src/wimm/ui/disk_view.py:22
+#: src/wimm/ui/disk_view.py:96
 msgid "Cestino"
 msgstr "Trash"
 
@@ -833,11 +833,11 @@ msgstr "Stop ignoring"
 msgid "non attivo ora"
 msgstr "not active now"
 
-#: src/wimm/ui/dialogs/preferences_language.py:13
+#: src/wimm/ui/dialogs/preferences_language.py:15
 msgid "Lingua"
 msgstr "Language"
 
-#: src/wimm/ui/dialogs/preferences_language.py:14
+#: src/wimm/ui/dialogs/preferences_language.py:16
 msgid "La lingua di finestra, menu e notifiche. Il cambio vale subito."
 msgstr "The language of the window, menus and notifications. The change applies at once."
 
@@ -1331,51 +1331,51 @@ msgstr "Free {size} with no risk"
 msgid "Puoi liberare fino a {size}"
 msgstr "You can free up to {size}"
 
-#: src/wimm/ui/disk_view.py:15 src/wimm/ui/pages/disk.py:17
+#: src/wimm/ui/disk_view.py:16 src/wimm/ui/pages/disk.py:17
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
-#: src/wimm/ui/disk_view.py:20
+#: src/wimm/ui/disk_view.py:21
 msgid "Miniature"
 msgstr "Thumbnails"
 
-#: src/wimm/ui/disk_view.py:31
+#: src/wimm/ui/disk_view.py:32
 #, python-brace-format
 msgid "Ultimo controllo alle {time}"
 msgstr "Last check at {time}"
 
-#: src/wimm/ui/disk_view.py:32
+#: src/wimm/ui/disk_view.py:33
 #, python-brace-format
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:55
+#: src/wimm/ui/disk_view.py:56
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:76
+#: src/wimm/ui/disk_view.py:77
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:82
+#: src/wimm/ui/disk_view.py:83
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:93
+#: src/wimm/ui/disk_view.py:94
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:93
+#: src/wimm/ui/disk_view.py:94
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:95
+#: src/wimm/ui/disk_view.py:96
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 
@@ -1640,6 +1640,12 @@ msgstr "in use"
 msgid "non in uso {elapsed}"
 msgstr "not in use {elapsed}"
 
+#. TRANSLATORS: strftime pattern of a day without the year; English puts the month first.
+#: src/wimm/ui/format.py:167
+#, no-python-format
+msgid "%d/%m"
+msgstr "%m/%d"
+
 #: src/wimm/ui/outcome.py:14
 msgid "Fatto"
 msgstr "Done"
@@ -1898,39 +1904,39 @@ msgid_plural "Ferma {names}: non li usi e non perdi nulla."
 msgstr[0] "Stop {names}: you're not using it and you lose nothing."
 msgstr[1] "Stop {names}: you're not using them and you lose nothing."
 
-#: src/wimm/ui/viewmodel.py:38
+#: src/wimm/ui/viewmodel.py:39
 msgid "Nessuna azione"
 msgstr "No action"
 
-#: src/wimm/ui/viewmodel.py:39
+#: src/wimm/ui/viewmodel.py:40
 msgid "Niente da liberare: il resto è in uso o ancora in osservazione."
 msgstr "Nothing to free: the rest is in use or still being watched."
 
-#: src/wimm/ui/viewmodel.py:40
+#: src/wimm/ui/viewmodel.py:41
 msgid "Nessun programma corrisponde ai filtri."
 msgstr "No program matches the filters."
 
-#: src/wimm/ui/viewmodel.py:41
+#: src/wimm/ui/viewmodel.py:42
 msgid "Tutto in ordine"
 msgstr "All clear"
 
-#: src/wimm/ui/viewmodel.py:43
+#: src/wimm/ui/viewmodel.py:44
 msgid "Non c'è niente acceso che si possa chiudere. Ti avvisiamo noi se qualcosa resta acceso senza motivo."
 msgstr "Nothing is running that can be closed. We'll tell you if something stays on for no reason."
 
-#: src/wimm/ui/viewmodel.py:137
+#: src/wimm/ui/viewmodel.py:138
 #, python-brace-format
 msgid "porta {ports}"
 msgid_plural "porte {ports}"
 msgstr[0] "port {ports}"
 msgstr[1] "ports {ports}"
 
-#: src/wimm/ui/viewmodel.py:148
+#: src/wimm/ui/viewmodel.py:149
 #, python-brace-format
 msgid "avvisi in pausa fino alle {time}"
 msgstr "alerts paused until {time}"
 
-#: src/wimm/ui/viewmodel.py:150
+#: src/wimm/ui/viewmodel.py:151
 #, python-brace-format
 msgid "avvisi in pausa fino al {date} alle {time}"
 msgstr "alerts paused until {date} at {time}"

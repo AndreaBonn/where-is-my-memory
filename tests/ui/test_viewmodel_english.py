@@ -97,7 +97,7 @@ def test_snooze_text_in_english(snapshot: Snapshot, now: datetime) -> None:
     }
 
     assert rows["future"].snoozed_text == "alerts paused until 11:30"
-    assert rows["tomorrow"].snoozed_text == "alerts paused until 17/10 at 14:30"
+    assert rows["tomorrow"].snoozed_text == "alerts paused until 10/17 at 14:30"
 
 
 def test_empty_states_in_english(snapshot: Snapshot) -> None:

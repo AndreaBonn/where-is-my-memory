@@ -11,6 +11,7 @@ from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import ActionSpec, DiskRowView, DiskSectionView, make_row, more_text
 from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, SECTION_TIERS
 from wimm.ui.disk_view_docker import docker_sections
+from wimm.ui.format import short_date
 
 NO_SCAN_TEXT = N_("Nessun controllo ancora")
 CACHE_TITLES = {
@@ -30,7 +31,7 @@ def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:
     if local.date() == now.astimezone().date():
         return _("Ultimo controllo alle {time}").format(time=f"{local:%H:%M}")
     return _("Ultimo controllo il {date} alle {time}").format(
-        date=f"{local:%d/%m}", time=f"{local:%H:%M}"
+        date=short_date(moment=local), time=f"{local:%H:%M}"
     )
 
 

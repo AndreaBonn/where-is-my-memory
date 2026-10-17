@@ -203,3 +203,11 @@ def test_format_clock_compares_days_in_the_system_time_zone() -> None:
     value = datetime(2026, 10, 16, 23, 30, tzinfo=UTC)
     assert format_clock(value=value, now=now) == "01:30"
     assert format_clock(value=value - timedelta(hours=2), now=now) == "16/10 23:30"
+
+
+def test_short_date_puts_the_day_first_in_italian() -> None:
+    from datetime import datetime
+
+    from wimm.ui.format import short_date
+
+    assert short_date(moment=datetime(2026, 10, 16, 9, 5)) == "16/10"

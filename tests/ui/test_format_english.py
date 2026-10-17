@@ -65,3 +65,22 @@ def test_the_tables_keep_the_italian_source_so_that_identities_do_not_move() -> 
 def test_button_labels_are_english() -> None:
     assert button_label(kind=ActionKind.CONTAINER_STOP) == "Stop"
     assert button_label(kind=ActionKind.STOP_ALL_IDLE_SAFE) == "Free the memory"
+
+
+def test_short_date_puts_the_month_first_in_english() -> None:
+    from datetime import datetime
+
+    from wimm.ui.format import short_date
+
+    assert short_date(moment=datetime(2026, 10, 16, 9, 5)) == "10/16"
+
+
+def test_format_clock_on_another_day_puts_the_month_first() -> None:
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+
+    from wimm.ui.format import format_clock
+
+    rome = ZoneInfo("Europe/Rome")
+    now = datetime(2026, 10, 16, 9, 0, tzinfo=rome)
+    assert format_clock(value=datetime(2026, 10, 15, 23, 5, tzinfo=rome), now=now) == "10/15 23:05"

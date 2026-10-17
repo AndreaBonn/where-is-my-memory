@@ -128,13 +128,15 @@ def fold_text(*, text: str) -> str:
 
 
 def format_clock(*, value: datetime, now: datetime) -> str:
-    """Format a time in the system time zone: ``HH:MM`` on today's date, else ``DD/MM HH:MM``.
+    """Format a time in the system time zone: ``HH:MM`` today, else with the short date too.
 
     The service clock is UTC, so the zone of ``now`` says nothing about the user's.
     """
     local = value.astimezone()
-    pattern = "%H:%M" if local.date() == now.astimezone().date() else "%d/%m %H:%M"
-    return local.strftime(pattern)
+    time = local.strftime("%H:%M")
+    if local.date() == now.astimezone().date():
+        return time
+    return f"{short_date(moment=local)} {time}"
 
 
 def activity_text(*, state: ActivityState, reason: str, elapsed_s: float | None) -> str:
@@ -160,3 +162,13 @@ def format_round_size(*, size: int) -> str:
     if size < ROUND_FROM_BYTES:
         return format_size(size=size)
     return f"{(2 * size + BYTES_PER_GB) // (2 * BYTES_PER_GB)} GB"
+
+
+# TRANSLATORS: strftime pattern of a day without the year; English puts the month first.
+# xgettext: no-python-format
+SHORT_DATE = N_("%d/%m")
+
+
+def short_date(*, moment: datetime) -> str:
+    """A day without the year in the order of the active language (``16/10``, ``10/16``)."""
+    return moment.strftime(_(SHORT_DATE))

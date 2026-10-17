@@ -21,6 +21,7 @@ from .format import (
     fold_text,
     format_clock,
     format_size,
+    short_date,
 )
 from .plain import friendly_container_name, friendly_process_name, plain_reason, titled_name
 from .summary import build_summary as build_summary
@@ -148,7 +149,7 @@ def _snooze(*, group: Group, now: datetime) -> tuple[datetime | None, str | None
         text = _("avvisi in pausa fino alle {time}").format(time=f"{local:%H:%M}")
     else:
         text = _("avvisi in pausa fino al {date} alle {time}").format(
-            date=f"{local:%d/%m}", time=f"{local:%H:%M}"
+            date=short_date(moment=local), time=f"{local:%H:%M}"
         )
     return until, text
 
