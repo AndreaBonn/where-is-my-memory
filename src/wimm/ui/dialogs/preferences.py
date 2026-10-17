@@ -1,6 +1,7 @@
 """The preferences dialog (RF-50): edits are validated and saved by `AppService.update_config`."""
 
 import logging
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -10,11 +11,14 @@ gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
 from gi.repository import Adw, Gtk
 
+from wimm.collectors.foreground import X11_SESSION
 from wimm.config import config_to_raw
 from wimm.model.errors import WimmError
 from wimm.paths import UserPaths
+from wimm.ui.dialogs.preferences_alerts import PresetPicker
 from wimm.ui.dialogs.preferences_ignored import IgnoredGroups, can_unignore
-from wimm.ui.dialogs.preferences_model import GROUPS, collect_changes
+from wimm.ui.dialogs.preferences_model import ADVANCED_GROUPS, ESSENTIAL_GROUPS, collect_changes
+from wimm.ui.dialogs.preferences_presets import recommended_values
 from wimm.ui.dialogs.preferences_rows import ERROR_CLASS, Field, build_field
 
 LOGGER = logging.getLogger(__name__)
@@ -24,6 +28,18 @@ SAVED_TEXT = "Preferenze applicate."
 NO_CHANGES_TEXT = "Nessuna modifica."
 INVALID_TEXT = "Alcuni valori non sono validi: restano quelli in uso."
 SAVE_FAILED_TEXT = "Impossibile salvare le preferenze: {reason}. Riprova."
+RESET_LABEL = "Ripristina i valori consigliati"
+RESET_HINT = (
+    "Tornano come all'inizio anche i tipi di programma per cui ricevi avvisi; i programmi da "
+    "non toccare e le cartelle in cui cercare restano come sono."
+)
+INVALID_ADVANCED_TEXT = (
+    "Alcuni valori in Impostazioni avanzate non sono validi: restano quelli in uso."
+)
+ADVANCED_TITLE = "Impostazioni avanzate"
+ADVANCED_SUBTITLE = "Come si capisce se è in uso, soglie, chiusura e cartelle ({count} voci)"
+FOREGROUND_KEY = "foreground_tracking"
+NO_X11_TEXT = "Non disponibile su questo desktop: funziona solo con X11"
 STATUS_SPACING = 12
 
 
@@ -35,25 +51,36 @@ class PreferencesDialog(Adw.PreferencesDialog):
     midway through an edit that is valid as a whole.
     """
 
-    def __init__(self, *, source: Any, paths: UserPaths, home: Path) -> None:
+    def __init__(
+        self, *, source: Any, paths: UserPaths, home: Path, session_type: str | None = None
+    ) -> None:
         super().__init__(title=TITLE, search_enabled=False)
         self._source, self._paths, self._home = source, paths, home
         self._config = source.config()
         self.fields: dict[str, Field] = {}
-        self._status = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self._statuses: list[Gtk.Label] = []
         page = Adw.PreferencesPage()
-        for group in GROUPS:
-            page.add(self._build_group(group=group))
+        essentials = [self._build_group(group=group) for group in ESSENTIAL_GROUPS]
+        self.advanced = self._build_advanced()
+        self._presets = PresetPicker(fields=self.fields)
+        for group in (self._presets.group, *essentials, self._build_advanced_link()):
+            page.add(group)
         if can_unignore(source=source):
             page.add(IgnoredGroups(source=source).group)
-        page.add(self._build_apply_group())
+        page.add(self._build_apply_group(with_reset=True))
         self.add(page)
+        self._limit_foreground(session_type=session_type)
         self._load_all()
+
+    @property
+    def preset_text(self) -> str:
+        """R3: what the chosen alert level means, or that the values are set by hand."""
+        return self._presets.sentence.get_label()
 
     @property
     def status_text(self) -> str:
         """The message under the fields: saved, invalid values or a save failure."""
-        return self._status.get_label()
+        return self._statuses[0].get_label()
 
     def _build_group(self, *, group: Any) -> Adw.PreferencesGroup:
         widget = Adw.PreferencesGroup(title=group.title, description=group.description)
@@ -62,29 +89,85 @@ class PreferencesDialog(Adw.PreferencesDialog):
             widget.add(self.fields[key].row)
         return widget
 
-    def _build_apply_group(self) -> Adw.PreferencesGroup:
+    def _build_advanced(self) -> Adw.NavigationPage:
+        """R1: the measuring, threshold, closing and folder settings, one level down."""
+        page = Adw.PreferencesPage()
+        for group in ADVANCED_GROUPS:
+            page.add(self._build_group(group=group))
+        page.add(self._build_apply_group(with_reset=False))
+        view = Adw.ToolbarView(content=page)
+        view.add_top_bar(Adw.HeaderBar())
+        return Adw.NavigationPage(title=ADVANCED_TITLE, child=view)
+
+    def _build_advanced_link(self) -> Adw.PreferencesGroup:
+        count = sum(len(group.keys) for group in ADVANCED_GROUPS)
+        self.advanced_row = Adw.ActionRow(
+            title=ADVANCED_TITLE, subtitle=ADVANCED_SUBTITLE.format(count=count), activatable=True
+        )
+        self.advanced_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+        self.advanced_row.connect("activated", lambda *_a: self.push_subpage(self.advanced))
+        group = Adw.PreferencesGroup()
+        group.add(self.advanced_row)
+        return group
+
+    def _build_apply_group(self, *, with_reset: bool) -> Adw.PreferencesGroup:
+        group = Adw.PreferencesGroup()
+        status = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self._statuses.append(status)
         button = Gtk.Button(label=APPLY_LABEL, halign=Gtk.Align.END)
         button.add_css_class("suggested-action")
         button.connect("clicked", lambda *_a: self.apply())
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=STATUS_SPACING)
-        box.append(self._status)
+        box.append(status)
+        if with_reset:
+            self.reset_button = Gtk.Button(label=RESET_LABEL, halign=Gtk.Align.START)
+            self.reset_button.connect("clicked", lambda *_a: self.reset())
+            hint = Gtk.Label(label=RESET_HINT, xalign=0, wrap=True)
+            hint.add_css_class("caption")
+            hint.add_css_class("dim-label")
+            box.append(self.reset_button)
+            box.append(hint)
         box.append(button)
-        group = Adw.PreferencesGroup()
         group.add(box)
         return group
+
+    def _limit_foreground(self, *, session_type: str | None) -> None:
+        """R5: following the foreground window works only on X11; elsewhere say so."""
+        if session_type == X11_SESSION:
+            return
+        item = self.fields[FOREGROUND_KEY]
+        item.subtitle = NO_X11_TEXT
+        item.row.set_subtitle(NO_X11_TEXT)
+        item.row.set_sensitive(False)
 
     def _load_all(self) -> None:
         raw = config_to_raw(config=self._config)
         for key, item in self.fields.items():
             item.load(raw[key])
+        self._presets.refresh()
+
+    def reset(self) -> None:
+        """R4: put back the recommended values and apply them at once.
+
+        Names and folders keep the value in use, even an edit not applied yet, and an
+        option the session cannot use keeps its value too.
+        """
+        raw = config_to_raw(config=self._config)
+        for key, item in self.fields.items():
+            item.load(raw[key])
+        for key, value in recommended_values().items():
+            if self.fields[key].row.get_sensitive():
+                self.fields[key].load(value)
+        self.apply()
 
     def _say(self, *, text: str, is_error: bool) -> None:
-        self._status.set_label(text)
-        self._status.set_visible(True)
-        if is_error:
-            self._status.add_css_class(ERROR_CLASS)
-        else:
-            self._status.remove_css_class(ERROR_CLASS)
+        for status in self._statuses:
+            status.set_label(text)
+            status.set_visible(True)
+            if is_error:
+                status.add_css_class(ERROR_CLASS)
+            else:
+                status.remove_css_class(ERROR_CLASS)
 
     def _save_failed(self, *, reason: str) -> None:
         LOGGER.error("Cannot save the preferences: %s", reason)
@@ -113,4 +196,13 @@ class PreferencesDialog(Adw.PreferencesDialog):
             if key in self.fields:
                 self.fields[key].show_error(message=message)
         failed = bool(result.field_errors)
-        self._say(text=INVALID_TEXT if failed else SAVED_TEXT, is_error=failed)
+        self._say(text=self._result_text(errors=result.field_errors), is_error=failed)
+
+    def _result_text(self, *, errors: Mapping[str, str]) -> str:
+        """Saved, or invalid; an error on the advanced page is named from the main one."""
+        if not errors:
+            return SAVED_TEXT
+        hidden = any(
+            self.fields[key].row.is_ancestor(self.advanced) for key in errors if key in self.fields
+        )
+        return INVALID_ADVANCED_TEXT if hidden else INVALID_TEXT

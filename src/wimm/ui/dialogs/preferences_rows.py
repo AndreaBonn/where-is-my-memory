@@ -24,17 +24,21 @@ from wimm.ui.format import CATEGORY_LABELS
 ERROR_CLASS = "error"
 ENTRY_WIDTH_CHARS = 30
 PAGE_STEP_FACTOR = 10
+# R2: titles as sentences, subtitles that say what changes for the user.
 TEXTS = {
     "foreground_tracking": (
-        "Segui la finestra in primo piano",
-        "Il gruppo con la finestra in primo piano conta come in uso (solo su X11)",
+        "Conta come in uso il programma in primo piano",
+        "Il programma della finestra che stai usando non viene proposto",
     ),
-    CATEGORIES_KEY: ("Categorie notificate", "Scegli per quali categorie ricevere notifiche"),
+    CATEGORIES_KEY: ("Avvisami per questi tipi di programma", "Gli altri non mandano avvisi"),
     "extra_protected_names": (
-        "Nomi di processo protetti in più",
-        "Separati da virgola; si aggiungono alla lista protetta",
+        "Programmi da non toccare mai",
+        "Nomi dei processi separati da virgola, in aggiunta a quelli già protetti",
     ),
-    "devdirs_roots": ("Cartelle da scansionare", "Percorsi nella home, separati da virgola"),
+    "devdirs_roots": (
+        "Cartelle in cui cercare",
+        "Percorsi nella tua cartella personale, separati da virgola",
+    ),
 }
 
 

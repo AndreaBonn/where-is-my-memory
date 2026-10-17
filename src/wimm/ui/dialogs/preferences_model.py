@@ -9,6 +9,7 @@ from wimm.model.enums import Category, Protection, protection_of
 SECONDS_PER_MINUTE = 60
 SECONDS_PER_HOUR = 3600
 BYTES_PER_MIB = 1024 * 1024
+BYTES_PER_KB = 1000
 # The spec leaves notify_min_bytes unbounded; the spin row needs a finite top (1 TiB).
 MAX_MIN_BYTES_MIB = 1024 * 1024
 LIST_SEPARATOR = ","
@@ -47,85 +48,98 @@ class FieldGroup:
     keys: tuple[str, ...]
 
 
+# R2: each title reads as a sentence, the unit in brackets; the subtitle says why it matters.
 _NUMBERS = (
     NumberField(
         "sample_interval_s",
-        "Intervallo di campionamento (secondi)",
-        "Ogni quanto si legge la memoria",
+        "Controlla la memoria ogni (secondi)",
+        "Più spesso è più preciso, ma usa un po' più di processore",
     ),
     NumberField(
         "activity_window_s",
-        "Finestra di osservazione (minuti)",
-        "Per quanto tempo si misura l'attività",
+        "Per decidere se è in uso, guarda gli ultimi (minuti)",
+        "Un programma è in uso se ha lavorato in questo tempo",
         factor=SECONDS_PER_MINUTE,
     ),
     NumberField(
         "cpu_active_threshold_pct",
-        "Soglia CPU di attività (%)",
-        "Sotto questo uso medio un gruppo è inattivo",
+        "È fermo se usa meno del processore di (%)",
+        "Media sul tempo osservato",
         digits=1,
         step=0.1,
     ),
     NumberField(
         "net_active_threshold_bps",
-        "Soglia di rete di attività (byte/s)",
-        "Sotto questo traffico un gruppo è inattivo",
-        step=100,
+        "È fermo se scambia in rete meno di (kB al secondo)",
+        "Media sul tempo osservato",
+        factor=BYTES_PER_KB,
+        digits=1,
+        step=0.1,
     ),
     NumberField(
         "notify_after_s",
-        "Notifica dopo (minuti)",
-        "Quanto deve restare inattivo un gruppo prima della notifica",
+        "Avvisami se non lo usi da (minuti)",
+        "Prima di questo tempo non arriva nessun avviso",
         factor=SECONDS_PER_MINUTE,
     ),
     NumberField(
         "notify_min_bytes",
-        "Recuperabile minimo (MB)",
-        "Sotto questa quantità non si notifica",
+        "Avvisami solo se libero almeno (MB)",
+        "Per i programmi più piccoli non arriva nessun avviso",
         factor=BYTES_PER_MIB,
         step=50,
     ),
     NumberField(
         "max_notifications_per_hour",
-        "Notifiche all'ora (massimo)",
-        "Oltre questo numero le notifiche aspettano",
+        "Avvisi singoli in un'ora",
+        "Gli altri arrivano insieme in uno solo; memoria o disco pieni si segnalano sempre",
     ),
     NumberField(
         "pressure_warning_pct",
-        "Pressione: avviso (% libera)",
-        "Sotto questa memoria libera la pressione è di avviso",
+        "Quasi pieno quando resta libero meno del (%)",
+        "Vale per la memoria e per il disco: da qui compare l'avviso",
     ),
     NumberField(
         "pressure_critical_pct",
-        "Pressione: critica (% libera)",
-        "Deve essere minore della soglia di avviso",
+        "Pieno quando resta libero meno del (%)",
+        "Deve essere minore della soglia precedente",
     ),
     NumberField(
         "terminate_timeout_s",
-        "Attesa alla chiusura (secondi)",
-        "Dopo questo tempo si propone la chiusura forzata",
+        "Se non si chiude, proponi la chiusura forzata dopo (secondi)",
+        "Il tempo che un programma ha per chiudersi da solo",
     ),
     NumberField(
         "devdirs_min_age_days",
-        "Età minima delle cartelle (giorni)",
-        "Più recenti di così non si propongono",
+        "Proponi le cartelle non usate da almeno (giorni)",
+        "Le cartelle node_modules e .venv più recenti restano fuori",
     ),
     NumberField(
-        "devdirs_max_depth", "Profondità massima", "Livelli di sottocartelle da scansionare"
+        "devdirs_max_depth",
+        "Cerca fino a questi livelli di sottocartelle",
+        "Più livelli trovano di più, ma la ricerca dura di più",
     ),
     NumberField(
         "disk_scan_interval_s",
-        "Scansione del disco ogni (ore)",
-        "Ogni quanto si ricalcolano le dimensioni",
+        "Ricontrolla il disco ogni (ore)",
+        "Il controllo calcola quanto occupano cartelle e cache",
         factor=SECONDS_PER_HOUR,
     ),
 )
 NUMBER_FIELDS: Mapping[str, NumberField] = {field.key: field for field in _NUMBERS}
 
-GROUPS = (
+# R1: in view only what a non-expert changes; the rest behind "Impostazioni avanzate".
+ESSENTIAL_GROUPS = (
     FieldGroup(
-        "Campionamento",
-        "Come si legge il sistema e quando un gruppo conta come inattivo.",
+        "Avvisi",
+        "Quando ti avvisiamo di un programma acceso che non usi.",
+        ("notify_after_s", "notify_min_bytes", CATEGORIES_KEY),
+    ),
+)
+ADVANCED_GROUPS = (
+    FieldGroup(
+        "Come si capisce se un programma è in uso",
+        "Quanto spesso si controlla e quando un programma conta come fermo.",
         (
             "sample_interval_s",
             "activity_window_s",
@@ -135,26 +149,27 @@ GROUPS = (
         ),
     ),
     FieldGroup(
-        "Notifiche",
-        "Quando e per quali categorie arriva una notifica.",
-        ("notify_after_s", "notify_min_bytes", "max_notifications_per_hour", CATEGORIES_KEY),
+        "Quanti avvisi",
+        "Il limite di avvisi, oltre a quanto scelto in Avvisi.",
+        ("max_notifications_per_hour",),
     ),
     FieldGroup(
-        "Pressione di memoria",
-        "Le soglie in percentuale di memoria libera.",
+        "Memoria e disco quasi pieni",
+        "Le soglie in percentuale di spazio libero.",
         ("pressure_warning_pct", "pressure_critical_pct"),
     ),
     FieldGroup(
-        "Chiusura",
-        "Come si chiudono i processi e quali nomi non si toccano mai.",
+        "Chiusura dei programmi",
+        "Quanto si aspetta e quali programmi non si toccano mai.",
         ("terminate_timeout_s", "extra_protected_names"),
     ),
     FieldGroup(
-        "Cartelle",
+        "Cartelle di sviluppo",
         "Dove cercare node_modules e .venv e ogni quanto.",
         ("devdirs_roots", "devdirs_min_age_days", "devdirs_max_depth", "disk_scan_interval_s"),
     ),
 )
+GROUPS = ESSENTIAL_GROUPS + ADVANCED_GROUPS
 
 
 def display_value(*, field: NumberField, raw: object) -> float:

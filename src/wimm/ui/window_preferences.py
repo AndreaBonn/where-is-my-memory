@@ -13,10 +13,14 @@ ACTION_NAME = ACTION_PREFERENCES.removeprefix("win.")
 
 @dataclass(frozen=True)
 class PreferencesEnv:
-    """Where the preferences file lives and the home its directories must stay in."""
+    """Where the preferences file lives, the home its directories must stay in, the session.
+
+    `session_type` is `XDG_SESSION_TYPE`: following the foreground window needs X11 (R5).
+    """
 
     paths: UserPaths
     home: Path
+    session_type: str | None = None
 
 
 def can_edit_config(*, source: object) -> bool:
@@ -35,7 +39,9 @@ def install_preferences(*, window: Any, source: object, env: PreferencesEnv) -> 
     def open_dialog(*_args: object) -> None:
         if isinstance(window.get_visible_dialog(), PreferencesDialog):
             return
-        PreferencesDialog(source=source, paths=env.paths, home=env.home).present(window)
+        PreferencesDialog(
+            source=source, paths=env.paths, home=env.home, session_type=env.session_type
+        ).present(window)
 
     action = Gio.SimpleAction.new(ACTION_NAME, None)
     action.connect("activate", open_dialog)

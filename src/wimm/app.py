@@ -16,6 +16,8 @@ SUCCESS = 0
 STARTUP_FAILED = 1
 APPLICATION_ID = "io.github.wimm.WhereIsMyMemory"
 LOGGER = logging.getLogger(__name__)
+# Read by the preferences: following the foreground window needs X11 (R5).
+SESSION_TYPE_VARIABLE = "XDG_SESSION_TYPE"
 
 
 class PresentableWindow(Protocol):
@@ -94,7 +96,11 @@ def _install_preferences(*, application: Any, window: Any) -> None:
     from wimm.paths import default_user_paths
     from wimm.ui.window_preferences import PreferencesEnv, install_preferences
 
-    env = PreferencesEnv(paths=default_user_paths(), home=Path.home())
+    env = PreferencesEnv(
+        paths=default_user_paths(),
+        home=Path.home(),
+        session_type=os.environ.get(SESSION_TYPE_VARIABLE),
+    )
     install_preferences(window=window, source=application._service, env=env)
 
 

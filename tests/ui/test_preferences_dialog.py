@@ -285,7 +285,7 @@ def test_ignored_section_is_absent_without_set_ignored(
 
     titles = [w.get_title() for w in tree(dialog) if isinstance(w, Adw.PreferencesGroup)]
     assert "Programmi senza avvisi" not in titles
-    assert "Campionamento" in titles
+    assert "Avvisi" in titles
 
 
 def test_install_preferences_wiring_in_app_needs_no_display() -> None:
@@ -372,4 +372,4 @@ def test_apply_without_changes_clears_a_previous_invalid_status(
     dialog.apply()
 
     assert dialog.status_text == "Nessuna modifica."
-    assert not dialog._status.has_css_class("error")
+    assert not any(status.has_css_class("error") for status in dialog._statuses)
