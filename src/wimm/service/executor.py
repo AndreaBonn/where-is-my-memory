@@ -1,7 +1,7 @@
 """Executes a confirmed plan (SPECIFICHE 8.2, 8.4). Revalidates first, then acts."""
 
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from itertools import groupby
 
 from wimm.config import Config
@@ -33,8 +33,10 @@ from .executor_disk_docker import (
     log_disk_outcomes,
     run_disk_docker_step,
 )
+from .executor_disk_fs import DISK_FS_KINDS, check_disk_fs, run_disk_fs_step
 from .executor_docker import run_container_step
 from .executor_process import TerminationRequest, close_root, terminate_tree
+from .fs_controls import DiskFsControl
 
 
 @dataclass(slots=True, kw_only=True)
@@ -50,6 +52,7 @@ class PlanExecutor:
     containers: DockerControl | None
     owner_uid: int
     compose: ComposeControl | None = None
+    disk_fs: DiskFsControl | None = None
     terminate_timeout_s: float = TERMINATE_TIMEOUT_S
 
     def apply_config(self, *, config: Config) -> None:
@@ -59,6 +62,10 @@ class PlanExecutor:
         """
         self.terminate_timeout_s = config.terminate_timeout_s
         self.processes.set_extra_protected_names(names=config.extra_protected_names)
+        if self.disk_fs is not None:
+            self.disk_fs = replace(
+                self.disk_fs, roots=config.devdirs_roots, min_age_days=config.devdirs_min_age_days
+            )
 
     def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:
         rules = ProcessRules(owner_uid=self.owner_uid, lineage=self.processes.self_lineage())
@@ -80,11 +87,16 @@ class PlanExecutor:
         compose = self.compose
         if compose is None and any(s.kind in COMPOSE_KINDS for s in plan.steps):
             raise DockerUnavailable()
+        disk_fs = self.disk_fs
+        if disk_fs is None and any(s.kind in DISK_FS_KINDS for s in plan.steps):
+            raise InvalidRequest("Folder, cache and trash actions are not available")
         for step in plan.steps:
             if step.kind in PROCESS_KINDS:
                 check_process(step=step, control=self.processes, rules=rules)
             elif step.kind in COMPOSE_KINDS and compose is not None:
                 check_compose(step=step, control=compose)
+            elif disk_fs is not None and step.kind in DISK_FS_KINDS:
+                check_disk_fs(step=step, control=disk_fs)
             elif containers is not None and step.kind in DISK_DOCKER_KINDS:
                 check_disk_docker(step=step, control=containers)
             elif containers is not None:
@@ -97,6 +109,8 @@ class PlanExecutor:
             return self._run_compose(steps=steps)
         if steps[0].kind in DISK_DOCKER_KINDS:
             return self._run_disk_docker(steps=steps)
+        if steps[0].kind in DISK_FS_KINDS:
+            return self._run_disk_fs(steps=steps)
         if steps[0].kind is ActionKind.CONTAINER_STOP:
             return self._run_containers(steps=steps, parallel=True)
         return self._run_containers(steps=steps, parallel=False)
@@ -112,6 +126,12 @@ class PlanExecutor:
         if control is None:
             raise DockerUnavailable()
         return [run_disk_docker_step(control=control, step=s) for s in steps]
+
+    def _run_disk_fs(self, *, steps: tuple[PlanStep, ...]) -> list[StepOutcome]:
+        control = self.disk_fs
+        if control is None:
+            raise InvalidRequest("Folder, cache and trash actions are not available")
+        return [run_disk_fs_step(control=control, step=s) for s in steps]
 
     def _run_containers(self, *, steps: tuple[PlanStep, ...], parallel: bool) -> list[StepOutcome]:
         control = self.containers

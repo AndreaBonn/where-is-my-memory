@@ -16,6 +16,7 @@ from .control_protocols import (
     failed_outcome,
 )
 from .errors import ControlFailed, InvalidRequest, TargetChanged, TargetGone, WimmError
+from .executor_disk_fs import DISK_FS_KINDS
 
 LOGGER = logging.getLogger(__name__)
 DISK_DOCKER_KINDS = frozenset(
@@ -179,7 +180,7 @@ def run_disk_docker_step(*, control: DockerControl, step: PlanStep) -> StepOutco
 
 
 def _is_disk_step(*, plan: Plan, step: PlanStep) -> bool:
-    if step.kind in DISK_DOCKER_KINDS:
+    if step.kind in DISK_DOCKER_KINDS | DISK_FS_KINDS:
         return True
     return (
         step.kind is ActionKind.CONTAINER_REMOVE

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from wimm.collectors.devdirs import DevDirScan, DevDirSettings, scan_devdirs
+from wimm.collectors.devdirs import DevDirScan, DevDirSettings, project_age_days, scan_devdirs
 from wimm.core.constants import DIRSIZE_YIELD_EVERY
 
 NOW = 1_800_000_000.0
@@ -316,3 +316,16 @@ def test_folder_replaced_by_a_symlink_before_measuring_is_dropped(tmp_path: Path
     )
     assert real is not None
     assert swapped is None
+
+
+def test_project_age_days_is_none_when_the_project_cannot_be_read(tmp_path: Path) -> None:
+    project = _project(tmp_path, "app", age=100)
+    assert project_age_days(project=project, now=NOW) == 100
+
+    (project / "src").mkdir()
+    (project / "src" / "main.py").write_text("x")
+    (project / "src").chmod(0o000)
+    try:
+        assert project_age_days(project=project, now=NOW) is None
+    finally:
+        (project / "src").chmod(0o700)

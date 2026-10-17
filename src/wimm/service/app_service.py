@@ -229,6 +229,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         plan = self._plans.take(
             plan_id=plan_id, typed_confirmation=typed_confirmation, now=self._clock()
         )
+        self._track_disk_plan(plan=plan)
         future = self._executor.submit(self._run_action, setup.executor, plan)
         future.add_done_callback(partial(self._action_completed, plan_id))
 
@@ -246,6 +247,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         try:
             outcomes, before = future.result()
         except Exception as error:
+            self._after_action(plan_id=plan_id, ran=False)
             if not isinstance(error, WimmError):
                 LOGGER.exception("Action %s crashed", plan_id)
             self.emit(
@@ -255,6 +257,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
             )
             return GLib.SOURCE_REMOVE
         self.emit("action-finished", plan_id, outcomes)
+        self._after_action(plan_id=plan_id, ran=True)
         if self._reclaim.watch(plan_id=plan_id, before=before):
             delay_ms = round(self._require_actions().measure_delay_s * 1000)
             GLib.timeout_add(delay_ms, self._delay_elapsed, plan_id)

@@ -197,3 +197,12 @@ CACHE_RELATIVE_PATHS = (
 DEVDIR_NAMES = frozenset({"node_modules", ".venv"})
 DEVDIR_SOURCE_DIRNAME = "src"
 SECONDS_PER_DAY = 86400
+# SPECIFICHE 8.4 (caches): pip falls back to removing the folder content when the tool is not
+# on PATH. Thumbnails and trash have no command.
+CACHE_COMMAND_TIMEOUT_S = 300
+# Variables that redirect a cache tool away from the planned folder: removed from its environment.
+CACHE_ENV_VARS = ("UV_CACHE_DIR", "PIP_CACHE_DIR", "npm_config_cache")
+# SPECIFICHE 8.4 (trash): the folders under the trash whose content is removed.
+TRASH_CONTENT_DIRS = ("files", "info")
+MOUNTINFO_PATH = "/proc/self/mountinfo"
+MAX_RECORDED_REMOVAL_ERRORS = 10

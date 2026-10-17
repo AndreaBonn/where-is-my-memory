@@ -5,10 +5,25 @@ from typing import Protocol
 
 from wimm.config import Config
 from wimm.model.actions import Plan
+from wimm.model.enums import ActionKind
 
 from .control_protocols import StepOutcome
 
 RECLAIM_MEASURE_DELAY_S = 3.0
+# Requests that change what the disk report shows: the service rescans after they run.
+DISK_REQUEST_KINDS = frozenset(
+    {
+        ActionKind.IMAGE_REMOVE,
+        ActionKind.IMAGES_PRUNE_DANGLING,
+        ActionKind.IMAGES_PRUNE_UNUSED,
+        ActionKind.CONTAINERS_PRUNE_STOPPED,
+        ActionKind.BUILDER_PRUNE,
+        ActionKind.VOLUME_REMOVE,
+        ActionKind.CACHE_CLEAN,
+        ActionKind.TRASH_EMPTY,
+        ActionKind.DEVDIR_DELETE,
+    }
+)
 
 
 class ActionExecutor(Protocol):

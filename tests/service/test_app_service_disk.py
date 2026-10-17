@@ -7,6 +7,7 @@ import pytest
 from gi.repository import GLib
 
 from tests.core.disk_helpers import MB, cache, docker_disk, image, report
+from tests.core.planning_helpers import group, proc, snapshot
 from tests.service.service_helpers import (
     TIMEOUT_S,
     FakeSampler,
@@ -18,7 +19,7 @@ from tests.service.test_sampler import make_sampler
 from wimm.config import Config
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DiskReport
-from wimm.model.enums import ActionKind, TargetId
+from wimm.model.enums import ActionKind, Category, TargetId
 from wimm.paths import UserPaths
 from wimm.service.actions import ActionSetup
 from wimm.service.app_service import AppService
@@ -316,3 +317,43 @@ def test_an_interval_change_before_the_first_scan_applies_to_its_timer(
     finally:
         monkeypatch.undo()
         rig.service.stop()
+
+
+def disk_action_service(rig: Rig) -> AppService:
+    setup = ActionSetup(executor=FakeExecutor(), owner_uid=OWNER_UID, measure_delay_s=0.0)
+    rig.sampler.current = snapshot(
+        group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=8),))
+    )
+    service = AppService(sampler=rig.sampler, config=Config(), actions=setup)
+    service.attach_disk_scanner(scanner=rig.scanner, start_delay_s=QUICK_START_S)
+    service.start()
+    spin_until(predicate=lambda: service.disk_report() is not None)
+    return service
+
+
+def run_plan(*, service: AppService, request: ActionRequest) -> None:
+    finished: list[str] = []
+    service.connect("action-finished", lambda _s, plan_id, _o: finished.append(plan_id))
+    plan = service.plan(request=request)
+    service.execute(plan_id=plan.plan_id, typed_confirmation=plan.confirm_phrase)
+    spin_until(predicate=lambda: bool(finished))
+
+
+def test_a_finished_disk_action_triggers_one_rescan_and_a_process_action_does_not() -> None:
+    rig = build_rig()
+    rig.scanner.gate.set()
+    service = disk_action_service(rig)
+    try:
+        scans = len(rig.scanner.configs)
+        terminate = ActionRequest(kind=ActionKind.PROCESS_TERMINATE, target_id=TargetId("8"))
+        run_plan(service=service, request=terminate)
+        spin_for(seconds=0.15)
+        assert len(rig.scanner.configs) == scans
+
+        clean = ActionRequest(kind=ActionKind.CACHE_CLEAN, target_id=TargetId("uv"))
+        run_plan(service=service, request=clean)
+        spin_until(predicate=lambda: len(rig.scanner.configs) == scans + 1)
+        spin_for(seconds=0.15)
+        assert len(rig.scanner.configs) == scans + 1
+    finally:
+        service.stop()

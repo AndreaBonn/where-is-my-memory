@@ -148,6 +148,20 @@ class _Walker:
             return 0.0
 
 
+def project_age_days(*, project: Path, now: float) -> int | None:
+    """Whole days since ``project`` was last touched, by the scan's rule (SPECIFICHE 7.6).
+
+    The newest mtime among the first-level entries (dependency folders excluded) and the
+    first level of a real ``src/``; never negative. ``None`` if any of it could not be read:
+    an age computed on a partial view could hide a recent edit.
+    """
+    walker = _Walker(max_depth=0, sleep=time.sleep)
+    newest = walker.newest_mtime(project=project)
+    if walker.errors:
+        return None
+    return max(0, int((now - newest) // SECONDS_PER_DAY))
+
+
 def _is_real_dir(path: Path) -> bool:
     """A directory that is not a symlink; a missing path is simply not one."""
     try:

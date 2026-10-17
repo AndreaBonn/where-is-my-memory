@@ -1,10 +1,24 @@
 import logging
+from pathlib import Path
 from typing import Any
 
 LOGGER = logging.getLogger(__name__)
 
 
-def build_actions(*, config: Any, owner_uid: int) -> Any:
+def _disk_fs(*, config: Any, owner_uid: int, home: Path | None) -> Any:
+    """Folder, cache and trash control: real commands, real process list, one home."""
+    from wimm.service.fs_controls import DiskFsControl, PsutilCwds, SubprocessRunner
+
+    return DiskFsControl(
+        home=Path.home() if home is None else home,
+        roots=config.devdirs_roots,
+        min_age_days=config.devdirs_min_age_days,
+        runner=SubprocessRunner(),
+        cwds=PsutilCwds(owner_uid=owner_uid),
+    )
+
+
+def build_actions(*, config: Any, owner_uid: int, home: Path | None = None) -> Any:
     from wimm.service.actions import ActionSetup
     from wimm.service.compose import DockerComposeControl
     from wimm.service.controls import DockerSdkControl, PsutilProcessControl
@@ -27,6 +41,7 @@ def build_actions(*, config: Any, owner_uid: int) -> Any:
         processes=processes,
         containers=containers,
         compose=compose,
+        disk_fs=_disk_fs(config=config, owner_uid=owner_uid, home=home),
         owner_uid=owner_uid,
         terminate_timeout_s=config.terminate_timeout_s,
     )

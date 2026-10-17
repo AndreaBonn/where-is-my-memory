@@ -9,7 +9,9 @@ from gi.repository import GLib
 from wimm.config import Config
 from wimm.core import constants as c
 from wimm.core.disk_rules import safe_reclaimable_bytes
+from wimm.model.actions import Plan
 from wimm.model.disk import DiskReport
+from wimm.service.actions import DISK_REQUEST_KINDS
 from wimm.service.disk_scanner import DiskScanner
 
 LOGGER = logging.getLogger(__name__)
@@ -43,6 +45,7 @@ class DiskMixin:
         self._disk_start_timer = 0
         self._disk_busy = False
         self._disk_pending = False
+        self._disk_plan_ids: set[str] = set()
 
     def attach_disk_scanner(
         self, *, scanner: DiskScanner, start_delay_s: float = c.DISK_SCAN_START_DELAY_S
@@ -67,6 +70,18 @@ class DiskMixin:
             self._disk_busy = True
             future = self._disk_executor.submit(self._disk_scanner.scan, config=self._config)
             future.add_done_callback(self._disk_completed)
+
+    def _track_disk_plan(self, *, plan: Plan) -> None:
+        """Remember a plan that changes the disk, so its end triggers a rescan."""
+        if plan.request.kind in DISK_REQUEST_KINDS:
+            self._disk_plan_ids.add(plan.plan_id)
+
+    def _after_action(self, *, plan_id: str, ran: bool) -> None:
+        """Rescan once a disk plan ran, so the view and `reclaimable_now.disk` follow it."""
+        if plan_id in self._disk_plan_ids:
+            self._disk_plan_ids.discard(plan_id)
+            if ran:
+                self.rescan_disk()
 
     def _disk_tick(self) -> bool:
         self.rescan_disk()

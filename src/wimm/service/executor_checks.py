@@ -11,11 +11,12 @@ from .control_protocols import DockerControl, LiveProcess, ProcessControl
 from .errors import InvalidRequest, ProtectedTarget, TargetChanged
 from .executor_compose import COMPOSE_KINDS
 from .executor_disk_docker import DISK_DOCKER_KINDS
+from .executor_disk_fs import DISK_FS_KINDS
 
 PROCESS_KINDS = frozenset({ActionKind.PROCESS_TERMINATE, ActionKind.APP_CLOSE})
 CONTAINER_KINDS = frozenset({ActionKind.CONTAINER_STOP, ActionKind.CONTAINER_REMOVE})
 DOCKER_KINDS = CONTAINER_KINDS | DISK_DOCKER_KINDS
-SUPPORTED_KINDS = PROCESS_KINDS | DOCKER_KINDS | COMPOSE_KINDS
+SUPPORTED_KINDS = PROCESS_KINDS | DOCKER_KINDS | COMPOSE_KINDS | DISK_FS_KINDS
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
