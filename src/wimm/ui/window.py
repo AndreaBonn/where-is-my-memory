@@ -10,6 +10,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk
 
 from wimm import __version__
+from wimm.i18n import N_, _
 from wimm.model.actions import ActionRequest
 from wimm.paths import default_user_paths
 from wimm.ui.action_flow import can_act
@@ -39,7 +40,7 @@ FAILURE_LIMIT = 3
 FAILURE_POLL_SECONDS = 2
 SAVE_DELAY_MS = 500
 ACTION_REFRESH = "win.refresh"
-ABOUT_COMMENTS = "Mostra dove va la memoria e cosa si può liberare."
+ABOUT_COMMENTS = N_("Mostra dove va la memoria e cosa si può liberare.")
 
 
 class MainWindow(Adw.Window):
@@ -59,8 +60,7 @@ class MainWindow(Adw.Window):
         self._state_dir, self._state_path = state_dir, state_dir / STATE_FILE
         self._dirty = False
         self._last_failures = -1
-        self._save_timer = self._poll_timer = 0
-        self._source_handler = 0
+        self._save_timer = self._poll_timer = self._source_handler = 0
         self._init_actions(application=application)
         width, height = load_window_size(path=self._state_path)
         self.set_default_size(width, height)
@@ -120,8 +120,8 @@ class MainWindow(Adw.Window):
 
     def _build_chrome(self) -> None:
         stack = Adw.ViewStack()
-        stack.add_titled_with_icon(self.overview, "overview", "Panoramica", "view-list-symbolic")
-        stack.add_titled_with_icon(self.disk, "disk", "Disco", "drive-harddisk-symbolic")
+        stack.add_titled_with_icon(self.overview, "overview", _("Panoramica"), "view-list-symbolic")
+        stack.add_titled_with_icon(self.disk, "disk", _("Disco"), "drive-harddisk-symbolic")
         self.view_stack = stack
         switcher = Adw.ViewSwitcher(stack=stack, policy=Adw.ViewSwitcherPolicy.WIDE)
         bar = Adw.ViewSwitcherBar(stack=stack)
@@ -146,14 +146,14 @@ class MainWindow(Adw.Window):
         menu, self._snooze_all = build_main_menu(source=self._source)
         self._actions.add_action(self._snooze_all.action)
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu, primary=True)
-        name_icon_button(button=button, label="Menu principale")
+        name_icon_button(button=button, label=_("Menu principale"))
         self._add_window_action(name="about", handler=self._show_about)
         return button
 
     def _refresh_button(self) -> Gtk.Button:
         self._add_window_action(name="refresh", handler=lambda *_a: self.refresh())
         button = Gtk.Button(icon_name="view-refresh-symbolic", action_name=ACTION_REFRESH)
-        name_icon_button(button=button, label="Aggiorna (F5)")
+        name_icon_button(button=button, label=_("Aggiorna (F5)"))
         button.set_visible(self.can_refresh)
         return button
 
@@ -172,7 +172,7 @@ class MainWindow(Adw.Window):
             application_name=WINDOW_TITLE,
             application_icon=APPLICATION_ID,
             version=__version__,
-            comments=ABOUT_COMMENTS,
+            comments=_(ABOUT_COMMENTS),
             license_type=Gtk.License.GPL_3_0,
         ).present(self)
 

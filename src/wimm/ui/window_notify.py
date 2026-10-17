@@ -2,15 +2,16 @@ from typing import Any, cast
 
 from gi.repository import Gio
 
+from wimm.i18n import N_, _
 from wimm.model.enums import GroupId
 from wimm.ui.widgets.group_controls import GroupControlHandlers
 from wimm.ui.window_shortcuts import ACTION_PREFERENCES
 
 ACTION_NAME = "snooze-all"
 ACTION_SNOOZE_ALL = f"win.{ACTION_NAME}"
-SNOOZE_ALL_TEXT = "Silenzia 1 h"
+SNOOZE_ALL_TEXT = N_("Silenzia 1 h")
 SNOOZE_ALL_SECONDS = 3600
-MUTED_TEXT = "Notifiche silenziate fino alle {until}"
+MUTED_TEXT = N_("Notifiche silenziate fino alle {until}")
 MUTE_ENTRY_INDEX = 1
 
 
@@ -35,7 +36,7 @@ class SnoozeAllEntry:
 
     def __init__(self, *, source: object, menu: Gio.Menu) -> None:
         self._source, self._menu = source, menu
-        self._label = SNOOZE_ALL_TEXT
+        self._label = _(SNOOZE_ALL_TEXT)
         self.action = Gio.SimpleAction.new(ACTION_NAME, None)
         self.action.connect("activate", self._activate)
         self.sync()
@@ -44,9 +45,9 @@ class SnoozeAllEntry:
         """Bring label and enabled state in line with the service's global mute."""
         enabled = callable(getattr(self._source, "snooze_all", None))
         until = getattr(self._source, "notifications_muted_until", None) if enabled else None
-        label = SNOOZE_ALL_TEXT
+        label = _(SNOOZE_ALL_TEXT)
         if until is not None:
-            label = MUTED_TEXT.format(until=until.astimezone().strftime("%H:%M"))
+            label = _(MUTED_TEXT).format(until=until.astimezone().strftime("%H:%M"))
         self.action.set_enabled(enabled and until is None)
         if label != self._label:
             self._label = label
@@ -61,8 +62,8 @@ class SnoozeAllEntry:
 def build_main_menu(*, source: object) -> tuple[Gio.Menu, SnoozeAllEntry]:
     """The window menu (Preferenze, Silenzia 1 h, Info, Esci) and the entry to keep in sync."""
     menu = Gio.Menu()
-    menu.append("Preferenze", ACTION_PREFERENCES)
-    menu.append(SNOOZE_ALL_TEXT, ACTION_SNOOZE_ALL)
-    menu.append("Info", "win.about")
-    menu.append("Esci", "app.quit")
+    menu.append(_("Preferenze"), ACTION_PREFERENCES)
+    menu.append(_(SNOOZE_ALL_TEXT), ACTION_SNOOZE_ALL)
+    menu.append(_("Info"), "win.about")
+    menu.append(_("Esci"), "app.quit")
     return menu, SnoozeAllEntry(source=source, menu=menu)

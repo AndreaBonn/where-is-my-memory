@@ -129,7 +129,7 @@ def _categories_field() -> Field:
     checks: dict[str, Gtk.CheckButton] = {}
     for category in actionable_categories():
         check = Gtk.CheckButton(name=category.value, valign=Gtk.Align.CENTER)
-        sub = Adw.ActionRow(title=CATEGORY_LABELS[category], activatable_widget=check)
+        sub = Adw.ActionRow(title=_(CATEGORY_LABELS[category]), activatable_widget=check)
         sub.add_prefix(check)
         row.add_row(sub)
         checks[category.value] = check

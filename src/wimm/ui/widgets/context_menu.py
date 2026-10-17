@@ -3,10 +3,11 @@ from dataclasses import dataclass
 
 from gi.repository import Gdk, Gio, GLib, Gtk
 
+from wimm.i18n import _
+
 from . import name_icon_button
 
 LOGGER = logging.getLogger(__name__)
-MENU_TOOLTIP = "Altre azioni"
 CONTEXT_GROUP = "ctx"
 
 
@@ -21,9 +22,9 @@ class MenuTarget:
 
 def _context_menu() -> Gio.Menu:
     menu = Gio.Menu()
-    menu.append("Copia comando", f"{CONTEXT_GROUP}.copy-command")
-    menu.append("Copia PID", f"{CONTEXT_GROUP}.copy-pid")
-    menu.append("Apri cartella", f"{CONTEXT_GROUP}.open-folder")
+    menu.append(_("Copia comando"), f"{CONTEXT_GROUP}.copy-command")
+    menu.append(_("Copia PID"), f"{CONTEXT_GROUP}.copy-pid")
+    menu.append(_("Apri cartella"), f"{CONTEXT_GROUP}.open-folder")
     return menu
 
 
@@ -54,13 +55,18 @@ def install_context_actions(*, owner: Gtk.Widget, target: MenuTarget) -> Gio.Sim
     return actions
 
 
+def menu_label(*, title: str) -> str:
+    """The accessible name of the ⋮ button of the row called ``title``."""
+    return _("Altre azioni: {title}").format(title=title)
+
+
 def make_context_button(*, title: str) -> Gtk.MenuButton:
     """The ⋮ button that opens the context menu of the row it is placed on."""
     button = Gtk.MenuButton(
         icon_name="view-more-symbolic", menu_model=_context_menu(), valign=Gtk.Align.CENTER
     )
     button.add_css_class("flat")
-    name_icon_button(button=button, label=f"{MENU_TOOLTIP}: {title}")
+    name_icon_button(button=button, label=menu_label(title=title))
     return button
 
 

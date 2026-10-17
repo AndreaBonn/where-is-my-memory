@@ -4,14 +4,15 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
 from wimm.ui.disk_texts import ACTIONS_NOTE, SAFE_CAPTION, TIER_DESCRIPTIONS, TIER_TITLES
 
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
 HEADER_SPACING = 2
-SCAN_LABEL = "Controlla ora"
+SCAN_LABEL = N_("Controlla ora")
 SAFE_BUTTON_NAME = "disk-free-safe"
-SCANNING_LABEL = "Controllo in corso"
+SCANNING_LABEL = N_("Controllo in corso")
 
 
 def _caption(*, text: str = "") -> Gtk.Label:
@@ -23,11 +24,11 @@ def _caption(*, text: str = "") -> Gtk.Label:
 
 def tier_heading(*, tier: str) -> Gtk.Box:
     """The title and the one-line meaning of a risk tier, above its sections."""
-    title = Gtk.Label(label=TIER_TITLES[tier], xalign=0, wrap=True)
+    title = Gtk.Label(label=_(TIER_TITLES[tier]), xalign=0, wrap=True)
     title.add_css_class("title-4")
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=HEADER_SPACING)
     box.append(title)
-    box.append(_caption(text=TIER_DESCRIPTIONS[tier]))
+    box.append(_caption(text=_(TIER_DESCRIPTIONS[tier])))
     return box
 
 
@@ -51,17 +52,17 @@ class DiskHeader:
         self._can_safe = on_safe is not None
         if on_safe is not None:
             self.safe.connect("clicked", lambda *_a: on_safe())
-        self.safe_caption = _caption(text=SAFE_CAPTION)
+        self.safe_caption = _caption(text=_(SAFE_CAPTION))
         self.spinner = Gtk.Spinner(visible=False)
-        self.spinner.update_property([Gtk.AccessibleProperty.LABEL], [SCANNING_LABEL])
-        self.scan = Gtk.Button(label=SCAN_LABEL, valign=Gtk.Align.CENTER)
+        self.spinner.update_property([Gtk.AccessibleProperty.LABEL], [_(SCANNING_LABEL)])
+        self.scan = Gtk.Button(label=_(SCAN_LABEL), valign=Gtk.Align.CENTER)
         self.scan.connect("clicked", lambda *_a: on_scan())
         self.widget.set_child(self._layout())
 
     def _layout(self) -> Gtk.Box:
         texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=HEADER_SPACING, hexpand=True)
         lines: list[Gtk.Widget] = [self.headline, self.scan_text, self.safe, self.safe_caption]
-        for line in [*lines, _caption(text=ACTIONS_NOTE)]:
+        for line in [*lines, _caption(text=_(ACTIONS_NOTE))]:
             texts.append(line)
         header = Gtk.Box(spacing=PAGE_MARGIN)
         for part in (texts, self.spinner, self.scan):

@@ -1,9 +1,10 @@
 from gi.repository import Gtk
 
+from wimm.i18n import N_, _
 from wimm.ui.widgets.group_row import GroupRowWidget
 
-IDLE_HEADER = "Da liberare · non li usi da tempo"
-OTHER_HEADER = "In uso adesso o non misurabile"
+IDLE_HEADER = N_("Da liberare · non li usi da tempo")
+OTHER_HEADER = N_("In uso adesso o non misurabile")
 HEADER_MARGIN = 12
 
 
@@ -30,7 +31,7 @@ def _section_header(row: Gtk.ListBoxRow, before: Gtk.ListBoxRow | None) -> None:
     if not starts:
         row.set_header(None)
         return
-    label = Gtk.Label(label=IDLE_HEADER if row.is_idle else OTHER_HEADER, xalign=0)
+    label = Gtk.Label(label=_(IDLE_HEADER if row.is_idle else OTHER_HEADER), xalign=0)
     label.add_css_class("heading")
     label.add_css_class("dim-label")
     for side in ("top", "bottom", "start", "end"):

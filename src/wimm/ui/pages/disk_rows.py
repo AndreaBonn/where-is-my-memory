@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, GLib, Gtk
 
+from wimm.i18n import _
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, SectionActionView
 from wimm.ui.format import button_label
@@ -71,7 +72,7 @@ class SectionGroup:
         self.key = key
         self.group = Adw.PreferencesGroup()
         self.spinner = Gtk.Spinner(width_request=SPINNER_SIZE, height_request=SPINNER_SIZE)
-        self.spinner.update_property([Gtk.AccessibleProperty.LABEL], ["Controllo in corso"])
+        self.spinner.update_property([Gtk.AccessibleProperty.LABEL], [_("Controllo in corso")])
         self.group.set_header_suffix(self.spinner)
         self._on_action, self._on_section = on_action, on_section
         self._busy = False

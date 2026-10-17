@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
+
 from . import ACTIONS_UNAVAILABLE_TOOLTIP
 
 SNOOZE_BUTTON_PREFIX = "snooze-group-"
@@ -10,15 +12,15 @@ IGNORE_BUTTON_NAME = "ignore-group"
 SECONDS_PER_HOUR = 3600
 SECONDS_PER_DAY = 86400
 SNOOZE_CHOICES = (
-    ("1 ora", SECONDS_PER_HOUR),
-    ("1 giorno", SECONDS_PER_DAY),
-    ("7 giorni", 7 * SECONDS_PER_DAY),
+    (N_("1 ora"), SECONDS_PER_HOUR),
+    (N_("1 giorno"), SECONDS_PER_DAY),
+    (N_("7 giorni"), 7 * SECONDS_PER_DAY),
 )
-CONTROLS_TITLE = "Non avvisarmi per questo"
-CONTROLS_SUBTITLE = "Resta in lista, smetti solo di ricevere avvisi"
-IGNORED_SUBTITLE = "Non ricevi avvisi per questo programma"
-IGNORE_LABEL = "Mai più"
-UNIGNORE_LABEL = "Riattiva gli avvisi"
+CONTROLS_TITLE = N_("Non avvisarmi per questo")
+CONTROLS_SUBTITLE = N_("Resta in lista, smetti solo di ricevere avvisi")
+IGNORED_SUBTITLE = N_("Non ricevi avvisi per questo programma")
+IGNORE_LABEL = N_("Mai più")
+UNIGNORE_LABEL = N_("Riattiva gli avvisi")
 SUFFIX_SPACING = 6
 CONTENT_MARGIN = 12
 
@@ -37,7 +39,7 @@ class GroupControls(Adw.PreferencesRow):
     def __init__(
         self, *, group_id: str, ignored: bool, handlers: GroupControlHandlers | None
     ) -> None:
-        super().__init__(title=CONTROLS_TITLE, use_markup=False, activatable=False)
+        super().__init__(title=_(CONTROLS_TITLE), use_markup=False, activatable=False)
         self._group_id, self._handlers = group_id, handlers
         self._ignored = ignored
         box = Gtk.FlowBox(
@@ -46,7 +48,9 @@ class GroupControls(Adw.PreferencesRow):
             row_spacing=SUFFIX_SPACING,
             homogeneous=False,
         )
-        self._snoozes = [self._snooze_button(label=label, seconds=s) for label, s in SNOOZE_CHOICES]
+        self._snoozes = [
+            self._snooze_button(label=_(label), seconds=s) for label, s in SNOOZE_CHOICES
+        ]
         self._ignore = Gtk.Button(valign=Gtk.Align.CENTER)
         self._ignore.set_name(IGNORE_BUTTON_NAME)
         self._ignore.connect("clicked", self._on_ignore)
@@ -54,7 +58,7 @@ class GroupControls(Adw.PreferencesRow):
             box.append(Gtk.FlowBoxChild(child=control, focusable=False))
             if handlers is None:
                 control.set_sensitive(False)
-                control.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+                control.set_tooltip_text(_(ACTIONS_UNAVAILABLE_TOOLTIP))
         self.subtitle = Gtk.Label(xalign=0, wrap=True)
         self.subtitle.add_css_class("dim-label")
         self.subtitle.add_css_class("caption")
@@ -66,7 +70,11 @@ class GroupControls(Adw.PreferencesRow):
         content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=SUFFIX_SPACING)
         for side in ("top", "bottom", "start", "end"):
             getattr(content, f"set_margin_{side}")(CONTENT_MARGIN)
-        for child in (Gtk.Label(label=CONTROLS_TITLE, xalign=0, wrap=True), self.subtitle, buttons):
+        for child in (
+            Gtk.Label(label=_(CONTROLS_TITLE), xalign=0, wrap=True),
+            self.subtitle,
+            buttons,
+        ):
             content.append(child)
         return content
 
@@ -79,8 +87,8 @@ class GroupControls(Adw.PreferencesRow):
     def update(self, *, ignored: bool) -> None:
         """Offer the snooze choices, or only "Riattiva gli avvisi" for an ignored group."""
         self._ignored = ignored
-        self._ignore.set_label(UNIGNORE_LABEL if ignored else IGNORE_LABEL)
-        self.subtitle.set_label(IGNORED_SUBTITLE if ignored else CONTROLS_SUBTITLE)
+        self._ignore.set_label(_(UNIGNORE_LABEL if ignored else IGNORE_LABEL))
+        self.subtitle.set_label(_(IGNORED_SUBTITLE if ignored else CONTROLS_SUBTITLE))
         for button in self._snoozes:
             # The flow box child would keep an empty slot if only the button were hidden.
             for widget in (button, button.get_parent()):

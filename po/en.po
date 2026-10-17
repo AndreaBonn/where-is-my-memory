@@ -559,6 +559,27 @@ msgstr "Docker is not available"
 msgid "L'elemento non esiste più"
 msgstr "The item no longer exists"
 
+#: src/wimm/ui/action_flow.py:34
+msgid "Non c'è niente da fermare senza rischi"
+msgstr "There is nothing to stop without risk"
+
+#: src/wimm/ui/action_flow.py:35
+msgid "Non c'è niente da liberare senza rischi sul disco"
+msgstr "There is nothing to free on the disk without risk"
+
+#: src/wimm/ui/action_flow.py:41
+msgid "La situazione è cambiata, ricalcolo…"
+msgstr "Things have changed, recalculating…"
+
+#: src/wimm/ui/action_flow.py:42
+msgid "Dettagli"
+msgstr "Details"
+
+#: src/wimm/ui/action_flow.py:43 src/wimm/ui/format.py:87
+#: src/wimm/ui/format.py:88
+msgid "Riaccendi"
+msgstr "Start again"
+
 #: src/wimm/ui/dialogs/facts.py:19
 msgid "Cosa succede"
 msgstr "What happens"
@@ -618,7 +639,7 @@ msgstr "Result"
 msgid "Forza chiusura"
 msgstr "Force close"
 
-#: src/wimm/ui/dialogs/preferences.py:26
+#: src/wimm/ui/dialogs/preferences.py:26 src/wimm/ui/window_notify.py:65
 msgid "Preferenze"
 msgstr "Preferences"
 
@@ -1182,7 +1203,7 @@ msgstr "Free {size} with no risk"
 msgid "Puoi liberare fino a {size}"
 msgstr "You can free up to {size}"
 
-#: src/wimm/ui/disk_view.py:15
+#: src/wimm/ui/disk_view.py:15 src/wimm/ui/pages/disk.py:17
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
@@ -1460,10 +1481,6 @@ msgstr "Delete folder"
 msgid "Libera spazio"
 msgstr "Free up space"
 
-#: src/wimm/ui/format.py:87 src/wimm/ui/format.py:88
-msgid "Riaccendi"
-msgstr "Start again"
-
 #: src/wimm/ui/format.py:99
 #, python-brace-format
 msgid "da {count} s"
@@ -1550,6 +1567,30 @@ msgstr "Freed {ram} of RAM and {disk} of disk"
 #, python-brace-format
 msgid "Liberati {size} di RAM"
 msgstr "Freed {size} of RAM"
+
+#: src/wimm/ui/pages/disk.py:18
+msgid "Il primo controllo parte poco dopo l'avvio. Puoi avviarlo con Controlla ora."
+msgstr "The first check starts shortly after launch. You can start it with Check now."
+
+#: src/wimm/ui/pages/disk.py:19
+msgid "Controllo in corso…"
+msgstr "Checking…"
+
+#: src/wimm/ui/pages/disk.py:20
+msgid "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
+msgstr "The check failed: the list shows the last result."
+
+#: src/wimm/ui/pages/disk.py:21
+msgid "Il controllo non è riuscito. Riprova con Controlla ora."
+msgstr "The check failed. Try again with Check now."
+
+#: src/wimm/ui/pages/disk_header.py:13
+msgid "Controlla ora"
+msgstr "Check now"
+
+#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:75
+msgid "Controllo in corso"
+msgstr "Checking"
 
 #: src/wimm/ui/plain.py:10
 msgid "Lo stai usando adesso."
@@ -1765,3 +1806,264 @@ msgstr "alerts paused until {time}"
 #, python-brace-format
 msgid "avvisi in pausa fino al {date} alle {time}"
 msgstr "alerts paused until {date} at {time}"
+
+#: src/wimm/ui/widgets/__init__.py:10
+msgid "Disponibile con le azioni (fase 3)"
+msgstr "Available with actions (phase 3)"
+
+#: src/wimm/ui/widgets/context_menu.py:25
+msgid "Copia comando"
+msgstr "Copy command"
+
+#: src/wimm/ui/widgets/context_menu.py:26
+msgid "Copia PID"
+msgstr "Copy PID"
+
+#: src/wimm/ui/widgets/context_menu.py:27
+msgid "Apri cartella"
+msgstr "Open folder"
+
+#: src/wimm/ui/widgets/context_menu.py:60
+#, python-brace-format
+msgid "Altre azioni: {title}"
+msgstr "More actions: {title}"
+
+#: src/wimm/ui/widgets/filter_bar.py:14
+msgid "Cerca…"
+msgstr "Search…"
+
+#: src/wimm/ui/widgets/filter_bar.py:15
+msgid "Cerca tra i programmi"
+msgstr "Search programs"
+
+#: src/wimm/ui/widgets/filter_bar.py:16
+msgid "Da liberare"
+msgstr "To free up"
+
+#: src/wimm/ui/widgets/filter_bar.py:17
+msgid "Tutto"
+msgstr "All"
+
+#: src/wimm/ui/widgets/filter_bar.py:18
+msgid "Altri filtri"
+msgstr "More filters"
+
+#: src/wimm/ui/widgets/filter_bar.py:19
+msgid "Tipo di programma"
+msgstr "Program type"
+
+#: src/wimm/ui/widgets/filter_bar.py:20
+msgid "Rischio"
+msgstr "Risk"
+
+#: src/wimm/ui/widgets/group_controls.py:15
+msgid "1 ora"
+msgstr "1 hour"
+
+#: src/wimm/ui/widgets/group_controls.py:16
+msgid "1 giorno"
+msgstr "1 day"
+
+#: src/wimm/ui/widgets/group_controls.py:17
+msgid "7 giorni"
+msgstr "7 days"
+
+#: src/wimm/ui/widgets/group_controls.py:19
+msgid "Non avvisarmi per questo"
+msgstr "Don't alert me about this"
+
+#: src/wimm/ui/widgets/group_controls.py:20
+msgid "Resta in lista, smetti solo di ricevere avvisi"
+msgstr "It stays in the list, you just stop getting alerts"
+
+#: src/wimm/ui/widgets/group_controls.py:21
+msgid "Non ricevi avvisi per questo programma"
+msgstr "You get no alerts for this program"
+
+#: src/wimm/ui/widgets/group_controls.py:22
+msgid "Mai più"
+msgstr "Never again"
+
+#: src/wimm/ui/widgets/group_controls.py:23
+msgid "Riattiva gli avvisi"
+msgstr "Turn alerts back on"
+
+#: src/wimm/ui/widgets/group_list.py:6
+msgid "Da liberare · non li usi da tempo"
+msgstr "To free up · you have not used them for a while"
+
+#: src/wimm/ui/widgets/group_list.py:7
+msgid "In uso adesso o non misurabile"
+msgstr "In use now or not measurable"
+
+#: src/wimm/ui/widgets/group_row.py:20
+msgid "In corso…"
+msgstr "Working…"
+
+#: src/wimm/ui/widgets/group_row.py:21
+msgid "Memoria liberabile"
+msgstr "Memory that can be freed"
+
+#: src/wimm/ui/widgets/group_row.py:22
+msgid "senza avvisi"
+msgstr "no alerts"
+
+#: src/wimm/ui/widgets/group_row.py:189
+#, python-brace-format
+msgid "Liberabile: {reclaimable} · in uso: {memory}"
+msgstr "Can be freed: {reclaimable} · in use: {memory}"
+
+#: src/wimm/ui/widgets/member_row.py:19
+msgid "Dettagli tecnici"
+msgstr "Technical details"
+
+#: src/wimm/ui/widgets/member_row.py:28
+#, python-brace-format
+msgid "PID {pid}"
+msgstr "PID {pid}"
+
+#: src/wimm/ui/widgets/member_row.py:30
+#, python-brace-format
+msgid "avvio {when}"
+msgstr "started {when}"
+
+#: src/wimm/ui/widgets/member_row.py:36
+#, python-brace-format
+msgid "immagine {image} ({state})"
+msgstr "image {image} ({state})"
+
+#: src/wimm/ui/widgets/member_row.py:39
+#, python-brace-format
+msgid "immagine {image}"
+msgstr "image {image}"
+
+#: src/wimm/ui/widgets/member_row.py:41
+#, python-brace-format
+msgid "comando: {command}"
+msgstr "command: {command}"
+
+#: src/wimm/ui/widgets/member_row.py:43
+#, python-brace-format
+msgid "cartella: {folder}"
+msgstr "folder: {folder}"
+
+#: src/wimm/ui/widgets/member_row.py:45
+#, python-brace-format
+msgid "porte: {ports}"
+msgstr "ports: {ports}"
+
+#: src/wimm/ui/widgets/member_row.py:46
+#, python-brace-format
+msgid "mount {path}"
+msgstr "mount {path}"
+
+#: src/wimm/ui/widgets/member_row.py:54
+#, python-brace-format
+msgid "avviato {when}"
+msgstr "running since {when}"
+
+#: src/wimm/ui/widgets/memory_bar.py:15
+msgid "Memoria per categoria"
+msgstr "Memory by category"
+
+#: src/wimm/ui/widgets/state_views.py:6
+msgid "Raccolta dati in corso…"
+msgstr "Collecting data…"
+
+#: src/wimm/ui/widgets/state_views.py:7
+msgid "Ci sta mettendo più del previsto"
+msgstr "This is taking longer than expected"
+
+#: src/wimm/ui/widgets/state_views.py:8
+msgid "Non riesco a leggere i dati del computer"
+msgstr "I cannot read the computer's data"
+
+#: src/wimm/ui/widgets/state_views.py:9
+msgid "Riprova adesso"
+msgstr "Try again now"
+
+#: src/wimm/ui/widgets/state_views.py:24
+#, python-brace-format
+msgid "Ho provato {failures} volta di fila senza riuscirci. Di solito basta riprovare; se non passa, i dettagli sono nel registro dell'applicazione."
+msgid_plural "Ho provato {failures} volte di fila senza riuscirci. Di solito basta riprovare; se non passa, i dettagli sono nel registro dell'applicazione."
+msgstr[0] "I tried {failures} time in a row without success. Usually trying again is enough; if it does not work, the details are in the application log."
+msgstr[1] "I tried {failures} times in a row without success. Usually trying again is enough; if it does not work, the details are in the application log."
+
+#: src/wimm/ui/widgets/summary.py:18
+msgid "Memoria (RAM)"
+msgstr "Memory (RAM)"
+
+#: src/wimm/ui/widgets/summary.py:19
+msgid "Spazio sul disco"
+msgstr "Disk space"
+
+#: src/wimm/ui/widgets/summary.py:20
+msgid "Cos'è la memoria (RAM)?"
+msgstr "What is memory (RAM)?"
+
+#: src/wimm/ui/widgets/summary.py:22
+msgid "La memoria (RAM) è lo spazio dove lavorano i programmi aperti. Quando è piena il computer rallenta. Chiudere un programma la libera subito: i file salvati restano, il lavoro non salvato in quel programma si perde."
+msgstr "Memory (RAM) is the space where open programs work. When it is full the computer slows down. Closing a program frees it at once: saved files stay, unsaved work in that program is lost."
+
+#: src/wimm/ui/widgets/summary.py:26
+msgid "Cos'è lo spazio sul disco?"
+msgstr "What is disk space?"
+
+#: src/wimm/ui/widgets/summary.py:28
+msgid "Il disco è dove restano i file anche a computer spento. Quando è quasi pieno non si riesce più a salvare né ad aggiornare. Dalla scheda Disco puoi liberare spazio: prima di ogni cancellazione ti diciamo cosa si perde."
+msgstr "The disk is where files stay even when the computer is off. When it is almost full you can no longer save or update. From the Disk tab you can free up space: before each deletion we tell you what is lost."
+
+#: src/wimm/ui/widgets/summary.py:177
+#, python-brace-format
+msgid "Uso del disco {mount}: {used} su {total}"
+msgstr "Disk usage {mount}: {used} of {total}"
+
+#: src/wimm/ui/widgets/summary.py:183
+#, python-brace-format
+msgid "Liberabile ora: {ram} di RAM · {disk} di disco"
+msgstr "Can be freed now: {ram} of RAM · {disk} of disk"
+
+#: src/wimm/ui/widgets/system_section.py:11
+msgid "Parti del sistema"
+msgstr "System parts"
+
+#: src/wimm/ui/widgets/system_section.py:13
+msgid "Questi programmi fanno funzionare il computer. Da qui non si possono chiudere, quindi non puoi rompere niente."
+msgstr "These programs keep the computer running. They cannot be closed from here, so you cannot break anything."
+
+#: src/wimm/ui/window.py:43
+msgid "Mostra dove va la memoria e cosa si può liberare."
+msgstr "Shows where the memory goes and what can be freed."
+
+#: src/wimm/ui/window.py:123
+msgid "Panoramica"
+msgstr "Overview"
+
+#: src/wimm/ui/window.py:124
+msgid "Disco"
+msgstr "Disk"
+
+#: src/wimm/ui/window.py:149
+msgid "Menu principale"
+msgstr "Main menu"
+
+#: src/wimm/ui/window.py:156
+msgid "Aggiorna (F5)"
+msgstr "Refresh (F5)"
+
+#: src/wimm/ui/window_notify.py:12
+msgid "Silenzia 1 h"
+msgstr "Mute for 1 h"
+
+#: src/wimm/ui/window_notify.py:14
+#, python-brace-format
+msgid "Notifiche silenziate fino alle {until}"
+msgstr "Notifications muted until {until}"
+
+#: src/wimm/ui/window_notify.py:67
+msgid "Info"
+msgstr "About"
+
+#: src/wimm/ui/window_notify.py:68
+msgid "Esci"
+msgstr "Quit"

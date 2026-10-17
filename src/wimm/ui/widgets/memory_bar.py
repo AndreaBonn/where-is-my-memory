@@ -1,5 +1,6 @@
 from gi.repository import Gtk
 
+from wimm.i18n import N_, _
 from wimm.ui.views import BarSegment
 
 from . import clear_children
@@ -11,7 +12,7 @@ SPECIAL_CLASSES = {
     "unattributed": "unattributed",
     "free": "free",
 }
-BAR_LABEL = "Memoria per categoria"
+BAR_LABEL = N_("Memoria per categoria")
 LEGEND_COLUMNS = 6
 BAR_SPACING = 6
 LEGEND_COLUMN_SPACING = 12
@@ -73,7 +74,7 @@ class MemoryBar(Gtk.Box):
             self._legend.append(_legend_entry(text=segment.legend, style=style))
         text = "; ".join(segment.legend for segment in segments)
         self._grid.update_property(
-            [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION], [BAR_LABEL, text]
+            [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION], [_(BAR_LABEL), text]
         )
 
 

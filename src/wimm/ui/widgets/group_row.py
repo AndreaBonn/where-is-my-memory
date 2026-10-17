@@ -3,6 +3,7 @@ from collections.abc import Callable
 
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
 from wimm.ui.views import GroupRow, MemberRow
 
 from . import ACTIONS_UNAVAILABLE_TOOLTIP, NARROW_CLASS, ROW_CLASS, color_primary
@@ -16,9 +17,9 @@ SUBTITLE_LINES = 3
 SUFFIX_SPACING = 8
 NARROW_SUFFIX_SPACING = 4
 PRIMARY_ACTION_NAME = "primary-action"
-BUSY_LABEL = "In corso…"
-RECLAIMABLE_TOOLTIP = "Memoria liberabile"
-IGNORED_TEXT = "senza avvisi"
+BUSY_LABEL = N_("In corso…")
+RECLAIMABLE_TOOLTIP = N_("Memoria liberabile")
+IGNORED_TEXT = N_("senza avvisi")
 LINE_SEPARATOR = "\n"
 FIELD_SEPARATOR = " · "
 
@@ -62,7 +63,7 @@ class GroupRowWidget(Adw.ExpanderRow):
     def _build_suffix(self, *, row: GroupRow) -> None:
         self._reclaim = Gtk.Label(valign=Gtk.Align.CENTER)
         self._reclaim.add_css_class("wimm-reclaim")
-        self._reclaim.set_tooltip_text(RECLAIMABLE_TOOLTIP)
+        self._reclaim.set_tooltip_text(_(RECLAIMABLE_TOOLTIP))
         self._badge = make_risk_badge(text=row.risk_text, style=row.risk_style)
         self._suffix = Gtk.Box(spacing=SUFFIX_SPACING, valign=Gtk.Align.CENTER)
         for child in (self._reclaim, self._badge):
@@ -107,7 +108,7 @@ class GroupRowWidget(Adw.ExpanderRow):
         color_primary(button=self._action, risk=row.primary_action.risk)
         if self._on_action is None:
             self._action.set_sensitive(False)
-            self._action.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+            self._action.set_tooltip_text(_(ACTIONS_UNAVAILABLE_TOOLTIP))
         else:
             self._action.connect("clicked", self._on_primary_clicked)
         self._suffix.insert_child_after(self._action, self._badge)
@@ -119,7 +120,7 @@ class GroupRowWidget(Adw.ExpanderRow):
         if self._action is None or self._row is None or self._row.primary_action is None:
             return
         self._action.set_sensitive(self._on_action is not None and not busy)
-        self._action.set_label(BUSY_LABEL if busy else self._row.primary_action.label)
+        self._action.set_label(_(BUSY_LABEL) if busy else self._row.primary_action.label)
 
     def _on_primary_clicked(self, *_args: object) -> None:
         if self._on_action is not None and self._row is not None:
@@ -185,7 +186,9 @@ class GroupRowWidget(Adw.ExpanderRow):
 
 
 def _info_title(*, row: GroupRow) -> str:
-    return f"Liberabile: {row.reclaimable} · in uso: {row.memory}"
+    return _("Liberabile: {reclaimable} · in uso: {memory}").format(
+        reclaimable=row.reclaimable, memory=row.memory
+    )
 
 
 def _info_subtitle(*, row: GroupRow) -> str:
@@ -196,7 +199,7 @@ def _info_subtitle(*, row: GroupRow) -> str:
 def _subtitle(*, row: GroupRow) -> str:
     first = [row.subtitle]
     if row.ignored:
-        first.append(IGNORED_TEXT)
+        first.append(_(IGNORED_TEXT))
     if row.snoozed_text:
         first.append(row.snoozed_text)
     return LINE_SEPARATOR.join([FIELD_SEPARATOR.join(first), row.detail])

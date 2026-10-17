@@ -2,6 +2,7 @@ from collections.abc import Callable
 
 from gi.repository import Gtk
 
+from wimm.i18n import N_, _
 from wimm.ui.views import SummaryView
 
 from . import ACTIONS_UNAVAILABLE_TOOLTIP, SECONDARY_CLASS
@@ -14,16 +15,16 @@ STATUS_COLUMNS = 2
 STATUS_COLUMN_SPACING = 12
 LINE_SPACING = 2
 STATUS_ICON_SIZE = 32
-RAM_TITLE = "Memoria (RAM)"
-DISK_TITLE = "Spazio sul disco"
-RAM_QUESTION = "Cos'è la memoria (RAM)?"
-RAM_ANSWER = (
+RAM_TITLE = N_("Memoria (RAM)")
+DISK_TITLE = N_("Spazio sul disco")
+RAM_QUESTION = N_("Cos'è la memoria (RAM)?")
+RAM_ANSWER = N_(
     "La memoria (RAM) è lo spazio dove lavorano i programmi aperti. Quando è piena il "
     "computer rallenta. Chiudere un programma la libera subito: i file salvati restano, il "
     "lavoro non salvato in quel programma si perde."
 )
-DISK_QUESTION = "Cos'è lo spazio sul disco?"
-DISK_ANSWER = (
+DISK_QUESTION = N_("Cos'è lo spazio sul disco?")
+DISK_ANSWER = N_(
     "Il disco è dove restano i file anche a computer spento. Quando è quasi pieno non si "
     "riesce più a salvare né ad aggiornare. Dalla scheda Disco puoi liberare spazio: prima di "
     "ogni cancellazione ti diciamo cosa si perde."
@@ -42,7 +43,9 @@ def _section_title(*, text: str) -> Gtk.Label:
 
 
 def _help_title(*, text: str, question: str, answer: str) -> Gtk.Box:
-    return titled_with_help(title=_section_title(text=text), question=question, answer=answer)
+    return titled_with_help(
+        title=_section_title(text=_(text)), question=_(question), answer=_(answer)
+    )
 
 
 def _detail_label() -> Gtk.Label:
@@ -68,7 +71,7 @@ def _build_stop_all(*, on_stop_all: Callable[[], None] | None) -> Gtk.Button:
     button.add_css_class("suggested-action")
     if on_stop_all is None:
         button.set_sensitive(False)
-        button.set_tooltip_text(ACTIONS_UNAVAILABLE_TOOLTIP)
+        button.set_tooltip_text(_(ACTIONS_UNAVAILABLE_TOOLTIP))
     else:
         button.connect("clicked", lambda *_args: on_stop_all())
     button.set_name("stop-all-idle")
@@ -170,8 +173,14 @@ class SummaryPanel(Gtk.Box):
         self._disk_bar.set_fraction(view.disk_fraction)
         self._disk_bar.update_property(
             [Gtk.AccessibleProperty.LABEL],
-            [f"Uso del disco {view.disk_mount}: {view.disk_used} su {view.disk_total}"],
+            [
+                _("Uso del disco {mount}: {used} su {total}").format(
+                    mount=view.disk_mount, used=view.disk_used, total=view.disk_total
+                )
+            ],
         )
         self._reclaim.set_label(
-            f"Liberabile ora: {view.reclaimable_ram} di RAM · {view.reclaimable_disk} di disco"
+            _("Liberabile ora: {ram} di RAM · {disk} di disco").format(
+                ram=view.reclaimable_ram, disk=view.reclaimable_disk
+            )
         )

@@ -2,13 +2,14 @@
 
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
 from wimm.model.snapshot import Snapshot
 from wimm.ui.format import format_size
 from wimm.ui.viewmodel import build_system_rows
 from wimm.ui.views import SystemRow
 
-TITLE = "Parti del sistema"
-INTRO_TEXT = (
+TITLE = N_("Parti del sistema")
+INTRO_TEXT = N_(
     "Questi programmi fanno funzionare il computer. "
     "Da qui non si possono chiudere, quindi non puoi rompere niente."
 )
@@ -34,7 +35,7 @@ class SystemSection(Gtk.ListBox):
     def __init__(self) -> None:
         super().__init__(selection_mode=Gtk.SelectionMode.NONE, visible=False)
         self.add_css_class("boxed-list")
-        self.expander = Adw.ExpanderRow(subtitle=INTRO_TEXT, use_markup=False, subtitle_lines=0)
+        self.expander = Adw.ExpanderRow(subtitle=_(INTRO_TEXT), use_markup=False, subtitle_lines=0)
         self.expander.add_prefix(_lock())
         self.append(self.expander)
         self._rows: list[Adw.ActionRow] = []
@@ -53,7 +54,7 @@ class SystemSection(Gtk.ListBox):
         """List the protected groups, largest first, with their total in the title."""
         rows = build_system_rows(snapshot=snapshot)
         total = sum(item.memory for item in snapshot.protected_summary)
-        self.expander.set_title(f"{TITLE} · {format_size(size=total)}")
+        self.expander.set_title(f"{_(TITLE)} · {format_size(size=total)}")
         if rows != self._last:
             self._last = rows
             for widget in self._rows:

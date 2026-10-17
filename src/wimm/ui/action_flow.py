@@ -10,7 +10,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Gtk
 
-from wimm.i18n import _
+from wimm.i18n import N_, _
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import ActionKind, PlanId, TargetId
 from wimm.model.errors import InvalidRequest, WimmError
@@ -31,16 +31,16 @@ from wimm.ui.outcome import (
 )
 
 LOGGER = logging.getLogger(__name__)
-NOTHING_TO_STOP_TEXT = "Non c'è niente da fermare senza rischi"
-NOTHING_SAFE_ON_DISK_TEXT = "Non c'è niente da liberare senza rischi sul disco"
+NOTHING_TO_STOP_TEXT = N_("Non c'è niente da fermare senza rischi")
+NOTHING_SAFE_ON_DISK_TEXT = N_("Non c'è niente da liberare senza rischi sul disco")
 # The invalid requests the UI builds itself: "everything safe" with nothing left to do.
 NOTHING_LEFT_TEXTS = {
     ActionKind.STOP_ALL_IDLE_SAFE: NOTHING_TO_STOP_TEXT,
     ActionKind.DISK_FREE_SAFE: NOTHING_SAFE_ON_DISK_TEXT,
 }
-REPLAN_TEXT = "La situazione è cambiata, ricalcolo…"
-DETAILS_LABEL = "Dettagli"
-RESTART_LABEL = "Riaccendi"
+REPLAN_TEXT = N_("La situazione è cambiata, ricalcolo…")
+DETAILS_LABEL = N_("Dettagli")
+RESTART_LABEL = N_("Riaccendi")
 REPLANNED_ERRORS = (PlanExpired, TargetChanged)
 
 
@@ -130,7 +130,8 @@ class ActionFlow:
         try:
             plan = self._source.plan(request=request)
         except InvalidRequest as error:
-            self._notify(NOTHING_LEFT_TEXTS.get(request.kind, _(error.user_message)))
+            left = NOTHING_LEFT_TEXTS.get(request.kind)
+            self._notify(_(left) if left is not None else _(error.user_message))
             return
         except WimmError as error:
             self._notify(_(error.user_message))
@@ -195,10 +196,10 @@ class ActionFlow:
         text = report.summary if report.freed is None else f"{report.summary}. {report.freed}"
         # SPECIFICHE 10.3: the details are offered only when some target did not succeed.
         if not all(step.status in OK_STATUSES for step in report.steps):
-            self._notify(text, button=DETAILS_LABEL, on_button=self._show_details)
+            self._notify(text, button=_(DETAILS_LABEL), on_button=self._show_details)
         elif report.restartable:
             restart = partial(self._restart, plan_id=report.plan_id)
-            self._notify(text, button=RESTART_LABEL, on_button=restart)
+            self._notify(text, button=_(RESTART_LABEL), on_button=restart)
         else:
             self._notify(text)
 
@@ -242,7 +243,7 @@ class ActionFlow:
     def _reject(self, *, plan_id: str, error: WimmError) -> None:
         pending = self._release(plan_id=plan_id)
         if pending is not None and _should_replan(pending=pending, error=error):
-            self._notify(REPLAN_TEXT)
+            self._notify(_(REPLAN_TEXT))
             self._begin(request=pending.plan.request, subject=pending.subject, may_replan=False)
             return
         self._notify(_(error.user_message))

@@ -3,6 +3,7 @@ from datetime import datetime
 
 from gi.repository import Adw, Gtk
 
+from wimm.i18n import N_, _
 from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import DiskSectionView
@@ -13,11 +14,11 @@ from wimm.ui.pages.disk_rows import RowAction, SectionAction, SectionGroup
 
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
-WAITING_TITLE = "Nessun controllo ancora"
-WAITING_TEXT = "Il primo controllo parte poco dopo l'avvio. Puoi avviarlo con Controlla ora."
-SCANNING_TITLE = "Controllo in corso…"
-FAILED_WITH_REPORT = "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
-FAILED_WITHOUT_REPORT = "Il controllo non è riuscito. Riprova con Controlla ora."
+WAITING_TITLE = N_("Nessun controllo ancora")
+WAITING_TEXT = N_("Il primo controllo parte poco dopo l'avvio. Puoi avviarlo con Controlla ora.")
+SCANNING_TITLE = N_("Controllo in corso…")
+FAILED_WITH_REPORT = N_("Il controllo non è riuscito: l'elenco mostra l'ultimo risultato.")
+FAILED_WITHOUT_REPORT = N_("Il controllo non è riuscito. Riprova con Controlla ora.")
 STATE_WAITING = "waiting"
 STATE_LIST = "list"
 
@@ -40,7 +41,7 @@ class DiskPage(Gtk.Box):
         self._groups: dict[str, SectionGroup] = {}
         self._headings: list[Gtk.Widget] = []
         self._header = DiskHeader(
-            waiting=WAITING_TITLE,
+            waiting=_(WAITING_TITLE),
             on_scan=self._start_scan,
             on_safe=None if on_section is None else lambda: on_section(ActionKind.DISK_FREE_SAFE),
         )
@@ -52,7 +53,7 @@ class DiskPage(Gtk.Box):
 
     def _build_stack(self) -> Gtk.Stack:
         self._waiting = Adw.StatusPage(
-            title=WAITING_TITLE, description=WAITING_TEXT, icon_name="drive-harddisk-symbolic"
+            title=_(WAITING_TITLE), description=_(WAITING_TEXT), icon_name="drive-harddisk-symbolic"
         )
         self._stack = Gtk.Stack(vexpand=True)
         self._stack.add_named(self._waiting, STATE_WAITING)
@@ -116,7 +117,7 @@ class DiskPage(Gtk.Box):
         self._header.set_scanning(scanning=scanning)
         for group in self._groups.values():
             group.set_scanning(scanning=scanning)
-        self._waiting.set_title(SCANNING_TITLE if scanning else WAITING_TITLE)
+        self._waiting.set_title(_(SCANNING_TITLE if scanning else WAITING_TITLE))
 
     def show_report(self, *, report: DiskReport | None, now: datetime, min_age_days: int) -> None:
         """Show a fresh report (or None before the first scan) and end the scan state."""
@@ -141,7 +142,7 @@ class DiskPage(Gtk.Box):
     def show_scan_failed(self) -> None:
         """Keep the last report and say, without blocking, that the scan failed."""
         self._set_scanning(scanning=False)
-        self._notice.set_label(FAILED_WITH_REPORT if self._has_report else FAILED_WITHOUT_REPORT)
+        self._notice.set_label(_(FAILED_WITH_REPORT if self._has_report else FAILED_WITHOUT_REPORT))
         self._notice.set_visible(True)
 
     def _sync_groups(self, *, sections: tuple[DiskSectionView, ...]) -> None:

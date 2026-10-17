@@ -4,19 +4,20 @@ from collections.abc import Callable
 
 from gi.repository import Gtk
 
+from wimm.i18n import N_, _
 from wimm.model.enums import Category, Protection, Risk, protection_of
 from wimm.ui.format import CATEGORY_LABELS, RISK_TEXT
 from wimm.ui.views import RowFilters
 
 SECTION_SPACING = 8
 LINE_SPACING = 2
-SEARCH_PLACEHOLDER = "Cerca…"
-SEARCH_LABEL = "Cerca tra i programmi"
-FILTER_IDLE = "Da liberare"
-FILTER_ALL = "Tutto"
-MORE_MENU = "Altri filtri"
-CATEGORY_TITLE = "Tipo di programma"
-RISK_TITLE = "Rischio"
+SEARCH_PLACEHOLDER = N_("Cerca…")
+SEARCH_LABEL = N_("Cerca tra i programmi")
+FILTER_IDLE = N_("Da liberare")
+FILTER_ALL = N_("Tutto")
+MORE_MENU = N_("Altri filtri")
+CATEGORY_TITLE = N_("Tipo di programma")
+RISK_TITLE = N_("Rischio")
 FILTERABLE_CATEGORIES = tuple(
     category for category in Category if protection_of(category=category) is Protection.ACTIONABLE
 )
@@ -40,13 +41,13 @@ class FilterBar(Gtk.Box):
         self._on_changed = on_changed
         self._muted = False
         self._reported: RowFilters | None = None
-        self._idle = Gtk.ToggleButton(label=FILTER_IDLE, active=True)
-        self._all = Gtk.ToggleButton(label=FILTER_ALL, group=self._idle)
+        self._idle = Gtk.ToggleButton(label=_(FILTER_IDLE), active=True)
+        self._all = Gtk.ToggleButton(label=_(FILTER_ALL), group=self._idle)
         self._categories: dict[Category, Gtk.CheckButton] = {}
         self._risks: dict[Risk, Gtk.CheckButton] = {}
         self._more = self._build_more()
-        self.search = Gtk.SearchEntry(placeholder_text=SEARCH_PLACEHOLDER, hexpand=True)
-        self.search.update_property([Gtk.AccessibleProperty.LABEL], [SEARCH_LABEL])
+        self.search = Gtk.SearchEntry(placeholder_text=_(SEARCH_PLACEHOLDER), hexpand=True)
+        self.search.update_property([Gtk.AccessibleProperty.LABEL], [_(SEARCH_LABEL)])
         for toggle in (self._all, self._idle):
             toggle.connect("toggled", self._changed)
         self.search.connect("search-changed", self._changed)
@@ -65,15 +66,15 @@ class FilterBar(Gtk.Box):
 
     def _build_more(self) -> Gtk.MenuButton:
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING)
-        box.append(_heading(text=CATEGORY_TITLE))
+        box.append(_heading(text=_(CATEGORY_TITLE)))
         self._add_checks(
             box=box,
-            choices=[(c, CATEGORY_LABELS[c]) for c in FILTERABLE_CATEGORIES],
+            choices=[(c, _(CATEGORY_LABELS[c])) for c in FILTERABLE_CATEGORIES],
             store=self._categories,
         )
-        box.append(_heading(text=RISK_TITLE))
-        self._add_checks(box=box, choices=[(r, RISK_TEXT[r]) for r in Risk], store=self._risks)
-        button = Gtk.MenuButton(label=MORE_MENU, popover=Gtk.Popover(child=box))
+        box.append(_heading(text=_(RISK_TITLE)))
+        self._add_checks(box=box, choices=[(r, _(RISK_TEXT[r])) for r in Risk], store=self._risks)
+        button = Gtk.MenuButton(label=_(MORE_MENU), popover=Gtk.Popover(child=box))
         button.set_name(MORE_MENU)
         return button
 
@@ -88,8 +89,8 @@ class FilterBar(Gtk.Box):
 
     def set_counts(self, *, idle: int, total: int) -> None:
         """Show how many programs each choice lists: "Da liberare (4)", "Tutto (6)"."""
-        self._idle.set_label(_counted(title=FILTER_IDLE, count=idle))
-        self._all.set_label(_counted(title=FILTER_ALL, count=total))
+        self._idle.set_label(_counted(title=_(FILTER_IDLE), count=idle))
+        self._all.set_label(_counted(title=_(FILTER_ALL), count=total))
 
     @property
     def filters(self) -> RowFilters:
@@ -116,7 +117,7 @@ class FilterBar(Gtk.Box):
             return
         filters = self.filters
         active = len(filters.categories) + len(filters.risks)
-        self._more.set_label(_counted(title=MORE_MENU, count=active or None))
+        self._more.set_label(_counted(title=_(MORE_MENU), count=active or None))
         # A radio switch toggles two buttons and a cleared search reports late: one
         # notification per real change, so the page does not render twice.
         if filters == self._reported:
