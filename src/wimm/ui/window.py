@@ -17,6 +17,7 @@ from wimm.ui.pages.overview import OverviewPage
 from wimm.ui.pages.system import SystemPage
 from wimm.ui.widgets import install_style, name_icon_button
 from wimm.ui.window_actions import build_action_flow
+from wimm.ui.window_disk import DiskBinding
 from wimm.ui.window_notify import build_main_menu, group_controls
 from wimm.ui.window_shortcuts import shortcut_controller
 from wimm.ui.window_state import (
@@ -63,16 +64,21 @@ class MainWindow(Adw.Window):
         width, height = load_window_size(path=self._state_path)
         self.set_default_size(width, height)
         self.set_size_request(MIN_WIDTH, MIN_HEIGHT)
-        self.overview = OverviewPage(
-            on_action=self._start_action if can_act(source=source) else None,
-            controls=group_controls(source=source),
-        )
-        self.system = SystemPage()
+        self._build_pages()
         self._build_chrome()
         self._init_actions_flow()
         self._build_shortcuts()
         self._connect_signals()
         self.sync()
+
+    def _build_pages(self) -> None:
+        self.overview = OverviewPage(
+            on_action=self._start_action if can_act(source=self._source) else None,
+            controls=group_controls(source=self._source),
+        )
+        self.system = SystemPage()
+        self._disk = DiskBinding(source=self._source, clock=self._clock)
+        self.disk = self._disk.page
 
     def _init_actions(self, *, application: Gio.Application) -> None:
         self.insert_action_group("app", application)
@@ -109,9 +115,7 @@ class MainWindow(Adw.Window):
     def _build_chrome(self) -> None:
         stack = Adw.ViewStack()
         stack.add_titled_with_icon(self.overview, "overview", "Panoramica", "view-list-symbolic")
-        stack.add_titled_with_icon(
-            self._disk_placeholder(), "disk", "Disco", "drive-harddisk-symbolic"
-        )
+        stack.add_titled_with_icon(self.disk, "disk", "Disco", "drive-harddisk-symbolic")
         stack.add_titled_with_icon(self.system, "system", "Sistema", "computer-symbolic")
         self.view_stack = stack
         switcher = Adw.ViewSwitcher(stack=stack, policy=Adw.ViewSwitcherPolicy.WIDE)
@@ -132,14 +136,6 @@ class MainWindow(Adw.Window):
         breakpoint_.connect("apply", lambda *_a: self.overview.set_narrow(narrow=True))
         breakpoint_.connect("unapply", lambda *_a: self.overview.set_narrow(narrow=False))
         self.add_breakpoint(breakpoint_)
-
-    @staticmethod
-    def _disk_placeholder() -> Adw.StatusPage:
-        return Adw.StatusPage(
-            title="In arrivo",
-            description="La vista Disco arriva in una prossima versione.",
-            icon_name="drive-harddisk-symbolic",
-        )
 
     def _menu_button(self) -> Gtk.MenuButton:
         menu, self._snooze_all = build_main_menu(source=self._source)
@@ -237,6 +233,7 @@ class MainWindow(Adw.Window):
             self._source.disconnect(self._source_handler)
             self._source_handler = 0
         self._stop_timers()
+        self._disk.close()
         if self.action_flow is not None:
             self.action_flow.close()
         self.overview.cancel()

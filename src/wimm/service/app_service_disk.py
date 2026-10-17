@@ -70,6 +70,11 @@ class DiskMixin:
             self._disk_busy = True
             future = self._disk_executor.submit(self._disk_scanner.scan, config=self._config)
             future.add_done_callback(self._disk_completed)
+            self.emit("disk-scan-started")
+
+    def disk_scanning(self) -> bool:
+        """A scan is running; a window opened now shows it as in progress."""
+        return self._disk_busy
 
     def _track_disk_plan(self, *, plan: Plan) -> None:
         """Remember a plan that changes the disk, so its end triggers a rescan."""

@@ -18,6 +18,7 @@ APP_SERVICE_SIGNALS: dict[str, Any] = {
     "action-finished": (GObject.SignalFlags.RUN_LAST, None, _PLAN_AND_PAYLOAD),
     "action-rejected": (GObject.SignalFlags.RUN_LAST, None, _PLAN_AND_PAYLOAD),
     "reclaim-measured": (GObject.SignalFlags.RUN_LAST, None, _PLAN_AND_PAYLOAD),
+    "disk-scan-started": (GObject.SignalFlags.RUN_LAST, None, ()),
     "disk-report-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
     "disk-scan-failed": (GObject.SignalFlags.RUN_LAST, None, ()),
 }

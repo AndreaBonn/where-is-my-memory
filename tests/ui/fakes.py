@@ -143,3 +143,47 @@ class RefreshableSource(FakeSource):
 
     def request_refresh(self) -> None:
         self.refreshes += 1
+
+
+class FakeDiskSource(FakeSource):
+    """A snapshot source with the disk scan API of AppService: a report, a rescan counter."""
+
+    __gsignals__: ClassVar = {
+        "disk-report-updated": (GObject.SignalFlags.RUN_LAST, None, ()),
+        "disk-scan-failed": (GObject.SignalFlags.RUN_LAST, None, ()),
+        "disk-scan-started": (GObject.SignalFlags.RUN_LAST, None, ()),
+    }
+
+    def __init__(
+        self, *, snapshot: Snapshot | None, report: DiskReport | None = None, can_scan: bool = True
+    ) -> None:
+        super().__init__(snapshot=snapshot)
+        self._report = report
+        self._can_scan = can_scan
+        self._scanning = False
+        self.rescans = 0
+
+    def disk_scanning(self) -> bool:
+        return self._scanning
+
+    def start_scan(self) -> None:
+        """A scan the service starts on its own, like the periodic one."""
+        self._scanning = True
+        self.emit("disk-scan-started")
+
+    def disk_report(self) -> DiskReport | None:
+        return self._report
+
+    def rescan_disk(self) -> None:
+        self.rescans += 1
+        if self._can_scan:
+            self.start_scan()
+
+    def publish_report(self, report: DiskReport) -> None:
+        self._report = report
+        self._scanning = False
+        self.emit("disk-report-updated")
+
+    def fail_scan(self) -> None:
+        self._scanning = False
+        self.emit("disk-scan-failed")

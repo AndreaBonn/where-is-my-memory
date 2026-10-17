@@ -357,3 +357,33 @@ def test_a_finished_disk_action_triggers_one_rescan_and_a_process_action_does_no
         assert len(rig.scanner.configs) == scans + 1
     finally:
         service.stop()
+
+
+def test_a_scan_that_starts_announces_itself_on_the_main_thread() -> None:
+    rig = build_rig()
+    started: list[int] = []
+    rig.service.connect("disk-scan-started", lambda *_: started.append(threading.get_ident()))
+    try:
+        assert rig.service.disk_scanning() is False
+        rig.service.rescan_disk()
+        assert started == [threading.get_ident()]
+        assert rig.service.disk_scanning() is True
+        rig.service.rescan_disk()
+        assert len(started) == 1
+        rig.scanner.gate.set()
+        spin_until(predicate=lambda: len(rig.updated) == 2)
+        assert len(started) == 2
+        assert rig.service.disk_scanning() is False
+    finally:
+        rig.scanner.gate.set()
+        rig.service.stop()
+
+
+def test_a_rescan_without_a_scanner_announces_nothing() -> None:
+    service = AppService(sampler=FakeSampler(), config=Config())
+    started: list[int] = []
+    service.connect("disk-scan-started", lambda *_: started.append(1))
+    service.rescan_disk()
+    assert started == []
+    assert service.disk_scanning() is False
+    service.stop()
