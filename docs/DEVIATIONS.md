@@ -392,3 +392,18 @@ c'è il punto della specifica, cosa cambia e perché.
   passa dalla conferma come ogni altro; all'esecuzione un container già riacceso resta
   com'è, uno rimosso nel frattempo dà "Non riuscito". I processi non si riaccendono da qui:
   il dialogo dice con quale comando e in quale cartella.
+- **R1, struttura delle Preferenze (§10.2, RF-50).** I campi della RF-50 ci sono tutti, ma
+  in vista restano solo gli avvisi (tempo, memoria minima, tipi di programma); gli altri 14
+  stanno in una sottopagina "Impostazioni avanzate", con il proprio "Applica". Un valore non
+  valido lassù viene indicato anche dalla pagina principale.
+- **R2, etichette.** I titoli sono frasi con l'unità fra parentesi ("Avvisami se non lo usi
+  da (minuti)"); la soglia di rete si mostra in kB al secondo invece che in byte/s, e il
+  valore salvato resta in byte/s.
+- **R3, livelli di avviso.** "Pochi / Normali / Tanti" impostano insieme tempo, memoria
+  minima e avvisi singoli all'ora (4 h, 500 MB, 1; i valori predefiniti; 1 h, 100 MB, 6).
+  Si salvano solo con "Applica"; un valore cambiato a mano toglie la scelta.
+- **R4, valori consigliati.** "Ripristina i valori consigliati" rimette e applica subito i
+  valori predefiniti di tutti i campi, tranne i programmi da non toccare e le cartelle in
+  cui cercare, e tranne un'opzione che la sessione non può usare.
+- **R5, finestra in primo piano.** Fuori da X11 l'opzione è disattivata e lo dice ("Non
+  disponibile su questo desktop"); il valore salvato non cambia.
