@@ -178,3 +178,17 @@ DIRSIZE_PAUSE_EVERY = 10000
 DIRSIZE_PAUSE_S = 0.01
 DISK_CACHE_FILENAME = "disk-cache.json"
 DISK_CACHE_VERSION = 1
+
+# SPECIFICHE 7.6 (disk report): cache folders relative to HOME, keyed by CacheKind.value.
+CACHE_RELATIVE_PATHS = (
+    ("uv", ".cache/uv"),
+    ("npm", ".npm/_cacache"),
+    ("pip", ".cache/pip"),
+    ("trash", ".local/share/Trash"),
+    ("thumbnails", ".cache/thumbnails"),
+)
+# SPECIFICHE 7.6 (dependency folders): exact names searched (`.venv` is the only hidden
+# folder of interest) and the project subfolder whose first level counts for the age.
+DEVDIR_NAMES = frozenset({"node_modules", ".venv"})
+DEVDIR_SOURCE_DIRNAME = "src"
+SECONDS_PER_DAY = 86400
