@@ -408,7 +408,7 @@ c'è il punto della specifica, cosa cambia e perché.
 - **R5, finestra in primo piano.** Fuori da X11 l'opzione è disattivata e lo dice ("Non
   disponibile su questo desktop"); il valore salvato non cambia.
 - **A1, primo avvio (§6.2, §11).** Al primo avvio la finestra si apre anche con
-  `--background` e mostra un benvenuto in quattro punti con "Ho capito"; chiuderlo crea il
+  `--background` e mostra un benvenuto in quattro punti con "Ho capito"; mostrarlo crea il
   file vuoto `welcomed` nella cartella di stato (nuovo, accanto a `state.json`). Se la
   cartella non si può leggere o scrivere il benvenuto non torna a ogni login: conta come
   già visto.

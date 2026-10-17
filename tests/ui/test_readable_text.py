@@ -16,6 +16,7 @@ from wimm.ui.widgets import (
 pytestmark = pytest.mark.ui
 MIN_SECONDARY_PX = 13
 DPI_SCALE = 1024
+DEFAULT_DPI = 96
 LARGE_TEXT = 1.5
 
 
@@ -46,8 +47,10 @@ def test_a_decision_line_grows_with_large_text(secondary: Gtk.Label) -> None:
     assert settings is not None
     normal = size_px(secondary)
     dpi = settings.get_property("gtk-xft-dpi")
+    # Relative to the dpi in use: the display under test is not always at 96.
+    current = dpi if dpi > 0 else DEFAULT_DPI * DPI_SCALE
     try:
-        settings.set_property("gtk-xft-dpi", int(LARGE_TEXT * 96 * DPI_SCALE))
+        settings.set_property("gtk-xft-dpi", int(current * LARGE_TEXT))
         main_context_iterate()
         assert size_px(secondary) == pytest.approx(normal * LARGE_TEXT, rel=0.05)
     finally:

@@ -21,7 +21,12 @@ _shown: set[Path] = set()
 
 
 def welcome_if_first_run(*, parent: Gtk.Widget, state_dir: Path) -> None:
-    """Show the welcome over ``parent`` on the first run; closing it in any way marks it seen."""
+    """Show the welcome over ``parent`` on the first run, and mark it seen at once.
+
+    Marking on show, not on "closed": that signal waits for the close animation, which
+    a compositor may never finish (window hidden, session ending), and the welcome must
+    not come back.
+    """
     if state_dir in _shown or not is_first_run(state_dir=state_dir):
         return
     _shown.add(state_dir)
@@ -29,5 +34,5 @@ def welcome_if_first_run(*, parent: Gtk.Widget, state_dir: Path) -> None:
     dialog.set_extra_child(Gtk.Label(label=POINTS, xalign=0, wrap=True))
     dialog.add_response(CLOSE_RESPONSE, CLOSE_LABEL)
     dialog.set_default_response(CLOSE_RESPONSE)
-    dialog.connect("closed", lambda *_a: mark_welcomed(state_dir=state_dir))
+    mark_welcomed(state_dir=state_dir)
     dialog.present(parent)
