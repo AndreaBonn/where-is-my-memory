@@ -82,9 +82,26 @@ class FakeActionService(GObject.Object):
         self.planned: list[ActionRequest] = []
         self.executed: list[tuple[PlanId, str | None]] = []
         self.last_plan: Plan | None = None
+        self.snoozed: list[tuple[GroupId, float]] = []
+        self.ignored: list[tuple[GroupId, bool]] = []
+        self.snoozed_all: list[float] = []
+        self.notifications_muted_until: datetime | None = None
 
     def snapshot(self) -> Snapshot:
         return self._snapshot
+
+    def publish(self, snapshot: Snapshot) -> None:
+        self._snapshot = snapshot
+        self.emit("snapshot-updated")
+
+    def snooze(self, *, group_id: GroupId, duration_s: float) -> None:
+        self.snoozed.append((group_id, duration_s))
+
+    def set_ignored(self, *, group_id: GroupId, ignored: bool) -> None:
+        self.ignored.append((group_id, ignored))
+
+    def snooze_all(self, *, duration_s: float) -> None:
+        self.snoozed_all.append(duration_s)
 
     def plan(self, *, request: ActionRequest) -> Plan:
         self.planned.append(request)

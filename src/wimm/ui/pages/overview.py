@@ -11,6 +11,7 @@ from wimm.model.snapshot import Snapshot
 from wimm.ui.requests import request_for_row
 from wimm.ui.viewmodel import build_rows, build_summary, empty_state
 from wimm.ui.views import GroupRow, RowFilters
+from wimm.ui.widgets.group_controls import GroupControlHandlers
 from wimm.ui.widgets.group_list import build_list
 from wimm.ui.widgets.group_row import GroupRowWidget
 from wimm.ui.widgets.state_views import EmptyView, ErrorView, LoadingView
@@ -39,9 +40,10 @@ class OverviewPage(Gtk.Stack):
         *,
         slow_loading_ms: int = SLOW_LOADING_MS,
         on_action: Callable[[ActionRequest, str | None], None] | None = None,
+        controls: GroupControlHandlers | None = None,
     ) -> None:
         super().__init__()
-        self._on_action = on_action
+        self._on_action, self._controls = on_action, controls
         self._slow_ms = slow_loading_ms
         self._slow_timer = 0
         self._loading_started = False
@@ -278,9 +280,8 @@ class OverviewPage(Gtk.Stack):
         for rank, row in enumerate(rows):
             widget = self._widgets.get(row.id)
             if widget is None:
-                widget = GroupRowWidget(
-                    row=row, on_action=None if self._on_action is None else self._on_row_action
-                )
+                act = None if self._on_action is None else self._on_row_action
+                widget = GroupRowWidget(row=row, on_action=act, controls=self._controls)
                 widget.set_narrow(narrow=self._narrow)
                 widget.set_busy(busy=self._busy)
                 widget.sort_rank = rank

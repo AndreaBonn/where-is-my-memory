@@ -12,10 +12,10 @@ from wimm.ui.views import (
     RowFilters,
 )
 from wimm.ui.widgets import icon_only_label, install_style
+from wimm.ui.widgets.context_menu import MenuTarget
 from wimm.ui.widgets.group_row import (
     PRIMARY_ACTION_NAME,
     GroupRowWidget,
-    MenuTarget,
     group_target,
     member_subtitle,
     target_of,

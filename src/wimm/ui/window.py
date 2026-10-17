@@ -17,7 +17,8 @@ from wimm.ui.pages.overview import OverviewPage
 from wimm.ui.pages.system import SystemPage
 from wimm.ui.widgets import install_style, name_icon_button
 from wimm.ui.window_actions import build_action_flow
-from wimm.ui.window_shortcuts import ACTION_PREFERENCES, shortcut_controller
+from wimm.ui.window_notify import build_main_menu, group_controls
+from wimm.ui.window_shortcuts import shortcut_controller
 from wimm.ui.window_state import (
     MIN_HEIGHT,
     MIN_WIDTH,
@@ -34,9 +35,6 @@ NARROW_CONDITION = "max-width: 600px"
 FAILURE_LIMIT = 3
 FAILURE_POLL_SECONDS = 2
 SAVE_DELAY_MS = 500
-ACTION_SNOOZE_ALL = "app.snooze-all"
-ACTION_QUIT = "app.quit"
-ACTION_ABOUT = "win.about"
 ACTION_REFRESH = "win.refresh"
 TRAY_MISSING_TEXT = "L'icona nella barra richiede l'estensione AppIndicator di Ubuntu"
 ABOUT_COMMENTS = "Mostra dove va la memoria e cosa si può liberare."
@@ -59,15 +57,15 @@ class MainWindow(Adw.Window):
         self._state_path = state_dir / STATE_FILE
         self._dirty = False
         self._last_failures = -1
-        self._save_timer = 0
-        self._poll_timer = 0
+        self._save_timer = self._poll_timer = 0
         self._source_handler = 0
         self._init_actions(application=application)
         width, height = load_window_size(path=self._state_path)
         self.set_default_size(width, height)
         self.set_size_request(MIN_WIDTH, MIN_HEIGHT)
         self.overview = OverviewPage(
-            on_action=self._start_action if can_act(source=source) else None
+            on_action=self._start_action if can_act(source=source) else None,
+            controls=group_controls(source=source),
         )
         self.system = SystemPage()
         self._build_chrome()
@@ -139,11 +137,8 @@ class MainWindow(Adw.Window):
         )
 
     def _menu_button(self) -> Gtk.MenuButton:
-        menu = Gio.Menu()
-        menu.append("Preferenze", ACTION_PREFERENCES)
-        menu.append("Silenzia 1 h", ACTION_SNOOZE_ALL)
-        menu.append("Info", ACTION_ABOUT)
-        menu.append("Esci", ACTION_QUIT)
+        menu, self._snooze_all = build_main_menu(source=self._source)
+        self._actions.add_action(self._snooze_all.action)
         button = Gtk.MenuButton(icon_name="open-menu-symbolic", menu_model=menu, primary=True)
         name_icon_button(button=button, label="Menu principale")
         self._add_window_action(name="about", handler=self._show_about)
@@ -186,6 +181,7 @@ class MainWindow(Adw.Window):
         self._dirty = False
         failures = self._source.consecutive_failures
         self._last_failures = failures
+        self._snooze_all.sync()
         snapshot = self._source.snapshot()
         if failures >= FAILURE_LIMIT:
             self.overview.show_error(failures=failures)
