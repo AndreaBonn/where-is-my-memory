@@ -137,6 +137,9 @@ def test_cgroup_normal_cycle_never_calls_stats(tmp_path: Path) -> None:
 
 
 MEMORY_TOLERANCE = 0.05
+# Cache moves during the docker samples are absolute (8 MiB measured), not proportional:
+# on a small total the relative tolerance alone is tighter than that noise.
+MEMORY_NOISE_FLOOR = 8 * 1024 * 1024
 
 
 def _running_containers() -> tuple[DockerSource, list[RawContainer]]:
@@ -197,7 +200,7 @@ def test_real_total_container_memory_matches_docker_stats() -> None:
         ours += (item.memory_bytes + later.memory_bytes) / 2
         docker += expected[identifier]
     assert docker > 0
-    assert abs(ours - docker) <= MEMORY_TOLERANCE * docker
+    assert abs(ours - docker) <= max(MEMORY_TOLERANCE * docker, MEMORY_NOISE_FLOOR)
 
 
 def _docker_memory_rows(output: str) -> dict[str, float]:
