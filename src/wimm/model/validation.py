@@ -50,17 +50,33 @@ def collection_matches(value: object, spec: CollectionSpec) -> bool:
     return type(value) is spec.kind or (spec.optional and value is None)
 
 
+_FieldSpecs = tuple[tuple[str, CollectionSpec | None], ...]
+_FIELD_SPECS: dict[type, _FieldSpecs] = {}
+
+
+def _field_specs(cls: type) -> _FieldSpecs:
+    """Field names and collection specs of a model class, parsed once per class.
+
+    The sampler builds thousands of models per cycle; reading the annotations every
+    time was a measurable share of its CPU (RNF-01).
+    """
+    specs = _FIELD_SPECS.get(cls)
+    if specs is None:
+        specs = tuple((f.name, declared_collection(annotation=f.type)) for f in fields(cls))
+        _FIELD_SPECS[cls] = specs
+    return specs
+
+
 @dataclass(frozen=True, slots=True)
 class ImmutableModel:
     def __post_init__(self) -> None:
-        for item in fields(self):
-            value = getattr(self, item.name)
-            spec = declared_collection(annotation=item.type)
+        for name, spec in _field_specs(type(self)):
+            value = getattr(self, name)
             if spec is not None and not collection_matches(value=value, spec=spec):
-                raise ValueError(f"{item.name} must be a {spec.kind.__name__}")
-            require_immutable(value=value, field=item.name)
+                raise ValueError(f"{name} must be a {spec.kind.__name__}")
+            require_immutable(value=value, field=name)
             if isinstance(value, datetime):
-                require_aware(value=value, field=item.name)
+                require_aware(value=value, field=name)
 
 
 MAX_PORT = 65535

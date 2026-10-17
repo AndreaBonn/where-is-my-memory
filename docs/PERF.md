@@ -75,3 +75,17 @@ Build del repository, `wimm --background` per 1 h su bus D-Bus privato e Xvfb, c
 | RSS a finestra mai aperta, dopo 55 min | 63 MB | 120 MB (RNF-02) | rispettato |
 | RSS con la finestra aperta, dopo 56 min | 136 MB | 200 MB (RNF-02) | rispettato (limite superiore della finestra nascosta) |
 | Ciclo di campionamento, 122 cicli | mediana 0,47 s, massimo 0,61 s | 1,5 s (RNF-03) | rispettato a 393 processi |
+
+## CPU del ciclo per RNF-01 (2026-10-17)
+
+Misura: `bench_cycle.py`, 12 cicli dopo uno di riscaldamento, tempo di CPU del processo per ciclo (`time.process_time`), tre run per riga; 721-727 processi in totale, 27 gruppi, load average 5,5-7,3. Limite di RNF-01 tradotto: sotto 0,30 s di CPU ogni 30 s.
+
+| Idea | Baseline -> Risultato (mediane delle tre run) | Verdetto | Perché |
+|---|---|---|---|
+| Specifiche dei campi dei modelli lette una volta per classe invece che a ogni istanza | 0,409 / 0,413 / 0,433 s -> 0,387 / 0,389 / 0,393 s | tenuta | serie non sovrapposte; 4300 modelli per ciclo |
+| Cache limitata (4096) su scomposizione del cgroup e confronto dei pattern | 0,387-0,393 -> 0,354-0,363 s | tenuta | 118 mila iterazioni e 98 mila `fnmatchcase` per ciclo su poche centinaia di stringhe |
+| Nome dell'eseguibile da un percorso via helper in cache invece di `PurePosixPath` per ogni processo | 0,354-0,363 -> 0,324-0,340 s | tenuta | 10 mila costruzioni di `Path` per ciclo |
+| Nessuna ricorsione di `require_immutable` sugli elementi scalari delle tuple | 0,324-0,340 -> 0,313-0,320 s | scartata | guadagno dentro il rumore fra run (±0,01 s) con codice in più |
+| Lettura di `smaps_rollup` solo per i processi dei gruppi su cui si può agire (O1) | stima: 83 processi su 390 del proprio utente sono fuori da quei gruppi, `memory_full_info` costa 0,10 s per tutti i 390 | non provata | risparmio atteso circa 0,02 s: non porta da solo sotto 0,30 s |
+
+Dopo le tre modifiche tenute il ciclo costa 0,33-0,34 s di CPU (circa 1,1% di un core a 30 s): RNF-01 resta sopra il limite. La voce rimasta più grande è `memory_full_info` (0,10 s).

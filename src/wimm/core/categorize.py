@@ -1,10 +1,10 @@
 from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
-from pathlib import PurePosixPath
 
 from wimm.model.enums import Category
 from wimm.model.raw import RawProcess
 
+from .cgroup_paths import basename as _basename
 from .cgroup_paths import components as _components
 from .cgroup_paths import is_direct_user_service
 from .cgroup_paths import matches as _matches
@@ -114,7 +114,7 @@ def _is_session(proc: RawProcess) -> bool:
 
 def _process_names(proc: RawProcess) -> tuple[str, ...]:
     paths = (proc.exe, *(proc.cmdline or ())[:1])
-    return (proc.name, *(PurePosixPath(path).name for path in paths if path))
+    return (proc.name, *(_basename(path) for path in paths if path))
 
 
 def _is_terminal(proc: RawProcess) -> bool:
@@ -125,7 +125,7 @@ def _scope_decision(proc: RawProcess) -> CategoryDecision | None:
     parts = _components(proc=proc)
     scope = parts[-1] if parts else ""
     appid = _scope_appid(scope=scope)
-    executable = PurePosixPath(proc.exe).name if proc.exe else proc.name
+    executable = _basename(proc.exe) if proc.exe else proc.name
     if (
         _matches(name=scope, patterns=BROWSER_SCOPE_PATTERNS)
         or proc.name in BROWSER_NAMES
@@ -208,12 +208,12 @@ def _from_terminal(proc: RawProcess, context: CategorizationContext) -> bool:
 
 def _is_ai_cli(proc: RawProcess) -> bool:
     args = proc.cmdline or ()
-    names = tuple(PurePosixPath(arg).name for arg in args)
+    names = tuple(_basename(arg) for arg in args)
     if proc.name in AI_CLI_NAMES or (names and names[0] in AI_CLI_NAMES):
         return True
     if names and names[0] in CLI_WRAPPER_NAMES:
         script = next((arg for arg in args[1:] if not arg.startswith(OPTION_PREFIX)), "")
-        return PurePosixPath(script).name in AI_CLI_NAMES
+        return _basename(script) in AI_CLI_NAMES
     return len(names) >= 2 and names[0] == OLLAMA_NAME and args[1] == OLLAMA_RUN_COMMAND
 
 

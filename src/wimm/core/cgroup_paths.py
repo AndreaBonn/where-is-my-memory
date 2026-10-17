@@ -1,5 +1,7 @@
 import re
 from fnmatch import fnmatchcase
+from functools import lru_cache
+from pathlib import PurePosixPath
 
 from wimm.model.raw import RawProcess
 
@@ -17,6 +19,7 @@ from .constants import (
 
 UNIT_ESCAPE_PATTERN = re.compile(r"\\x([0-9a-fA-F]{2})")
 HEX_BASE = 16
+MATCH_CACHE_SIZE = 4096
 
 
 def unescape_unit_name(name: str) -> str:
@@ -25,12 +28,26 @@ def unescape_unit_name(name: str) -> str:
 
 
 def components(proc: RawProcess) -> tuple[str, ...]:
-    path = proc.cgroup.removeprefix(CGROUP_RECORD_PREFIX)
+    return _components_of(cgroup=proc.cgroup)
+
+
+# Pure functions of a few hundred distinct strings, called tens of thousands of times per
+# cycle: cached, with a bound so the resident memory stays flat (RNF-01, RNF-02).
+@lru_cache(maxsize=MATCH_CACHE_SIZE)
+def _components_of(*, cgroup: str) -> tuple[str, ...]:
+    path = cgroup.removeprefix(CGROUP_RECORD_PREFIX)
     return tuple(unescape_unit_name(name=part) for part in path.split("/") if part)
 
 
+@lru_cache(maxsize=MATCH_CACHE_SIZE)
 def matches(name: str, patterns: tuple[str, ...]) -> bool:
     return any(fnmatchcase(name=name, pat=pattern) for pattern in patterns)
+
+
+@lru_cache(maxsize=MATCH_CACHE_SIZE)
+def basename(path: str) -> str:
+    """Last component of a path, as PurePosixPath gives it; cached for the same reason."""
+    return PurePosixPath(path).name
 
 
 def scope_appid(scope: str) -> str | None:
