@@ -86,3 +86,27 @@ def test_restart_targets_the_plan_of_the_toast_even_after_a_later_action(
     button.emit("clicked")
 
     assert service.planned[-1].target_id == TargetId(plan_id)
+
+
+def test_a_container_that_was_already_gone_is_not_offered_for_restart(
+    window_factory: WindowFactory,
+) -> None:
+    # Only a container the plan really stopped (DONE) can be started again.
+    window, service = ready(window_factory)
+    service.publish(project_snapshot())
+    main_context_iterate()
+    plan = confirmed(window, service)
+    container_step = next(s for s in plan.steps if s.kind is ActionKind.CONTAINER_STOP)
+    outcomes = tuple(
+        StepOutcome(
+            order=s.order,
+            status=StepStatus.ALREADY_GONE if s is container_step else StepStatus.DONE,
+        )
+        for s in plan.steps
+    )
+
+    service.emit("action-finished", plan.plan_id, outcomes)
+    main_context_iterate()
+
+    shown(window, "Fatto")
+    assert button_labelled(window, RESTART) is None

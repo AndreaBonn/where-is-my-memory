@@ -20,7 +20,8 @@ from tests.ui.test_overview_performance import (
     snapshot_of,
     visible_order,
 )
-from wimm.model.enums import ActivityState
+from wimm.model.actions import ActionRequest
+from wimm.model.enums import ActionKind, ActivityState
 from wimm.model.snapshot import ProcessMember, Snapshot
 from wimm.ui.pages import overview as overview_module
 from wimm.ui.pages.overview import OverviewPage
@@ -256,3 +257,17 @@ def member_row(widget: Adw.ExpanderRow, title: str) -> Adw.ActionRow:
         w for w in descendants(widget) if isinstance(w, Adw.ActionRow) and w.get_title() == title
     ]
     return row
+
+
+def test_the_stop_all_button_requests_stop_all_idle_safe_without_a_subject(
+    display: None,
+) -> None:
+    install_style()
+    sent: list[tuple[ActionRequest, str | None]] = []
+    page = OverviewPage(on_action=lambda request, subject: sent.append((request, subject)))
+    (button,) = [w for w in descendants(page) if w.get_name() == "stop-all-idle"]
+
+    assert isinstance(button, Gtk.Button)
+    button.emit("clicked")
+
+    assert sent == [(ActionRequest(kind=ActionKind.STOP_ALL_IDLE_SAFE), None)]

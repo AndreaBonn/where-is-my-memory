@@ -3,7 +3,7 @@ from dataclasses import replace
 import pytest
 from gi.repository import Gtk
 
-from tests.core.planning_helpers import group, proc, snapshot
+from tests.core.planning_helpers import container, group, proc, snapshot
 from tests.ui.conftest import (
     FakeActionService,
     FakeSource,
@@ -13,9 +13,9 @@ from tests.ui.conftest import (
     present_and_settle,
 )
 from wimm.model.actions import ActionRequest
-from wimm.model.enums import ActionKind, GroupId, Risk
+from wimm.model.enums import ActionKind, Category, GroupId, Risk, TargetId
 from wimm.model.errors import ProtectedTarget
-from wimm.model.snapshot import ActionOffer, Snapshot
+from wimm.model.snapshot import ActionOffer, Member, Snapshot
 from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE
 from wimm.ui.widgets.group_row import PRIMARY_ACTION_NAME
 from wimm.ui.widgets.summary import SummaryPanel
@@ -143,3 +143,50 @@ def test_stop_all_with_nothing_to_stop_says_so(window_factory: WindowFactory) ->
 
     assert flow.dialog is None
     assert NOTHING_TO_STOP_TEXT in toast_texts(window)
+
+
+def single_member_snapshot(*, member: Member, kind: ActionKind) -> Snapshot:
+    row_group = replace(
+        group(gid="solo-group", name="solo", members=(member,), category=Category.DEV_SERVER),
+        primary_action=ActionOffer(kind=kind, risk=Risk.SAFE),
+    )
+    return snapshot(row_group)
+
+
+@pytest.mark.parametrize(
+    ("member", "kind", "expected_target"),
+    [
+        (proc(pid=4242), ActionKind.PROCESS_TERMINATE, "4242"),
+        (container(cid="cont-9"), ActionKind.CONTAINER_STOP, "cont-9"),
+    ],
+)
+def test_a_target_shaped_row_action_points_at_the_member_not_the_group(
+    window_factory: WindowFactory, member: Member, kind: ActionKind, expected_target: str
+) -> None:
+    service = FakeActionService(snapshot=single_member_snapshot(member=member, kind=kind))
+    window = window_factory(service)
+    present_and_settle(window)
+
+    primary_button(window).emit("clicked")
+
+    assert service.planned == [ActionRequest(kind=kind, target_id=TargetId(expected_target))]
+
+
+def test_a_target_shaped_row_action_points_at_the_member_that_offers_it(
+    window_factory: WindowFactory,
+) -> None:
+    without_offers = replace(proc(pid=1), actions=())
+    offering = proc(pid=2)
+    row_group = replace(
+        group(gid="two", name="two", members=(without_offers, offering)),
+        primary_action=ActionOffer(kind=ActionKind.PROCESS_TERMINATE, risk=Risk.SAFE),
+    )
+    service = FakeActionService(snapshot=snapshot(row_group))
+    window = window_factory(service)
+    present_and_settle(window)
+
+    primary_button(window).emit("clicked")
+
+    assert service.planned == [
+        ActionRequest(kind=ActionKind.PROCESS_TERMINATE, target_id=TargetId("2"))
+    ]

@@ -18,7 +18,7 @@ from wimm.model.errors import ProtectedTarget, WimmError
 from wimm.model.snapshot import ActionOffer, Snapshot
 from wimm.service.actions import ReclaimDelta
 from wimm.service.control_protocols import StepOutcome, StepStatus
-from wimm.service.errors import TargetChanged
+from wimm.service.errors import PlanExpired, TargetChanged
 from wimm.ui.action_flow import ActionFlow
 from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE
 from wimm.ui.widgets.group_row import PRIMARY_ACTION_NAME
@@ -327,3 +327,49 @@ def test_a_changed_process_is_not_replanned_on_the_same_pid(
 
     assert len(service.planned) == 1
     shown(window, TargetChanged.user_message)
+
+
+def test_an_expired_plan_replans_once_and_reopens_the_dialog(
+    window_factory: WindowFactory,
+) -> None:
+    window, service = ready(window_factory)
+    plan = confirmed(window, service)
+    first_dialog = flow_of(window).dialog
+
+    service.emit("action-rejected", plan.plan_id, PlanExpired())
+    main_context_iterate()
+
+    request = ActionRequest(kind=ActionKind.GROUP_STOP, group_id=plan.request.group_id)
+    assert service.planned == [request, request]
+    new_dialog = flow_of(window).dialog
+    assert new_dialog is not None and new_dialog is not first_dialog
+    shown(window, "La situazione è cambiata, ricalcolo…")
+
+
+def two_process_project() -> Snapshot:
+    project = replace(
+        group(gid="p2", name="whitebox", members=(proc(pid=1), proc(pid=2))),
+        primary_action=ActionOffer(kind=ActionKind.GROUP_STOP, risk=Risk.SAFE),
+    )
+    return snapshot(project)
+
+
+def test_a_partly_failed_plan_offers_details_even_if_another_step_succeeded(
+    window_factory: WindowFactory,
+) -> None:
+    # SPECIFICHE 10.3: "Dettagli" appears when ANY target did not succeed.
+    service = FakeActionService(snapshot=two_process_project())
+    window = window_factory(service)
+    present_and_settle(window)
+    plan = confirmed(window, service)
+    first, second = plan.steps[0].order, plan.steps[1].order
+    outcomes = (
+        StepOutcome(order=first, status=StepStatus.DONE),
+        StepOutcome(order=second, status=StepStatus.FAILED),
+    )
+
+    service.emit("action-finished", plan.plan_id, outcomes)
+    main_context_iterate()
+
+    shown(window, "Alcune operazioni non sono riuscite")
+    assert button_labelled(window, DETAILS) is not None

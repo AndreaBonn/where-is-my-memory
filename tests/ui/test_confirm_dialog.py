@@ -348,3 +348,26 @@ def test_unticking_an_entry_does_not_blame_parts_that_cannot_stop(display: None)
     next(iter(switches(dialog).values())).set_active(False)
 
     assert "Nella lista conta" not in dialog.get_body()
+
+
+def warning_box_classes(dialog: ConfirmDialog) -> set[str]:
+    extra = dialog.get_extra_child()
+    assert extra is not None
+    boxes = [w for w in descendants(extra) if w.has_css_class("wimm-warning")]
+    facts = [w for w in descendants(extra) if w.has_css_class("wimm-facts")]
+    return {name for name, found in (("wimm-warning", boxes), ("wimm-facts", facts)) if found}
+
+
+def test_consequences_use_warning_style_for_caution_and_plain_style_for_safe(
+    display: None,
+) -> None:
+    snap = snapshot(
+        group(gid="a", name="agent", members=(proc(pid=2, category=Category.AI_CLI),)),
+        group(gid="s", name="server", members=(proc(pid=1),)),
+    )
+
+    caution, _, _ = open_dialog(snap=snap, request=stop("a"), subject="agent")
+    safe, _, _ = open_dialog(snap=snap, request=stop("s"), subject="server")
+
+    assert warning_box_classes(caution) == {"wimm-warning"}
+    assert warning_box_classes(safe) == {"wimm-facts"}

@@ -1,10 +1,10 @@
-from tests.core.disk_helpers import MB, cache, docker_disk, image, report
+from tests.core.disk_helpers import MB, cache, docker_disk, image, report, stopped
 from tests.core.planning_helpers import NOW, OWNER_UID, container, group, proc, snapshot
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.planning_restart import StoppedContainer
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.disk import CacheKind, DiskReport
-from wimm.model.enums import ActionKind, GroupId, PlanId, TargetId
+from wimm.model.enums import ActionKind, Category, GroupId, PlanId, TargetId
 from wimm.model.snapshot import Snapshot
 from wimm.ui.dialogs.facts import KEEP_TITLE, RESTART_TITLE, WHAT_TITLE, facts_for
 from wimm.ui.dialogs.session import entries_for
@@ -98,3 +98,35 @@ def test_a_restart_entry_shows_no_size_since_it_frees_nothing() -> None:
     labels = [entry.label for entry in entries_for(plan=plan, snapshot=snap)]
 
     assert labels == ["name-kc"]
+
+
+def test_closing_an_app_says_that_saved_files_and_data_stay() -> None:
+    members = (proc(pid=1, name="firefox", category=Category.BROWSER),)
+    snap = snapshot(group(gid="b", category=Category.BROWSER, members=members))
+    plan = plan_for(
+        snap=snap, request=ActionRequest(kind=ActionKind.APP_CLOSE, group_id=GroupId("b"))
+    )
+
+    titles = [title for title, _ in facts_for(plan=plan, snapshot=snap)]
+
+    assert KEEP_TITLE in titles
+
+
+def test_removing_stopped_containers_does_not_claim_that_data_stays() -> None:
+    disk = report(docker=docker_disk(containers=(stopped(cid="1"),)))
+    removal = plan_for(
+        snap=snapshot(),
+        request=ActionRequest(kind=ActionKind.CONTAINERS_PRUNE_STOPPED),
+        disk=disk,
+    )
+    stopping = plan_for(
+        snap=project(),
+        request=ActionRequest(kind=ActionKind.GROUP_STOP, group_id=GroupId("p")),
+    )
+
+    removal_titles = [title for title, _ in facts_for(plan=removal, snapshot=snapshot())]
+    stop_titles = [title for title, _ in facts_for(plan=stopping, snapshot=project())]
+
+    assert {s.kind for s in removal.steps} == {ActionKind.CONTAINER_REMOVE}
+    assert KEEP_TITLE not in removal_titles
+    assert KEEP_TITLE in stop_titles
