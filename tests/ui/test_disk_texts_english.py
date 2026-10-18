@@ -20,7 +20,14 @@ from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind
 from wimm.model.snapshot import DockerStatus
 from wimm.ui.disk_model import DiskSectionView, more_text
-from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, TIER_TITLES, disk_headline, safe_label
+from wimm.ui.disk_texts import (
+    SECTION_DESCRIPTIONS,
+    TIER_TITLES,
+    DiskTotals,
+    disk_headline,
+    review_text,
+    safe_label,
+)
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
 from wimm.ui.format import button_label
 
@@ -39,7 +46,7 @@ def test_headline_and_safe_label_in_english() -> None:
     sections = build_disk_sections(
         report=report(docker=docker, caches=caches), min_age_days=MIN_AGE
     )
-    assert disk_headline(sections=sections) == "You can free up to 8 MB"
+    assert disk_headline(sections=sections) == "You can free 8 MB without losing anything"
     assert safe_label(sections=sections) == "Free 8 MB with no risk"
 
 
@@ -166,3 +173,12 @@ def test_docker_unavailable_names_the_cause_in_english() -> None:
 
     assert section.title == "Docker"
     assert section.message == "Docker not available: no socket"
+
+
+def test_review_text_in_english() -> None:
+    assert review_text(totals=DiskTotals(safe=MB, review=2 * MB)) == (
+        "Another 2 MB if you accept downloading or rebuilding again"
+    )
+    assert review_text(totals=DiskTotals(safe=0, review=2 * MB)) == (
+        "2 MB can be freed if you accept downloading or rebuilding again"
+    )

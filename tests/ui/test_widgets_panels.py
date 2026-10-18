@@ -6,6 +6,7 @@ from gi.repository import GLib, Gtk
 from tests.ui.conftest import descendants, main_context_iterate, wait_until
 from wimm.model.enums import Risk
 from wimm.model.snapshot import Snapshot
+from wimm.ui.disk_texts import DiskTotals
 from wimm.ui.viewmodel import build_summary
 from wimm.ui.views import (
     BarSegment,
@@ -85,7 +86,10 @@ def test_summary_panel_shows_totals_and_a_disabled_stop_all_button(
     panel.update(view=build_summary(snapshot=snapshot))
 
     texts = " | ".join(label.get_label() for label in labels_under(panel))
-    assert "Liberabile ora:" in texts
+    assert "Puoi liberare 4,2 GB senza perdere niente" in texts
+    # Before the first disk scan the disk is unchecked, never "0 B".
+    assert "Il disco non è ancora stato controllato" in texts
+    assert "0 B" not in texts
     assert "33 GB usati su 42 GB" in texts
     assert "28 GB liberi su 376 GB" in texts
     assert "Memoria (RAM)" in texts
@@ -123,7 +127,7 @@ def test_safe_button_says_how_much_it_frees_and_what_it_stops(
 
     (button,) = [w for w in descendants(panel) if w.get_name() == "stop-all-idle"]
     assert isinstance(button, Gtk.Button)
-    assert button.get_label() == "Libera 4,2 GB senza rischi"
+    assert button.get_label() == "Libera 4,2 GB di memoria"
     assert button.has_css_class("suggested-action")
     assert button.get_sensitive()
     assert view.safe_text in [label.get_label() for label in labels_under(panel)]
@@ -143,10 +147,10 @@ def test_safe_button_is_off_when_nothing_can_be_freed_without_risk(
 
     (button,) = [w for w in descendants(panel) if w.get_name() == "stop-all-idle"]
     assert isinstance(button, Gtk.Button)
-    assert button.get_label() == "Niente da liberare senza rischi"
-    assert not button.get_sensitive()
-    panel.set_busy(busy=False)
-    assert not button.get_sensitive()
+    # A button that could only say "nothing" is not shown at all.
+    assert not _cell_shown(button)
+    panel.update(view=build_summary(snapshot=snapshot))
+    assert _cell_shown(button)
 
 
 def toggle(bar: FilterBar, prefix: str) -> Gtk.ToggleButton:
@@ -301,3 +305,50 @@ def test_memory_bar_keeps_the_help_button_when_only_the_sizes_change(display: No
     assert [w for w in descendants(bar) if isinstance(w, Gtk.MenuButton)] == [button]
     assert "Kernel: 1,2 GB" in {label.get_label() for label in labels_under(bar)}
     assert "Kernel: 1,1 GB" not in {label.get_label() for label in labels_under(bar)}
+
+
+def _cell_shown(button: Gtk.Widget) -> bool:
+    cell = button.get_ancestor(Gtk.FlowBoxChild)
+    return cell is not None and cell.get_visible()
+
+
+def _named(panel: Gtk.Widget, name: str) -> Gtk.Button:
+    (button,) = [w for w in descendants(panel) if w.get_name() == name]
+    assert isinstance(button, Gtk.Button)
+    return button
+
+
+def test_the_disk_button_frees_the_safe_disk_and_the_rest_points_to_the_disco_page(
+    display: None, snapshot: Snapshot
+) -> None:
+    calls: list[str] = []
+    panel = SummaryPanel(
+        on_free_disk=lambda: calls.append("disk"), on_show_disk=lambda: calls.append("show")
+    )
+    totals = DiskTotals(safe=5_000_000_000, review=6_600_000_000)
+
+    panel.update(view=build_summary(snapshot=snapshot, disk_totals=totals))
+
+    disk = _named(panel, "free-disk-safe")
+    assert disk.get_label() == "Libera 5,0 GB di disco"
+    assert _cell_shown(disk) and disk.get_sensitive()
+    texts = [label.get_label() for label in labels_under(panel)]
+    assert "Puoi liberare 9,2 GB senza perdere niente" in texts
+    assert "Altri 6,6 GB se accetti di riscaricare o ricostruire" in texts
+    disk.emit("clicked")
+    _named(panel, "show-disk-page").emit("clicked")
+    assert calls == ["disk", "show"]
+    panel.set_busy(busy=True)
+    assert not disk.get_sensitive()
+
+
+def test_before_the_disk_scan_there_is_no_disk_button_and_no_rebuild_line(
+    display: None, snapshot: Snapshot
+) -> None:
+    panel = SummaryPanel(on_free_disk=lambda: None, on_show_disk=lambda: None)
+
+    panel.update(view=build_summary(snapshot=snapshot))
+
+    assert not _cell_shown(_named(panel, "free-disk-safe"))
+    review = _named(panel, "show-disk-page").get_parent()
+    assert review is not None and not review.get_visible()

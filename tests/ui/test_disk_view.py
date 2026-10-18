@@ -17,7 +17,15 @@ from wimm.model.disk import CacheKind, DockerDisk
 from wimm.model.enums import ActionKind
 from wimm.model.snapshot import DockerStatus
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, more_text
-from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, TIER_TITLES, disk_headline, safe_label
+from wimm.ui.disk_texts import (
+    SECTION_DESCRIPTIONS,
+    TIER_TITLES,
+    DiskTotals,
+    disk_headline,
+    disk_totals,
+    review_text,
+    safe_label,
+)
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
 
 MIN_AGE = 90
@@ -64,7 +72,7 @@ def test_disk_headline_sums_what_the_rows_can_free() -> None:
         report=report(docker=docker, caches=caches), min_age_days=MIN_AGE
     )
 
-    assert disk_headline(sections=sections) == "Puoi liberare fino a 8 MB"
+    assert disk_headline(sections=sections) == "Puoi liberare 8 MB senza perdere niente"
 
 
 def test_disk_headline_counts_only_the_freeable_build_cache_and_no_user_data() -> None:
@@ -77,7 +85,43 @@ def test_disk_headline_counts_only_the_freeable_build_cache_and_no_user_data() -
     sections = build_disk_sections(report=report(docker=docker, caches=trash), min_age_days=MIN_AGE)
 
     # The volume and the trash are "Pericolo": their bytes are data, not a promise.
-    assert disk_headline(sections=sections) == "Puoi liberare fino a 4 MB"
+    assert disk_headline(sections=sections) == "Puoi liberare 4 MB senza perdere niente"
+
+
+def test_disk_totals_split_the_safe_bytes_from_those_that_cost_a_rebuild() -> None:
+    docker = docker_disk(
+        images=(
+            image(char="d", tags=("reg:1",), size=5 * MB),
+            image(char="e", size=2 * MB, local_build=True),
+        ),
+        volumes=(volume(name="db", size=50 * MB),),
+    )
+    caches = (cache(kind=CacheKind.UV, size=3 * MB), cache(kind=CacheKind.TRASH, size=9 * MB))
+    sections = build_disk_sections(
+        report=report(docker=docker, caches=caches), min_age_days=MIN_AGE
+    )
+
+    # Safe: pulled image 5 + uv 3. To rebuild: the local image 2. Volume and trash are data.
+    assert disk_totals(sections=sections) == DiskTotals(safe=8 * MB, review=2 * MB)
+    assert review_text(totals=disk_totals(sections=sections)) == (
+        "Altri 2 MB se accetti di riscaricare o ricostruire"
+    )
+
+
+def test_disk_totals_before_a_scan_are_none() -> None:
+    assert disk_totals(sections=()) is None
+    assert review_text(totals=None) == ""
+
+
+def test_with_nothing_safe_the_headline_says_so_and_the_rest_is_offered_apart() -> None:
+    docker = docker_disk(images=(image(char="e", size=2 * MB, local_build=True),))
+    sections = build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
+
+    assert disk_headline(sections=sections) == "Niente da liberare senza perdere qualcosa"
+    assert review_text(totals=disk_totals(sections=sections)) == (
+        "2 MB si liberano se accetti di riscaricare o ricostruire"
+    )
+    assert review_text(totals=DiskTotals(safe=MB, review=0)) == ""
 
 
 def test_last_scan_on_another_day_names_the_date() -> None:

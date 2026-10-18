@@ -13,6 +13,7 @@ from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import DockerStatus, Snapshot
 from wimm.ui.disk_model import DiskRowView
 from wimm.ui.disk_texts import TIER_TITLES
+from wimm.ui.format import format_size
 from wimm.ui.pages.disk import DiskPage
 from wimm.ui.pages.disk_header import SAFE_BUTTON_NAME
 from wimm.ui.pages.disk_rows import build_disk_row
@@ -60,10 +61,13 @@ def test_report_fills_sections_and_header(display: None, now: datetime, sample: 
     show(page, report_=sample, now=now)
     # The sample report was scanned at 10:12 (scanned_at in the fixture).
     assert page.header_text == "Ultimo controllo alle 10:12"
-    # D1 headline, by hand from the fixture: uv 3,0 GB + node_modules 0,70 + local image 0,45
-    # + dangling image 0,12 (unique size) + build cache 0,07 + stopped container 2 kB =
-    # 4,34 GB. The volume and the trash are "Pericolo" rows and do not count.
-    assert page.headline_text == "Puoi liberare fino a 4,3 GB"
+    # D1 headline, by hand from the fixture: safe are uv 3,0 GB + dangling image 0,12 (unique
+    # size) + build cache 0,07 = 3,19 GB. node_modules 0,70 + local image 0,45 + stopped
+    # container 2 kB = 1,15 GB cost a rebuild. The volume and the trash are data: not counted.
+    assert page.headline_text == "Puoi liberare 3,2 GB senza perdere niente"
+    assert page.totals is not None
+    assert format_size(size=page.totals.safe) == "3,2 GB"
+    assert format_size(size=page.totals.review) == "1,2 GB"
     assert list(page.sections) == [
         "caches",
         "build_cache",
@@ -346,3 +350,29 @@ def test_safe_button_is_absent_without_actions(
     show(page, report_=sample, now=now)
 
     assert not safe_button(page).get_visible()
+
+
+def _overview_texts(window: Gtk.Window) -> list[str]:
+    overview = window.overview  # type: ignore[attr-defined]
+    return [w.get_label() for w in descendants(overview) if isinstance(w, Gtk.Label)]
+
+
+def test_the_overview_counts_the_disk_only_once_it_is_checked(
+    window_factory: WindowFactory, snapshot: Snapshot, sample: DiskReport
+) -> None:
+    source = FakeDiskSource(snapshot=snapshot, report=None)
+    window = window_factory(source)
+    main_context_iterate()
+    assert any(
+        t.startswith("Il disco non è ancora stato controllato") for t in _overview_texts(window)
+    )
+
+    source.publish_report(sample)
+    main_context_iterate()
+
+    buttons = {w.get_name(): w for w in descendants(window.overview) if isinstance(w, Gtk.Button)}
+    # Same safe amount as the Disco page headline above: 3,2 GB.
+    assert buttons["free-disk-safe"].get_label() == "Libera 3,2 GB di disco"
+    assert "Altri 1,2 GB se accetti di riscaricare o ricostruire" in _overview_texts(window)
+    buttons["show-disk-page"].emit("clicked")
+    assert window.view_stack.get_visible_child_name() == "disk"

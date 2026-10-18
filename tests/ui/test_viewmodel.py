@@ -18,6 +18,7 @@ from wimm.model.snapshot import (
     Snapshot,
 )
 from wimm.serialize import snapshot_from_json
+from wimm.ui.disk_texts import DiskTotals
 from wimm.ui.viewmodel import (
     build_rows,
     build_summary,
@@ -497,7 +498,10 @@ def test_summary_formats_ram_swap_disk_and_reclaimable(snapshot: Snapshot) -> No
         "375,8 GB",
         "27,9 GB",
     )
-    assert (summary.reclaimable_ram, summary.reclaimable_disk) == ("4,2 GB", "7,4 GB")
+    disk = DiskTotals(safe=7_400_000_000, review=0)
+    assert build_summary(snapshot=snapshot, disk_totals=disk).disk_safe_label == (
+        "Libera 7,4 GB di disco"
+    )
     assert (summary.pressure, summary.pressure_text) == (Pressure.WARNING, "Alta")
     assert summary.ram_fraction == pytest.approx(32.9 / 41.742)
     assert summary.disk_fraction == pytest.approx(329638211584 / 375809638400)
@@ -702,7 +706,7 @@ def test_status_follows_the_pressure_and_offers_the_safe_amount(snapshot: Snapsh
     assert (critical.status_title, critical.status_level) == ("La memoria è quasi finita", "error")
     assert (calm.status_title, calm.status_level) == ("Il computer sta bene", "success")
     assert warning.status_text == (
-        "Puoi liberare 4,2 GB chiudendo programmi che non usi. "
+        "Puoi liberare memoria chiudendo programmi che non usi. "
         "Niente si chiude senza il tuo consenso."
     )
 
@@ -715,7 +719,7 @@ def test_status_without_anything_safe_to_close_does_not_offer_an_amount(
     summary = build_summary(snapshot=roomy_disk(nothing))
 
     assert summary.status_text == "Non c'è niente da chiudere senza rischi."
-    assert summary.safe_label == "Niente da liberare senza rischi"
+    assert summary.safe_label == ""
     assert summary.safe_text == ""
 
 
@@ -732,7 +736,7 @@ def test_safe_button_names_the_programs_it_stops(snapshot: Snapshot) -> None:
 
     summary = build_summary(snapshot=replace(shot, groups=(*groups, unsafe, busy)))
 
-    assert summary.safe_label == "Libera 18 B senza rischi"
+    assert summary.safe_label == "Libera 18 B di memoria"
     assert summary.safe_text == "Ferma b, c, a e un altro: non li usi e non perdi nulla."
 
 
@@ -750,7 +754,7 @@ def test_status_and_button_agree_when_no_group_is_safe_to_stop(snapshot: Snapsho
     summary = build_summary(snapshot=roomy_disk(with_groups(snapshot)))
 
     assert summary.status_text == "Non c'è niente da chiudere senza rischi."
-    assert summary.safe_label == "Niente da liberare senza rischi"
+    assert summary.safe_label == ""
 
 
 def test_status_names_the_disk_when_the_disk_drives_the_pressure(snapshot: Snapshot) -> None:

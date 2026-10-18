@@ -5,9 +5,10 @@ from gi.repository import Gtk
 from wimm.i18n import N_, _
 from wimm.ui.views import SummaryView
 
-from . import ACTIONS_UNAVAILABLE_TOOLTIP, SECONDARY_CLASS, clear_children
+from . import SECONDARY_CLASS, clear_children
 from .help_button import titled_with_help
 from .memory_bar import MemoryBar
+from .reclaim_panel import ReclaimPanel
 
 MARGIN = 12
 SECTION_SPACING = 8
@@ -73,23 +74,25 @@ def _dim_caption() -> Gtk.Label:
     return label
 
 
-def _build_stop_all(*, on_stop_all: Callable[[], None] | None) -> Gtk.Button:
-    button = Gtk.Button()
-    button.add_css_class("suggested-action")
-    if on_stop_all is None:
-        button.set_sensitive(False)
-        button.set_tooltip_text(_(ACTIONS_UNAVAILABLE_TOOLTIP))
-    else:
-        button.connect("clicked", lambda *_args: on_stop_all())
-    button.set_name("stop-all-idle")
-    return button
-
-
 class SummaryPanel(Gtk.Box):
-    """RAM bar, disk usage, reclaimable totals and the stop-all button."""
+    """Status, what frees without losing anything, then RAM and disk use."""
 
-    def __init__(self, *, on_stop_all: Callable[[], None] | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        on_stop_all: Callable[[], None] | None = None,
+        on_free_disk: Callable[[], None] | None = None,
+        on_show_disk: Callable[[], None] | None = None,
+    ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=SECTION_SPACING)
+        self._reclaim = ReclaimPanel(
+            on_stop_all=on_stop_all, on_free_disk=on_free_disk, on_show_disk=on_show_disk
+        )
+        for widget in (self._build_status(), self._reclaim, *self._build_usage()):
+            self.append(widget)
+
+    def _build_usage(self) -> tuple[Gtk.Widget, ...]:
+        """RAM and disk use: the detail under the answer, for whoever wants it."""
         self._ram_text = _headline_label()
         self._ram_details = _dim_caption()
         self._bar = MemoryBar()
@@ -98,13 +101,7 @@ class SummaryPanel(Gtk.Box):
         self._disk_title = _help_title(text=DISK_TITLE, question=DISK_QUESTION, answer=DISK_ANSWER)
         self._disk_text = _headline_label()
         self._disk_bar = Gtk.ProgressBar()
-        self._stop_all = _build_stop_all(on_stop_all=on_stop_all)
-        self._safe_text = _dim_caption()
-        self._can_stop_all = on_stop_all is not None
-        self._has_safe = False
-        self._busy = False
-        for widget in (
-            self._build_status(),
+        return (
             _help_title(text=RAM_TITLE, question=RAM_QUESTION, answer=RAM_ANSWER),
             self._ram_text,
             self._ram_details,
@@ -114,18 +111,11 @@ class SummaryPanel(Gtk.Box):
             self._disk_title,
             self._disk_text,
             self._disk_bar,
-            self._build_reclaim_row(),
-        ):
-            self.append(widget)
+        )
 
     def set_busy(self, *, busy: bool) -> None:
-        """Disable "stop all" while an action runs, so a second plan cannot start over it."""
-        self._busy = busy
-        self._sync_stop_all()
-
-    def _sync_stop_all(self) -> None:
-        # Off with nothing safe to free too: a button that can only say "nothing" is noise.
-        self._stop_all.set_sensitive(self._can_stop_all and self._has_safe and not self._busy)
+        """Disable the free buttons while an action runs, so a second plan cannot start."""
+        self._reclaim.set_busy(busy=busy)
 
     def _build_status(self) -> Gtk.Box:
         """P1: one sentence in the style of the memory pressure, first thing on the page."""
@@ -167,30 +157,10 @@ class SummaryPanel(Gtk.Box):
             self._video_lines.append(_detail_label_with(text=line))
         self._video.set_visible(bool(view.video_lines))
 
-    def _build_reclaim_row(self) -> Gtk.FlowBox:
-        self._reclaim = _detail_label()
-        self._reclaim.add_css_class("wimm-reclaim")
-        row = Gtk.FlowBox(
-            selection_mode=Gtk.SelectionMode.NONE,
-            max_children_per_line=STATUS_COLUMNS,
-            homogeneous=False,
-            column_spacing=STATUS_COLUMN_SPACING,
-        )
-        action = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING)
-        action.append(self._stop_all)
-        action.append(self._safe_text)
-        row.append(self._reclaim)
-        row.append(action)
-        return row
-
     def update(self, *, view: SummaryView) -> None:
         """Show a new SummaryView."""
         self._update_status(view=view)
-        self._stop_all.set_label(view.safe_label)
-        self._safe_text.set_label(view.safe_text)
-        self._safe_text.set_visible(bool(view.safe_text))
-        self._has_safe = bool(view.safe_text)
-        self._sync_stop_all()
+        self._reclaim.update(view=view)
         self._ram_text.set_label(view.ram_headline)
         self._ram_details.set_label(view.ram_details)
         self._bar.update(segments=view.segments)
@@ -205,9 +175,4 @@ class SummaryPanel(Gtk.Box):
                     mount=view.disk_mount, used=view.disk_used, total=view.disk_total
                 )
             ],
-        )
-        self._reclaim.set_label(
-            _("Liberabile ora: {ram} di RAM · {disk} di disco").format(
-                ram=view.reclaimable_ram, disk=view.reclaimable_disk
-            )
         )

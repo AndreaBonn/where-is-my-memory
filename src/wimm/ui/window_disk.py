@@ -10,6 +10,7 @@ from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind, TargetId
 from wimm.ui.dialogs.preferences_model import RootState, root_statuses
 from wimm.ui.disk_model import DiskRowView, RootsState
+from wimm.ui.disk_texts import DiskTotals
 from wimm.ui.format import home_relative
 from wimm.ui.pages.disk import DiskPage
 from wimm.ui.window_shortcuts import ACTION_FOLDERS
@@ -36,6 +37,7 @@ class DiskBinding:
         on_choose_folder: Callable[[], None] | None = None,
     ) -> None:
         self._source, self._clock, self._start = source, clock, start
+        self._on_totals: Callable[[DiskTotals | None], None] | None = None
         self._handlers: list[int] = []
         self._roots = RootsState()
         self._seen_roots: tuple[Path, ...] | None = None
@@ -56,6 +58,11 @@ class DiskBinding:
             self._on_report()
             if getattr(self._source, "disk_scanning", lambda: False)():
                 self.page.begin_scan()
+
+    def watch_totals(self, on_totals: Callable[[DiskTotals | None], None]) -> None:
+        """Hand the page's totals to ``on_totals`` now and after every report."""
+        self._on_totals = on_totals
+        on_totals(self.page.totals)
 
     def _has_disk_scan(self) -> bool:
         source = cast(GObject.Object, self._source)
@@ -115,6 +122,8 @@ class DiskBinding:
             min_age_days=self._min_age_days(),
             roots=self._roots,
         )
+        if self._on_totals is not None:
+            self._on_totals(self.page.totals)
 
     def _on_snapshot(self, *_args: object) -> None:
         """Preferences saved new folders: refresh the notice now, not at the next scan.

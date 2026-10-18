@@ -151,11 +151,11 @@ def test_status_follows_the_pressure_in_english(snapshot: Snapshot) -> None:
     assert critical.status_title == "Memory is almost out"
     assert calm.status_title == "Your computer is doing fine"
     assert warning.status_text == (
-        "You can free 4.2 GB by closing programs you don't use. "
+        "You can free memory by closing programs you don't use. "
         "Nothing closes without your consent."
     )
     assert nothing.status_text == "There is nothing to close without risk."
-    assert nothing.safe_label == "Nothing to free without risk"
+    assert nothing.safe_label == ""
 
 
 def test_status_names_the_disk_when_the_disk_drives_the_pressure_in_english(
@@ -197,5 +197,5 @@ def test_the_safe_button_names_the_programs_it_stops_in_english(
 
     summary = build_summary(snapshot=shot)
 
-    assert summary.safe_label == f"Free {sum(sizes)} B with no risk"
+    assert summary.safe_label == f"Free {sum(sizes)} B of memory"
     assert summary.safe_text == expected

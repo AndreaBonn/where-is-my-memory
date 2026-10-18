@@ -6,10 +6,11 @@ from datetime import datetime
 from gi.repository import Adw, GLib, Gtk
 
 from wimm.model.actions import ActionRequest
-from wimm.model.enums import ActionKind
 from wimm.model.snapshot import Snapshot
+from wimm.ui.disk_texts import DiskTotals
+from wimm.ui.pages.overview_summary import OverviewSummary
 from wimm.ui.requests import request_for_row
-from wimm.ui.viewmodel import build_rows, build_summary, empty_state, filter_counts
+from wimm.ui.viewmodel import build_rows, empty_state, filter_counts
 from wimm.ui.views import GroupRow, RowFilters
 from wimm.ui.widgets.filter_bar import FilterBar
 from wimm.ui.widgets.group_controls import GroupControlHandlers
@@ -17,7 +18,6 @@ from wimm.ui.widgets.group_list import build_list
 from wimm.ui.widgets.group_row import GroupRowWidget
 from wimm.ui.widgets.scroll_restore import ScrollRestore
 from wimm.ui.widgets.state_views import EmptyView, ErrorView, LoadingView
-from wimm.ui.widgets.summary import SummaryPanel
 from wimm.ui.widgets.system_section import SystemSection
 
 LOGGER = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class OverviewPage(Gtk.Stack):
         self._loading = LoadingView()
         self._error = ErrorView()
         self._empty = EmptyView()
-        self._summary = SummaryPanel(on_stop_all=None if on_action is None else self._on_stop_all)
+        self._reclaim = OverviewSummary(page=self, start=on_action)
         self._filters = FilterBar(on_changed=self._on_filters_changed)
         self._list = build_list()
         self.system = SystemSection()
@@ -89,7 +89,7 @@ class OverviewPage(Gtk.Stack):
             margin_start=PAGE_MARGIN,
             margin_end=PAGE_MARGIN,
         )
-        for child in (self._summary, self._filters, self._list_stack, self.system):
+        for child in (self._reclaim.panel, self._filters, self._list_stack, self.system):
             box.append(child)
         return Adw.Clamp(maximum_size=MAX_CONTENT_WIDTH, child=box)
 
@@ -134,10 +134,16 @@ class OverviewPage(Gtk.Stack):
         self._render()
         self.set_visible_child_name(STATE_CONTENT)
 
+    def show_disk_totals(self, totals: DiskTotals | None) -> None:
+        """The Disco page has new totals: redraw the summary, not the rows."""
+        self._reclaim.disk_totals = totals
+        if self._snapshot is not None:
+            self._reclaim.update(snapshot=self._snapshot)
+
     def set_busy(self, *, busy: bool) -> None:
         """Disable every action button while a confirmed action runs."""
         self._busy = busy
-        self._summary.set_busy(busy=busy)
+        self._reclaim.panel.set_busy(busy=busy)
         for widget in self._widgets.values():
             widget.set_busy(busy=busy)
 
@@ -165,10 +171,6 @@ class OverviewPage(Gtk.Stack):
         if request is not None and self._on_action is not None:
             self._on_action(request, row.title)
 
-    def _on_stop_all(self) -> None:
-        if self._on_action is not None:
-            self._on_action(ActionRequest(kind=ActionKind.STOP_ALL_IDLE_SAFE), None)
-
     def _on_slow(self) -> bool:
         self._slow_timer = 0
         self._loading.mark_slow()
@@ -191,7 +193,7 @@ class OverviewPage(Gtk.Stack):
         self._filters.set_counts(idle=idle, total=total)
         filters = self._filters.filters
         rows = build_rows(snapshot=self._snapshot, filters=filters, now=self._now)
-        self._summary.update(view=build_summary(snapshot=self._snapshot))
+        self._reclaim.update(snapshot=self._snapshot)
         self._start_sync(rows=rows, scroll_position=self._scroller.get_vadjustment().get_value())
         state = empty_state(snapshot=self._snapshot, filters=filters)
         if state is None:

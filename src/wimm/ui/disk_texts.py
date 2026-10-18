@@ -1,6 +1,7 @@
 """Plain-language texts of the Disco page: section explanations and the header line."""
 
 from collections.abc import Iterable
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from wimm.core.sizes import format_size
@@ -16,6 +17,10 @@ NO_ROOTS_TITLE = N_("Nessuna cartella di progetti trovata")
 NO_ROOTS_TEXT = N_("Indica dove tieni i tuoi progetti e cerco le librerie che si possono liberare.")
 CHOOSE_FOLDER_LABEL = N_("Scegli una cartella")
 NOTHING_TO_FREE_TEXT = N_("Niente da liberare sul disco")
+NOTHING_SAFE_TEXT = N_("Niente da liberare senza perdere qualcosa")
+SAFE_HEADLINE = N_("Puoi liberare {size} senza perdere niente")
+REVIEW_MORE_TEXT = N_("Altri {size} se accetti di riscaricare o ricostruire")
+REVIEW_ONLY_TEXT = N_("{size} si liberano se accetti di riscaricare o ricostruire")
 ACTIONS_NOTE = N_("Ogni bottone ti mostra prima cosa succede e chiede conferma.")
 # D4: one sentence per section, for someone who has never heard of Docker or caches.
 SECTION_DESCRIPTIONS = {
@@ -63,32 +68,49 @@ SECTION_TIERS = {
 SAFE_CAPTION = N_("Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano.")
 
 
+@dataclass(frozen=True, slots=True)
+class DiskTotals:
+    """What the listed rows free: `safe` without losing anything, `review` at a rebuild cost.
+
+    "Pericolo" rows (volumes, the trash) hold data: their bytes are in neither.
+    """
+
+    safe: int
+    review: int
+
+
+def disk_totals(*, sections: Iterable["DiskSectionView"]) -> DiskTotals | None:
+    """The two totals over the actionable rows; None before the first scan."""
+    listed = tuple(sections)
+    if not listed:
+        return None
+    rows = [row for section in listed for row in section.rows if row.action_kind]
+    safe = sum(row.size_bytes for row in rows if row.risk is Risk.SAFE)
+    review = sum(row.size_bytes for row in rows if row.risk is Risk.CAUTION)
+    return DiskTotals(safe=safe, review=review)
+
+
 def safe_label(*, sections: Iterable["DiskSectionView"]) -> str:
     """D2: "Libera X senza rischi" over the safe rows, empty when there is none."""
-    total = sum(
-        row.size_bytes
-        for section in sections
-        for row in section.rows
-        if row.action_kind and row.risk is Risk.SAFE
-    )
-    return _("Libera {size} senza rischi").format(size=format_size(size=total)) if total > 0 else ""
+    totals = disk_totals(sections=sections)
+    if totals is None or totals.safe <= 0:
+        return ""
+    return _("Libera {size} senza rischi").format(size=format_size(size=totals.safe))
 
 
 def disk_headline(*, sections: Iterable["DiskSectionView"]) -> str:
-    """The D1 headline: what the listed rows free without deleting user data.
-
-    "Pericolo" rows (volumes, the trash) hold data, so their bytes are not offered here.
-    Empty before the first scan.
-    """
-    listed = tuple(sections)
-    if not listed:
+    """The D1 headline: what the disk frees without losing anything; empty before a scan."""
+    totals = disk_totals(sections=sections)
+    if totals is None:
         return ""
-    total = sum(
-        row.size_bytes
-        for section in listed
-        for row in section.rows
-        if row.action_kind and row.risk is not Risk.DANGER
-    )
-    if total <= 0:
-        return _(NOTHING_TO_FREE_TEXT)
-    return _("Puoi liberare fino a {size}").format(size=format_size(size=total))
+    if totals.safe > 0:
+        return _(SAFE_HEADLINE).format(size=format_size(size=totals.safe))
+    return _(NOTHING_SAFE_TEXT) if totals.review > 0 else _(NOTHING_TO_FREE_TEXT)
+
+
+def review_text(*, totals: DiskTotals | None) -> str:
+    """What else frees at the cost of a download or a rebuild; empty when nothing does."""
+    if totals is None or totals.review <= 0:
+        return ""
+    template = REVIEW_MORE_TEXT if totals.safe > 0 else REVIEW_ONLY_TEXT
+    return _(template).format(size=format_size(size=totals.review))

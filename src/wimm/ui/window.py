@@ -73,13 +73,11 @@ class MainWindow(Adw.Window):
         self.sync()
 
     def _build_pages(self) -> None:
-        self.overview = OverviewPage(
-            on_action=self._start_action if can_act(source=self._source) else None,
-            controls=group_controls(source=self._source),
-        )
-        self.system = self.overview.system
         start = self._start_action if can_act(source=self._source) else None
+        self.overview = OverviewPage(on_action=start, controls=group_controls(source=self._source))
+        self.system = self.overview.system
         self._disk = DiskBinding(source=self._source, clock=self._clock, start=start)
+        self._disk.watch_totals(self.overview.show_disk_totals)
         self.disk = self._disk.page
 
     def _init_actions(self, *, application: Gio.Application) -> None:

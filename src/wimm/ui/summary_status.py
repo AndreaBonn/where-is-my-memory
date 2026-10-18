@@ -30,7 +30,6 @@ DISK_TITLES = MappingProxyType(
 )
 DISK_TEXT = N_("Fai spazio dalla scheda Disco: lì trovi cosa si può cancellare.")
 NOTHING_SAFE_TEXT = N_("Non c'è niente da chiudere senza rischi.")
-NOTHING_SAFE_LABEL = N_("Niente da liberare senza rischi")
 NAMED_GROUPS = 3
 
 
@@ -68,19 +67,21 @@ def ram_drives_pressure(*, snapshot: Snapshot) -> bool:
 
 
 def status_fields(*, snapshot: Snapshot) -> dict[str, str]:
-    """Title, sentence and style of the status line; the amount is the safe one only."""
+    """Title, sentence and style of the status line.
+
+    The sentence names no amount: the one amount on the page is the summary headline.
+    """
     level = STATUS_LEVELS[snapshot.pressure]
     if snapshot.pressure is not Pressure.OK and not ram_drives_pressure(snapshot=snapshot):
         title = _(DISK_TITLES[snapshot.pressure])
         return {"status_title": title, "status_text": _(DISK_TEXT), "status_level": level}
-    ram = snapshot.reclaimable_now.ram
     # Same condition as the button: the sentence never offers what the button cannot do.
     text = (
         _(
-            "Puoi liberare {size} chiudendo programmi che non usi. "
+            "Puoi liberare memoria chiudendo programmi che non usi. "
             "Niente si chiude senza il tuo consenso."
-        ).format(size=format_size(size=ram))
-        if ram > 0 and _safe_idle_groups(snapshot=snapshot)
+        )
+        if offered_ram(snapshot=snapshot) > 0
         else _(NOTHING_SAFE_TEXT)
     )
     return {
@@ -90,12 +91,21 @@ def status_fields(*, snapshot: Snapshot) -> dict[str, str]:
     }
 
 
-def safe_fields(*, snapshot: Snapshot) -> dict[str, str]:
-    """Label and caption of the button that stops every idle safe group (P4, RF-24)."""
+def offered_ram(*, snapshot: Snapshot) -> int:
+    """The memory "Ferma tutti" frees: 0 when no idle safe group stands behind the total."""
     ram = snapshot.reclaimable_now.ram
+    return ram if ram > 0 and _safe_idle_groups(snapshot=snapshot) else 0
+
+
+def safe_fields(*, snapshot: Snapshot) -> dict[str, str]:
+    """Label and caption of the button that stops every idle safe group (P4, RF-24).
+
+    Both are empty when there is nothing safe to stop: the button is then not shown.
+    """
+    ram = offered_ram(snapshot=snapshot)
     groups = _safe_idle_groups(snapshot=snapshot)
-    if ram <= 0 or not groups:
-        return {"safe_label": _(NOTHING_SAFE_LABEL), "safe_text": ""}
+    if ram <= 0:
+        return {"safe_label": "", "safe_text": ""}
     # "lo usi" / "li usi": the singular and the plural form of the whole sentence.
     text = ngettext(
         "Ferma {names}: non lo usi e non perdi nulla.",
@@ -103,6 +113,6 @@ def safe_fields(*, snapshot: Snapshot) -> dict[str, str]:
         len(groups),
     )
     return {
-        "safe_label": _("Libera {size} senza rischi").format(size=format_size(size=ram)),
+        "safe_label": _("Libera {size} di memoria").format(size=format_size(size=ram)),
         "safe_text": text.format(names=_names(groups=groups)),
     }

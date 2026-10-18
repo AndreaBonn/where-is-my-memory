@@ -44,6 +44,7 @@ class DiskHeader:
         self.widget.set_margin_end(PAGE_MARGIN)
         self.headline = Gtk.Label(xalign=0, wrap=True, visible=False)
         self.headline.add_css_class("title-3")
+        self.review = Gtk.Label(xalign=0, wrap=True, visible=False)
         self.scan_text = Gtk.Label(label=waiting, xalign=0, wrap=True)
         self.scan_text.add_css_class("dim-label")
         self.safe = Gtk.Button(halign=Gtk.Align.START, visible=False)
@@ -61,7 +62,8 @@ class DiskHeader:
 
     def _layout(self) -> Gtk.Box:
         texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=HEADER_SPACING, hexpand=True)
-        lines: list[Gtk.Widget] = [self.headline, self.scan_text, self.safe, self.safe_caption]
+        lines: list[Gtk.Widget] = [self.headline, self.review, self.scan_text, self.safe]
+        lines.append(self.safe_caption)
         for line in [*lines, _caption(text=_(ACTIONS_NOTE))]:
             texts.append(line)
         header = Gtk.Box(spacing=PAGE_MARGIN)
@@ -69,10 +71,11 @@ class DiskHeader:
             header.append(part)
         return header
 
-    def fill(self, *, headline: str, scan_text: str, safe_label: str) -> None:
-        """Fill the lines; an empty headline or safe label hides its widget."""
-        self.headline.set_label(headline)
-        self.headline.set_visible(bool(headline))
+    def fill(self, *, headline: str, review: str, scan_text: str, safe_label: str) -> None:
+        """Fill the lines; an empty headline, review line or safe label hides its widget."""
+        for label, text in ((self.headline, headline), (self.review, review)):
+            label.set_label(text)
+            label.set_visible(bool(text))
         self.scan_text.set_label(scan_text)
         self.safe.set_label(safe_label)
         # Without the action service the button could do nothing: it is not shown at all.

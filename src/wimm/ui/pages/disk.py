@@ -9,7 +9,14 @@ from wimm.i18n import N_, _
 from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import ROOTS_FINE, DiskSectionView, RootsState
-from wimm.ui.disk_texts import TIER_TITLES, disk_headline, safe_label
+from wimm.ui.disk_texts import (
+    TIER_TITLES,
+    DiskTotals,
+    disk_headline,
+    disk_totals,
+    review_text,
+    safe_label,
+)
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
 from wimm.ui.pages.disk_header import DiskHeader, tier_heading
 from wimm.ui.pages.disk_rows import RowAction, SectionAction, SectionGroup
@@ -42,6 +49,7 @@ class DiskPage(Gtk.Box):
         self._busy = False
         self._scanning = False
         self._has_report = False
+        self.totals: DiskTotals | None = None
         self._groups: dict[str, SectionGroup] = {}
         self._headings: list[Gtk.Widget] = []
         self._header = DiskHeader(
@@ -88,7 +96,7 @@ class DiskPage(Gtk.Box):
 
     @property
     def headline_text(self) -> str | None:
-        """The "Puoi liberare fino a …" line, if shown."""
+        """The D1 headline ("Puoi liberare … senza perdere niente"), if shown."""
         headline = self._header.headline
         return headline.get_label() if headline.get_visible() else None
 
@@ -140,8 +148,10 @@ class DiskPage(Gtk.Box):
             roots=roots,
             withheld=withheld_kinds(which=shutil.which),
         )
+        self.totals = disk_totals(sections=sections)
         self._header.fill(
             headline=disk_headline(sections=sections),
+            review=review_text(totals=self.totals),
             scan_text=last_scan_text(report=report, now=now),
             safe_label=safe_label(sections=sections),
         )

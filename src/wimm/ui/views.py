@@ -55,8 +55,6 @@ class SummaryView:
     ram_headline: str
     ram_details: str
     disk_headline: str
-    reclaimable_ram: str
-    reclaimable_disk: str
     pressure: Pressure
     pressure_text: str
     segments: tuple[BarSegment, ...]
@@ -66,6 +64,10 @@ class SummaryView:
     status_level: str
     safe_label: str
     safe_text: str
+    reclaim_headline: str
+    reclaim_details: str
+    disk_safe_label: str
+    review_text: str
     video_title: str = ""
     video_lines: tuple[str, ...] = ()
 

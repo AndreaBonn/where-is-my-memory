@@ -2,6 +2,7 @@ from wimm.i18n import N_, _
 from wimm.model.enums import Category
 from wimm.model.snapshot import Snapshot
 
+from .disk_texts import DiskTotals
 from .format import (
     CATEGORY_LABELS,
     PRESSURE_PLAIN,
@@ -10,7 +11,8 @@ from .format import (
     format_round_size,
     format_size,
 )
-from .summary_status import ram_drives_pressure, safe_fields, status_fields
+from .summary_reclaim import reclaim_fields
+from .summary_status import ram_drives_pressure, status_fields
 from .summary_voices import VIDEO_TITLE, video_lines, voice_help, voice_items
 from .views import BarSegment, SummaryView
 
@@ -113,9 +115,12 @@ def _headlines(*, snapshot: Snapshot) -> dict[str, str]:
     }
 
 
-def build_summary(*, snapshot: Snapshot) -> SummaryView:
-    """Build the panel header: RAM, swap, disk, reclaimable totals and the RAM bar segments."""
-    memory, disk, reclaimable = snapshot.memory, snapshot.disk, snapshot.reclaimable_now
+def build_summary(*, snapshot: Snapshot, disk_totals: DiskTotals | None = None) -> SummaryView:
+    """Build the panel header: what frees safely, then RAM, swap, disk and the RAM bar.
+
+    ``disk_totals`` are the Disco page's; None before the first disk scan.
+    """
+    memory, disk = snapshot.memory, snapshot.disk
     return SummaryView(
         ram_used=format_size(size=memory.used),
         ram_total=format_size(size=memory.total),
@@ -129,8 +134,6 @@ def build_summary(*, snapshot: Snapshot) -> SummaryView:
         disk_free=format_size(size=disk.free),
         disk_fraction=_fraction(part=disk.used, whole=disk.total),
         **_headlines(snapshot=snapshot),
-        reclaimable_ram=format_size(size=reclaimable.ram),
-        reclaimable_disk=format_size(size=reclaimable.disk),
         pressure=snapshot.pressure,
         pressure_text=_(PRESSURE_TEXT[snapshot.pressure]),
         segments=_segments(snapshot=snapshot),
@@ -138,5 +141,5 @@ def build_summary(*, snapshot: Snapshot) -> SummaryView:
         video_title=_(VIDEO_TITLE),
         video_lines=video_lines(snapshot=snapshot),
         **status_fields(snapshot=snapshot),
-        **safe_fields(snapshot=snapshot),
+        **reclaim_fields(snapshot=snapshot, disk=disk_totals),
     )
