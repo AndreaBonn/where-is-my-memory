@@ -587,3 +587,11 @@ Limiti: kind si riconosce solo dalla CLI; minikube con driver Docker non si rico
 - Una cartella scrivibile dal gruppo primario dell'utente è considerata sicura, come serve con i gruppi privati di Ubuntu; con un gruppo primario condiviso (per esempio `users`) altri utenti potrebbero rinominarvi voci. Le ACL non sono lette.
 - Che la scansione riceva solo cartelle ammesse è un contratto del chiamante, non del tipo.
 - I prefissi di sistema sono una lista chiusa; su Fedora i dischi rimovibili in `/run/media` risultano rifiutati.
+
+## Sessioni SSH, crescita della memoria e schema 4 (001-product-gaps, lotto L8)
+
+**Programmi lanciati via SSH (Q-12 rivista, decisione Q1=A).** Restano protetti per default, come decideva Q-12. Una nuova opzione nelle Impostazioni avanzate, "Gestisci anche i programmi lanciati via SSH", spenta, rende gestibili i processi dell'utente in una sessione SSH o mosh. Una sessione conta come remota solo se contiene `sshd` o `mosh-server`: le sessioni locali (terminali testuali, gdm) restano protette anche con l'opzione accesa. Sono sempre protetti `sshd`, `mosh-server`, la shell di accesso e i server di tmux e screen; i processi di altri utenti non diventano mai gestibili. Al momento dell'azione l'esecutore rilegge la catena dei processi padre: se lo `sshd` della sessione non è fra gli antenati del processo, il processo resta protetto. Provato con cgroup e processi simulati, non con una sessione SSH reale.
+
+**Crescita della memoria (R29, R30).** Ogni 600 s (orologio monotonic) wimm registra la memoria di ogni gruppo per 3 ore; 1000 gruppi occupano 751 KB. Un gruppo cresce in modo sostenuto se, su almeno un'ora e 7 punti, la mediana dell'ultimo terzo supera quella del primo di almeno 256 MiB e del 20%, e se le discese oltre 32 MiB sommano meno di un quarto del guadagno: una perdita con piccole oscillazioni conta, una cache che si svuota no. Le soglie di un'ora, 7 punti, 32 MiB e 25% non sono nella specifica: le ha fissate l'implementazione. Un gruppo che sparisce dallo snapshot anche per un solo ciclo perde la sua storia e ricomincia da zero.
+
+**Schema 4 (Q4=A).** Ogni gruppo dello snapshot ha il campo `growth`, `null` oppure `{"delta_bytes", "span_s"}`. Il report del disco condivide `SCHEMA_VERSION` e passa a 4 senza cambiare forma. Uno snapshot o un report con schema 3 viene rifiutato.

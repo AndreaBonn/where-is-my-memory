@@ -240,3 +240,8 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T079 | 7970faa | `/` mai progetto
 - T080 | (commit UI) | Preferenze con motivo del rifiuto, click-through a 1280 px
 - T081 | (questo commit) | security-reviewer su L7 eseguito (nessun P0/P1), DEVIATIONS, M-28. Aperti: F-SEL (`test_folders_action_opens_the_advanced_page_on_the_folders_entry` passa su Xvfb ma fallisce sul display reale con tutto il testo selezionato, preesistente da L1, da indagare); T1 lettura dei fatti sul thread UI non misurata; T2 cartella esistente con fatti illeggibili mostrata ok nella pagina Disco ma non scansionata
+- F-SEL | ff6669a d059b23 | test della guardia separato dal window manager; `show_folders` riapre la pagina anche durante la sua animazione di chiusura (difetto reale, 3/6 -> 6/6 sotto carico)
+- T082 T083 T084 | 7a59042 | sessioni SSH gestibili su opzione (spenta); review: flag all'avvio, scope locali gdm protette, mosh
+- T085 T086 | f14c47a | storico di 3 h e crescita sostenuta; review: rumore sotto 32 MiB, orologio monotonic
+- T087 T088 | (commit snapshot) | `growth` nello snapshot, schema 4, riga "+620 MB in 2 h"
+- T089 | (questo commit) | PERF.md: RNF-01 sopra il limite (1,0-1,6%) per 930 processi da censire, L5-L8 dentro il rumore rispetto a L4; DEVIATIONS. Aperti: F-PERF (test del budget del censimento fallito due volte sotto carico); F-RST (test del toast di riavvio fallito una volta nella suite intera); G5 (storia persa per un gruppo assente un ciclo); riga del gruppo lunga a 375 px non osservata

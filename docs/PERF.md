@@ -151,3 +151,22 @@ Script `measure_caches.py` nella cartella temporanea di sessione.
 Sulla prima scansione intera (cartelle di dipendenze, sezione sopra, più cache) il totale passa da
 circa 5,5 s a 6,6 s: +20%, sotto il budget del 30% di R30. L'aumento compra 5,6 GB di cache in
 più resi visibili. BASIS: measured.
+
+## RNF-01 dopo i lotti L5-L8 (001-product-gaps, 2026-10-18, 14:15-14:45)
+
+**pidstat a regime.** Stesso isolamento della misura del 2026-10-17 (bus D-Bus privato, Xvfb, cartelle XDG temporanee, finestra mai aperta), `pidstat -p <pid> 60 13` dopo il primo minuto. Sulla macchina 940-950 processi in totale (597 dell'utente, contro i 391 del 17), load average 4-11 per altre sessioni attive.
+
+| Grandezza | Valore | Limite | Verdetto |
+|---|---|---|---|
+| CPU a regime, minuti senza picchi | 1,02-1,63% di un core | 1% | sopra il limite |
+| CPU, media dei 13 minuti | 1,80%, con tre minuti al 3,4-3,9% | 1% | sopra il limite |
+| RSS dopo 14 minuti, finestra mai aperta | 114 MB | 120 MB | rispettato, margine stretto |
+
+**Confronto con la fine di L4 (`166f123`), stesse condizioni.** Per separare il codice nuovo dalla macchina più carica, `bench_cycle.py` (CPU per ciclo, 12 cicli, tre run alternati) e l'app completa avviata in parallelo nelle due versioni.
+
+| Idea | Baseline -> Risultato | Verdetto | Perché |
+|---|---|---|---|
+| L5-L8, CPU per ciclo (minimi dei tre run) | 0,58-0,75 s -> 0,62-0,69 s | dentro il rumore | mediane 0,61-0,82 s contro 0,66-1,84 s; il run da 1,84 s cade con load 13,4 |
+| L5-L8, RSS dell'app dopo 5 minuti | 113 MB -> 115 MB | dentro il rumore | +2 MB; un ciclo da solo occupa 42 MB in entrambe |
+
+Il superamento di RNF-01 viene dal numero di processi da censire, cresciuto di circa il 50% rispetto al 17 ottobre, non dai lotti L5-L8: con 930 processi anche la versione di L4 costa 0,6-0,8 s di CPU per ciclo, cioè 1,0-1,3% di un core a 60 s. Il costo per processo resta la voce da ridurre (vedi la misura del 2026-10-17, dominata da `smaps_rollup` e `memory_full_info`).
