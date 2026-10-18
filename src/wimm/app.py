@@ -230,7 +230,7 @@ def _command_line(application: Any, command_line: Any) -> int:
 
 
 def create_application() -> "Gio.Application":
-    from gi.repository import Gio
+    from gi.repository import Gio, GLib
 
     class Application(Gio.Application):
         _window_host: WindowHost
@@ -246,8 +246,12 @@ def create_application() -> "Gio.Application":
         do_command_line = _command_line
         do_activate = _activate
 
+    application_id = os.environ.get("WIMM_APP_ID", APPLICATION_ID)
+    # GTK names the X11 WM_CLASS after the program name, otherwise "wimm" from argv[0]:
+    # the dock matches it to the desktop file's StartupWMClass to show the app icon.
+    GLib.set_prgname(application_id)
     application = Application(
-        application_id=os.environ.get("WIMM_APP_ID", APPLICATION_ID),
+        application_id=application_id,
         flags=Gio.ApplicationFlags.HANDLES_COMMAND_LINE,
     )
     application._window_host = WindowHost(factory=partial(_build_window, application))

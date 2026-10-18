@@ -101,6 +101,17 @@ def test_application_id_and_unknown_option_rejection(monkeypatch: pytest.MonkeyP
     assert application.run(["wimm", "--unknown"]) != SUCCESS
 
 
+def test_program_name_is_the_application_id(monkeypatch: pytest.MonkeyPatch) -> None:
+    # GTK names the X11 WM_CLASS after it: the dock matches it to StartupWMClass for the icon.
+    from gi.repository import GLib
+
+    from wimm.app import create_application
+
+    monkeypatch.setenv(name="WIMM_APP_ID", value="io.github.wimm.Test")
+    create_application()
+    assert GLib.get_prgname() == "io.github.wimm.Test"
+
+
 def test_module_version_subprocess() -> None:
     result = subprocess.run(
         args=["/usr/bin/env", "uv", "run", "python", "-m", "wimm", "--version"],
