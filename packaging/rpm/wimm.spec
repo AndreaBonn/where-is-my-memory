@@ -2,7 +2,7 @@
 # with the same paths, except the Python package: Fedora has no dist-packages, so it goes to
 # %%{python3_sitelib}. Source: tarball from `git archive` (scripts/test_rpm.sh).
 Name:           where-is-my-memory
-Version:        0.1.0
+Version:        0.2.0
 Release:        1%{?dist}
 Summary:        Tray monitor for forgotten containers, dev servers and apps
 License:        GPL-3.0-or-later
@@ -83,5 +83,8 @@ chmod 644 %{buildroot}%{_mandir}/man1/wimm.1.gz
 %{_mandir}/man1/wimm.1.gz
 
 %changelog
+* Sun Oct 18 2026 where-is-my-memory contributors - 0.2.0-1
+- Release 0.2.0.
+
 * Sun Oct 18 2026 where-is-my-memory contributors - 0.1.0-1
 - Release 0.1.0.

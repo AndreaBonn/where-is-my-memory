@@ -5,7 +5,7 @@
 # Local build: scripts/test_arch.sh makes the source tarball with `git archive`.
 # Before publishing anywhere, replace SKIP with the real checksum of the release tarball.
 pkgname=where-is-my-memory
-pkgver=0.1.0
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Tray monitor for forgotten containers, dev servers and apps'
 arch=('any')
