@@ -15,6 +15,9 @@ HOME_VAR = "$HOME"
 GIT_ENTRY = ".git"
 GIT_SEARCH_DEPTH = 2
 MOUNTINFO_FILE = Path("/proc/self/mountinfo")
+# user-dirs.dirs is a few lines: anything larger, or not a regular file, is not read.
+USER_DIRS_MAX_BYTES = 64 * 1024
+HIDDEN_PREFIX = "."
 MOUNTINFO_SEPARATOR = " - "
 MOUNTPOINT_FIELD = 4
 _OCTAL_ESCAPE = re.compile(r"\\([0-7]{3})")
@@ -42,13 +45,7 @@ def is_safe_candidate(path: Path, home: Path) -> bool:
 
 def documents_dir(home: Path) -> Path | None:
     """Return the localized documents directory from ``user-dirs.dirs`` if safe."""
-    try:
-        text = (home / USER_DIRS_FILE).read_text(encoding="utf-8")
-    except FileNotFoundError:
-        return None
-    except (OSError, UnicodeDecodeError) as error:
-        LOGGER.debug("Cannot read user-dirs.dirs: %s", error)
-        return None
+    text = _read_user_dirs(path=home / USER_DIRS_FILE)
     match = _DOCUMENTS_LINE.search(text)
     if match is None:
         return None
@@ -56,7 +53,32 @@ def documents_dir(home: Path) -> Path | None:
     path = home / value[len(HOME_VAR) + 1 :] if value.startswith(f"{HOME_VAR}/") else Path(value)
     if value == HOME_VAR or HOME_VAR in path.as_posix():
         return None
+    # A file anyone of the user's programs can write must not turn ~/.cargo or another
+    # hidden folder into a root the executor accepts.
+    if path.is_relative_to(home) and any(
+        part.startswith(HIDDEN_PREFIX) for part in path.relative_to(home).parts
+    ):
+        return None
     return path if is_safe_candidate(path=path, home=home) else None
+
+
+def _read_user_dirs(*, path: Path) -> str:
+    """The text of a real, small ``user-dirs.dirs``; empty for anything else (a FIFO blocks)."""
+    try:
+        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+    except FileNotFoundError:
+        return ""
+    except OSError as error:
+        LOGGER.debug("Cannot open user-dirs.dirs: %s", error)
+        return ""
+    with os.fdopen(descriptor, "rb") as handle:
+        info = os.fstat(handle.fileno())
+        if not stat.S_ISREG(info.st_mode) or info.st_size > USER_DIRS_MAX_BYTES:
+            return ""
+        try:
+            return handle.read(USER_DIRS_MAX_BYTES).decode("utf-8", errors="replace")
+        except OSError:
+            return ""
 
 
 def has_git_repo(path: Path) -> bool:
@@ -130,10 +152,12 @@ def detect_dev_roots(
     if documents is not None:
         candidates.append(documents)
     mounts = parse_mountinfo(text=read_mounts())
+    # The lexical check comes first: a stat on an unreachable network mount would block.
     safe = (
         str(real)
         for path in candidates
-        if is_safe_candidate(path=path, home=home)
+        if not is_network_path(path=path, mounts=mounts)
+        and is_safe_candidate(path=path, home=home)
         and not is_network_path(path=(real := path.resolve()), mounts=mounts)
     )
     selected = select_dev_roots(candidates=safe, has_repo=lambda item: has_git_repo(Path(item)))

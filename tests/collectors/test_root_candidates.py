@@ -212,3 +212,39 @@ def test_is_network_path_lets_the_last_mount_on_a_point_win() -> None:
     over_network = ((Path("/mnt/data"), "ext4"), (Path("/mnt/data"), "nfs4"))
     assert not is_network_path(path=Path("/mnt/data/code"), mounts=over_local)
     assert is_network_path(path=Path("/mnt/data/code"), mounts=over_network)
+
+
+def test_documents_dir_ignores_a_fifo_instead_of_blocking(tmp_path: Path) -> None:
+    (tmp_path / ".config").mkdir(exist_ok=True)
+    os.mkfifo(tmp_path / ".config" / "user-dirs.dirs")
+    assert documents_dir(home=tmp_path) is None
+    (tmp_path / ".config" / "user-dirs.dirs").unlink()
+    (tmp_path / "Docs").mkdir()
+    write_user_dirs(home=tmp_path, line='XDG_DOCUMENTS_DIR="$HOME/Docs"')
+    assert documents_dir(home=tmp_path) == tmp_path / "Docs"
+
+
+def test_documents_dir_refuses_a_hidden_folder(tmp_path: Path) -> None:
+    (tmp_path / ".cargo" / "git").mkdir(parents=True)
+    write_user_dirs(home=tmp_path, line='XDG_DOCUMENTS_DIR="$HOME/.cargo"')
+    assert documents_dir(home=tmp_path) is None
+
+
+def test_detect_dev_roots_never_stats_a_candidate_on_a_network_mount(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import wimm.collectors.root_candidates as module
+
+    make_repo(tmp_path / "code" / "app")
+    probed: list[Path] = []
+    real_check = module.is_safe_candidate
+
+    def recording(path: Path, home: Path) -> bool:
+        probed.append(path)
+        return real_check(path=path, home=home)
+
+    monkeypatch.setattr(module, "is_safe_candidate", recording)
+    mounts = f"36 1 0:40 / {tmp_path / 'code'} rw - nfs4 server:/x rw\n"
+    assert detect_dev_roots(home=tmp_path, read_mounts=lambda: mounts) == ()
+    assert tmp_path / "code" not in probed
+    assert detect_dev_roots(home=tmp_path, read_mounts=lambda: "") == (tmp_path / "code",)
