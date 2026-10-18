@@ -175,7 +175,9 @@ def test_the_go_module_cache_is_refused_when_go_vanishes_between_the_checks(
     rig: FsRig,
 ) -> None:
     folder = make_cache(home=rig.home, relative="go/pkg/mod")
-    answers = iter(["/usr/bin/go", "/usr/bin/go", None])
+    # The first three answers feed the cache-kind lookups; the fourth reaches `_tool_path`,
+    # the window after the checks in which go can disappear.
+    answers = iter(["/usr/bin/go", "/usr/bin/go", "/usr/bin/go", None])
     rig.control = replace(rig.control, which=lambda _name: next(answers, None))
 
     outcome = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=folder))[0]

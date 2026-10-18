@@ -23,6 +23,7 @@ from wimm.model.enums import ActionKind, Category, TargetId
 from wimm.paths import UserPaths
 from wimm.service.actions import ActionSetup
 from wimm.service.app_service import AppService
+from wimm.service.errors import TargetChanged
 
 QUICK_START_S = 0.01
 
@@ -73,6 +74,42 @@ def build_rig(*, start_delay_s: float = QUICK_START_S, config: Config | None = N
     return rig
 
 
+FAKE_SOURCE_BASE = 10_000_000
+
+
+class Timers:
+    """Records the timers the disk side arms, so a test fires them instead of waiting."""
+
+    def __init__(self) -> None:
+        self.delayed: list[tuple[int, int, Callable[[], bool]]] = []  # (id, delay_ms, callback)
+        self.seconds: list[tuple[int, Callable[[], bool]]] = []  # (interval_s, callback)
+        self.removed: list[int] = []
+
+    def arm_delayed(self, delay_ms: int, callback: Callable[[], bool]) -> int:
+        source_id = FAKE_SOURCE_BASE + len(self.delayed)
+        self.delayed.append((source_id, delay_ms, callback))
+        return source_id
+
+    def arm_seconds(self, interval: int, callback: Callable[[], bool]) -> int:
+        self.seconds.append((interval, callback))
+        return FAKE_SOURCE_BASE + 1000 + len(self.seconds)
+
+
+@pytest.fixture
+def timers(monkeypatch: pytest.MonkeyPatch) -> Timers:
+    """Capture the start-delay timer instead of running it; record removals."""
+    recorded = Timers()
+    real_remove = GLib.source_remove
+
+    def remove(source_id: int) -> bool:
+        recorded.removed.append(source_id)
+        return True if source_id >= FAKE_SOURCE_BASE else real_remove(source_id)
+
+    monkeypatch.setattr(GLib, "timeout_add", recorded.arm_delayed)
+    monkeypatch.setattr(GLib, "source_remove", remove)
+    return recorded
+
+
 def test_rescan_disk_emits_the_signal_on_the_main_thread_and_stores_the_report() -> None:
     rig = build_rig()
     rig.scanner.gate.set()
@@ -100,13 +137,49 @@ def test_the_scan_runs_on_its_own_worker_not_the_main_loop_nor_the_sampler() -> 
         rig.service.stop()
 
 
-def test_start_scans_after_the_delay_and_not_before() -> None:
+def test_start_scans_after_the_delay_and_not_before(timers: Timers) -> None:
     rig = build_rig(start_delay_s=60)
     rig.scanner.gate.set()
     try:
         rig.service.start()
-        spin_for(seconds=0.1)
+        assert [delay_ms for _, delay_ms, _ in timers.delayed] == [60_000]
         assert rig.scanner.threads == []
+
+        assert timers.delayed[0][2]() is GLib.SOURCE_REMOVE  # the delay elapses
+
+        spin_until(predicate=lambda: bool(rig.updated))
+        assert len(rig.scanner.threads) == 1
+    finally:
+        rig.service.stop()
+
+
+def test_start_twice_arms_one_start_timer_and_start_after_stop_arms_none(timers: Timers) -> None:
+    rig = build_rig(start_delay_s=60)
+    rig.service.start()
+    rig.service.start()
+    assert len(timers.delayed) == 1
+
+    rig.service.stop()
+    rig.service.start()
+    assert len(timers.delayed) == 1
+
+
+def test_the_disk_timer_tick_rescans_and_stays_scheduled(
+    timers: Timers, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    rig = build_rig(start_delay_s=60)
+    rig.scanner.gate.set()
+    try:
+        rig.service.start()
+        monkeypatch.setattr(GLib, "timeout_add_seconds", timers.arm_seconds)
+        timers.delayed[0][2]()
+        spin_until(predicate=lambda: len(rig.updated) == 1)
+        assert [interval for interval, _ in timers.seconds] == [21600]
+
+        assert timers.seconds[0][1]() is GLib.SOURCE_CONTINUE
+
+        spin_until(predicate=lambda: len(rig.updated) == 2)
+        assert len(rig.scanner.threads) == 2
     finally:
         rig.service.stop()
 
@@ -152,23 +225,41 @@ def test_requests_during_a_running_scan_coalesce_into_one_rerun() -> None:
 def test_stop_during_a_scan_discards_its_result() -> None:
     rig = build_rig()
     rig.service.rescan_disk()
+    rig.scanner.gate.set()
+    spin_until(predicate=lambda: len(rig.updated) == 1)  # a scan that finishes delivers
+    delivered = rig.service.disk_report()
+    assert delivered == rig.scanner.result
+
+    rig.scanner.gate.clear()
+    rig.scanner.entered.clear()
+    rig.service.rescan_disk()
     assert rig.scanner.entered.wait(timeout=TIMEOUT_S)
     rig.service.stop()
     rig.scanner.gate.set()
-    spin_for(seconds=0.1)
-    assert rig.updated == []
-    assert rig.service.disk_report() is None
+    spin_until(predicate=lambda: not rig.service.disk_scanning())  # the worker has finished
+
+    assert len(rig.updated) == 1
+    assert rig.service.disk_report() is delivered
     rig.service.rescan_disk()
-    assert len(rig.scanner.threads) == 1
+    assert len(rig.scanner.threads) == 2
 
 
-def test_stop_cancels_the_pending_start_timer() -> None:
-    rig = build_rig(start_delay_s=0.05)
-    rig.scanner.gate.set()
-    rig.service.start()
-    rig.service.stop()
-    spin_for(seconds=0.2)
-    assert rig.scanner.threads == []
+def test_stop_cancels_the_pending_start_timer(timers: Timers) -> None:
+    stopped = build_rig(start_delay_s=60)
+    kept = build_rig(start_delay_s=60)
+    stopped.service.start()
+    kept.service.start()
+    stopped_id, kept_id = timers.delayed[0][0], timers.delayed[1][0]
+
+    stopped.service.stop()
+
+    assert stopped_id in timers.removed
+    assert kept_id not in timers.removed
+    kept.scanner.gate.set()
+    timers.delayed[1][2]()  # the timer that was not cancelled still fires and scans
+    spin_until(predicate=lambda: bool(kept.updated))
+    assert stopped.scanner.threads == [] and len(kept.scanner.threads) == 1
+    kept.service.stop()
 
 
 def test_the_scan_reads_the_config_current_at_its_start(tmp_path: Path) -> None:
@@ -319,8 +410,10 @@ def test_an_interval_change_before_the_first_scan_applies_to_its_timer(
         rig.service.stop()
 
 
-def disk_action_service(rig: Rig) -> AppService:
-    setup = ActionSetup(executor=FakeExecutor(), owner_uid=OWNER_UID, measure_delay_s=0.0)
+def disk_action_service(rig: Rig, executor: FakeExecutor | None = None) -> AppService:
+    setup = ActionSetup(
+        executor=executor or FakeExecutor(), owner_uid=OWNER_UID, measure_delay_s=0.0
+    )
     rig.sampler.current = snapshot(
         group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=8),))
     )
@@ -355,6 +448,30 @@ def test_a_finished_disk_action_triggers_one_rescan_and_a_process_action_does_no
         spin_until(predicate=lambda: len(rig.scanner.configs) == scans + 1)
         spin_for(seconds=0.15)
         assert len(rig.scanner.configs) == scans + 1
+    finally:
+        service.stop()
+
+
+def test_a_refused_disk_action_does_not_rescan_and_the_next_one_that_runs_does() -> None:
+    rig = build_rig()
+    rig.scanner.gate.set()
+    executor = FakeExecutor(error=TargetChanged())
+    service = disk_action_service(rig, executor)
+    rejected: list[str] = []
+    service.connect("action-rejected", lambda _s, plan_id, _e: rejected.append(plan_id))
+    try:
+        scans = len(rig.scanner.configs)
+        clean = ActionRequest(kind=ActionKind.CACHE_CLEAN, target_id=TargetId("uv"))
+        refused = service.plan(request=clean)
+        service.execute(plan_id=refused.plan_id, typed_confirmation=refused.confirm_phrase)
+        spin_until(predicate=lambda: bool(rejected))
+        # A rescan is flagged synchronously when requested, before the signal is emitted.
+        assert service.disk_scanning() is False
+        assert len(rig.scanner.configs) == scans
+
+        executor.error = None
+        run_plan(service=service, request=clean)
+        spin_until(predicate=lambda: len(rig.scanner.configs) == scans + 1)
     finally:
         service.stop()
 

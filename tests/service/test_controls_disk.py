@@ -6,7 +6,6 @@ import requests.exceptions
 
 from tests.service.engine_fakes import FakeProvider, engine_at
 from wimm.collectors.docker_engines import FixedEngines
-from wimm.core.constants import BUILD_PRUNE_TIMEOUT_S
 from wimm.service.controls import DockerSdkControl
 from wimm.service.errors import ControlFailed, TargetGone
 
@@ -239,15 +238,18 @@ def test_build_cache_prune_asks_for_all_records_and_returns_space_reclaimed() ->
     sdk, client = control(reclaimed=1234)
 
     assert sdk.prune_build_cache() == 1234
-    assert client.api.posts == [
-        ("http://daemon/build/prune", {"all": "true"}, BUILD_PRUNE_TIMEOUT_S)
-    ]
+    assert client.api.posts == [("http://daemon/build/prune", {"all": "true"}, 600)]
 
 
 def test_build_prune_waits_longer_than_the_client_default() -> None:
     default_client_timeout_s = 60
+    sdk, client = control(reclaimed=1)
 
-    assert default_client_timeout_s < BUILD_PRUNE_TIMEOUT_S
+    sdk.prune_build_cache()
+
+    passed_timeout_s = client.api.posts[0][2]
+    assert passed_timeout_s == 600
+    assert passed_timeout_s > default_client_timeout_s
 
 
 def test_sdk_failure_while_pruning_becomes_control_failed() -> None:

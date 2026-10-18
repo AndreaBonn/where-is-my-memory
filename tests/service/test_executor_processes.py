@@ -87,6 +87,8 @@ def test_execute_same_start_time_but_other_cmdline_raises_target_changed() -> No
     with pytest.raises(TargetChanged):
         build_executor(processes=processes).execute(plan=plan)
 
+    assert processes.signals == []
+
 
 def test_execute_vanished_process_is_already_gone_and_plan_continues() -> None:
     second = TARGET_PID + 1

@@ -1,7 +1,6 @@
 import threading
 from collections.abc import Iterator
 from dataclasses import dataclass, field
-from time import monotonic
 
 import pytest
 from gi.repository import GLib
@@ -348,12 +347,17 @@ def test_stop_returns_at_once_while_an_action_is_still_running(rigs: RigFactory)
     rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
     assert executor.started.wait(timeout=TIMEOUT_S)
 
-    began = monotonic()
-    rig.service.stop()
-    elapsed = monotonic() - began
+    stopper = threading.Thread(target=rig.service.stop)
+    stopper.start()
+    stopper.join(timeout=TIMEOUT_S)
+    returned_while_blocked = not stopper.is_alive()
 
     executor.gate.set()
-    assert elapsed < 1.0
+    stopper.join(timeout=TIMEOUT_S)
+    context = GLib.MainContext.default()
+    while context.pending():
+        context.iteration(may_block=False)
+    assert returned_while_blocked
     assert rig.finished == []
 
 

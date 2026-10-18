@@ -65,11 +65,13 @@ def test_apply_config_keeps_unrelated_names_actionable() -> None:
 
 def test_psutil_control_protects_a_name_added_after_construction() -> None:
     with spawned(args=python_child(script="import time; time.sleep(30)")) as child:
-        control = PsutilProcessControl(owner_uid=os.getuid())
+        # Remote sessions actionable: the suite may run over SSH, whose scope is protected.
+        control = PsutilProcessControl(owner_uid=os.getuid(), remote_sessions_actionable=True)
         live = control.inspect(pid=child.pid)
         assert live is not None
-        if live.protected:
-            pytest.skip("test child is categorized protected here")
+        assert not live.protected, (
+            "a child of this test must be actionable before the name is added"
+        )
         control.set_extra_protected_names(names=(os.path.basename(sys.executable),))
         protected = control.inspect(pid=child.pid)
         assert protected is not None

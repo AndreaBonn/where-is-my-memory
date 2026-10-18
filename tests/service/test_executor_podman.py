@@ -263,7 +263,7 @@ def test_container_that_vanishes_during_the_remove_call_is_not_a_failure() -> No
         planned_status="exited",
     )
 
-    assert outcome.status in (StepStatus.DONE, StepStatus.ALREADY_GONE)
+    assert outcome.status is StepStatus.DONE
     assert container.calls == ["remove:False"]
 
 
