@@ -192,3 +192,15 @@ def test_every_refusal_has_an_italian_message() -> None:
 
     assert set(ROOT_REFUSAL_MESSAGES) == set(RootRefusal)
     assert all(message for message in ROOT_REFUSAL_MESSAGES.values())
+
+
+@pytest.mark.parametrize(
+    "path", ["/bin/a/b", "/sbin/a/b", "/lib/x/y", "/lib64/x/y", "/lost+found/a/b"]
+)
+def test_root_policy_refuses_the_merged_usr_links_and_lost_found(path: str) -> None:
+    assert refusal(path) is RootRefusal.SYSTEM_PATH
+
+
+def test_root_policy_refuses_fuseblk_like_any_fuse_mount() -> None:
+    # ntfs-3g and exfat through FUSE: owner and mode are declared by the daemon, not the disk.
+    assert refusal("/mnt/data/code", fstype="fuseblk") is RootRefusal.REMOTE_FS

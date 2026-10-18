@@ -85,7 +85,7 @@ def _is_unsafe_level(*, level: DirFacts, own_uid: int, own_gid: int) -> bool:
 
 
 def _is_remote(fstype: str) -> bool:
-    return fstype in c.NETWORK_FSTYPES or fstype == "fuse" or fstype.startswith("fuse.")
+    return fstype in c.NETWORK_FSTYPES or fstype in c.FUSE_FSTYPES or fstype.startswith("fuse.")
 
 
 def _is_system(real: Path) -> bool:

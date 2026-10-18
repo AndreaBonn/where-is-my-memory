@@ -25,6 +25,8 @@ BUILD_PRUNE_TIMEOUT_S = 600
 NETWORK_FSTYPES = frozenset(
     ("nfs", "nfs4", "cifs", "smb3", "smbfs", "afs", "ceph", "glusterfs", "9p", "autofs")
 )
+# fuseblk serves local NTFS and exFAT disks through FUSE: owner and mode come from the daemon.
+FUSE_FSTYPES = frozenset(("fuse", "fuseblk"))
 # ADR-007: a development root never sits at or below these (the root "/" is too shallow anyway).
 SYSTEM_PATH_PREFIXES = (
     "/usr",
@@ -40,6 +42,14 @@ SYSTEM_PATH_PREFIXES = (
     "/root",
     "/srv",
     "/tmp",
+    # Merged-/usr links and the fsck folder: paths of the system, whatever their owner says.
+    "/bin",
+    "/sbin",
+    "/lib",
+    "/lib32",
+    "/lib64",
+    "/libx32",
+    "/lost+found",
 )
 # ADR-007: a root needs more than two path components, so "/mnt/data" is refused.
 ROOT_MIN_COMPONENTS = 3
