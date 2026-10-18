@@ -14,7 +14,6 @@ from wimm.core.activity import ActivityInputs, EntitySample, assess_activity, la
 from wimm.core.assemble import (
     AssemblyInput,
     Entities,
-    Thresholds,
     UserState,
     Verdicts,
     assemble_snapshot,
@@ -27,6 +26,7 @@ from wimm.model.raw import MemInfo, RawProcess
 from wimm.model.snapshot import ActivityAssessment, DockerStatus, Snapshot
 from wimm.paths import UserPaths
 
+from .group_history import GroupHistory
 from .history import EntityKey, LastActiveTracker, SampleHistory
 from .sampler_collectors import Collectors as Collectors
 from .sampler_collectors import ForegroundSource
@@ -37,10 +37,12 @@ from .sampler_steps import (
     ListenPorts,
     ProcessCycle,
     ProcessSamples,
+    collect_processes,
     container_sample,
     docker_status,
     foreground_group_pids,
     identity,
+    pressure_thresholds,
     read_foreground,
     system_state,
 )
@@ -65,12 +67,8 @@ class Sampler:
         config: Config,
         clock: Callable[[], datetime] = wall_clock,
     ) -> None:
-        self.collectors, self.environment, self.settings, self.clock = (
-            collectors,
-            environment,
-            config,
-            clock,
-        )
+        self.collectors, self.environment = collectors, environment
+        self.settings, self.clock = config, clock
         self.monitor_started_at = clock()
         self.history = SampleHistory(
             window_s=config.activity_window_s, interval_s=config.sample_interval_s
@@ -80,13 +78,14 @@ class Sampler:
         )
         self._last_active = LastActiveTracker(persisted=environment.persisted_last_active)
         self._cpu = ProcessSamples()
-        self._process_warning = False
+        self._warned = False
         self._ports = ListenPorts()
         self._mem: MemInfo | None = None
         self._disks: tuple[DiskUsage, ...] = ()
         self._activity = activity_config(config=config)
         self._user = UserState()
         self._reclaimable_disk = 0
+        self.group_history = GroupHistory(clock=lambda: self.clock())
 
     def apply_config(self, *, config: Config) -> None:
         """Adopt a new configuration from the next cycle on.
@@ -120,7 +119,7 @@ class Sampler:
             LOGGER.debug("Sampling cycle duration %.6f s", monotonic() - started)
 
     def _run_cycle(self) -> Snapshot:
-        processes = self._collect_processes()
+        processes, self._warned = collect_processes(collectors=self.collectors, warned=self._warned)
         sockets = self.collectors.sockets()
         docker = self.collectors.docker()
         mem, disks = self.collectors.meminfo(), self.collectors.disks()
@@ -149,15 +148,6 @@ class Sampler:
             drafts=drafts, entities=entities, verdicts=verdicts, system=(now, docker_status(docker))
         )
 
-    def _collect_processes(self) -> tuple[RawProcess, ...]:
-        result = self.collectors.processes()
-        if result.error and not result.data:
-            raise RuntimeError(f"Process collection failed: {result.error}")
-        if result.error and not self._process_warning:
-            LOGGER.warning("Partial process collection: %s", result.error)
-        self._process_warning = bool(result.error)
-        return result.data
-
     def _entities(
         self,
         *,
@@ -175,6 +165,7 @@ class Sampler:
             extra_protected_names=self.settings.extra_protected_names,
             desktop_categories=categories,
             engine_container_ids=docker.data.container_ids(answered=not docker.error),
+            remote_sessions_actionable=self.settings.remote_sessions_actionable,
         )
         pairs = [(proc, categorize_process(proc=proc, context=context)) for proc in processes]
         return Entities(
@@ -278,7 +269,7 @@ class Sampler:
     ) -> Snapshot:
         if self._mem is None:
             raise RuntimeError("Memory counters are not ready")
-        return assemble_snapshot(
+        snapshot = assemble_snapshot(
             inputs=AssemblyInput(
                 drafts=drafts,
                 entities=entities,
@@ -291,9 +282,8 @@ class Sampler:
                 taken_at=system[0],
                 monitor_started_at=self.monitor_started_at,
                 user=self._user,
-                thresholds=Thresholds(
-                    warning_pct=self.settings.pressure_warning_pct,
-                    critical_pct=self.settings.pressure_critical_pct,
-                ),
+                thresholds=pressure_thresholds(config=self.settings),
             )
         )
+        self.group_history.record(groups=snapshot.groups)
+        return snapshot

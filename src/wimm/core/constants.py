@@ -60,6 +60,7 @@ DISK_SCAN_INTERVAL_S = 21600
 DISK_SCAN_START_DELAY_S = 120
 EXTRA_PROTECTED_NAMES: tuple[str, ...] = ()
 FOREGROUND_TRACKING = True
+REMOTE_SESSIONS_ACTIONABLE = False
 
 PROTECTED_PROCESS_NAMES = (
     "gnome-shell",
@@ -88,6 +89,7 @@ PROTECTED_PROCESS_NAMES = (
     "gnome-keyring-daemon",
     "ssh-agent",
     "gpg-agent",
+    "mosh-server*",
     "snapd*",
 )
 DOCUMENT_APP_NAMES = (
@@ -118,7 +120,7 @@ DOCUMENT_DESKTOP_CATEGORIES = (
     "Chat",
     "InstantMessaging",
 )
-SHELL_NAMES = ("bash", "zsh", "fish", "sh", "dash")
+SHELL_NAMES = ("bash", "zsh", "fish", "sh", "dash", "ksh", "tcsh", "csh", "nu")
 AI_CLI_NAMES = ("claude", "codex", "gemini", "agy", "aider")
 BROWSER_UNIT_NAMES = ("firefox", "google-chrome", "chromium", "brave-browser", "brave")
 BROWSER_SCOPE_PATTERNS = tuple(
@@ -149,6 +151,10 @@ PODMAN_CONMON_PREFIX = "conmon-"
 VTE_SCOPE_PATTERNS = ("vte-spawn-*.scope",)
 APP_SLICE = "app.slice"
 SESSION_SLICE = "session.slice"
+LOGIN_SESSION_SCOPE_PATTERNS = ("session-*.scope",)
+SSHD_NAME_PATTERNS = ("sshd", "sshd-*", "sshd:*")
+MOSH_SERVER_PATTERNS = ("mosh-server*",)
+LOGIN_INFRASTRUCTURE_NAMES = ("tmux*", "screen", "SCREEN")
 USER_UNIT_TEMPLATE = "user@{uid}.service"
 SERVICE_SUFFIX = ".service"
 SCOPE_SUFFIX = ".scope"
@@ -167,6 +173,7 @@ REASON_SELF = "self"
 REASON_EXCLUDED = "excluded"
 REASON_SYSTEM = "system"
 REASON_SESSION = "session"
+REASON_REMOTE_LOGIN = "remote_login"
 REASON_PROTECTED_NAME = "protected_name"
 REASON_SCOPE = "scope"
 REASON_ANCESTOR = "ancestor"
@@ -239,3 +246,21 @@ CACHE_COMMAND_TIMEOUT_S = 300
 TRASH_CONTENT_DIRS = ("files", "info")
 MOUNTINFO_PATH = "/proc/self/mountinfo"
 MAX_RECORDED_REMOVAL_ERRORS = 10
+
+# SPECIFICHE R29 (growth indicator): one point per group every 10 minutes for 3 hours.
+GROWTH_SAMPLE_INTERVAL_S = 600
+GROWTH_WINDOW_S = 3 * 3600
+# "Growing" means the group gained at least this much and at least this fraction of where it
+# started, over a span and a number of points long enough not to be a spike.
+GROWTH_MIN_BYTES = 256 * 1024 * 1024
+GROWTH_MIN_RATIO = 0.2
+GROWTH_MIN_SPAN_S = 3600
+# Points needed to cover the span: 7 at 600 s (6 would cover only 3000 s).
+GROWTH_MIN_POINTS = GROWTH_MIN_SPAN_S // GROWTH_SAMPLE_INTERVAL_S + 1
+# Falls summing to more than this fraction of the net gain mean a sawtooth, not a leak.
+GROWTH_MAX_DROP_FRACTION = 0.25
+# A fall between two samples smaller than this is jitter, not a cache emptying: 32 MiB is
+# above the swing (about 20 MiB) of a +-10 MiB wobble and an eighth of GROWTH_MIN_BYTES.
+GROWTH_NOISE_BYTES = 32 * 1024 * 1024
+# Medians of the first and last third of the series stand for its start and end.
+GROWTH_EDGE_PARTS = 3

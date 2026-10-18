@@ -16,8 +16,9 @@ from wimm.collectors.sockets import (
     listening_ports_by_pid,
     non_listening_port_index,
 )
+from wimm.config import Config
 from wimm.core.activity import EntitySample
-from wimm.core.assemble import SystemState
+from wimm.core.assemble import SystemState, Thresholds
 from wimm.core.grouping import GroupDraft
 from wimm.core.memory import NO_KERNEL_MEMORY
 from wimm.model.enums import MetricsSource
@@ -99,6 +100,24 @@ def subtree_cpu(
             totals.get(child, 0.0) for child in children.get(pid, ())
         )
     return totals
+
+
+def collect_processes(
+    *, collectors: Collectors, warned: bool
+) -> tuple[tuple[RawProcess, ...], bool]:
+    """Read the processes; a partial read is logged once. Returns them and the new warned flag."""
+    result = collectors.processes()
+    if result.error and not result.data:
+        raise RuntimeError(f"Process collection failed: {result.error}")
+    if result.error and not warned:
+        LOGGER.warning("Partial process collection: %s", result.error)
+    return result.data, bool(result.error)
+
+
+def pressure_thresholds(*, config: Config) -> Thresholds:
+    return Thresholds(
+        warning_pct=config.pressure_warning_pct, critical_pct=config.pressure_critical_pct
+    )
 
 
 def docker_status(docker: CollectorResult[DockerSample]) -> DockerStatus:
