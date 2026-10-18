@@ -28,6 +28,7 @@ def test_is_ollama_serve_uses_argv0_when_the_process_name_is_truncated() -> None
         ("ollama", ["/usr/local/bin/ollama", "run", "llama3"]),
         ("ollama", ["ollama", "list"]),
         ("ollama", ["ollama"]),
+        ("ollama", ["serve"]),
         ("python3", ["python3", "/home/u/ollama/serve.py", "serve"]),
         ("vim", ["vim", "/home/u/.ollama/notes", "serve"]),
         ("ollama-tool", ["/opt/ollama-tool", "serve"]),

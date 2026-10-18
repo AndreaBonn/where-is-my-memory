@@ -11,6 +11,26 @@ from wimm.model.snapshot import ActionOffer
 
 PROCESS = Target(kind="process", category=Category.DEV_PROCESS, activity=ActivityState.IDLE)
 # C3: how to restart moves to its own line of the dialog, "Per riaccenderlo".
+FOREGROUND_TEXT = (
+    "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
+)
+IDLE_TEXT = "Il server si ferma."
+ACTIVE_TEXT = "È in uso adesso: chi lo sta usando perde la connessione."
+AGENT_TEXT = (
+    "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
+)
+BROWSER_TEXT = (
+    "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede "
+    "dal salvataggio automatico, che può essere indietro di qualche secondo."
+)
+APP_TEXT = "L'applicazione si chiude."
+TERMINAL_TEXT = (
+    "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
+)
+OTHER_TEXT = (
+    "Il programma si ferma: ciò che ha in memoria e non ha salvato va perso. "
+    "Se è un servizio, potrebbe riavviarsi da solo."
+)
 CONTAINER_TEXT = "Il container si ferma; dati e configurazione restano."
 CONTAINER_TIMEOUT_TEXT = "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
 
@@ -246,23 +266,47 @@ class TestRiskBehavior:
         assert result.level is Risk.CAUTION
         assert result.consequences == (text,)
 
-    @pytest.mark.parametrize("category", list(Category))
-    @pytest.mark.parametrize("activity", [ActivityState.IDLE, ActivityState.ACTIVE])
-    def test_foreground_consequences(self, category: Category, activity: ActivityState) -> None:
+    @pytest.mark.parametrize(
+        ("category", "activity", "base_level", "base_text"),
+        [
+            (Category.SYSTEM, ActivityState.IDLE, Risk.CAUTION, APP_TEXT),
+            (Category.CONTAINER, ActivityState.IDLE, Risk.CAUTION, APP_TEXT),
+            (Category.AI_CLI, ActivityState.IDLE, Risk.CAUTION, AGENT_TEXT),
+            (Category.BROWSER, ActivityState.IDLE, Risk.CAUTION, BROWSER_TEXT),
+            (Category.DESKTOP_APP, ActivityState.IDLE, Risk.CAUTION, APP_TEXT),
+            (Category.TERMINAL, ActivityState.IDLE, Risk.CAUTION, TERMINAL_TEXT),
+            (Category.SESSION, ActivityState.IDLE, Risk.CAUTION, APP_TEXT),
+            (Category.SELF, ActivityState.IDLE, Risk.CAUTION, APP_TEXT),
+            (Category.OTHER, ActivityState.IDLE, Risk.CAUTION, OTHER_TEXT),
+            (Category.PROJECT, ActivityState.IDLE, Risk.CAUTION, APP_TEXT),
+            (Category.DEV_SERVER, ActivityState.IDLE, Risk.SAFE, IDLE_TEXT),
+            (Category.DEV_PROCESS, ActivityState.IDLE, Risk.SAFE, IDLE_TEXT),
+            (Category.SYSTEM, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
+            (Category.CONTAINER, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
+            (Category.AI_CLI, ActivityState.ACTIVE, Risk.CAUTION, AGENT_TEXT),
+            (Category.BROWSER, ActivityState.ACTIVE, Risk.CAUTION, BROWSER_TEXT),
+            (Category.DESKTOP_APP, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
+            (Category.TERMINAL, ActivityState.ACTIVE, Risk.CAUTION, TERMINAL_TEXT),
+            (Category.SESSION, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
+            (Category.SELF, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
+            (Category.OTHER, ActivityState.ACTIVE, Risk.CAUTION, OTHER_TEXT),
+            (Category.PROJECT, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
+            (Category.DEV_SERVER, ActivityState.ACTIVE, Risk.CAUTION, ACTIVE_TEXT),
+            (Category.DEV_PROCESS, ActivityState.ACTIVE, Risk.CAUTION, ACTIVE_TEXT),
+        ],
+    )
+    def test_foreground_consequences(
+        self, category: Category, activity: ActivityState, base_level: Risk, base_text: str
+    ) -> None:
         target = replace(PROCESS, category=category, activity=activity)
         base = assess_risk(target=target, action=Action.PROCESS_TERMINATE)
         result = assess_risk(
             target=replace(target, is_foreground_on_tty=True), action=Action.PROCESS_TERMINATE
         )
-        is_dev = category in (Category.DEV_PROCESS, Category.DEV_SERVER)
-        is_idle_dev = is_dev and activity is ActivityState.IDLE
-        assert base.level is (Risk.SAFE if is_idle_dev else Risk.CAUTION)
-        assert result.level is max(Risk.CAUTION, base.level)
-        assert result.consequences == (
-            "È in esecuzione in primo piano in un terminale: "
-            "potresti interrompere un lavoro in corso.",
-            *base.consequences,
-        )
+        assert base.level is base_level
+        assert base.consequences == (base_text,)
+        assert result.level is Risk.CAUTION
+        assert result.consequences == (FOREGROUND_TEXT, base_text)
 
     @pytest.mark.parametrize(
         ("kind", "facts", "missing"),

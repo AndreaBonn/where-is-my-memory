@@ -324,18 +324,20 @@ def test_trash_empty_is_danger_with_the_trash_label_as_phrase() -> None:
 
 
 @pytest.mark.parametrize(
-    "kind",
+    ("kind", "target"),
     [
-        ActionKind.IMAGES_PRUNE_DANGLING,
-        ActionKind.IMAGES_PRUNE_UNUSED,
-        ActionKind.CONTAINERS_PRUNE_STOPPED,
-        ActionKind.BUILDER_PRUNE,
-        ActionKind.TRASH_EMPTY,
+        (ActionKind.IMAGES_PRUNE_DANGLING, None),
+        (ActionKind.IMAGES_PRUNE_UNUSED, None),
+        (ActionKind.CONTAINERS_PRUNE_STOPPED, None),
+        (ActionKind.BUILDER_PRUNE, None),
+        (ActionKind.TRASH_EMPTY, None),
+        (ActionKind.DEVDIR_DELETE, "/w/old/node_modules"),
+        (ActionKind.CACHE_CLEAN, "uv"),
     ],
 )
-def test_disk_actions_without_a_report_are_refused(kind: ActionKind) -> None:
+def test_disk_actions_without_a_report_are_refused(kind: ActionKind, target: str | None) -> None:
     with pytest.raises(InvalidRequest, match="report"):
-        _plan(kind=kind, disk=None)
+        _plan(kind=kind, disk=None, target=target)
 
 
 def test_docker_actions_with_docker_unavailable_name_the_reason() -> None:

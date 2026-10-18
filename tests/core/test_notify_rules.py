@@ -132,15 +132,22 @@ def test_ai_cli_idle_is_silent_by_default_and_notifies_when_enabled() -> None:
     assert _ids(snapshot, config=enabled) == ["idle-g_1"]
 
 
-def test_desktop_app_idle_is_silent_by_default() -> None:
-    assert _ids(make_snapshot((make_group(category=Category.DESKTOP_APP),))) == []
+def test_desktop_app_idle_is_silent_by_default_and_notifies_when_enabled() -> None:
+    snapshot = make_snapshot((make_group(category=Category.DESKTOP_APP),))
+    enabled = with_config(notify_categories=frozenset({Category.DESKTOP_APP}))
+
+    assert _ids(snapshot) == []
+    assert _ids(snapshot, config=enabled) == ["idle-g_1"]
 
 
 def test_system_category_is_not_among_the_notified_categories() -> None:
     # Config refuses protected categories in notify_categories, so this is the category
     # filter at work; the protection check in the rules is defence in depth behind it.
-    snapshot = make_snapshot((make_group(category=Category.SYSTEM),))
-    assert _ids(snapshot) == []
+    system = make_snapshot((make_group(category=Category.SYSTEM),))
+    notified = make_snapshot((make_group(category=Category.DEV_PROCESS),))
+
+    assert _ids(system) == []
+    assert _ids(notified) == ["idle-g_1"]
 
 
 def test_ignored_group_is_silent_and_same_group_not_ignored_notifies() -> None:

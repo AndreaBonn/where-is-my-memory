@@ -192,6 +192,31 @@ def test_every_refusal_has_an_italian_message() -> None:
 
     assert set(ROOT_REFUSAL_MESSAGES) == set(RootRefusal)
     assert all(message for message in ROOT_REFUSAL_MESSAGES.values())
+    assert ROOT_REFUSAL_MESSAGES[RootRefusal.NOT_OWNED] == "La cartella non è tua"
+    assert ROOT_REFUSAL_MESSAGES[RootRefusal.READ_ONLY] == (
+        "La cartella sta su un disco in sola lettura"
+    )
+    assert ROOT_REFUSAL_MESSAGES[RootRefusal.HOME_ANCESTOR] == "La cartella contiene la tua home"
+
+
+def test_unsafe_parent_wins_over_remote_filesystem() -> None:
+    shared = DirFacts(uid=0, gid=0, mode=stat.S_IFDIR | 0o777)
+    chain = (ROOT_DIR, ROOT_DIR, shared)
+
+    unsafe_and_remote = refusal("/mnt/shared/code", ancestors=chain, fstype="nfs")
+    remote_only = refusal("/mnt/shared/code", fstype="nfs")
+
+    assert unsafe_and_remote is RootRefusal.UNSAFE_PARENT
+    assert remote_only is RootRefusal.REMOTE_FS
+
+
+def test_position_refusal_wins_over_not_owned() -> None:
+    other_home_not_mine = refusal("/home/bob/x", st_uid=1001)
+    system_not_mine = refusal("/var/www/proj", st_uid=0)
+
+    assert other_home_not_mine is RootRefusal.OTHER_HOME
+    assert system_not_mine is RootRefusal.SYSTEM_PATH
+    assert refusal("/mnt/data/code", st_uid=1001) is RootRefusal.NOT_OWNED
 
 
 @pytest.mark.parametrize(

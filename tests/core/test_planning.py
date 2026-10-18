@@ -217,10 +217,11 @@ def test_plan_compose_down_on_protected_group_raises() -> None:
 
 
 def test_plan_unsupported_kind_raises_invalid_request() -> None:
-    request = ActionRequest(kind=ActionKind.TRASH_EMPTY)
+    project = group(gid="p", members=(container(cid="up"),))
+    request = ActionRequest(kind=ActionKind.CONTAINER_START, target_id=TargetId("up"))
 
-    with pytest.raises(InvalidRequest):
-        plan_action(request=request, snapshot=snapshot(), context=context())
+    with pytest.raises(InvalidRequest, match="cannot be planned"):
+        plan_action(request=request, snapshot=snapshot(project), context=context())
 
 
 def test_group_stop_terminates_processes_before_containers() -> None:

@@ -143,6 +143,29 @@ def test_state_forgets_episodes_of_groups_that_disappeared() -> None:
     assert NotificationState().episodes == frozenset()
 
 
+def test_pressure_does_not_list_a_group_with_nothing_to_reclaim() -> None:
+    groups = (
+        make_group("g_a", name="vuoto", reclaimable=0),
+        make_group("g_b", name="visibile", reclaimable=1 * GB),
+    )
+
+    (intent, *_) = evaluate_notifications(
+        request=request(make_snapshot(groups, ram_free_pct=5))
+    ).intents
+
+    assert intent.body == "Puoi liberare subito: visibile 1,0 GB."
+
+
+def test_pressure_with_only_empty_groups_points_to_the_panel() -> None:
+    groups = (make_group("g_a", name="vuoto", reclaimable=0),)
+
+    (intent, *_) = evaluate_notifications(
+        request=request(make_snapshot(groups, ram_free_pct=5))
+    ).intents
+
+    assert intent.body == "Apri il pannello per vedere cosa chiudere."
+
+
 def test_pressure_never_lists_a_protected_group_as_freeable() -> None:
     from wimm.model.enums import Category
 

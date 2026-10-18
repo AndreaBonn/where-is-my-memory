@@ -143,7 +143,10 @@ def test_plain_reason_reads_the_english_at_least_mark() -> None:
     assert _(text.AT_LEAST_MARK) in since_start.reason
     assert _(text.AT_LEAST_MARK) not in measured.reason
     # Same duration on both sides: the only difference is the "at least" the reader adds.
-    assert plain_reason(activity=since_start, now=NOW) != plain_reason(activity=measured, now=NOW)
+    assert (
+        plain_reason(activity=since_start, now=NOW) == "You haven't used it for at least 2 hours."
+    )
+    assert plain_reason(activity=measured, now=NOW) == "You haven't used it for 2 hours."
 
 
 def test_ui_readers_tell_observing_from_other_unknown_reasons() -> None:
