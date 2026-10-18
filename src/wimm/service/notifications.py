@@ -4,7 +4,8 @@ from datetime import datetime
 from typing import Any, Protocol
 
 from wimm.config import Config
-from wimm.core.notify_rules import NotificationState, NotifyRequest, evaluate_notifications
+from wimm.core.notify_rules import evaluate_notifications
+from wimm.core.notify_types import NotificationState, NotifyRequest
 from wimm.model.snapshot import Snapshot
 from wimm.service.notifier import NotificationSink, Notifier
 from wimm.service.sampler import wall_clock

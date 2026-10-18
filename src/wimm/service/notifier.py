@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING, Any, Protocol
 
-from wimm.core.notify_rules import NotificationIntent
+from wimm.core.notify_types import NotificationIntent
 from wimm.i18n import N_, _
 
 if TYPE_CHECKING:

@@ -5,11 +5,12 @@ import pytest
 from wimm.config import Config
 from wimm.core import constants
 from wimm.core.notify_rules import evaluate_notifications
+from wimm.core.notify_types import NotificationState, NotifyResult
 from wimm.model.enums import ActivityState, Category
 from wimm.model.snapshot import ActivityAssessment, ContainerMember, Snapshot
 
 from .helpers import member
-from .notify_helpers import GB, NOW, idle_since, make_group, make_snapshot, request, with_config
+from .notify_helpers import GB, MB, NOW, idle_since, make_group, make_snapshot, request, with_config
 
 MIN_BYTES = constants.NOTIFY_MIN_BYTES
 
@@ -183,3 +184,89 @@ def test_notify_after_follows_configuration() -> None:
     snapshot = make_snapshot((make_group(activity=idle_since(hours=0.5)),))
     assert _ids(snapshot) == []
     assert _ids(snapshot, config=with_config(notify_after_s=600)) == ["idle-g_1"]
+
+
+def _oom_snapshot() -> Snapshot:
+    groups = (
+        make_group("g_a", name="vite (frontend)", reclaimable=640 * MB),
+        make_group("g_b", name="whitebox", reclaimable=1_100 * MB),
+        make_group("g_c", name="jupyter", reclaimable=410 * MB),
+        make_group("g_d", name="piccolo", reclaimable=50 * MB),
+    )
+    return make_snapshot(groups)
+
+
+def _oom_ids(result: NotifyResult) -> list[str]:
+    return [i.id for i in result.intents if i.id == "oom-kill"]
+
+
+def test_oom_kill_increase_notifies_once() -> None:
+    snapshot = _oom_snapshot()
+    first = evaluate_notifications(request=request(snapshot, oom_kills=6))
+    assert _oom_ids(first) == []
+
+    second = evaluate_notifications(request=request(snapshot, state=first.state, oom_kills=7))
+    (intent,) = [i for i in second.intents if i.id == "oom-kill"]
+    assert intent.title == "Il sistema ha chiuso 1 programma per mancanza di memoria"
+    expected = "Puoi liberare subito: whitebox 1,1 GB, vite (frontend) 640 MB, jupyter 410 MB."
+    assert intent.body == expected
+
+    third = evaluate_notifications(request=request(snapshot, state=second.state, oom_kills=7))
+    assert _oom_ids(third) == []
+
+
+def test_oom_kill_first_cycle_reads_the_counter_without_notifying() -> None:
+    result = evaluate_notifications(request=request(_oom_snapshot(), oom_kills=40))
+
+    assert _oom_ids(result) == []
+    assert result.state.oom_kills_seen == 40
+
+
+def test_oom_kill_unchanged_counter_is_silent() -> None:
+    state = NotificationState(oom_kills_seen=6)
+
+    result = evaluate_notifications(request=request(_oom_snapshot(), state=state, oom_kills=6))
+
+    assert _oom_ids(result) == []
+
+
+def test_oom_kill_absent_counter_is_silent_and_keeps_the_last_value() -> None:
+    state = NotificationState(oom_kills_seen=6)
+
+    result = evaluate_notifications(request=request(_oom_snapshot(), state=state, oom_kills=None))
+
+    assert _oom_ids(result) == []
+    assert result.state.oom_kills_seen == 6
+
+
+def test_oom_kill_notifies_even_when_the_hourly_window_is_full() -> None:
+    sent = tuple(NOW - timedelta(minutes=m) for m in (1, 2, 3))
+    state = NotificationState(sent_at=sent, oom_kills_seen=1)
+
+    result = evaluate_notifications(request=request(_oom_snapshot(), state=state, oom_kills=2))
+
+    assert _oom_ids(result) == ["oom-kill"]
+
+
+def test_oom_kill_waits_for_the_global_silence_to_end() -> None:
+    state = NotificationState(oom_kills_seen=1)
+    muted = NOW + timedelta(hours=1)
+
+    silent = evaluate_notifications(
+        request=request(_oom_snapshot(), state=state, oom_kills=2, muted_until=muted)
+    )
+    later = evaluate_notifications(
+        request=request(_oom_snapshot(), state=silent.state, oom_kills=2)
+    )
+
+    assert _oom_ids(silent) == []
+    assert _oom_ids(later) == ["oom-kill"]
+
+
+def test_oom_kill_counter_reset_updates_without_notifying() -> None:
+    state = NotificationState(oom_kills_seen=9)
+
+    result = evaluate_notifications(request=request(_oom_snapshot(), state=state, oom_kills=0))
+
+    assert _oom_ids(result) == []
+    assert result.state.oom_kills_seen == 0

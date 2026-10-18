@@ -2,7 +2,7 @@ from typing import Any
 
 import pytest
 
-from wimm.core.notify_rules import NotificationIntent
+from wimm.core.notify_types import NotificationIntent
 from wimm.model.enums import GroupId
 from wimm.service.notifier import (
     ACTION_OPEN_GROUP,

@@ -5,7 +5,7 @@ from types import MappingProxyType
 
 import pytest
 
-from wimm.core.notify_rules import NotificationState
+from wimm.core.notify_types import NotificationState
 from wimm.model.enums import GroupId
 from wimm.paths import UserPaths
 from wimm.service.history import EntityKey

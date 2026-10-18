@@ -6,7 +6,7 @@ import pytest
 
 from tests.core.notify_helpers import NOW, make_group, make_snapshot
 from wimm.config import Config
-from wimm.core.notify_rules import NotificationState
+from wimm.core.notify_types import NotificationState
 from wimm.model.enums import GroupId
 from wimm.model.snapshot import Snapshot
 from wimm.service.notifications import NotificationCoordinator

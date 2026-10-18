@@ -2,7 +2,7 @@ from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 
 from wimm.config import Config
-from wimm.core.notify_rules import NotificationState, NotifyRequest
+from wimm.core.notify_types import NotificationState, NotifyRequest
 from wimm.model.enums import ActivityState, Category, GroupId, Pressure
 from wimm.model.memory import DiskUsage, MemoryBreakdown, MemorySummary, MemoryUse, Reclaimable
 from wimm.model.snapshot import (
@@ -93,6 +93,7 @@ def request(
     now: datetime = NOW,
     muted_until: datetime | None = None,
     config: Config | None = None,
+    oom_kills: int | None = None,
 ) -> NotifyRequest:
     return NotifyRequest(
         snapshot=snapshot,
@@ -100,6 +101,7 @@ def request(
         state=state or NotificationState(),
         now=now,
         muted_until=muted_until,
+        oom_kills=oom_kills,
     )
 
 

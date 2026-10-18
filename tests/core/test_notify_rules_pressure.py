@@ -1,6 +1,7 @@
 from datetime import timedelta
 
-from wimm.core.notify_rules import NotificationState, evaluate_notifications
+from wimm.core.notify_rules import evaluate_notifications
+from wimm.core.notify_types import NotificationState
 
 from .notify_helpers import GB, MB, NOW, make_group, make_snapshot, request, with_config
 

@@ -8,7 +8,7 @@ from datetime import datetime
 from types import MappingProxyType
 from typing import Any
 
-from wimm.core.notify_rules import Episode, NotificationState
+from wimm.core.notify_types import Episode, NotificationState
 from wimm.model.enums import GroupId
 from wimm.paths import UserPaths, ensure_private_dir, write_private_atomic
 from wimm.service.history import EntityKey

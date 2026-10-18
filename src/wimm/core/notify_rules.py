@@ -1,56 +1,23 @@
-from collections.abc import Mapping
-from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from types import MappingProxyType
 
-from wimm.config import Config
 from wimm.core import constants as c
+from wimm.core.notify_types import (
+    Episode,
+    NotificationIntent,
+    NotificationState,
+    NotifyRequest,
+    NotifyResult,
+)
 from wimm.core.sizes import format_size
 from wimm.core.text import spoken_duration
 from wimm.i18n import _, ngettext
-from wimm.model.enums import ActivityState, Category, GroupId, Protection
+from wimm.model.enums import ActivityState, Category, Protection
 from wimm.model.snapshot import ContainerMember, Group, ProcessMember, Snapshot
 
 PERCENT = 100
 AGGREGATE_ID = "idle-aggregate"
 PRESSURE_KINDS = ("ram", "disk")
-Episode = tuple[GroupId, datetime]
-
-
-@dataclass(frozen=True, slots=True)
-class NotificationIntent:
-    """A notification to show; ``group_id`` feeds the open/snooze actions (None if no group)."""
-
-    id: str
-    title: str
-    body: str
-    group_id: GroupId | None
-
-
-@dataclass(frozen=True, slots=True)
-class NotificationState:
-    """What was already notified: idle episodes, last pressure per kind, send times."""
-
-    episodes: frozenset[Episode] = frozenset()
-    pressure_sent: Mapping[str, datetime] = field(default_factory=lambda: MappingProxyType({}))
-    sent_at: tuple[datetime, ...] = ()
-
-
-@dataclass(frozen=True, slots=True)
-class NotifyRequest:
-    """Everything the rules need, clock included; ``muted_until`` is the global silence."""
-
-    snapshot: Snapshot
-    config: Config
-    state: NotificationState
-    now: datetime
-    muted_until: datetime | None = None
-
-
-@dataclass(frozen=True, slots=True)
-class NotifyResult:
-    intents: tuple[NotificationIntent, ...]
-    state: NotificationState
 
 
 def _is_silenced(*, group: Group, now: datetime) -> bool:
@@ -142,7 +109,7 @@ def _free_pct(*, free: int, total: int) -> int | None:
     return None if total <= 0 else free * PERCENT // total
 
 
-def _ram_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
+def _free_now_body(*, snapshot: Snapshot) -> str:
     usable = [
         g
         for g in snapshot.groups
@@ -150,15 +117,40 @@ def _ram_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
     ]
     top = sorted(usable, key=lambda g: (-g.memory.reclaimable, g.id))[: c.PRESSURE_TOP_GROUPS]
     listed = ", ".join(f"{g.name} {format_size(size=g.memory.reclaimable)}" for g in top)
+    if not top:
+        return _("Apri il pannello per vedere cosa chiudere.")
+    return _("Puoi liberare subito: {listed}.").format(listed=listed)
+
+
+def _ram_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
     return NotificationIntent(
         id="pressure-ram",
         # xgettext: no-python-format
         title=_("Memoria quasi piena ({pct}% libera)").format(pct=pct),
-        body=_("Puoi liberare subito: {listed}.").format(listed=listed)
-        if top
-        else _("Apri il pannello per vedere cosa chiudere."),
+        body=_free_now_body(snapshot=snapshot),
         group_id=None,
     )
+
+
+def _oom_intent(*, snapshot: Snapshot, kills: int) -> NotificationIntent:
+    title = ngettext(
+        "Il sistema ha chiuso {count} programma per mancanza di memoria",
+        "Il sistema ha chiuso {count} programmi per mancanza di memoria",
+        kills,
+    ).format(count=kills)
+    return NotificationIntent(
+        id="oom-kill", title=title, body=_free_now_body(snapshot=snapshot), group_id=None
+    )
+
+
+def _oom_kills_since_last(*, request: NotifyRequest) -> int:
+    """Kills counted since the previous cycle; 0 on the first cycle or without a counter."""
+    seen, now = request.state.oom_kills_seen, request.oom_kills
+    return 0 if seen is None or now is None else max(now - seen, 0)
+
+
+def _oom_seen(*, request: NotifyRequest) -> int | None:
+    return request.state.oom_kills_seen if request.oom_kills is None else request.oom_kills
 
 
 def _disk_intent(*, snapshot: Snapshot, pct: int) -> NotificationIntent:
@@ -217,6 +209,40 @@ def _split_idle(*, candidates: list[Group], slots: int) -> tuple[list[Group], li
     return candidates[:slots], candidates[slots:]
 
 
+def _oom_intents(*, request: NotifyRequest) -> list[NotificationIntent]:
+    kills = _oom_kills_since_last(request=request)
+    return [_oom_intent(snapshot=request.snapshot, kills=kills)] if kills else []
+
+
+def _muted_result(
+    *, request: NotifyRequest, episodes: frozenset[Episode], recent: tuple[datetime, ...]
+) -> NotifyResult:
+    """Global silence: nothing sent, nothing recorded, the OOM counter keeps its last value."""
+    state = NotificationState(
+        episodes=episodes,
+        pressure_sent=request.state.pressure_sent,
+        sent_at=recent,
+        oom_kills_seen=request.state.oom_kills_seen,
+    )
+    return NotifyResult(intents=(), state=state)
+
+
+def _sent_state(
+    *,
+    request: NotifyRequest,
+    episodes: frozenset[Episode],
+    sends: tuple[datetime, ...],
+    pressure: list[tuple[str, NotificationIntent]],
+) -> NotificationState:
+    sent = {**request.state.pressure_sent, **{kind: request.now for kind, _intent in pressure}}
+    return NotificationState(
+        episodes=episodes,
+        pressure_sent=MappingProxyType(sent),
+        sent_at=sends,
+        oom_kills_seen=_oom_seen(request=request),
+    )
+
+
 def evaluate_notifications(*, request: NotifyRequest) -> NotifyResult:
     """Decide which notifications to show now (SPECIFICHE § 9). Pure: no I/O, no clock.
 
@@ -231,19 +257,19 @@ def evaluate_notifications(*, request: NotifyRequest) -> NotifyResult:
     recent = _recent_sends(request=request)
     episodes = _live_episodes(request=request)
     if request.muted_until is not None and request.now < request.muted_until:
-        state = NotificationState(episodes, request.state.pressure_sent, recent)
-        return NotifyResult(intents=(), state=state)
+        return _muted_result(request=request, episodes=episodes, recent=recent)
     pressure = _pressure_intents(request=request)
-    slots = request.config.max_notifications_per_hour - len(recent) - len(pressure)
+    urgent = [i for _kind, i in pressure] + _oom_intents(request=request)
+    slots = request.config.max_notifications_per_hour - len(recent) - len(urgent)
     shown, overflow = _split_idle(candidates=_idle_candidates(request=request), slots=slots)
-    intents = [i for _kind, i in pressure] + [_idle_intent(group=g, now=request.now) for g in shown]
+    intents = urgent + [_idle_intent(group=g, now=request.now) for g in shown]
     if overflow:
         intents.append(_aggregate_intent(groups=overflow))
     marked = {(g.id, g.activity.since) for g in (*shown, *overflow) if g.activity.since}
-    sent = {**request.state.pressure_sent, **{kind: request.now for kind, _intent in pressure}}
-    state = NotificationState(
-        episodes | frozenset(marked),
-        MappingProxyType(sent),
-        (*recent, *[request.now] * len(intents)),
+    state = _sent_state(
+        request=request,
+        episodes=episodes | frozenset(marked),
+        sends=(*recent, *[request.now] * len(intents)),
+        pressure=pressure,
     )
     return NotifyResult(intents=tuple(intents), state=state)

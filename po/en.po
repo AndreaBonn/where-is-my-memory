@@ -162,55 +162,55 @@ msgstr "System services"
 msgid "Container Podman"
 msgstr "Podman containers"
 
-#: src/wimm/core/notify_rules.py:87 src/wimm/core/text_groups.py:53
+#: src/wimm/core/notify_rules.py:89 src/wimm/core/text_groups.py:53
 #, python-brace-format
 msgid "{head} e {last}"
 msgstr "{head} and {last}"
 
-#: src/wimm/core/notify_rules.py:96
+#: src/wimm/core/notify_rules.py:98
 #, python-brace-format
 msgid "{count} container"
 msgid_plural "{count} container"
 msgstr[0] "{count} container"
 msgstr[1] "{count} containers"
 
-#: src/wimm/core/notify_rules.py:99
+#: src/wimm/core/notify_rules.py:101
 #, python-brace-format
 msgid "{count} server"
 msgid_plural "{count} server"
 msgstr[0] "{count} server"
 msgstr[1] "{count} servers"
 
-#: src/wimm/core/notify_rules.py:102
+#: src/wimm/core/notify_rules.py:104
 #, python-brace-format
 msgid "{count} processo"
 msgid_plural "{count} processi"
 msgstr[0] "{count} process"
 msgstr[1] "{count} processes"
 
-#: src/wimm/core/notify_rules.py:112
+#: src/wimm/core/notify_rules.py:114
 #, python-brace-format
 msgid "Chiudendolo liberi {size} di memoria. Decidi tu: non si chiude da solo."
 msgstr "Closing it frees {size} of memory. You decide: it won't close on its own."
 
-#: src/wimm/core/notify_rules.py:116
+#: src/wimm/core/notify_rules.py:118
 #, python-brace-format
 msgid "Dentro: {members}."
 msgstr "Inside: {members}."
 
-#: src/wimm/core/notify_rules.py:119
+#: src/wimm/core/notify_rules.py:121
 #, python-brace-format
 msgid "{name} è acceso ma non lo usi da {elapsed}"
 msgstr "{name} is running but you haven't used it for {elapsed}"
 
-#: src/wimm/core/notify_rules.py:131
+#: src/wimm/core/notify_rules.py:133
 #, python-brace-format
 msgid "{count} programma acceso che non usi"
 msgid_plural "{count} programmi accesi che non usi"
 msgstr[0] "{count} running program you don't use"
 msgstr[1] "{count} running programs you don't use"
 
-#: src/wimm/core/notify_rules.py:134
+#: src/wimm/core/notify_rules.py:136
 #, python-brace-format
 msgid "Chiudendolo liberi {size} di memoria. Apri il pannello per vederlo."
 msgid_plural "Chiudendoli liberi {size} di memoria. Apri il pannello per vederli."
@@ -218,29 +218,36 @@ msgstr[0] "Closing it frees {size} of memory. Open the panel to see it."
 msgstr[1] "Closing them frees {size} of memory. Open the panel to see them."
 
 #: src/wimm/core/notify_rules.py:156
-#, no-python-format, python-brace-format
-msgid "Memoria quasi piena ({pct}% libera)"
-msgstr "Memory almost full ({pct}% free)"
+msgid "Apri il pannello per vedere cosa chiudere."
+msgstr "Open the panel to see what to close."
 
 #: src/wimm/core/notify_rules.py:157
 #, python-brace-format
 msgid "Puoi liberare subito: {listed}."
 msgstr "You can free up right away: {listed}."
 
-#: src/wimm/core/notify_rules.py:159
-msgid "Apri il pannello per vedere cosa chiudere."
-msgstr "Open the panel to see what to close."
+#: src/wimm/core/notify_rules.py:164
+#, no-python-format, python-brace-format
+msgid "Memoria quasi piena ({pct}% libera)"
+msgstr "Memory almost full ({pct}% free)"
 
-#: src/wimm/core/notify_rules.py:167
+#: src/wimm/core/notify_rules.py:172
+#, python-brace-format
+msgid "Il sistema ha chiuso {count} programma per mancanza di memoria"
+msgid_plural "Il sistema ha chiuso {count} programmi per mancanza di memoria"
+msgstr[0] "The system closed {count} program because it ran out of memory"
+msgstr[1] "The system closed {count} programs because it ran out of memory"
+
+#: src/wimm/core/notify_rules.py:194
 #, python-brace-format
 msgid "Puoi liberare subito {size} sul disco."
 msgstr "You can free up {size} on the disk right away."
 
-#: src/wimm/core/notify_rules.py:169
+#: src/wimm/core/notify_rules.py:196
 msgid "Apri il pannello per vedere cosa occupa spazio."
 msgstr "Open the panel to see what takes up space."
 
-#: src/wimm/core/notify_rules.py:174
+#: src/wimm/core/notify_rules.py:201
 #, no-python-format, python-brace-format
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
@@ -259,7 +266,7 @@ msgstr "The report shows the {shown} largest items: {hidden} more remain, and a 
 msgid "Build cache"
 msgstr "Build cache"
 
-#: src/wimm/core/planning_drafts.py:104 src/wimm/core/planning_drafts.py:216
+#: src/wimm/core/planning_drafts.py:107 src/wimm/core/planning_drafts.py:219
 #, python-brace-format
 msgid "{name} (pid {pid})"
 msgstr "{name} (pid {pid})"
@@ -925,53 +932,53 @@ msgstr "Result"
 msgid "Forza chiusura"
 msgstr "Force close"
 
-#: src/wimm/ui/dialogs/preferences.py:29 src/wimm/ui/window_notify.py:65
+#: src/wimm/ui/dialogs/preferences.py:30 src/wimm/ui/window_notify.py:65
 msgid "Preferenze"
 msgstr "Preferences"
 
-#: src/wimm/ui/dialogs/preferences.py:30
+#: src/wimm/ui/dialogs/preferences.py:31
 msgid "Applica"
 msgstr "Apply"
 
-#: src/wimm/ui/dialogs/preferences.py:31
+#: src/wimm/ui/dialogs/preferences.py:32
 msgid "Preferenze applicate."
 msgstr "Preferences applied."
 
-#: src/wimm/ui/dialogs/preferences.py:32
+#: src/wimm/ui/dialogs/preferences.py:33
 msgid "Nessuna modifica."
 msgstr "No changes."
 
-#: src/wimm/ui/dialogs/preferences.py:33
+#: src/wimm/ui/dialogs/preferences.py:34
 msgid "Alcuni valori non sono validi: restano quelli in uso."
 msgstr "Some values are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:34
+#: src/wimm/ui/dialogs/preferences.py:35
 #, python-brace-format
 msgid "Impossibile salvare le preferenze: {reason}. Riprova."
 msgstr "Cannot save the preferences: {reason}. Try again."
 
-#: src/wimm/ui/dialogs/preferences.py:35
+#: src/wimm/ui/dialogs/preferences.py:36
 msgid "Ripristina i valori consigliati"
 msgstr "Restore the recommended values"
 
-#: src/wimm/ui/dialogs/preferences.py:37
+#: src/wimm/ui/dialogs/preferences.py:38
 msgid "Tornano come all'inizio anche i tipi di programma per cui ricevi avvisi; i programmi da non toccare e le cartelle in cui cercare restano come sono."
 msgstr "The kinds of program you get alerts for also go back to how they were at the start; the programs never to touch and the folders to search stay as they are."
 
-#: src/wimm/ui/dialogs/preferences.py:41
+#: src/wimm/ui/dialogs/preferences.py:42
 msgid "Alcuni valori in Impostazioni avanzate non sono validi: restano quelli in uso."
 msgstr "Some values in Advanced settings are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:43
+#: src/wimm/ui/dialogs/preferences.py:44
 msgid "Impostazioni avanzate"
 msgstr "Advanced settings"
 
-#: src/wimm/ui/dialogs/preferences.py:44
+#: src/wimm/ui/dialogs/preferences.py:45
 #, python-brace-format
 msgid "Come si capisce se è in uso, soglie, chiusura e cartelle ({count} voci)"
 msgstr "How to tell if it is in use, thresholds, closing and folders ({count} items)"
 
-#: src/wimm/ui/dialogs/preferences.py:47
+#: src/wimm/ui/dialogs/preferences.py:48
 msgid "Non disponibile su questo desktop: funziona solo con X11"
 msgstr "Not available on this desktop: it only works with X11"
 
