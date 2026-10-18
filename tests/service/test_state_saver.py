@@ -69,3 +69,32 @@ def test_unexpected_error_while_building_the_state_is_logged_not_raised(
         saver.save()
         saver.close()
     assert [r.levelno for r in caplog.records] == [logging.ERROR, logging.ERROR]
+
+
+def test_update_replaces_sections_and_save_round_trips_them_with_live_last_active(
+    tmp_path: Path,
+) -> None:
+    paths = make_paths(tmp_path=tmp_path)
+    until = NOW + timedelta(hours=24)
+    live: dict[EntityKey, datetime] = {"c1": NOW}
+    saver = StateSaver(
+        paths=paths,
+        state=PersistedState(ignored=frozenset({GroupId("old")})),
+        last_active=lambda: MappingProxyType(live),
+    )
+    notifications = NotificationState(episodes=frozenset({(GroupId("n"), NOW)}))
+
+    saver.update(
+        changes={
+            "ignored": frozenset({GroupId("new")}),
+            "snoozes": {GroupId("s"): until},
+            "notifications": notifications,
+        }
+    )
+    saver.save()
+
+    loaded = load_state(paths=paths, now=NOW)
+    assert loaded.ignored == frozenset({GroupId("new")})
+    assert dict(loaded.snoozes) == {GroupId("s"): until}
+    assert loaded.notifications.episodes == notifications.episodes
+    assert dict(loaded.last_active) == {"c1": NOW}

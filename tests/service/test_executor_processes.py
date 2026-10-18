@@ -127,3 +127,14 @@ def test_execute_unsupported_kind_is_invalid_request() -> None:
         build_executor(processes=processes).execute(plan=make_plan(steps=[step]))
 
     assert processes.signals == []
+
+
+def test_execute_live_uid_differing_from_the_fingerprint_uid_raises_target_changed() -> None:
+    # The live process still belongs to the user; only the plan recorded another uid.
+    processes = FakeProcesses(live={TARGET_PID: live_process(pid=TARGET_PID, uid=OWNER_UID)})
+    plan = make_plan(steps=[process_step(order=1, pid=TARGET_PID, uid=OWNER_UID + 1)])
+
+    with pytest.raises(TargetChanged):
+        build_executor(processes=processes).execute(plan=plan)
+
+    assert processes.signals == []

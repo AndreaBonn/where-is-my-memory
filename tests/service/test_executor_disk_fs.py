@@ -297,6 +297,25 @@ def test_a_project_touched_since_the_plan_is_refused(rig: FsRig) -> None:
     assert rig.executor().execute(plan=plan)[0].status is StepStatus.DONE
 
 
+@pytest.mark.parametrize(("days", "allowed"), [(MIN_AGE_DAYS, True), (MIN_AGE_DAYS - 1, False)])
+def test_a_project_exactly_at_the_minimum_age_is_old_enough(
+    rig: FsRig, days: int, allowed: bool
+) -> None:
+    folder = make_project(root=rig.root)
+    project = folder.parent
+    for path in (project, project / "src", project / "package.json", project / "src" / "app.js"):
+        age(path=path, mtime=NOW - days * 86400)
+    plan = dir_plan(kind=DELETE, path=folder)
+
+    if allowed:
+        assert rig.executor().execute(plan=plan)[0].status is StepStatus.DONE
+        assert not folder.exists()
+    else:
+        with pytest.raises(TargetChanged, match="days ago"):
+            rig.executor().execute(plan=plan)
+        assert (folder / "top.txt").exists()
+
+
 def test_a_process_with_its_cwd_inside_the_project_blocks_the_deletion(rig: FsRig) -> None:
     folder = make_project(root=rig.root)
     rig.cwds.paths = [folder.parent / "src"]
@@ -566,6 +585,17 @@ def test_a_cache_action_cannot_target_the_trash(rig: FsRig) -> None:
             control=rig.control,
         )
     assert (trash / "files" / "y.txt").exists()
+
+
+def test_a_trash_action_cannot_target_a_cache(rig: FsRig) -> None:
+    folder = make_cache(home=rig.home, relative=".cache/thumbnails")
+
+    with pytest.raises(ProtectedTarget):
+        check_disk_fs(
+            step=dir_plan(kind=ActionKind.TRASH_EMPTY, path=folder).steps[0], control=rig.control
+        )
+    assert (folder / "a.bin").exists() and (folder / "sub" / "b.bin").exists()
+    assert rig.runner.calls == []
 
 
 # --- TRASH_EMPTY -----------------------------------------------------------------

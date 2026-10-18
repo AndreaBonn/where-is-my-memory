@@ -160,3 +160,19 @@ def test_process_memory_never_logs_the_command(caplog: pytest.LogCaptureFixture)
     assert memory.stopped["p1"][0].argv == ("run", "--token", "s3cr3t-value")
     assert "s3cr3t-value" not in caplog.text
     assert "--token" not in caplog.text
+
+
+def test_a_closed_app_records_its_restart_command() -> None:
+    memory = StoppedProcesses()
+    step = process_step(order=1, pid=10, kind=ActionKind.APP_CLOSE)
+    plan = replace(make_plan(steps=[step]), plan_id=PlanId("p1"))
+
+    memory.note(plan=plan, snapshot=process_snapshot())
+    memory.record(plan_id=plan.plan_id, outcomes=all_done(plan=plan))
+
+    assert memory.stopped == {
+        "p1": (
+            StoppedProcess(label="proc 10", argv=("python3", "-m", "http.server"), cwd="/srv/a b"),
+        )
+    }
+    assert len(memory.commands(plan_id=plan.plan_id)) == 1

@@ -27,6 +27,7 @@ from wimm.service.app_service import AppService
 from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.service.errors import (
     ConfirmationMismatch,
+    ControlFailed,
     InvalidRequest,
     PlanExpired,
     PlanNotFound,
@@ -219,6 +220,28 @@ def test_rejected_plan_emits_action_rejected_and_no_outcome(rigs: RigFactory) ->
     assert rig.rejected[0][0] == plan.plan_id
     assert isinstance(rig.rejected[0][1], TargetChanged)
     assert rig.finished == []
+
+
+class CrashingExecutor(FakeExecutor):
+    def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:
+        raise RuntimeError("boom: internal detail")
+
+
+def test_crashing_executor_surfaces_a_control_failed_not_the_raw_exception(
+    rigs: RigFactory, caplog: pytest.LogCaptureFixture
+) -> None:
+    rig = rigs.build(executor=CrashingExecutor())
+    plan = rig.service.plan(request=terminate())
+
+    rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
+    spin_until(predicate=lambda: bool(rig.rejected))
+
+    rejected_id, error = rig.rejected[0]
+    assert rejected_id == plan.plan_id
+    assert isinstance(error, ControlFailed)
+    assert "boom" not in str(error)
+    assert rig.finished == []
+    assert "crashed" in caplog.text
 
 
 def test_actions_and_sampling_share_one_worker_so_they_never_overlap(rigs: RigFactory) -> None:

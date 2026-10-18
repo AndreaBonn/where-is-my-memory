@@ -69,6 +69,15 @@ def test_snooze_before_startup_is_logged_not_raised(caplog: pytest.LogCaptureFix
     assert "Snooze of 'g_1' ignored" in caplog.text
 
 
+def test_snooze_with_an_empty_target_is_logged_and_snoozes_nothing(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    application = make_application()
+    activate(application, "snooze-group", "")
+    assert application._service.snoozed == []
+    assert "Snooze of '' ignored" in caplog.text
+
+
 def test_actions_require_a_string_parameter() -> None:
     application = make_application()
     parameter_type = application.lookup_action("open-group").get_parameter_type()

@@ -1,6 +1,8 @@
+import logging
 import os
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -233,3 +235,71 @@ def test_removal_starts_at_the_folder_whatever_the_device_of_its_root(tmp_path: 
     assert (base / "mnt" / "disk" / "keep.txt").exists()
     assert not (base / "a").exists() and not (base / "top.txt").exists()
     assert not removal.root_removed and removal.remaining > 0
+
+
+def test_a_subfolder_swapped_after_it_was_listed_is_refused_and_the_new_one_survives(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    base = tmp_path / "t"
+    (base / "sub").mkdir(parents=True)
+    (base / "sub" / "old.txt").write_text("old", encoding="utf-8")
+    fingerprint = fingerprint_of(path=base)
+    real_open = os.open
+
+    def swapping_open(path: str, flags: int, *args: Any, **kwargs: Any) -> int:
+        if path == "sub" and kwargs.get("dir_fd") is not None:
+            (base / "sub").rename(base / "moved")
+            (base / "sub").mkdir()
+            (base / "sub" / "new.txt").write_text("new", encoding="utf-8")
+        return real_open(path, flags, *args, **kwargs)
+
+    with monkeypatch.context() as patch:
+        patch.setattr(os, "open", swapping_open)
+        removal = empty_directory(fingerprint=fingerprint)
+
+    assert removal.error_count == 1
+    assert "directory replaced" in removal.error_samples[0]
+    assert (base / "sub" / "new.txt").read_text(encoding="utf-8") == "new"
+    assert (base / "moved" / "old.txt").exists()
+
+
+def test_read_mountpoints_parses_the_mount_table(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    table = tmp_path / "mountinfo"
+    table.write_text(MOUNTINFO, encoding="utf-8")
+    monkeypatch.setattr(safe_tree, "MOUNTINFO_PATH", str(table))
+
+    assert safe_tree.read_mountpoints() == frozenset({"/mnt2", "/home/u/with space"})
+
+
+def test_read_mountpoints_returns_empty_and_warns_when_the_table_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(safe_tree, "MOUNTINFO_PATH", str(tmp_path / "missing"))
+
+    with caplog.at_level(logging.WARNING, logger=safe_tree.LOGGER.name):
+        points = safe_tree.read_mountpoints()
+
+    assert points == frozenset()
+    assert [r.levelno for r in caplog.records] == [logging.WARNING]
+    assert "Cannot read" in caplog.text
+
+
+def test_a_file_with_another_hard_link_outside_the_tree_frees_no_bytes(tmp_path: Path) -> None:
+    base = tmp_path / "t"
+    base.mkdir()
+    solo = base / "solo.txt"
+    solo.write_text("s" * 4096, encoding="utf-8")
+    solo_bytes = solo.stat().st_blocks * 512
+    linked = base / "linked.txt"
+    linked.write_text("l" * 4096, encoding="utf-8")
+    outside = tmp_path / "outside.txt"
+    os.link(linked, outside)
+
+    removal = empty_directory(fingerprint=fingerprint_of(path=base))
+
+    assert removal.removed == 2
+    assert solo_bytes >= 4096
+    assert removal.freed_bytes == solo_bytes
+    assert outside.read_text(encoding="utf-8") == "l" * 4096
