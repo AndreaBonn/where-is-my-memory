@@ -136,3 +136,18 @@ Condizioni (2026-10-18, 02:09-02:10): Xvfb, bus di sessione privato, 16 core, lo
 
 Riserve: Xvfb non dipinge su uno schermo reale e il "primo render" è approssimato dalla mappatura della finestra; i dati dello snapshot sono già pronti, come prevede la specifica, ma qui il campionamento ha avuto solo 3 s per finire. La prova sul display reale resta nel controllo manuale M-2.
 
+
+## Misura delle cache degli sviluppatori (001-product-gaps, T042)
+
+Misura: `collect_caches` sulla home reale, cartella delle dimensioni vuota a ogni run, senza
+pausa fra le cartelle, 3 run, le due versioni una dopo l'altra (cache del filesystem calda).
+Script `measure_caches.py` nella cartella temporanea di sessione.
+
+| Data | Codice | Voci | Dimensione misurata | Durata (mediana) | Verdetto |
+|---|---|---|---|---|---|
+| 2026-10-18 | baseline `d40bd18` (5 tipi) | 5 | 11,6 GB | 1,58 s (1,86 / 1,57 / 1,58) | riferimento |
+| 2026-10-18 | 17 tipi, tabella risolta | 12 | 17,3 GB | 2,57 s (2,57 / 2,18 / 2,60) | tenuta |
+
+Sulla prima scansione intera (cartelle di dipendenze, sezione sopra, più cache) il totale passa da
+circa 5,5 s a 6,6 s: +20%, sotto il budget del 30% di R30. L'aumento compra 5,6 GB di cache in
+più resi visibili. BASIS: measured.

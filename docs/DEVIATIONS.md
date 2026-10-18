@@ -495,3 +495,24 @@ L'esecutore riapplica la stessa regola alla cartella padre reale prima di cancel
 I marker di progetto della §5.5 si estendono a `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle` e `build.gradle.kts`.
 
 Misura: la scansione di `~/Documenti` passa da 76 a 88 cartelle, con +3% di durata (`docs/PERF.md`). BASIS: measured.
+
+## Cache degli sviluppatori e rischio per tipo (001-product-gaps)
+
+Task T033-T041, requisiti R30 e R40 di `specs/001-product-gaps/spec.md`.
+
+**Tipi.** La §7.6 elencava uv, npm, pip, cestino e miniature. I tipi di cache sono ora 17: ai precedenti si aggiungono cargo (registry e git), gradle, maven, go mod e go build, yarn, pnpm, bun, conda, playwright e JetBrains.
+
+**Posizione.** Il percorso predefinito segue `XDG_CACHE_HOME` quando è impostata, poi le variabili dello strumento (`CARGO_HOME`, `GRADLE_USER_HOME`, `GOMODCACHE` con ripiego su `GOPATH`, `GOCACHE`, `YARN_CACHE_FOLDER`, `BUN_INSTALL_CACHE_DIR`, `CONDA_PKGS_DIRS`, `PLAYWRIGHT_BROWSERS_PATH`). Una cartella spostata da una variabile si propone solo con un segnale dello strumento, cioè `CACHEDIR.TAG` o i file tipici di quella cache. Senza segnale la cartella non compare: una variabile che punta a una cartella qualunque non basta a farla passare per cache.
+
+**Collegamenti simbolici.** Una cache che è un collegamento simbolico, o che sta sotto uno, non si pulisce mai. Vale per la scansione e per l'esecutore.
+
+**Rischio per tipo.** Il rischio dipende dal tipo di cache e non è più uguale per tutte. Maven e JetBrains sono in Attenzione e restano fuori da "Libera spazio": Maven perché `~/.m2/repository` può contenere artefatti installati in locale con `mvn install`, che non si riscaricano da nessuna parte; JetBrains perché gli IDE ricostruiscono gli indici e l'apertura dei progetti rallenta. Gli altri tipi sono Sicuro, con una conseguenza specifica dove serve (git, build, Gradle). Un tipo non classificato resta Attenzione, mai Sicuro.
+
+**Pulizia per strumento.**
+
+- La cache dei moduli Go si pulisce solo con `go clean`, perché lo strumento gestisce da sé i permessi dei propri file e il suo stato.
+- Cargo svuota solo `registry/cache`, `registry/src`, `git/db` e `git/checkouts`. Il resto di `CARGO_HOME` (`bin/`, `config.toml`) non si tocca.
+
+**Versione dello schema (Q4=A).** `SCHEMA_VERSION` è una sola per snapshot e report disco, e passa da 1 a 2 perché il report disco ha cambiato forma: `DevDir.marker` è un campo nuovo, omesso se vuoto, e `CacheKind` passa da 5 a 17 valori. Il parser resta stretto: un documento con uno `schema` diverso da 2, più vecchio o più nuovo, è rifiutato con `SnapshotFormatError`. Non esiste un report disco salvato da riletture future: il report è ricostruito a ogni scansione e passa solo da `GetDiskReport`, quindi non serve una migrazione dei vecchi documenti. La cache delle dimensioni (`DISK_CACHE_VERSION`) è un altro file con un'altra forma, che non è cambiata, e resta a 1. `data/dbus/io.github.wimm.Inspector1.xml` documenta la versione. Un client D-Bus scritto per lo schema 1 deve aggiornarsi.
+
+**Protezioni della pulizia.** `XDG_CACHE_HOME` vale come posizione standard senza segnale dello strumento solo se la cartella si chiama `.cache` o `cache`; con un altro nome si applica la stessa regola delle variabili per strumento. Una variabile che punta alla home, a un suo antenato, a una radice di progetto, a `~/.cache`, `~/.local`, `~/.local/share`, `~/.config` o alla cartella di un'altra cache viene rifiutata. Prima di ogni pulizia l'esecutore ricontrolla che la cartella sia la stessa del piano, che appartenga all'utente e che non sia un punto di montaggio. I comandi degli strumenti (`uv cache prune`, `pip cache purge`, `npm cache clean --force`, `go clean -modcache` e `-cache`, `pnpm store prune`, `yarn cache clean`, `conda clean --packages --tarballs`) partono con il percorso assoluto dello strumento e con un ambiente ridotto a `PATH`, `HOME`, `LANG` e alla sola variabile che li punta alla cartella del piano; se lo strumento manca la cartella si svuota direttamente, tranne la cache dei moduli Go, che senza `go` non si propone. Se `yarn cache clean` fallisce (Yarn 2 e successivi lo richiedono dentro un progetto) la cartella verificata si svuota direttamente. Limite noto: `go clean -modcache` su file in sola lettura è verificato solo con un esecutore finto, perché `go` non è installato sulla macchina di sviluppo.
