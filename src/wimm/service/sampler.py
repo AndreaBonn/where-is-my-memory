@@ -240,11 +240,8 @@ class Sampler:
         now: datetime,
         ports: frozenset[int],
     ) -> ActivityInputs:
-        created = (
-            datetime.fromtimestamp(key[1], tz=UTC)
-            if isinstance(key, tuple)
-            else self.monitor_started_at
-        )
+        # A container key carries no creation time: the monitor start is not one (F5).
+        created = datetime.fromtimestamp(key[1], tz=UTC) if isinstance(key, tuple) else None
         return ActivityInputs(
             category=category or Category.OTHER,
             history=self.history.history_for(key=key) if key is not None else (),

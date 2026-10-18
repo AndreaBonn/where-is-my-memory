@@ -306,3 +306,20 @@ def test_last_active_at_is_none_for_a_not_evaluated_category_even_with_cpu() -> 
     assert last_active_at(inputs=inputs(busy, category=Category.SYSTEM), config=CONFIG) is None
     # Positive pair: the same series on an evaluated category reports its last active step.
     assert last_active_at(inputs=inputs(busy), config=CONFIG) == at(0)
+
+
+def test_an_unknown_creation_time_never_hides_the_persisted_instant() -> None:
+    # F5: a container has no creation time; the monitor start must not stand in for it.
+    persisted = NOW - timedelta(hours=3)
+    started = NOW - timedelta(seconds=25)
+    history = cpu_series([-90, -60, -30, 0])
+    restarted = replace(
+        inputs(history, persisted_last_active=persisted),
+        created_at=None,
+        monitor_started_at=started,
+    )
+    fresh = replace(restarted, persisted_last_active=None, history=cpu_series([-WINDOW, 0]))
+
+    assert assess_activity(inputs=restarted, config=CONFIG).since == persisted
+    idle = assess_activity(inputs=fresh, config=CONFIG)
+    assert (idle.state, idle.since) == (ActivityState.IDLE, started)

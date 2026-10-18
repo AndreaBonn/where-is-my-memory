@@ -91,7 +91,8 @@ class ActivityInputs(ImmutableModel):
     category: Category
     history: tuple[EntitySample, ...]
     now: datetime
-    created_at: datetime
+    # None when the creation time is unknown (a container): it then bounds nothing.
+    created_at: datetime | None
     monitor_started_at: datetime
     persisted_last_active: datetime | None = None
     server_ports: frozenset[int] = frozenset()

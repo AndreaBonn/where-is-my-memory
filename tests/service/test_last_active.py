@@ -2,11 +2,13 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from tests.core.assemble_helpers import container
 from tests.core.helpers import process
 from tests.service.test_sampler import NOW, make_sampler
 from wimm.collectors import CollectorResult
+from wimm.collectors.docker_source import DockerSample
 from wimm.model.enums import ActivityState
-from wimm.model.snapshot import ActivityAssessment
+from wimm.model.snapshot import ActivityAssessment, DockerStatus
 from wimm.paths import UserPaths
 from wimm.service.history import LastActiveTracker
 from wimm.service.sampler import Sampler
@@ -110,3 +112,23 @@ def test_entities_absent_from_a_cycle_are_not_seen_and_expire() -> None:
     assert set(tracker.export(now=NOW, retention_s=DAY_S)) == {"alive"}
     tracker.begin_cycle()
     assert set(tracker.export(now=NOW, retention_s=DAY_S)) == set()
+
+
+def test_a_container_keeps_its_persisted_idle_since_after_a_restart(tmp_path: Path) -> None:
+    # F5: a container idle for hours read "non in uso da 25 s" right after the app started,
+    # because its creation time was taken to be the monitor start.
+    idle_since = NOW - timedelta(hours=3)
+    sampler = make_sampler(tmp_path=tmp_path)
+    sample = DockerSample(
+        status=DockerStatus(available=True, error=None), containers=(container("sigv4"),)
+    )
+    collectors = replace(sampler.collectors, docker=lambda: CollectorResult(data=sample))
+    environment = replace(sampler.environment, persisted_last_active={"id-sigv4": idle_since})
+    restarted = Sampler(
+        collectors=collectors, environment=environment, config=sampler.settings, clock=lambda: NOW
+    )
+
+    member = restarted.run_cycle().groups[0].members[0]
+
+    assert member.activity.state is ActivityState.IDLE
+    assert member.activity.since == idle_since

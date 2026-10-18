@@ -31,11 +31,13 @@ def _unknown(*, reason: str) -> ActivityAssessment:
 
 def _idle_since(*, inputs: ActivityInputs) -> tuple[datetime, bool]:
     """Idle start and whether it is only the monitor start (no earlier evidence)."""
+    created = inputs.created_at
     if inputs.persisted_last_active is not None:
-        return max(inputs.created_at, inputs.persisted_last_active), False
-    return max(inputs.created_at, inputs.monitor_started_at), (
-        inputs.monitor_started_at >= inputs.created_at
-    )
+        persisted = inputs.persisted_last_active
+        return (persisted if created is None else max(created, persisted)), False
+    if created is None or inputs.monitor_started_at >= created:
+        return inputs.monitor_started_at, True
+    return created, False
 
 
 def _assess_idle(
