@@ -516,3 +516,27 @@ Task T033-T041, requisiti R30 e R40 di `specs/001-product-gaps/spec.md`.
 **Versione dello schema (Q4=A).** `SCHEMA_VERSION` è una sola per snapshot e report disco, e passa da 1 a 2 perché il report disco ha cambiato forma: `DevDir.marker` è un campo nuovo, omesso se vuoto, e `CacheKind` passa da 5 a 17 valori. Il parser resta stretto: un documento con uno `schema` diverso da 2, più vecchio o più nuovo, è rifiutato con `SnapshotFormatError`. Non esiste un report disco salvato da riletture future: il report è ricostruito a ogni scansione e passa solo da `GetDiskReport`, quindi non serve una migrazione dei vecchi documenti. La cache delle dimensioni (`DISK_CACHE_VERSION`) è un altro file con un'altra forma, che non è cambiata, e resta a 1. `data/dbus/io.github.wimm.Inspector1.xml` documenta la versione. Un client D-Bus scritto per lo schema 1 deve aggiornarsi.
 
 **Protezioni della pulizia.** `XDG_CACHE_HOME` vale come posizione standard senza segnale dello strumento solo se la cartella si chiama `.cache` o `cache`; con un altro nome si applica la stessa regola delle variabili per strumento. Una variabile che punta alla home, a un suo antenato, a una radice di progetto, a `~/.cache`, `~/.local`, `~/.local/share`, `~/.config` o alla cartella di un'altra cache viene rifiutata. Prima di ogni pulizia l'esecutore ricontrolla che la cartella sia la stessa del piano, che appartenga all'utente e che non sia un punto di montaggio. I comandi degli strumenti (`uv cache prune`, `pip cache purge`, `npm cache clean --force`, `go clean -modcache` e `-cache`, `pnpm store prune`, `yarn cache clean`, `conda clean --packages --tarballs`) partono con il percorso assoluto dello strumento e con un ambiente ridotto a `PATH`, `HOME`, `LANG` e alla sola variabile che li punta alla cartella del piano; se lo strumento manca la cartella si svuota direttamente, tranne la cache dei moduli Go, che senza `go` non si propone. Se `yarn cache clean` fallisce (Yarn 2 e successivi lo richiedono dentro un progetto) la cartella verificata si svuota direttamente. Limite noto: `go clean -modcache` su file in sola lettura è verificato solo con un esecutore finto, perché `go` non è installato sulla macchina di sviluppo.
+
+## Motori container e strumenti di sviluppo (001-product-gaps, lotto L4)
+
+**Motori.** La §7.3 usava `docker.from_env()`. Ora l'app legge insieme tutti i motori locali. Le fonti sono `DOCKER_HOST`, il contesto Docker (`DOCKER_CONTEXT` o `currentContext` di `~/.docker/config.json`, con i metadati letti per sha256 del nome), i socket predefiniti `/var/run/docker.sock` e `/run/docker.sock`, il socket di Docker Desktop `~/.docker/desktop/docker.sock` (esatto e dell'utente) e il socket di Podman senza root in `$XDG_RUNTIME_DIR/podman/podman.sock`. Due socket che portano allo stesso motore contano una volta, riconosciuti dall'ID di `/info`. Codice: `src/wimm/core/docker_endpoint.py` e `src/wimm/collectors/docker_engines.py`.
+
+**Solo socket locali.** `tcp://` e `ssh://` sono rifiutati, anche quando arrivano da `DOCKER_HOST`, e l'app mostra un avviso (rilievo S8). Nessun client nasce più da `docker.from_env`. Il socket di Podman con root non si usa (N2).
+
+**Motore che non risponde.** Non blocca gli altri e viene ritentato con attesa crescente, da 60 s fino a 10 minuti. I container senza cgroup locale (Docker Desktop, Podman senza root) prendono la memoria dalla stats API, al massimo 4 chiamate per ciclo, per restare nel tempo di ciclo di RNF-03.
+
+**Azioni.** Vanno al motore che ha il container. Immagini, volumi e build cache vanno al motore principale. `docker compose down` va al motore del progetto, con `--host`. Il piano registra l'identità dei motori e l'esecutore rifiuta l'azione se è cambiata (S9). Resta una finestra residua: un socket sostituito fra quel controllo e lo step.
+
+**Processi Podman.** I processi dei container Podman (scope `libpod-*`) non compaiono fra i processi quando il motore vede il container. Se il motore non risponde formano il gruppo protetto "Container Podman", senza azioni.
+
+**Strumenti di sviluppo (decisione Q3=A).** Le etichette restano dentro le categorie esistenti, con un motivo leggibile: macchine virtuali, emulatore Android, daemon Gradle e Kotlin, language server, kind e minikube. I daemon Gradle e Kotlin formano un gruppo per tipo. Il rischio dipende dall'etichetta:
+
+- daemon e language server: Sicuro se fermi, Attenzione se stanno lavorando;
+- emulatore Android e cluster locali: Attenzione;
+- macchina virtuale: Pericolo, con conferma digitata.
+
+Limiti: kind si riconosce solo dalla CLI; minikube con driver Docker non si riconosce.
+
+**Schema.** Lo schema dello snapshot resta 2: `ProcessMember` guadagna `tool_label` e `tool_reason`.
+
+**Non provato su macchina reale.** Podman e Docker Desktop non sono installati sulla macchina di sviluppo. Le verifiche manuali sono in `docs/DELIVERY_REPORT.md`.
