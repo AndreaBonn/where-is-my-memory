@@ -14,7 +14,6 @@ from wimm.core.activity import ActivityInputs, EntitySample, assess_activity, la
 from wimm.core.assemble import (
     AssemblyInput,
     Entities,
-    SystemState,
     Thresholds,
     UserState,
     Verdicts,
@@ -43,6 +42,7 @@ from .sampler_steps import (
     foreground_group_pids,
     identity,
     read_foreground,
+    system_state,
 )
 
 LOGGER = logging.getLogger(__name__)
@@ -283,11 +283,10 @@ class Sampler:
                 drafts=drafts,
                 entities=entities,
                 verdicts=verdicts,
-                system=SystemState(
-                    mem=self._mem,
-                    disks=self._disks,
+                system=system_state(
+                    collectors=self.collectors,
+                    counters=(self._mem, self._disks, self._reclaimable_disk),
                     docker=system[1],
-                    reclaimable_disk=self._reclaimable_disk,
                 ),
                 taken_at=system[0],
                 monitor_started_at=self.monitor_started_at,

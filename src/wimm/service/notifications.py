@@ -3,12 +3,14 @@ from collections.abc import Callable, Mapping
 from datetime import datetime
 from typing import Any, Protocol
 
+from wimm.collectors.pressure import read_oom_kills
 from wimm.config import Config
 from wimm.core.notify_rules import evaluate_notifications
 from wimm.core.notify_types import NotificationState, NotifyRequest
 from wimm.model.snapshot import Snapshot
 from wimm.service.notifier import NotificationSink, Notifier
 from wimm.service.sampler import wall_clock
+from wimm.service.sampler_collectors import safe_read
 from wimm.service.state_store import PersistedState
 
 LOGGER = logging.getLogger(__name__)
@@ -48,10 +50,15 @@ class NotificationCoordinator:
         state: PersistedState,
         clock: Callable[[], datetime] = wall_clock,
     ) -> None:
+        self._oom_reader: Callable[[], int | None] = read_oom_kills
         self._notifier = notifier
         self._saver = saver
         self._clock = clock
         self._notified: NotificationState = state.notifications
+
+    def use_oom_reader(self, *, reader: Callable[[], int | None]) -> None:
+        """Replace the kernel OOM counter source (tests)."""
+        self._oom_reader = reader
 
     def attach(self, *, source: NotificationSource) -> None:
         source.connect(SNAPSHOT_SIGNAL, self._on_snapshot)
@@ -75,6 +82,7 @@ class NotificationCoordinator:
                 state=self._notified,
                 now=now,
                 muted_until=source.notifications_muted_until,
+                oom_kills=safe_read(self._oom_reader, neutral=None, name="oom_kills"),
             )
         )
         self._notifier.notify(intents=result.intents)

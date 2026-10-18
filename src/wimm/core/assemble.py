@@ -14,18 +14,15 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from itertools import chain
 
-from wimm.i18n import N_, _
 from wimm.model.enums import (
     ActionKind,
     ActivityState,
     Category,
     GroupId,
     Pressure,
-    Protection,
-    protection_of,
 )
-from wimm.model.memory import DiskUsage
-from wimm.model.raw import MemInfo, RawContainer, RawProcess
+from wimm.model.memory import DiskUsage, GpuMemory, MemorySummary
+from wimm.model.raw import KernelMemory, MemInfo, PsiSample, RawContainer, RawProcess
 from wimm.model.snapshot import (
     ActionOffer,
     ActivityAssessment,
@@ -33,25 +30,24 @@ from wimm.model.snapshot import (
     DockerStatus,
     Group,
     Member,
-    ProtectedSummaryItem,
     Snapshot,
 )
 
 from . import text
 from .activity import GroupMember, assess_group_activity, is_measurable
 from .assemble_members import ProcessFacts, build_container_member, build_process_member
+from .assemble_protected import actionable, protected_summary, ranked
 from .categorize import CategoryDecision
 from .constants import PRESSURE_CRITICAL_PCT, PRESSURE_WARNING_PCT
 from .grouping import GroupDraft
-from .grouping_keys import (
-    LABEL_AUDIO,
-    LABEL_OTHER_USERS,
-    LABEL_PODMAN,
-    LABEL_SELF,
-    LABEL_SESSION,
-    LABEL_SYSTEM,
+from .memory import (
+    NO_KERNEL_MEMORY,
+    group_memory,
+    memory_summary,
+    pressure,
+    pressure_with_psi,
+    reclaimable_now,
 )
-from .memory import group_memory, memory_summary, pressure, reclaimable_now
 from .risk import RiskTarget, TargetKind, available_actions, group_primary_action
 
 PRESSURE_ORDER = (Pressure.OK, Pressure.WARNING, Pressure.CRITICAL)
@@ -59,14 +55,6 @@ APP_TARGET_KINDS: Mapping[Category, TargetKind] = {
     Category.BROWSER: "browser",
     Category.DESKTOP_APP: "desktop_app",
     Category.TERMINAL: "terminal",
-}
-PROTECTED_REASONS: Mapping[str, str] = {
-    LABEL_AUDIO[0]: N_("audio e media del desktop"),
-    LABEL_SESSION[0]: N_("componente del desktop"),
-    LABEL_OTHER_USERS[0]: N_("processi di altri utenti, non modificabili da qui"),
-    LABEL_SYSTEM[0]: N_("servizio di sistema"),
-    LABEL_SELF[0]: N_("questa applicazione"),
-    LABEL_PODMAN[0]: N_("container Podman che il motore non mostra, non modificabili da qui"),
 }
 
 
@@ -100,6 +88,9 @@ class SystemState:
     disks: tuple[DiskUsage, ...]
     docker: DockerStatus
     reclaimable_disk: int = 0
+    kernel: KernelMemory = NO_KERNEL_MEMORY
+    video: tuple[GpuMemory, ...] = ()
+    psi: PsiSample | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,36 +229,16 @@ def _worst_pressure(*, inputs: AssemblyInput) -> Pressure:
         )
         for disk in inputs.system.disks
     )
-    return max(levels, key=PRESSURE_ORDER.index)
+    return pressure_with_psi(level=max(levels, key=PRESSURE_ORDER.index), psi=inputs.system.psi)
 
 
-def _protected_item(*, draft: GroupDraft, group: Group) -> ProtectedSummaryItem:
-    return ProtectedSummaryItem(
-        label=draft.name, memory=group.memory.used, reason=_(PROTECTED_REASONS[draft.key])
+def _memory(*, built: list[tuple[GroupDraft, Group]], inputs: AssemblyInput) -> MemorySummary:
+    return memory_summary(
+        mem=inputs.system.mem,
+        groups=[group for _key, group in built],
+        kernel=inputs.system.kernel,
+        video=inputs.system.video,
     )
-
-
-def _ranked(*, groups: list[Group]) -> tuple[Group, ...]:
-    return tuple(sorted(groups, key=lambda item: (-item.memory.reclaimable, item.name, item.id)))
-
-
-def _actionable(*, built: list[tuple[GroupDraft, Group]]) -> list[Group]:
-    return [
-        group
-        for draft, group in built
-        if protection_of(category=draft.category) is Protection.ACTIONABLE
-    ]
-
-
-def _protected_summary(
-    *, built: list[tuple[GroupDraft, Group]]
-) -> tuple[ProtectedSummaryItem, ...]:
-    items = [
-        _protected_item(draft=draft, group=group)
-        for draft, group in built
-        if protection_of(category=draft.category) is Protection.PROTECTED
-    ]
-    return tuple(sorted(items, key=lambda item: (-item.memory, item.label)))
 
 
 def assemble_snapshot(*, inputs: AssemblyInput) -> Snapshot:
@@ -284,17 +255,15 @@ def assemble_snapshot(*, inputs: AssemblyInput) -> Snapshot:
         If the memory or disk totals are zero (from `pressure`).
     """
     built = [(draft, _build_group(draft=draft, inputs=inputs)) for draft in inputs.drafts]
-    actionable = _actionable(built=built)
+    offered = actionable(built=built)
     return Snapshot(
         taken_at=inputs.taken_at,
         monitor_started_at=inputs.monitor_started_at,
-        memory=memory_summary(mem=inputs.system.mem, groups=[group for _key, group in built]),
+        memory=_memory(built=built, inputs=inputs),
         disk=inputs.system.disks[0],
-        reclaimable_now=reclaimable_now(
-            groups=actionable, disk_bytes=inputs.system.reclaimable_disk
-        ),
+        reclaimable_now=reclaimable_now(groups=offered, disk_bytes=inputs.system.reclaimable_disk),
         pressure=_worst_pressure(inputs=inputs),
         docker=inputs.system.docker,
-        groups=_ranked(groups=actionable),
-        protected_summary=_protected_summary(built=built),
+        groups=ranked(groups=offered),
+        protected_summary=protected_summary(built=built),
     )

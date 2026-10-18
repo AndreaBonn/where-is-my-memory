@@ -7,13 +7,12 @@ import pytest
 
 from wimm.collectors.gpu import (
     CACHE_CYCLES,
-    VENDOR_AMD,
-    VENDOR_NVIDIA,
     GpuCollector,
-    GpuMemory,
     run_inline,
     run_nvidia_smi,
 )
+from wimm.model.enums import GpuVendor
+from wimm.model.memory import GpuMemory
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "nvidia_smi_memory.txt"
 MIB = 1024 * 1024
@@ -54,7 +53,7 @@ def test_nvidia_real_output_is_converted_from_mib_to_bytes(tmp_path: Path) -> No
 
     result = _collector(runner, drm=tmp_path).collect()
 
-    assert result == (GpuMemory(VENDOR_NVIDIA, used * MIB, total * MIB),)
+    assert result == (GpuMemory(GpuVendor.NVIDIA, used * MIB, total * MIB),)
 
 
 def test_nvidia_command_is_an_argv_list_with_the_resolved_absolute_path(tmp_path: Path) -> None:
@@ -73,8 +72,8 @@ def test_nvidia_several_gpus_give_one_entry_each_in_order(tmp_path: Path) -> Non
     result = _collector(runner, drm=tmp_path).collect()
 
     assert result == (
-        GpuMemory(VENDOR_NVIDIA, 100 * MIB, 8000 * MIB),
-        GpuMemory(VENDOR_NVIDIA, 200 * MIB, 16000 * MIB),
+        GpuMemory(GpuVendor.NVIDIA, 100 * MIB, 8000 * MIB),
+        GpuMemory(GpuVendor.NVIDIA, 200 * MIB, 16000 * MIB),
     )
 
 
@@ -85,9 +84,9 @@ def test_nvidia_is_sampled_once_every_cache_cycles_and_cached_between(tmp_path: 
     results = [collector.collect() for _ in range(CACHE_CYCLES)]
 
     assert len(runner.calls) == 1
-    assert all(r == (GpuMemory(VENDOR_NVIDIA, 10 * MIB, 100 * MIB),) for r in results)
+    assert all(r == (GpuMemory(GpuVendor.NVIDIA, 10 * MIB, 100 * MIB),) for r in results)
     runner.output = "20, 100\n"
-    assert collector.collect() == (GpuMemory(VENDOR_NVIDIA, 20 * MIB, 100 * MIB),)
+    assert collector.collect() == (GpuMemory(GpuVendor.NVIDIA, 20 * MIB, 100 * MIB),)
     assert len(runner.calls) == 2
 
 
@@ -115,7 +114,7 @@ def test_nvidia_valid_line_survives_a_malformed_one(tmp_path: Path) -> None:
     runner = FakeRunner(output="[N/A], [N/A]\n7, 70\n")
 
     assert _collector(runner, drm=tmp_path).collect() == (
-        GpuMemory(VENDOR_NVIDIA, 7 * MIB, 70 * MIB),
+        GpuMemory(GpuVendor.NVIDIA, 7 * MIB, 70 * MIB),
     )
 
 
@@ -124,7 +123,7 @@ def test_amd_vram_is_read_in_bytes_from_sysfs(tmp_path: Path) -> None:
 
     result = _collector(FakeRunner(output=""), drm=tmp_path, smi=None).collect()
 
-    assert result == (GpuMemory(VENDOR_AMD, 1073741824, 8589934592),)
+    assert result == (GpuMemory(GpuVendor.AMD, 1073741824, 8589934592),)
 
 
 def test_amd_cards_without_both_files_or_with_bad_values_are_skipped(tmp_path: Path) -> None:
@@ -136,7 +135,7 @@ def test_amd_cards_without_both_files_or_with_bad_values_are_skipped(tmp_path: P
 
     result = _collector(FakeRunner(output=""), drm=tmp_path, smi=None).collect()
 
-    assert result == (GpuMemory(VENDOR_AMD, 2, 9),)
+    assert result == (GpuMemory(GpuVendor.AMD, 2, 9),)
 
 
 def test_amd_is_read_every_cycle_while_nvidia_stays_cached(tmp_path: Path) -> None:
@@ -149,8 +148,8 @@ def test_amd_is_read_every_cycle_while_nvidia_stays_cached(tmp_path: Path) -> No
     result = collector.collect()
 
     assert result == (
-        GpuMemory(VENDOR_NVIDIA, 3 * MIB, 30 * MIB),
-        GpuMemory(VENDOR_AMD, 4, 9),
+        GpuMemory(GpuVendor.NVIDIA, 3 * MIB, 30 * MIB),
+        GpuMemory(GpuVendor.AMD, 4, 9),
     )
     assert len(runner.calls) == 1
 

@@ -1,8 +1,9 @@
 import pytest
 
 from wimm.core.assemble import SystemState, Thresholds, assemble_snapshot
-from wimm.model.enums import Category, Pressure
-from wimm.model.memory import DiskUsage
+from wimm.model.enums import Category, GpuVendor, Pressure
+from wimm.model.memory import DiskUsage, GpuMemory
+from wimm.model.raw import KernelMemory, PsiSample
 from wimm.model.snapshot import DockerStatus
 
 from .assemble_helpers import DOCKER_UP, NOW, ROOT_DISK, build_input, draft, pair
@@ -82,3 +83,24 @@ def test_assemble_requires_at_least_one_disk() -> None:
 
     with pytest.raises(ValueError, match="disk"):
         build_input([], system=system)
+
+
+def test_assemble_uses_kernel_voices_video_and_psi_from_the_system_state() -> None:
+    video = (GpuMemory(vendor=GpuVendor.AMD, used_bytes=1, total_bytes=2),)
+    system = SystemState(
+        mem=meminfo(),
+        disks=(ROOT_DISK,),
+        docker=DOCKER_UP,
+        kernel=KernelMemory(zram=40, tmpfs_used=0),
+        video=video,
+        psi=PsiSample(some_avg60=0.0, full_avg60=9.0),
+    )
+
+    snapshot = assemble_snapshot(inputs=build_input([], system=system))
+
+    assert snapshot.memory.breakdown.zram == 40
+    assert snapshot.memory.video == video
+    assert snapshot.pressure is Pressure.CRITICAL
+    plain = assemble_snapshot(inputs=build_input([]))
+    assert plain.pressure is Pressure.OK
+    assert plain.memory.video == ()

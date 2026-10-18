@@ -17,13 +17,16 @@ from wimm.collectors.sockets import (
     non_listening_port_index,
 )
 from wimm.core.activity import EntitySample
+from wimm.core.assemble import SystemState
 from wimm.core.grouping import GroupDraft
+from wimm.core.memory import NO_KERNEL_MEMORY
 from wimm.model.enums import MetricsSource
-from wimm.model.raw import RawContainer, RawProcess, RawSocket
+from wimm.model.memory import DiskUsage
+from wimm.model.raw import MemInfo, RawContainer, RawProcess, RawSocket
 from wimm.model.snapshot import DockerStatus
 
 from .history import MAX_MISSED_CYCLES, EntityKey
-from .sampler_collectors import ForegroundSource
+from .sampler_collectors import Collectors, ForegroundSource, safe_read
 
 LOGGER = logging.getLogger(__name__)
 MICROSECONDS_PER_SECOND = 1_000_000
@@ -247,3 +250,25 @@ class ListenPorts:
             if (key := identity(proc=proc)) is not None and proc.pid in ports
         }
         return ports
+
+
+def system_state(
+    *,
+    collectors: Collectors,
+    counters: tuple[MemInfo, tuple[DiskUsage, ...], int],
+    docker: DockerStatus,
+) -> SystemState:
+    """System counters plus the kernel voices, video memory and PSI read this cycle.
+
+    ``counters`` is RAM, disks and the safe-to-free disk bytes.
+    """
+    mem, disks, reclaimable_disk = counters
+    return SystemState(
+        mem=mem,
+        disks=disks,
+        docker=docker,
+        reclaimable_disk=reclaimable_disk,
+        kernel=safe_read(collectors.kernel_memory, neutral=NO_KERNEL_MEMORY, name="kernel_memory"),
+        video=safe_read(collectors.video, neutral=(), name="video"),
+        psi=safe_read(collectors.psi, neutral=None, name="psi"),
+    )

@@ -69,7 +69,12 @@ class Clock:
 
 
 class Rig:
-    def __init__(self, *, state: PersistedState | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        state: PersistedState | None = None,
+        oom_reader: Callable[[], int | None] | None = None,
+    ) -> None:
         self.source = FakeSource(make_snapshot((make_group(),)))
         self.sink = FakeSink()
         self.saver = FakeSaver()
@@ -80,6 +85,7 @@ class Rig:
             state=state or PersistedState(),
             clock=self.clock,
         )
+        self.coordinator.use_oom_reader(reader=oom_reader or (lambda: None))
         self.coordinator.attach(source=self.source)
 
     def saved(self, section: str) -> Any:
@@ -155,3 +161,16 @@ def test_snoozed_until_in_the_past_does_not_silence(hours: int) -> None:
 def test_the_coordinator_keeps_no_snooze_of_its_own() -> None:
     rig = Rig()
     assert not hasattr(rig.coordinator, "snooze_group")
+
+
+def test_oom_counter_reader_feeds_the_request_and_its_failure_is_neutral() -> None:
+    rig = Rig(oom_reader=lambda: 3)
+    rig.source.emit()
+    assert rig.saved("notifications").oom_kills_seen == 3
+
+    def failing() -> int | None:
+        raise OSError("cgroup gone")
+
+    broken = Rig(oom_reader=failing)
+    broken.source.emit()
+    assert broken.sink.sent == ["idle-g_1"]

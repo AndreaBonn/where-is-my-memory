@@ -4,11 +4,11 @@ import subprocess
 import threading
 from collections.abc import Callable
 from pathlib import Path
-from typing import NamedTuple
+
+from wimm.model.enums import GpuVendor
+from wimm.model.memory import GpuMemory
 
 LOGGER = logging.getLogger(__name__)
-VENDOR_NVIDIA = "nvidia"
-VENDOR_AMD = "amd"
 NVIDIA_SMI = "nvidia-smi"
 NVIDIA_QUERY_ARGS = ("--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits")
 NVIDIA_TIMEOUT_S = 2.0
@@ -18,14 +18,6 @@ MIB = 1024 * 1024
 DRM_ROOT = Path("/sys/class/drm")
 AMD_USED_GLOB = "card*/device/mem_info_vram_used"
 AMD_TOTAL_FILE = "mem_info_vram_total"
-
-
-class GpuMemory(NamedTuple):
-    """Dedicated video memory of one GPU, in bytes."""
-
-    vendor: str
-    used_bytes: int
-    total_bytes: int
 
 
 Runner = Callable[[list[str]], str]
@@ -68,7 +60,7 @@ def parse_nvidia(text: str) -> tuple[GpuMemory, ...]:
             continue
         found.append(
             GpuMemory(
-                vendor=VENDOR_NVIDIA,
+                vendor=GpuVendor.NVIDIA,
                 used_bytes=int(parts[0]) * MIB,
                 total_bytes=int(parts[1]) * MIB,
             )
@@ -90,7 +82,7 @@ def read_amd(*, drm_root: Path) -> tuple[GpuMemory, ...]:
         used = _read_int(path=used_path)
         total = _read_int(path=used_path.with_name(AMD_TOTAL_FILE))
         if used is not None and total:
-            found.append(GpuMemory(vendor=VENDOR_AMD, used_bytes=used, total_bytes=total))
+            found.append(GpuMemory(vendor=GpuVendor.AMD, used_bytes=used, total_bytes=total))
     return tuple(found)
 
 

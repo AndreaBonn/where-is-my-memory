@@ -1,7 +1,14 @@
 from collections.abc import Sequence
 
 from wimm.model.enums import ActivityState, Category, Pressure, Risk
-from wimm.model.memory import DiskUsage, MemoryBreakdown, MemorySummary, MemoryUse, Reclaimable
+from wimm.model.memory import (
+    DiskUsage,
+    GpuMemory,
+    MemoryBreakdown,
+    MemorySummary,
+    MemoryUse,
+    Reclaimable,
+)
 from wimm.model.raw import KernelMemory, MemInfo, PsiSample, RawProcess
 from wimm.model.snapshot import ContainerMember, Group, Member
 
@@ -91,22 +98,17 @@ def _breakdown(
 
 
 def memory_summary(
-    mem: MemInfo, groups: Sequence[Group], kernel: KernelMemory = NO_KERNEL_MEMORY
+    mem: MemInfo,
+    groups: Sequence[Group],
+    kernel: KernelMemory = NO_KERNEL_MEMORY,
+    video: tuple[GpuMemory, ...] = (),
 ) -> MemorySummary:
     """Build the category breakdown and system totals in bytes.
 
     Every voice is a disjoint share of `MemTotal - MemFree`; shared memory is removed
     from the kernel cache and reported once as its own voice. What no voice explains
-    is "unattributed", clamped at zero.
-
-    Parameters
-    ----------
-    mem : MemInfo
-        System memory counters.
-    groups : Sequence[Group]
-        Disjoint groups, including protected entities, counted once.
-    kernel : KernelMemory
-        zram and tmpfs usage; zero when the collector had nothing.
+    is "unattributed", clamped at zero. `kernel` (zram, tmpfs) is zero when its collector
+    had nothing; `video` is per-GPU VRAM, a separate field and never in the breakdown.
     """
     return MemorySummary(
         total=mem.mem_total,
@@ -115,6 +117,7 @@ def memory_summary(
         swap_total=mem.swap_total,
         swap_used=mem.swap_total - mem.swap_free,
         breakdown=_breakdown(mem=mem, categories=_category_totals(groups=groups), kernel=kernel),
+        video=video,
     )
 
 

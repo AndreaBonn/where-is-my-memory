@@ -11,8 +11,8 @@ from wimm.core.memory import (
     process_memory,
     reclaimable_now,
 )
-from wimm.model.enums import ActionKind, ActivityState, Category, Pressure, Risk
-from wimm.model.memory import DiskUsage, MemorySummary, MemoryUse, Reclaimable
+from wimm.model.enums import ActionKind, ActivityState, Category, GpuVendor, Pressure, Risk
+from wimm.model.memory import DiskUsage, GpuMemory, MemorySummary, MemoryUse, Reclaimable
 from wimm.model.raw import KernelMemory, PsiSample
 from wimm.model.snapshot import ActionOffer, ContainerMember, Group
 
@@ -237,3 +237,10 @@ def test_pressure_with_psi_keeps_the_worse_of_ram_disk_and_psi() -> None:
 @pytest.mark.parametrize("level", list(Pressure))
 def test_pressure_without_psi_leaves_the_current_rule_unchanged(level: Pressure) -> None:
     assert pressure_with_psi(level=level, psi=None) is level
+
+
+def test_summary_carries_the_video_memory_it_is_given() -> None:
+    video = (GpuMemory(vendor=GpuVendor.NVIDIA, used_bytes=5, total_bytes=10),)
+
+    assert memory_summary(mem=meminfo(), groups=(), video=video).video == video
+    assert memory_summary(mem=meminfo(), groups=()).video == ()
