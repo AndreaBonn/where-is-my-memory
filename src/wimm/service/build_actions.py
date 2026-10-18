@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any
 
 LOGGER = logging.getLogger(__name__)
+# The Docker SDK's default client timeout, kept now that the controls run on pool clients.
+ENGINE_TIMEOUT_S = 60
 
 
 def _disk_fs(*, config: Any, owner_uid: int, home: Path | None) -> Any:
@@ -23,18 +25,16 @@ def _disk_fs(*, config: Any, owner_uid: int, home: Path | None) -> Any:
 
 
 def build_actions(*, config: Any, owner_uid: int, home: Path | None = None) -> Any:
+    from wimm.collectors.docker_engines import local_pool
     from wimm.service.actions import ActionSetup
-    from wimm.service.compose import DockerComposeControl
+    from wimm.service.compose import DockerComposeControl, resolve_docker_binary
     from wimm.service.controls import DockerSdkControl, PsutilProcessControl
     from wimm.service.executor import PlanExecutor
 
+    engines = local_pool(timeout=ENGINE_TIMEOUT_S)
+    containers = DockerSdkControl(engines=engines)
     try:
-        containers = DockerSdkControl.from_env()
-    except Exception:
-        LOGGER.warning("Docker client unavailable, container actions disabled", exc_info=True)
-        containers = None
-    try:
-        compose = DockerComposeControl.from_env()
+        compose = DockerComposeControl(engines=engines, docker_bin=resolve_docker_binary())
     except Exception:
         LOGGER.warning("Docker compose unavailable, project actions disabled", exc_info=True)
         compose = None

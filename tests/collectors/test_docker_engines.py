@@ -1,5 +1,7 @@
 import os
 import socket
+import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -28,6 +30,7 @@ from wimm.model.actions import EngineIdentity
 
 DOCKER = "/var/run/docker.sock"
 PODMAN = "/run/user/1000/podman/podman.sock"
+THREADS = 8
 
 
 class FakeClient:
@@ -313,3 +316,36 @@ def test_local_engine_identities_follow_the_resolved_endpoints(
     monkeypatch.setattr(target=docker_engines, name="local_resolution", value=lambda: resolution)
     (only,) = local_engine_identities()
     assert only.path == str(present)
+
+
+def test_concurrent_refreshes_on_a_cold_pool_open_one_client_and_close_none() -> None:
+    made: list[FakeClient] = []
+    start = threading.Barrier(THREADS)
+
+    def connect(found: DockerEndpoint) -> FakeClient:
+        time.sleep(0.05)  # widens the window in which a second thread would also connect
+        client = FakeClient(found.path)
+        made.append(client)
+        return client
+
+    pool = EnginePool(
+        resolve=lambda: EndpointResolution(endpoints=(endpoint(DOCKER),), rejected=()),
+        connect=connect,
+        identify=identities({DOCKER: 10}),
+    )
+    views: list[Any] = []
+
+    def work() -> None:
+        start.wait()
+        views.append(pool.refresh())
+
+    threads = [threading.Thread(target=work) for _ in range(THREADS)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len(made) == 1
+    assert made[0].close_calls == 0
+    assert len(views) == THREADS
+    assert all(view.engines[0].client is made[0] for view in views)

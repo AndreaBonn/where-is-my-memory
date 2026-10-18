@@ -8,6 +8,7 @@ import pytest
 from tests.integration.docker_targets import connect, exists, started_container
 from tests.integration.live_targets import container_step, single_step_plan
 from tests.service.executor_fakes import make_plan
+from wimm.collectors.docker_engines import FixedEngines
 from wimm.model.enums import ActionKind
 from wimm.service.control_protocols import StepStatus
 from wimm.service.controls import DockerSdkControl, PsutilProcessControl
@@ -31,7 +32,7 @@ def client() -> Any:
 def executor(client: Any) -> PlanExecutor:
     return PlanExecutor(
         processes=PsutilProcessControl(owner_uid=os.getuid()),
-        containers=DockerSdkControl(client=client),
+        containers=DockerSdkControl(engines=FixedEngines(client=client)),
         owner_uid=os.getuid(),
     )
 

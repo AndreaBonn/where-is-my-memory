@@ -1,3 +1,4 @@
+import os
 import subprocess
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -7,11 +8,16 @@ from typing import Any
 import docker.errors
 import pytest
 
+from tests.service.engine_fakes import FakeProvider, engine_at
+from wimm.collectors.docker_engines import FixedEngines
 from wimm.service.compose import DockerComposeControl, resolve_docker_binary
-from wimm.service.errors import ControlFailed, InvalidRequest
+from wimm.service.errors import ControlFailed, DockerUnavailable, InvalidRequest
 
 DOCKER = "/usr/bin/docker"
 PROJECT = "wimmtest-demo"
+SOCKET = "/var/run/docker.sock"
+OTHER_SOCKET = "/run/user/1000/podman/podman.sock"
+LABEL = f"com.docker.compose.project={PROJECT}"
 
 
 @dataclass(slots=True)
@@ -55,7 +61,21 @@ class FakeClient:
 
 
 def control(*, runner: FakeRunner, client: FakeClient | None = None) -> DockerComposeControl:
-    return DockerComposeControl(client=client or FakeClient(), docker_bin=DOCKER, runner=runner)
+    engines = FixedEngines(client=client or FakeClient(), path=SOCKET)
+    return DockerComposeControl(engines=engines, docker_bin=DOCKER, runner=runner)
+
+
+def two_engines(
+    *, runner: FakeRunner, first: FakeClient, second: FakeClient
+) -> DockerComposeControl:
+    provider = FakeProvider(
+        engines=(engine_at(path=SOCKET, client=first), engine_at(path=OTHER_SOCKET, client=second))
+    )
+    return DockerComposeControl(engines=provider, docker_bin=DOCKER, runner=runner)
+
+
+def hosting(*ids: str) -> FakeClient:
+    return FakeClient(containers=FakeContainers(by_label={LABEL: list(ids)}))
 
 
 def test_down_runs_the_exact_argv_with_timeout_and_no_shell() -> None:
@@ -64,8 +84,8 @@ def test_down_runs_the_exact_argv_with_timeout_and_no_shell() -> None:
     control(runner=runner).down(project=PROJECT, volumes=False)
 
     [(argv, kwargs)] = runner.calls
-    # --context default: the daemon the SDK reads (DOCKER_HOST or the default socket).
-    assert argv == [DOCKER, "--context", "default", "compose", "-p", PROJECT, "down"]
+    # --host: the validated socket of the engine, never what the user's shell selects.
+    assert argv == [DOCKER, "--host", f"unix://{SOCKET}", "compose", "-p", PROJECT, "down"]
     assert kwargs["check"] is False
     assert kwargs["errors"] == "replace"
     assert kwargs["timeout"] == 120
@@ -178,8 +198,9 @@ def test_down_runs_without_compose_variables_or_a_selected_context(
     assert not {"COMPOSE_FILE", "COMPOSE_PROJECT_NAME", "COMPOSE_PROFILES", "DOCKER_CONTEXT"} & set(
         env
     )
-    # Positive pair: what the SDK also reads is kept, so both talk to the same daemon.
-    assert env["DOCKER_HOST"] == "unix:///run/user/1000/docker.sock"
+    # Positive pair: the rest of the environment is kept.
+    assert "DOCKER_HOST" not in env
+    assert env["PATH"] == os.environ["PATH"]
 
 
 def test_failed_down_redacts_secrets_in_the_stderr_tail() -> None:
@@ -190,3 +211,56 @@ def test_failed_down_redacts_secrets_in_the_stderr_tail() -> None:
 
     assert "hunter2" not in str(raised.value)
     assert "registry.example" in str(raised.value)  # positive pair: the tail is still there
+
+
+def test_container_ids_are_the_union_over_every_engine() -> None:
+    ids = two_engines(runner=FakeRunner(), first=hosting("c1"), second=hosting("c2")).container_ids(
+        project=PROJECT
+    )
+
+    assert ids == frozenset({"c1", "c2"})
+
+
+def test_down_targets_the_engine_that_hosts_the_project() -> None:
+    runner = FakeRunner()
+
+    two_engines(runner=runner, first=FakeClient(), second=hosting("c2")).down(
+        project=PROJECT, volumes=False
+    )
+
+    [(argv, _)] = runner.calls
+    assert argv[1:3] == ["--host", f"unix://{OTHER_SOCKET}"]
+
+
+def test_down_refuses_a_project_that_lives_on_several_engines() -> None:
+    runner = FakeRunner()
+    both = two_engines(runner=runner, first=hosting("c1"), second=hosting("c2"))
+
+    with pytest.raises(ControlFailed, match=OTHER_SOCKET):
+        both.down(project=PROJECT, volumes=False)
+
+    assert runner.calls == []
+
+
+def test_down_of_a_project_with_no_containers_uses_the_primary_engine() -> None:
+    runner = FakeRunner()
+
+    two_engines(runner=runner, first=FakeClient(), second=FakeClient()).down(
+        project=PROJECT, volumes=False
+    )
+
+    assert runner.calls[0][0][2] == f"unix://{SOCKET}"
+
+
+def test_without_any_engine_compose_is_docker_unavailable() -> None:
+    runner = FakeRunner()
+    control_ = DockerComposeControl(
+        engines=FakeProvider(engines=()), docker_bin=DOCKER, runner=runner
+    )
+
+    with pytest.raises(DockerUnavailable):
+        control_.down(project=PROJECT, volumes=False)
+    with pytest.raises(DockerUnavailable):
+        control_.container_ids(project=PROJECT)
+
+    assert runner.calls == []

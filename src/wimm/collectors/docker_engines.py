@@ -6,6 +6,7 @@ would follow an unvalidated ``DOCKER_HOST`` such as ``tcp://``.
 
 import logging
 import os
+import threading
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -107,7 +108,10 @@ class _Backoff:
 class EnginePool:
     """Clients for the resolved endpoints, reused while the socket is the same file.
 
-    Not thread-safe: each consumer (the sampler, the executor) owns its pool. Two sockets
+    Thread-safe: `refresh` and `discard` run under one lock, because the executor's workers
+    share a pool. The lock is held while connecting (`info()` is bounded by the client
+    timeout, and a failing endpoint is then skipped by the backoff), so a cold pool opens one
+    client per endpoint instead of one per thread. Two sockets
     that reach the same engine (podman-docker) count once, by the `ID` of `/info`; the first
     in resolution order wins. An endpoint that does not answer is not contacted again for a
     delay that doubles from `BACKOFF_INITIAL_S` to `BACKOFF_MAX_S`: a socket that hangs would
@@ -129,8 +133,13 @@ class EnginePool:
         self._clock = clock
         self._known: dict[EngineIdentity, Engine] = {}
         self._backoff: dict[EngineIdentity, _Backoff] = {}
+        self._lock = threading.Lock()
 
     def refresh(self) -> EngineView:
+        with self._lock:
+            return self._refresh()
+
+    def _refresh(self) -> EngineView:
         resolution = self._resolve()
         notices = [rejection_notice(rejected=item) for item in resolution.rejected]
         current: dict[EngineIdentity, Engine] = {}
@@ -149,8 +158,9 @@ class EnginePool:
         )
 
     def discard(self, *, engine: Engine) -> None:
-        if self._known.pop(engine.identity, None) is not None:
-            _close(client=engine.client)
+        with self._lock:
+            if self._known.pop(engine.identity, None) is not None:
+                _close(client=engine.client)
 
     def _engine_for(
         self, *, found: DockerEndpoint, notices: list[EngineNotice], seen: set[EngineIdentity]

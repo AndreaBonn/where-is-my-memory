@@ -16,6 +16,7 @@ import docker.errors
 import pytest
 
 from tests.integration.docker_targets import IMAGE, TEST_LABELS, connect
+from wimm.collectors.docker_engines import FixedEngines
 from wimm.model.actions import ActionRequest, ImageFingerprint, Plan, PlanStep, VolumeFingerprint
 from wimm.model.enums import ActionKind, PlanId, Risk, TargetId
 from wimm.service.control_protocols import StepStatus
@@ -40,7 +41,7 @@ def client() -> Any:
 def executor(client: Any) -> PlanExecutor:
     return PlanExecutor(
         processes=PsutilProcessControl(owner_uid=os.getuid()),
-        containers=DockerSdkControl(client=client),
+        containers=DockerSdkControl(engines=FixedEngines(client=client)),
         owner_uid=os.getuid(),
     )
 

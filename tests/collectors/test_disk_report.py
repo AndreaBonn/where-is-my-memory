@@ -6,7 +6,10 @@ import docker.errors
 import pytest
 import requests
 
-from wimm.collectors.disk_report import DF_TIMEOUT_S, DockerDiskSource
+from tests.service.engine_fakes import FakeProvider, engine_at
+from wimm.collectors import disk_report
+from wimm.collectors.disk_report import DF_TIMEOUT_S, NO_ENGINE, DockerDiskSource
+from wimm.collectors.docker_engines import FixedEngines
 from wimm.core.disk_rules import parse_docker_df
 
 FIXTURE = Path(__file__).parent.parent / "fixtures" / "docker_df.json"
@@ -29,7 +32,7 @@ class FakeClient:
 
 
 def _source(*, api: FakeApi) -> DockerDiskSource:
-    return DockerDiskSource(reader=FakeClient(api=api))
+    return DockerDiskSource(engines=FixedEngines(client=FakeClient(api=api)))
 
 
 def test_collect_fixture_returns_parsed_docker_disk() -> None:
@@ -85,25 +88,42 @@ def test_collect_recovers_after_failure() -> None:
     assert source.collect().data.status.available is True
 
 
-def test_client_created_once_with_explicit_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    created: list[Any] = []
+def test_default_source_reads_a_pool_with_the_df_timeout_never_from_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timeouts: list[int] = []
 
-    def fake_from_env(*, timeout: int) -> FakeClient:
-        created.append(timeout)
-        return FakeClient(api=FakeApi(answer={}))
+    def forbidden(**_: Any) -> None:
+        raise AssertionError("docker.from_env follows an unvalidated DOCKER_HOST")
 
-    monkeypatch.setattr(target=docker, name="from_env", value=fake_from_env)
+    def fake_pool(*, timeout: int) -> FixedEngines:
+        timeouts.append(timeout)
+        return FixedEngines(client=FakeClient(api=FakeApi(answer={})))
+
+    monkeypatch.setattr(target=docker, name="from_env", value=forbidden)
+    monkeypatch.setattr(target=disk_report, name="local_pool", value=fake_pool)
     source = DockerDiskSource()
+
     assert source.collect().data.status.available is True
     assert source.collect().data.status.available is True
-    assert created == [DF_TIMEOUT_S]
+    assert timeouts == [DF_TIMEOUT_S]
 
 
-def test_client_creation_failure_returns_unavailable(monkeypatch: pytest.MonkeyPatch) -> None:
-    def broken(*, timeout: int) -> FakeClient:
-        raise docker.errors.DockerException("no socket")
+def test_the_report_reads_the_primary_engine_only() -> None:
+    primary = FakeClient(api=FakeApi(answer={}))
+    other = FakeClient(api=FakeApi(failure=docker.errors.DockerException("not me")))
+    provider = FakeProvider(
+        engines=(engine_at(path="/a.sock", client=primary), engine_at(path="/b.sock", client=other))
+    )
 
-    monkeypatch.setattr(target=docker, name="from_env", value=broken)
-    result = DockerDiskSource().collect()
+    result = DockerDiskSource(engines=provider).collect()
+
+    assert result.data.status.available is True and result.error is None
+    assert primary.api.calls == 1 and other.api.calls == 0
+
+
+def test_no_reachable_engine_is_unavailable_with_a_reason() -> None:
+    result = DockerDiskSource(engines=FakeProvider(engines=())).collect()
+
     assert result.data.status.available is False
-    assert "no socket" in (result.error or "")
+    assert result.error == NO_ENGINE

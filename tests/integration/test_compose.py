@@ -7,6 +7,7 @@ import pytest
 from tests.integration.compose_targets import VOLUME_NAME, compose_project, project_resources
 from tests.integration.docker_targets import connect
 from tests.service.compose_fakes import compose_plan
+from wimm.collectors.docker_engines import FixedEngines
 from wimm.model.enums import ActionKind
 from wimm.service.compose import DockerComposeControl, resolve_docker_binary
 from wimm.service.control_protocols import StepStatus
@@ -29,14 +30,16 @@ def client() -> Any:
 
 @pytest.fixture
 def compose(client: Any) -> DockerComposeControl:
-    return DockerComposeControl(client=client, docker_bin=resolve_docker_binary())
+    return DockerComposeControl(
+        engines=FixedEngines(client=client), docker_bin=resolve_docker_binary()
+    )
 
 
 @pytest.fixture
 def executor(client: Any, compose: DockerComposeControl) -> PlanExecutor:
     return PlanExecutor(
         processes=PsutilProcessControl(owner_uid=os.getuid()),
-        containers=DockerSdkControl(client=client),
+        containers=DockerSdkControl(engines=FixedEngines(client=client)),
         compose=compose,
         owner_uid=os.getuid(),
     )

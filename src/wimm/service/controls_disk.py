@@ -1,5 +1,6 @@
 """Docker SDK operations behind the disk actions (SPECIFICHE 8.2, 8.4): images, volumes, cache."""
 
+from abc import ABC, abstractmethod
 from collections.abc import Iterator
 from contextlib import contextmanager
 from enum import Enum
@@ -97,10 +98,12 @@ class DiskClientLike(Protocol):
     def api(self) -> _LowLevelApi: ...
 
 
-class DiskSdkOps:
-    """Mixin of `DockerSdkControl`: the disk operations over the same client."""
+class DiskSdkOps(ABC):
+    """Mixin of `DockerSdkControl`: the disk operations over the primary engine's client."""
 
-    _client: DiskClientLike
+    @property
+    @abstractmethod
+    def _client(self) -> DiskClientLike: ...
 
     def inspect_image(self, *, image_id: str) -> LiveImage | None:
         """In use means a container (any state) whose `ImageID` equals the id.
@@ -110,8 +113,9 @@ class DiskSdkOps:
         `has_children`: some image lists this id as its `ParentId`.
         """
         with _sdk_errors(action="inspect", noun="image", on_missing=OnMissing.NONE):
-            image = self._client.images.get(image_id)
-            api = self._client.api
+            client = self._client
+            image = client.images.get(image_id)
+            api = client.api
             used = {str(c.get("ImageID")) for c in api.containers(all=True)}
             children = any(r.get("ParentId") == image.id for r in api.images(all=True))
             return LiveImage(
@@ -133,8 +137,9 @@ class DiskSdkOps:
     def inspect_volume(self, *, name: str) -> LiveVolume | None:
         """In use means a container (any state) mounts it: filter `volume=<name>`."""
         with _sdk_errors(action="inspect", noun="volume", on_missing=OnMissing.NONE):
-            volume = self._client.volumes.get(name)
-            users = self._client.api.containers(all=True, filters={"volume": [name]})
+            client = self._client
+            volume = client.volumes.get(name)
+            users = client.api.containers(all=True, filters={"volume": [name]})
             created_at = str(volume.attrs.get("CreatedAt") or "")
             return LiveVolume(name=name, in_use=bool(users), created_at=created_at)
         return None

@@ -4,6 +4,8 @@ import docker.errors
 import pytest
 import requests.exceptions
 
+from tests.service.engine_fakes import FakeProvider, engine_at
+from wimm.collectors.docker_engines import FixedEngines
 from wimm.core.constants import BUILD_PRUNE_TIMEOUT_S
 from wimm.service.controls import DockerSdkControl
 from wimm.service.errors import ControlFailed, TargetGone
@@ -125,7 +127,7 @@ def control(
     failure: Exception | None = None,
 ) -> Any:
     client = FakeClient(containers=containers or [], reclaimed=reclaimed, failure=failure)
-    return DockerSdkControl(client=client), client
+    return DockerSdkControl(engines=FixedEngines(client=client)), client
 
 
 def test_image_used_by_a_stopped_container_is_in_use() -> None:
@@ -270,3 +272,44 @@ def test_build_prune_not_found_is_a_failure_not_a_silent_success() -> None:
 
     with pytest.raises(ControlFailed, match="build cache"):
         sdk.prune_build_cache()
+
+
+def test_disk_operations_use_the_primary_engine_only() -> None:
+    primary = FakeClient(containers=[{"ImageID": IMAGE_ID}])
+    other = FakeClient(containers=[])
+    provider = FakeProvider(
+        engines=(engine_at(path="/a.sock", client=primary), engine_at(path="/b.sock", client=other))
+    )
+
+    live = DockerSdkControl(engines=provider).inspect_image(image_id=IMAGE_ID)
+
+    assert live is not None and live.in_use is True  # seen on the primary, not on the other
+
+
+class ChangingPrimary:
+    """A provider whose primary engine is another one at every refresh."""
+
+    def __init__(self, *, clients: list[FakeClient]) -> None:
+        self._engines = [
+            engine_at(path=f"/{index}.sock", client=client) for index, client in enumerate(clients)
+        ]
+        self.refreshes = 0
+
+    def refresh(self) -> Any:
+        engine = self._engines[min(self.refreshes, len(self._engines) - 1)]
+        self.refreshes += 1
+        return FakeProvider(engines=(engine,)).refresh()
+
+    def discard(self, *, engine: Any) -> None:
+        return None
+
+
+def test_one_operation_resolves_the_engine_once() -> None:
+    first = FakeClient(containers=[{"ImageID": IMAGE_ID}])
+    second = FakeClient(containers=[])
+    provider = ChangingPrimary(clients=[first, second])
+
+    live = DockerSdkControl(engines=provider).inspect_image(image_id=IMAGE_ID)
+
+    assert provider.refreshes == 1
+    assert live is not None and live.in_use is True

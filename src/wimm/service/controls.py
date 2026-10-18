@@ -5,19 +5,21 @@ import os
 import signal
 from collections.abc import Iterable, Iterator, Sequence
 from contextlib import contextmanager
-from typing import Any, Protocol
+from typing import Protocol
 
 import docker
 import docker.errors
 import psutil
 
+from wimm.collectors.docker_engines import EngineProvider, EngineView
 from wimm.collectors.processes import collect_processes
 from wimm.core.categorize import CategorizationContext, categorize_process
+from wimm.core.docker_notices import notices_text
 from wimm.model.enums import Protection, protection_of
 
 from .control_protocols import LiveContainer, LiveProcess
 from .controls_disk import DiskClientLike, DiskSdkOps
-from .errors import ControlFailed
+from .errors import ControlFailed, DockerUnavailable
 
 LOGGER = logging.getLogger(__name__)
 MISSING = (psutil.NoSuchProcess, psutil.ZombieProcess)
@@ -165,35 +167,61 @@ class DockerClientLike(DiskClientLike, Protocol):
 
 
 class DockerSdkControl(DiskSdkOps):
-    """Docker control on the SDK (containers here, disk objects in `DiskSdkOps`).
+    """Docker control over every local engine (containers here, disk objects in `DiskSdkOps`).
 
-    SDK failures become `ControlFailed`.
+    A container operation goes to the first engine that has the id; disk operations go to the
+    primary engine, the first one, as the disk report does. The engines are resolved at each
+    call, so Docker started after the app is usable. SDK failures become `ControlFailed`.
     """
 
-    _client: DockerClientLike
+    def __init__(self, *, engines: EngineProvider) -> None:
+        self._engines = engines
 
-    def __init__(self, *, client: DockerClientLike) -> None:
-        self._client = client
-
-    @classmethod
-    def from_env(cls) -> "DockerSdkControl":
-        client: Any = docker.from_env()
-        return cls(client=client)
+    @property
+    def _client(self) -> DockerClientLike:
+        client: DockerClientLike = self._view().engines[0].client
+        return client
 
     def inspect(self, *, container_id: str) -> LiveContainer | None:
+        container = self._find(container_id=container_id, action="inspect")
+        if container is None:
+            return None
         with _sdk_errors(action="inspect"):
-            container = self._client.containers.get(container_id)
             return LiveContainer(id=container.id, status=container.status)
         return None
 
     def stop(self, *, container_id: str, timeout_s: int) -> None:
-        with _sdk_errors(action="stop"):
-            self._client.containers.get(container_id).stop(timeout=timeout_s)
+        container = self._find(container_id=container_id, action="stop")
+        if container is not None:
+            with _sdk_errors(action="stop"):
+                container.stop(timeout=timeout_s)
 
     def start(self, *, container_id: str) -> None:
-        with _sdk_errors(action="start"):
-            self._client.containers.get(container_id).start()
+        container = self._find(container_id=container_id, action="start")
+        if container is not None:
+            with _sdk_errors(action="start"):
+                container.start()
 
     def remove(self, *, container_id: str, volumes: bool) -> None:
-        with _sdk_errors(action="remove"):
-            self._client.containers.get(container_id).remove(v=volumes)
+        container = self._find(container_id=container_id, action="remove")
+        if container is not None:
+            with _sdk_errors(action="remove"):
+                container.remove(v=volumes)
+
+    def _view(self) -> EngineView:
+        view = self._engines.refresh()
+        if not view.engines:
+            raise DockerUnavailable(notices_text(notices=view.notices) or "no container engine")
+        return view
+
+    def _find(self, *, container_id: str, action: str) -> _ContainerLike | None:
+        """The container on the first engine that has it; None if none of them does."""
+        for engine in self._view().engines:
+            client: DockerClientLike = engine.client
+            try:
+                return client.containers.get(container_id)
+            except docker.errors.NotFound:
+                continue
+            except (docker.errors.DockerException, OSError) as error:
+                raise ControlFailed(f"Cannot {action} container: {error}") from error
+        return None
