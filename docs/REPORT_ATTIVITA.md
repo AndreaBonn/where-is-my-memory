@@ -428,3 +428,91 @@ Al primo avvio l'app trova da sola le cartelle dei progetti, senza bisogno di in
 - **Complessità:** alta (18 commit)
 - **Stato:** L1 completato; L2 completato tranne T025 (sospeso per la Q8).
 - **Prossimo:** lotto L3 (cache degli sviluppatori), poi L4-L12.
+
+
+## 2026-10-18 | Sessione #7 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Il lavoro copre i 38 commit da `ecfc4f0` a `2fcc84a` e prosegue il piano `specs/001-product-gaps` (workflow RPI) dal lotto L5 al lotto L12. Il registro dei task chiusi è nel blocco "Avanzamento" di `specs/001-product-gaps/tasks.md`.
+
+### Richiesta
+
+Continuare l'esecuzione del piano dei gap di prodotto: dopo L1-L4, portare a termine i lotti L5-L12 con commit atomici, review a ogni blocco e click-through reale per le parti con interfaccia.
+
+### Azioni Eseguite
+
+**L5, memoria del kernel, memoria video, PSI e OOM** (`ecfc4f0` ... `73a174f`)
+- Il dettaglio della RAM mostra le voci di memoria del kernel. La quota "Non attribuita" sul computer di prova scende da 1,30 a 0,32 GiB.
+- Memoria video letta da GPU NVIDIA e AMD. Regola di pressione basata su PSI. Il contatore `oom_kill` genera una notifica quando il kernel chiude programmi per mancanza di memoria; l'aumento è stato provato dal vivo (da 6 a 7).
+- Schema dello snapshot portato a 3 (`memory.video`). Il ciclo di campionamento passa da 0,52 a 0,56 s, nel rumore.
+
+**L6, cache degli strumenti di intelligenza artificiale e Android** (`3711b4d`, `cdd104d`)
+- Misura e pulizia delle cache di HuggingFace, ollama, emulatori e SDK Android.
+- La pulizia dei modelli ollama è bloccata finché `ollama serve` è in esecuzione. Se gli argomenti del processo non si leggono, il blocco resta.
+
+**L7, cartelle di progetto fuori dalla home** (`63e3387` ... `d059b23`)
+- ADR-007 accettato dall'utente: la home resta ammessa per intero come radice. Una regola pura decide quali radici esterne sono ammesse, e la stessa regola vale per la scansione e per la cancellazione.
+- Le radici rifiutate restano visibili nelle Preferenze con il motivo. `/` non è mai un progetto.
+
+**L8, sessioni SSH e crescita della memoria** (`7a59042`, `f14c47a`, `047b095`)
+- I programmi avviati via SSH si possono gestire solo con un'opzione, spenta in origine.
+- Storico di 3 ore per gruppo e rilevazione della crescita sostenuta, con soglia di rumore a 32 MiB. Nello snapshot (schema 4) compare il campo `growth`, mostrato come "+620 MB in 2 h".
+
+**L9, stato da riga di comando** (`84fe29c`, `e2b6eeb`, `029365c`)
+- `wimm status` mostra lo stato senza finestra, provato senza display contro un'istanza reale.
+- Correzione della redazione nell'Inspector D-Bus: nomi, percorsi e alias di password sono oscurati.
+
+**L10, comando di riavvio** (`30d2c73`)
+- Dopo l'arresto di programmi l'interfaccia offre "Copia comando di riavvio".
+
+**L11, Wayland con estensione GNOME** (`8dc45e1`, `316191c`, `1437c32`, `2fcc84a`)
+- ADR-006: un adattatore per compositor per il programma in primo piano. L'estensione GNOME è facoltativa, supporta solo la shell 46 e pubblica il pid della finestra attiva. Il collector Wayland verifica il proprietario del dato. L'estensione è inclusa nel .deb.
+
+**L12, pacchetti Arch e Fedora** (`2098ee4`, `5d033a6`, `eb76bfa`)
+- PKGBUILD per Arch e spec RPM per Fedora, provati in container. Il banner sull'icona nella barra spiega i passi per la distribuzione in uso (Fedora, Arch, Debian) e ripiega su `/usr/lib/os-release`.
+
+**Difetti reali trovati dalle review o dai click-through, e corretti**
+- **Collegamenti simbolici nelle cache:** un link messo sul percorso predefinito rendeva pulibile una destinazione imprevista. Ora è rifiutato.
+- **Progetti Cordova pulibili:** i marcatori dell'SDK Android erano troppo generici e `ANDROID_SDK_ROOT` poteva far trattare come SDK la cartella di un progetto Cordova. Marcatori più stretti.
+- **Pagina avanzata non riaperta:** "Scegli una cartella" non riapriva la pagina se arrivava durante l'animazione di chiusura. Il test passava su Xvfb e falliva sul display reale (3 su 6); ora 6 su 6 anche sotto carico.
+- **Avviso di riavvio troppo breve:** il messaggio con il comando spariva prima di poterlo usare. Corretta la durata.
+- **Legenda che chiudeva l'aiuto:** la legenda si ricostruiva a ogni campione e chiudeva l'aiuto aperto. Ora non si ricostruisce.
+- **`nvidia-smi` bloccato:** un driver bloccato fermava il ciclo oltre il timeout. La lettura gira ora in un thread a parte.
+
+### File Modificati
+
+| File | Tipo | Descrizione |
+|---|---|---|
+| `src/wimm/collectors/` | nuovo/modifica | memoria del kernel e video, PSI, `oom_kill`, cache AI e Android, adattatore Wayland |
+| `src/wimm/core/` | nuovo/modifica | regola PSI, regola delle radici esterne, crescita sostenuta, testi dei comandi di riavvio |
+| `src/wimm/service/` | modifica | storico di 3 h, blocco su `ollama serve`, radici ammesse in scansione e cancellazione, sessioni SSH |
+| `src/wimm/ui/` | modifica | riepilogo RAM, radici rifiutate nelle Preferenze, banner per distribuzione, "Copia comando di riavvio" |
+| `src/wimm/cli/`, Inspector D-Bus | nuovo/modifica | `wimm status`, redazione dei dati sensibili |
+| `data/gnome-shell-extension/`, `packaging/` | nuovo | estensione GNOME, PKGBUILD, spec RPM, inclusione nel .deb |
+| `docs/` | modifica | ADR-006 e ADR-007, `DEVIATIONS.md`, `PERF.md` |
+| `specs/001-product-gaps/tasks.md` | modifica | blocco "Avanzamento" |
+| `tests/` | nuovo/modifica | test per ogni punto sopra (suite finale: 3576 test passati) |
+
+### Punti aperti
+
+- **RNF-01 sopra il limite su questa macchina:** 1,0-1,6% di un core con circa 930 processi da censire (`docs/PERF.md`). L5-L8 stanno nel rumore rispetto a L4: il superamento dipende dal numero di processi.
+- **F-PERF e F-RST:** il test del budget del censimento è fallito due volte sotto carico, il test del toast di riavvio una volta nella suite intera. Sono instabili, non indagati a fondo.
+- **T025 sospeso:** mancano l'URL della homepage e quello del bug tracker (Q8).
+- **README:** il testo di installazione per Arch e Fedora è stato proposto all'utente e non è stato scritto, in attesa dell'ok.
+- **Pubblicazione AUR e COPR non fatta.** L'indirizzo email nel changelog RPM da rivedere.
+- **Controlli manuali M-25..M-29:** richiedono la macchina reale (M-29 una sessione Wayland). Zram, AMD e `nvidia-smi` bloccato non sono provati su hardware reale. Podman e Docker Desktop non provati su macchina reale (M-24).
+- **Finding parked** (vedi `tasks.md`): ollama rinominato non riconosciuto; `ANDROID_AVD_HOME` non onorato; "Puoi liberare fino a" conta anche le voci in "Attenzione"; lettura dei fatti sul thread UI non misurata; cartella con fatti illeggibili mostrata ma non scansionata; storia persa per un gruppo assente un ciclo; riga lunga del gruppo a 375 px non osservata; un'APU AMD può comparire come memoria video; euristiche PipeWire/CPU, KWin e wlroots non coperti; un motore che risponde a `info()` ma blocca `list()` costa ancora il timeout.
+- Nessun push eseguito.
+
+### Note per il Cliente (linguaggio NON tecnico)
+
+L'app ora dà un quadro più completo: mostra anche la memoria usata dal sistema e dalla scheda video, avvisa quando il sistema chiude da solo dei programmi per mancanza di memoria e segnala quelli che crescono nel tempo. Riconosce più cartelle da pulire, comprese quelle dei modelli di intelligenza artificiale e degli strumenti Android, e rifiuta di toccarle mentre il programma che le usa è acceso. Dalla riga di comando si può leggere lo stato senza aprire la finestra. Dopo aver fermato dei programmi si può copiare il comando per riavviarli.
+
+Sono pronti i pacchetti per Arch Linux e Fedora e un componente facoltativo per il desktop GNOME su Wayland. Non sono ancora pubblicati e non sono stati provati su computer reali con quei sistemi.
+
+Una misura non rispetta ancora l'obiettivo: su un computer con circa 930 programmi attivi l'app usa tra l'1,0% e l'1,6% di un processore, invece di meno dell'1%. Servono i controlli a mano elencati sopra e una vostra decisione sul testo di installazione del README.
+
+### Riepilogo
+
+- **Complessità:** alta (38 commit, 8 lotti)
+- **Stato:** lotti L5-L12 implementati e verificati in automatico (3576 test passati). RNF-01 non rispettato su questa macchina; T025 sospeso; pubblicazione AUR/COPR non fatta.
+- **Prossimo:** ok dell'utente sul testo del README, controlli manuali M-25..M-29, URL della Q8.
