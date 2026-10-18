@@ -85,7 +85,7 @@ class RealDiskScanner:
         caches = collect_caches(table=table, cache_dir=self._cache_dir, sleep=self._pause)
         self._check()
         settings = DevDirSettings(
-            roots=config.devdirs_roots, home=self._home, max_depth=config.devdirs_max_depth
+            roots=config.admitted_roots, home=self._home, max_depth=config.devdirs_max_depth
         )
         found = scan_devdirs(
             settings=settings, cache_dir=self._cache_dir, now=started.timestamp(), sleep=self._pause

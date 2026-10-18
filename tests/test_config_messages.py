@@ -3,6 +3,8 @@ from pathlib import Path
 import pytest
 
 from wimm.config import parse_config
+from wimm.config_messages import root_refusal_message
+from wimm.core.root_policy import RootRefusal
 
 INVALID = {
     "sample_interval_s": 1,
@@ -50,3 +52,9 @@ def test_pressure_conflict_reads_in_english(tmp_path: Path) -> None:
     assert errors(home=tmp_path, raw=raw) == {
         "pressure_critical_pct": "Must be lower than the warning threshold"
     }
+
+
+def test_every_refusal_reads_in_italian_and_the_reasons_differ() -> None:
+    texts = {reason: root_refusal_message(reason=reason) for reason in RootRefusal}
+    assert texts[RootRefusal.NOT_OWNED] == "La cartella non è tua"
+    assert len(set(texts.values())) == len(RootRefusal)

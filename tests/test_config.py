@@ -15,7 +15,9 @@ from wimm.config import (
     save_config,
     update_config,
 )
+from wimm.config_roots import refused_roots
 from wimm.core import constants as c
+from wimm.core.root_policy import RootRefusal
 from wimm.model import Category
 from wimm.paths import UserPaths
 
@@ -81,17 +83,28 @@ def test_categories_and_unknown_keys(tmp_path: Path, caplog: pytest.LogCaptureFi
         Config(notify_categories=frozenset({Category.SELF}))
 
 
-def test_roots_expand_and_reject_escape(tmp_path: Path) -> None:
+def test_roots_expand_and_reject_malformed_values(tmp_path: Path) -> None:
     root = tmp_path / "project"
     root.mkdir()
-    link = tmp_path / "escape"
-    link.symlink_to(target=tmp_path.parent, target_is_directory=True)
     result = parse_config(raw={"devdirs_roots": ["~/project"]}, home=tmp_path)
     assert result.config.devdirs_roots == (root,)
-    for value in ([str(link)], ["/nonexistent/x"], ["relative"], [42], "~/project", [], [""]):
+    for value in (["relative"], [42], "~/project", [], [""]):
         result = parse_config(raw={"devdirs_roots": value}, home=tmp_path)
         assert "devdirs_roots" in result.field_errors
         assert result.config.devdirs_roots == ()
+
+
+def test_parse_config_keeps_a_root_that_resolves_outside_home_and_flags_it(tmp_path: Path) -> None:
+    home = tmp_path / "fakehome"
+    home.mkdir()
+    link = home / "escape"
+    link.symlink_to(target=tmp_path, target_is_directory=True)
+    result = parse_config(raw={"devdirs_roots": [str(link), "~"]}, home=home)
+    assert result.field_errors == {}
+    assert result.config.devdirs_roots == (tmp_path, home)
+    reasons = dict(refused_roots(roots=result.config.devdirs_roots, home=home))
+    assert reasons[tmp_path] is RootRefusal.HOME_ANCESTOR
+    assert home not in reasons
 
 
 def test_parse_config_keeps_a_missing_root_and_flags_it(tmp_path: Path) -> None:
@@ -349,3 +362,20 @@ def test_failed_write_keeps_old_file_and_leaves_no_temporary(
         save_config(paths=paths, config=Config(sample_interval_s=120), home=tmp_path)
     assert target.read_bytes() == before
     assert [p.name for p in paths.config_dir.iterdir()] == ["config.json"]
+
+
+def test_config_exposes_the_refused_roots_with_their_reason() -> None:
+    config = Config(devdirs_roots=(Path("/usr/share/fonts"),))
+    assert config.refused_roots == ((Path("/usr/share/fonts"), RootRefusal.SYSTEM_PATH),)
+
+
+def test_admitted_roots_leave_out_the_refused_ones(tmp_path: Path) -> None:
+    # HOME is isolated under tmp_path/home; tmp_path itself sits under /tmp, a system prefix.
+    inside = Path.home() / "code"
+    outside = tmp_path / "elsewhere"
+    inside.mkdir(parents=True)
+    outside.mkdir()
+    config = Config(devdirs_roots=(inside, outside))
+
+    assert [root for root, _reason in config.refused_roots] == [outside]
+    assert config.admitted_roots == (inside,)

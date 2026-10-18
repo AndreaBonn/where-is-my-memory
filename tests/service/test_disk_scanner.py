@@ -73,3 +73,19 @@ def test_scan_with_only_a_missing_root_returns_a_report_without_devdirs(tmp_path
     result = scanner.scan(config=Config(devdirs_roots=(tmp_path / "home" / "gone",)))
     assert result.devdirs == ()
     assert [entry.kind.value for entry in result.caches] == ["uv"]
+
+
+def test_scan_never_walks_a_root_that_adr_007_refuses(tmp_path: Path) -> None:
+    scanner = _scanner(tmp_path=tmp_path, docker=CancellingDocker())
+    # tmp_path sits under /tmp, a system prefix: a root there is refused, its folders unseen.
+    project = tmp_path / "srv" / "app"
+    (project / "node_modules").mkdir(parents=True)
+    (project / "node_modules" / "dep.js").write_bytes(b"x" * 4000)
+    manifest = project / "package.json"
+    manifest.write_text("{}", encoding="utf-8")
+    for path in (manifest, project):
+        os.utime(path, (OLD_MTIME, OLD_MTIME))
+    config = Config(devdirs_roots=(tmp_path / "srv",), devdirs_min_age_days=7)
+
+    assert config.refused_roots
+    assert scanner.scan(config=config).devdirs == ()

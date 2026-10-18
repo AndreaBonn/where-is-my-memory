@@ -1,7 +1,9 @@
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 
 from wimm.collectors.root_candidates import detect_dev_roots
+from wimm.collectors.root_facts import read_root_facts
+from wimm.core.root_policy import RootFacts, RootRefusal, root_refusal
 
 
 def expand_root(value: str, home: Path) -> Path:
@@ -19,16 +21,17 @@ def default_roots(home: Path) -> tuple[Path, ...]:
 
 
 def decode_roots(value: Sequence[str], home: Path) -> tuple[Path, ...]:
-    """Decode user roots: absolute, within ``home``, and not an existing non-directory.
+    """Decode user roots: absolute and not an existing non-directory.
 
-    A root that no longer exists is kept so the user sees it flagged (``missing_roots``)
+    Whether a root is allowed is the policy's call (``refused_roots``, ADR-007). A root
+    that is missing or refused is kept so the user sees it flagged with its reason
     instead of losing the whole list.
     """
     if not value:
         raise ValueError("Expected at least one directory")
     roots = tuple(expand_root(value=item, home=home) for item in value)
-    if any(not root.is_relative_to(home.resolve()) or _is_not_directory(root) for root in roots):
-        raise ValueError("Expected directories within home")
+    if any(_is_not_directory(root) for root in roots):
+        raise ValueError("Expected existing directories or paths not yet created")
     return roots
 
 
@@ -39,6 +42,46 @@ def _is_not_directory(root: Path) -> bool:
 def missing_roots(roots: Sequence[Path]) -> tuple[Path, ...]:
     """Return the roots that are not directories right now, in their original order."""
     return tuple(root for root in roots if not root.is_dir())
+
+
+def refused_roots(
+    *,
+    roots: Sequence[Path],
+    home: Path,
+    read_facts: Callable[..., RootFacts | None] = read_root_facts,
+) -> tuple[tuple[Path, RootRefusal], ...]:
+    """Return ``(root, reason)`` for each root the ADR-007 policy refuses, in original order.
+
+    A root whose facts cannot be read (missing, unreadable) is not listed: it shows as
+    missing. Callers that act on a root must treat unreadable facts as a refusal.
+    """
+    refused = []
+    for root in roots:
+        facts = read_facts(path=root)
+        reason = None if facts is None else root_refusal(facts=facts, home=home.resolve())
+        if reason is not None:
+            refused.append((root, reason))
+    return tuple(refused)
+
+
+def admitted_roots(
+    *,
+    roots: Sequence[Path],
+    home: Path,
+    read_facts: Callable[..., RootFacts | None] = read_root_facts,
+) -> tuple[Path, ...]:
+    """Return the roots the scan may walk: facts readable now and no ADR-007 refusal.
+
+    Unreadable facts (a missing root, a denied stat, no mountinfo) are never admitted, so a
+    network or read-only mount cannot pass for lack of evidence.
+    """
+    real_home = home.resolve()
+    admitted = []
+    for root in roots:
+        facts = read_facts(path=root)
+        if facts is not None and root_refusal(facts=facts, home=real_home) is None:
+            admitted.append(root)
+    return tuple(admitted)
 
 
 def validate_roots(roots: object) -> None:

@@ -66,48 +66,48 @@ msgstr "Largest groups:"
 msgid "Disco: {free} liberi su {total} ({mount})"
 msgstr "Disk: {free} free of {total} ({mount})"
 
-#: src/wimm/config_messages.py:10
+#: src/wimm/config_messages.py:11
 msgid "Scegli solo categorie su cui sono consentite azioni"
 msgstr "Choose only categories that allow actions"
 
-#: src/wimm/config_messages.py:11
-msgid "Indica cartelle all'interno della home"
-msgstr "Enter folders inside your home"
-
 #: src/wimm/config_messages.py:12
+msgid "Indica percorsi assoluti di cartelle"
+msgstr "Give absolute folder paths"
+
+#: src/wimm/config_messages.py:13
 msgid "Indica una lista di nomi di processo"
 msgstr "Enter a list of process names"
 
-#: src/wimm/config_messages.py:13
+#: src/wimm/config_messages.py:14
 msgid "Deve essere un valore booleano"
 msgstr "Must be true or false"
 
-#: src/wimm/config_messages.py:14
+#: src/wimm/config_messages.py:15
 msgid "Scegli una lingua disponibile"
 msgstr "Choose an available language"
 
-#: src/wimm/config_messages.py:17
+#: src/wimm/config_messages.py:18
 msgid "Deve essere minore della soglia di avviso"
 msgstr "Must be lower than the warning threshold"
 
-#: src/wimm/config_messages.py:22
+#: src/wimm/config_messages.py:23
 msgid "un numero"
 msgstr "a number"
 
-#: src/wimm/config_messages.py:22
+#: src/wimm/config_messages.py:23
 msgid "un numero intero"
 msgstr "a whole number"
 
-#: src/wimm/config_messages.py:23
+#: src/wimm/config_messages.py:24
 msgid " secondi"
 msgstr " seconds"
 
-#: src/wimm/config_messages.py:25
+#: src/wimm/config_messages.py:26
 #, python-brace-format
 msgid "Deve essere {number} almeno {lower}{unit}"
 msgstr "Must be {number}, at least {lower}{unit}"
 
-#: src/wimm/config_messages.py:28
+#: src/wimm/config_messages.py:29
 #, python-brace-format
 msgid "Deve essere {number} fra {lower} e {upper}{unit}"
 msgstr "Must be {number} between {lower} and {upper}{unit}"
@@ -976,15 +976,15 @@ msgstr "Start again"
 msgid "Copia comando di riavvio"
 msgstr "Copy restart command"
 
-#: src/wimm/ui/action_flow.py:48
+#: src/wimm/ui/action_flow.py:47
 msgid "Il comando può contenere password o token; resta copiato per un minuto."
 msgstr "The command may contain passwords or tokens; it stays copied for one minute."
 
-#: src/wimm/ui/action_flow.py:50
+#: src/wimm/ui/action_flow.py:48
 msgid "Comando copiato"
 msgstr "Command copied"
 
-#: src/wimm/ui/action_flow.py:51
+#: src/wimm/ui/action_flow.py:49
 msgid "Non riesco a copiare negli appunti"
 msgstr "Cannot copy to the clipboard"
 

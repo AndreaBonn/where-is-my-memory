@@ -2,13 +2,14 @@
 
 from types import MappingProxyType
 
+from wimm.core.root_policy import ROOT_REFUSAL_MESSAGES, RootRefusal
 from wimm.i18n import N_, _
 
 SECONDS_SUFFIX = "_s"
 FIELD_MESSAGES = MappingProxyType(
     {
         "notify_categories": N_("Scegli solo categorie su cui sono consentite azioni"),
-        "devdirs_roots": N_("Indica cartelle all'interno della home"),
+        "devdirs_roots": N_("Indica percorsi assoluti di cartelle"),
         "extra_protected_names": N_("Indica una lista di nomi di processo"),
         "foreground_tracking": N_("Deve essere un valore booleano"),
         "language": N_("Scegli una lingua disponibile"),
@@ -38,3 +39,8 @@ def field_message(*, name: str) -> str:
 def pressure_order_message() -> str:
     """The message shown when the critical threshold is not below the warning one."""
     return _(PRESSURE_ORDER_MESSAGE)
+
+
+def root_refusal_message(*, reason: RootRefusal) -> str:
+    """Why a configured root is refused, in the active language."""
+    return _(ROOT_REFUSAL_MESSAGES[reason])

@@ -8,8 +8,16 @@ from types import MappingProxyType
 from typing import Any
 
 from wimm.config_messages import field_message, pressure_order_message, range_message
-from wimm.config_roots import decode_roots, default_roots, missing_roots, validate_roots
+from wimm.config_roots import (
+    admitted_roots,
+    decode_roots,
+    default_roots,
+    missing_roots,
+    refused_roots,
+    validate_roots,
+)
 from wimm.core import constants as c
+from wimm.core.root_policy import RootRefusal
 from wimm.i18n import LANGUAGES
 from wimm.model import Category, Protection, protection_of
 from wimm.paths import UserPaths, ensure_private_dir, write_private_atomic
@@ -76,6 +84,16 @@ class Config:
     def missing_roots(self) -> tuple[Path, ...]:
         """Return the configured roots that do not exist now (checked at each access)."""
         return missing_roots(roots=self.devdirs_roots)
+
+    @property
+    def refused_roots(self) -> tuple[tuple[Path, RootRefusal], ...]:
+        """Return ``(root, reason)`` for the roots ADR-007 refuses now (checked at each access)."""
+        return refused_roots(roots=self.devdirs_roots, home=Path.home())
+
+    @property
+    def admitted_roots(self) -> tuple[Path, ...]:
+        """Return the configured roots ADR-007 admits now: the only ones the disk scan walks."""
+        return admitted_roots(roots=self.devdirs_roots, home=Path.home())
 
     @property
     def protected_names(self) -> frozenset[str]:
