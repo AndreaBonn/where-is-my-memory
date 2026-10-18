@@ -40,3 +40,31 @@ def test_the_banner_follows_the_tray_on_an_existing_window() -> None:
     host.set_tray_missing(missing=True)
     host.set_tray_missing(missing=False)
     assert built[0].tray_missing == [True, False]
+
+
+class TrackedWindow(RecordingWindow):
+    def __init__(self) -> None:
+        super().__init__()
+        self.destroyed = False
+
+    def destroy(self) -> None:
+        self.destroyed = True
+
+
+def test_rebuild_without_a_follow_up_replaces_a_shown_window() -> None:
+    built: list[TrackedWindow] = []
+
+    def factory() -> TrackedWindow:
+        built.append(TrackedWindow())
+        return built[-1]
+
+    host = WindowHost(factory=factory)
+    host.rebuild(then=None)  # nothing to rebuild yet: no window appears
+    assert built == []
+    host.present(group_id=None)
+    host.rebuild(then=None)
+    old, new = built
+    assert old.destroyed and not new.destroyed
+    assert new.shown == [None]
+    host.present(group_id="g")  # the host now serves the new window
+    assert new.shown == [None, "g"] and old.shown == [None]

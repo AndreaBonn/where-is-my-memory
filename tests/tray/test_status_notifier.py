@@ -165,3 +165,41 @@ def test_register_with_watcher_sends_the_unique_name(bus: Bus) -> None:
         assert received == [bus.server.get_unique_name()]
     finally:
         item.close()
+
+
+@pytest.mark.dbus
+def test_context_menu_and_scroll_answer_without_calling_a_callback(bus: Bus) -> None:
+    calls: list[str] = []
+    item = make_item(bus, calls)
+    try:
+        for method, parameters in (
+            ("ContextMenu", GLib.Variant("(ii)", (0, 0))),
+            ("Scroll", GLib.Variant("(is)", (1, "vertical"))),
+        ):
+            bus.call(
+                path=SNI_OBJECT_PATH, interface=SNI_IFACE, method=method, parameters=parameters
+            )
+        bus.call(
+            path=SNI_OBJECT_PATH,
+            interface=SNI_IFACE,
+            method="Activate",
+            parameters=GLib.Variant("(ii)", (0, 0)),
+        )
+        spin_until(predicate=lambda: bool(calls))
+        context = GLib.MainContext.default()
+        while context.iteration(False):  # run every callback already queued
+            pass
+        assert calls == ["activate"]  # the two answered calls ran no callback
+    finally:
+        item.close()
+
+
+@pytest.mark.dbus
+def test_closing_the_item_twice_is_harmless_and_stops_serving(bus: Bus) -> None:
+    item = make_item(bus, [])
+    assert get(bus, "Id") == ITEM_ID  # served while open
+    item.close()
+    item.close()
+    with pytest.raises(GLib.Error):
+        get(bus, "Id")
+    item.label = "9 GB"  # no object left: setting must not raise

@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import replace
 from datetime import UTC, timedelta, timezone
 from pathlib import Path
@@ -102,6 +103,17 @@ def test_group_compose_project_roundtrips_and_may_be_null(
         snapshot_from_json(text=json.dumps(document))
 
 
+def dotted(path: tuple[str | int, ...]) -> str:
+    """The location the decoder reports: ``snapshot.groups[0].members[1].create_time``."""
+    return "snapshot" + "".join(f"[{key}]" if isinstance(key, int) else f".{key}" for key in path)
+
+
+def test_dotted_reports_keys_with_dots_and_indexes_with_brackets() -> None:
+    assert dotted(("groups", 0, "members", 1, "create_time")) == (
+        "snapshot.groups[0].members[1].create_time"
+    )
+
+
 def set_path(document: dict[str, Any], path: tuple[str | int, ...], value: object) -> None:
     target: Any = document
     for key in path[:-1]:
@@ -158,7 +170,10 @@ def test_decoder_rejects_bad_values_with_field_path(
 ) -> None:
     assert snapshot_from_json(text=json.dumps(document)).groups[0].name == "whitebox"
     set_path(document=document, path=path, value=value)
-    with pytest.raises(ValueError, match=str(path[-1])):
+    # A rule across fields (protection vs category, since vs state) is reported on the record.
+    at_field = f"{re.escape(dotted(path))}[: ]"
+    at_record = f"{re.escape(dotted(path[:-1]))}: {path[-1]} "
+    with pytest.raises(ValueError, match=f"{at_field}|{at_record}"):
         snapshot_from_json(text=json.dumps(document))
 
 

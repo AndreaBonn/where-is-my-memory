@@ -34,13 +34,25 @@ def test_build_deb_installs_every_rendered_app_size() -> None:
     assert f"for size in {sizes}; do" in script
 
 
+def test_the_shipped_app_icon_sizes_are_exactly_the_rendered_ones() -> None:
+    shipped = {
+        int(folder.name.split("x")[0])
+        for folder in build_icons.HICOLOR.glob("[0-9]*x[0-9]*")
+        if (folder / "apps" / f"{build_icons.APP_ID}.png").is_file()
+    }
+    assert shipped == {16, 24, 32, 48, 64, 128, 256, 512}
+    assert tuple(sorted(shipped)) == build_icons.APP_SIZES
+
+
 def test_status_icons_share_the_logo_and_differ_only_by_badge() -> None:
     normal, warning, critical = (status_image(state=s) for s in ("normal", "warning", "critical"))
     corner = (build_icons.STATUS_RASTER * 7 // 8,) * 2
     top_left = (0, 0, build_icons.STATUS_RASTER // 2, build_icons.STATUS_RASTER // 2)
     assert normal.crop(top_left).tobytes() == warning.crop(top_left).tobytes()
-    assert warning.getpixel(corner) != normal.getpixel(corner)
-    assert warning.getpixel(corner) != critical.getpixel(corner)
+    # (112, 112) sits inside the badge disc, clear of the "!" mark: the Adwaita badge fills.
+    assert warning.getpixel(corner) == (229, 165, 10, 255)
+    assert critical.getpixel(corner) == (224, 27, 36, 255)
+    assert normal.getpixel(corner) not in {(229, 165, 10, 255), (224, 27, 36, 255)}
 
 
 def test_add_badge_paints_the_corner_without_touching_the_input() -> None:

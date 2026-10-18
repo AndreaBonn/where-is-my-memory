@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import pytest
@@ -80,6 +81,22 @@ class Events:
         return self.log.count(name)
 
 
+def wait_past_timeout(*, timeout_ms: int = SHORT_ABSENCE_MS) -> None:
+    """Return once a timer of ``timeout_ms`` started now has fired.
+
+    A watcher timer of the same length created earlier is due before this one, so when this
+    returns the watcher timer has fired already unless it was stopped.
+    """
+    fired: list[bool] = []
+
+    def mark() -> bool:
+        fired.append(True)
+        return GLib.SOURCE_REMOVE
+
+    GLib.timeout_add(timeout_ms, mark)
+    spin_until(predicate=lambda: bool(fired))
+
+
 def start(bus: Bus, events: Events, *, absent_after_ms: int = SHORT_ABSENCE_MS) -> TrayWatcher:
     return TrayWatcher(
         connection=bus.server, callbacks=events.callbacks, absent_after_ms=absent_after_ms
@@ -151,24 +168,66 @@ def test_a_watcher_that_appears_before_the_timeout_never_reports_absence(bus: Bu
     try:
         fake.appear()
         spin_until(predicate=lambda: events.count("appeared") == 1)
-        deadline = GLib.get_monotonic_time() + 3 * SHORT_ABSENCE_MS * 1000
-        spin_until(predicate=lambda: GLib.get_monotonic_time() > deadline)
+        wait_past_timeout()  # the absence timer was due before this returns
         assert events.log == ["appeared"]
     finally:
         watcher.close()
 
 
 @pytest.mark.dbus
-def test_close_stops_the_watch_and_the_timer(bus: Bus) -> None:
+def test_close_stops_the_timer_so_no_absence_is_reported(bus: Bus) -> None:
+    quiet = Events()
+    start(bus, quiet).close()
+    reporting = Events()
+    watcher = start(bus, reporting)  # same timeout, not closed: reports absence
+    try:
+        spin_until(predicate=lambda: reporting.count("absent") == 1)
+        wait_past_timeout()
+        assert quiet.log == []
+        assert reporting.log == ["absent"]
+    finally:
+        watcher.close()
+
+
+@pytest.mark.dbus
+def test_close_stops_the_watch_and_is_idempotent(bus: Bus) -> None:
     fake = FakeWatcher(bus=bus)
+    fake.appear()
     events = Events()
     watcher = start(bus, events)
+    spin_until(predicate=lambda: events.count("appeared") == 1)  # followed before close
     watcher.close()
-    watcher.close()  # idempotent
+    watcher.close()
+    fake.vanish()
     fake.appear()
-    deadline = GLib.get_monotonic_time() + 3 * SHORT_ABSENCE_MS * 1000
-    spin_until(predicate=lambda: GLib.get_monotonic_time() > deadline)
-    assert events.log == []
+    wait_past_timeout()
+    assert events.log == ["appeared"]
+
+
+@pytest.mark.dbus
+def test_a_callback_that_raises_is_logged_and_the_watcher_stays_alive(
+    bus: Bus, caplog: pytest.LogCaptureFixture
+) -> None:
+    fake = FakeWatcher(bus=bus)
+    calls: list[str] = []
+
+    def failing() -> None:
+        calls.append("appeared")
+        raise RuntimeError("boom")
+
+    callbacks = WatcherCallbacks(on_appeared=failing, on_absent=lambda: calls.append("absent"))
+    with caplog.at_level(logging.ERROR):
+        watcher = TrayWatcher(connection=bus.server, callbacks=callbacks, absent_after_ms=10_000)
+        try:
+            fake.appear()
+            spin_until(predicate=lambda: len(calls) == 1)
+            assert "Watcher callback failed" in caplog.text
+            fake.vanish()
+            fake.appear()
+            spin_until(predicate=lambda: len(calls) == 2)  # still watching after the failure
+        finally:
+            watcher.close()
+    assert calls == ["appeared", "appeared"]
 
 
 def test_the_default_absence_timeout_is_ten_seconds() -> None:

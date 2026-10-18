@@ -209,38 +209,57 @@ def test_save_load_round_trip(paths: UserPaths, tmp_path: Path) -> None:
     assert config_to_raw(config=config)["devdirs_roots"] == [str(root)]
 
 
-@pytest.mark.parametrize("content", ["{", "[]", "null", "\udcff"])
+@pytest.mark.parametrize(
+    ("content", "reason"),
+    [
+        ("{", "Expecting property name"),
+        ("[]", "Configuration must be a JSON object"),
+        ("null", "Configuration must be a JSON object"),
+        ("\udcff", "codec can't decode"),
+    ],
+)
 def test_corrupt_file_defaults(
-    paths: UserPaths, content: str, caplog: pytest.LogCaptureFixture, tmp_path: Path
+    paths: UserPaths, content: str, reason: str, caplog: pytest.LogCaptureFixture, tmp_path: Path
 ) -> None:
     paths.config_dir.mkdir(exist_ok=True)
     (paths.config_dir / "config.json").write_bytes(content.encode(errors="surrogateescape"))
     result = load_config(paths=paths, home=tmp_path)
     assert result.config.sample_interval_s == c.SAMPLE_INTERVAL_S
-    assert "WARNING" in caplog.text
+    assert [record.levelname for record in caplog.records] == ["WARNING"]
+    assert "Cannot load configuration" in caplog.text
+    assert reason in caplog.text
 
 
-def test_missing_file_defaults(paths: UserPaths, tmp_path: Path) -> None:
-    result = load_config(paths=paths, home=tmp_path)
+def test_missing_file_defaults(
+    paths: UserPaths, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level("WARNING"):
+        result = load_config(paths=paths, home=tmp_path)
     assert result.config.sample_interval_s == c.SAMPLE_INTERVAL_S
     assert result.field_errors == {}
+    assert caplog.records == []  # a missing file is the normal first run, not a warning
+
+
+CATEGORIES_MESSAGE = "notify_categories must contain actionable categories"
+NAMES_MESSAGE = "extra_protected_names must be a tuple of strings"
+ROOTS_MESSAGE = "devdirs_roots must be a tuple of absolute paths"
 
 
 @pytest.mark.parametrize(
-    "values",
+    ("values", "message"),
     [
-        {"notify_categories": frozenset({"PROJECT"})},
-        {"notify_categories": [Category.PROJECT]},
-        {"extra_protected_names": ["custom"]},
-        {"extra_protected_names": (1,)},
-        {"extra_protected_names": ("",)},
-        {"devdirs_roots": []},
-        {"devdirs_roots": [Path("/home")]},
-        {"devdirs_roots": (Path("relative"),)},
+        ({"notify_categories": frozenset({"PROJECT"})}, CATEGORIES_MESSAGE),
+        ({"notify_categories": [Category.PROJECT]}, CATEGORIES_MESSAGE),
+        ({"extra_protected_names": ["custom"]}, NAMES_MESSAGE),
+        ({"extra_protected_names": (1,)}, NAMES_MESSAGE),
+        ({"extra_protected_names": ("",)}, NAMES_MESSAGE),
+        ({"devdirs_roots": []}, ROOTS_MESSAGE),
+        ({"devdirs_roots": [Path("/home")]}, ROOTS_MESSAGE),
+        ({"devdirs_roots": (Path("relative"),)}, ROOTS_MESSAGE),
     ],
 )
-def test_constructor_rejects_invalid_collections(values: dict[str, Any]) -> None:
-    with pytest.raises(ValueError):
+def test_constructor_rejects_invalid_collections(values: dict[str, Any], message: str) -> None:
+    with pytest.raises(ValueError, match=message):
         Config(**values)
 
 
@@ -255,6 +274,13 @@ def test_valid_range_boundaries_and_fractional_integer_rejection(tmp_path: Path)
             if name == "pressure_critical_pct":
                 raw["pressure_warning_pct"] = c.PRESSURE_WARNING_PCT + 35
                 if boundary == 50:
+                    # The warning limit is 50 too, so a critical threshold of 50 is never
+                    # below it: the order rule refuses it and the defaults come back.
+                    refused = parse_config(
+                        raw={name: 50, "pressure_warning_pct": 50}, home=tmp_path
+                    )
+                    assert set(refused.field_errors) == {"pressure_critical_pct"}
+                    assert refused.config.pressure_critical_pct == c.PRESSURE_CRITICAL_PCT
                     continue
             result = parse_config(raw=raw, home=tmp_path)
             assert result.field_errors == {}

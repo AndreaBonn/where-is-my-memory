@@ -148,3 +148,33 @@ def test_get_layout_of_an_unknown_parent_id_is_a_dbus_error_not_the_root(bus: Bu
         assert root.unpack()[1][0] == 0
     finally:
         menu.close()
+
+
+@pytest.mark.dbus
+def test_about_to_show_answers_that_no_update_is_needed(bus: Bus) -> None:
+    menu = DBusMenu(connection=bus.server, on_click=lambda _callback_id: None)
+    try:
+        menu.set_items(ITEMS)
+        reply = bus.call(
+            path=MENU_OBJECT_PATH,
+            interface=DBUSMENU_IFACE,
+            method="AboutToShow",
+            parameters=GLib.Variant("(i)", (1,)),
+        )
+        assert reply.unpack() == (False,)
+    finally:
+        menu.close()
+
+
+@pytest.mark.dbus
+def test_closing_the_menu_twice_is_harmless_and_stops_serving(bus: Bus) -> None:
+    menu = DBusMenu(connection=bus.server, on_click=lambda _callback_id: None)
+    menu.set_items(ITEMS)
+    layout = GLib.Variant("(iias)", (0, -1, []))
+    call = {"path": MENU_OBJECT_PATH, "interface": DBUSMENU_IFACE, "method": "GetLayout"}
+    assert bus.call(parameters=layout, **call).unpack()[0] == 1  # served while open
+    menu.close()
+    menu.close()
+    with pytest.raises(GLib.Error):
+        bus.call(parameters=layout, **call)
+    assert menu.set_items([OPEN]) is True  # no object left: publishing must not raise

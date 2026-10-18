@@ -1,18 +1,12 @@
 import pytest
-from gi.repository import GLib
 
 from tests.service.test_app_service import spin_until
 from tests.tray.conftest import Bus
 from tests.tray.test_tray import FakeService
-from tests.tray.test_watcher import SHORT_ABSENCE_MS, FakeWatcher
+from tests.tray.test_watcher import SHORT_ABSENCE_MS, FakeWatcher, wait_past_timeout
 from wimm.tray import tray as tray_module
 from wimm.tray.tray import Tray
 from wimm.tray.watcher import TrayWatcher
-
-
-def settle_ms(duration_ms: int) -> None:
-    deadline = GLib.get_monotonic_time() + duration_ms * 1000
-    spin_until(predicate=lambda: GLib.get_monotonic_time() > deadline)
 
 
 def build(bus: Bus) -> Tray:
@@ -62,7 +56,7 @@ def test_the_host_is_present_only_after_a_successful_registration(
         spin_until(predicate=lambda: reports == [True])
         fake.appear()
         spin_until(predicate=lambda: len(fake.registrations) == 1)
-        settle_ms(SHORT_ABSENCE_MS)
+        wait_past_timeout()
         assert reports == [True]  # the registration was refused: the icon is still missing
         fake.fail = False
         fake.vanish()
@@ -88,7 +82,7 @@ def test_presence_is_reported_once_across_repeated_reappearances(
         fake.vanish()
         fake.appear()
         spin_until(predicate=lambda: len(fake.registrations) == 2)
-        settle_ms(SHORT_ABSENCE_MS)
+        wait_past_timeout()
         assert reports == [True, False]
     finally:
         tray.close()
@@ -103,7 +97,7 @@ def test_a_second_start_does_not_create_a_second_watcher(bus: Bus) -> None:
         tray.start()
         tray.start()
         spin_until(predicate=lambda: len(fake.registrations) >= 1)
-        settle_ms(SHORT_ABSENCE_MS)
+        wait_past_timeout()
         assert len(fake.registrations) == 1
     finally:
         tray.close()
@@ -112,9 +106,12 @@ def test_a_second_start_does_not_create_a_second_watcher(bus: Bus) -> None:
 @pytest.mark.dbus
 def test_close_stops_following_the_watcher(bus: Bus) -> None:
     fake = FakeWatcher(bus=bus)
+    fake.appear()
     tray = build(bus)
     tray.start()
+    spin_until(predicate=lambda: len(fake.registrations) == 1)  # followed before close
+    fake.vanish()
     tray.close()
     fake.appear()
-    settle_ms(3 * SHORT_ABSENCE_MS)
-    assert fake.registrations == []
+    wait_past_timeout()
+    assert len(fake.registrations) == 1

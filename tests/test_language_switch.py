@@ -225,3 +225,17 @@ def test_switch_exports_the_language_for_gtk_own_texts(monkeypatch: pytest.Monke
     switch_language(application=application, language="en")
 
     assert os.environ["LANGUAGE"] == "en"
+
+
+def test_switch_without_a_service_changes_language_and_refreshes_the_views() -> None:
+    host, built = make_host()
+    host.present(group_id=None)
+    application = FakeApplication(host=host, service=None)
+
+    switch_language(application=application, language="en")
+    assert i18n.current_language() == i18n.ENGLISH  # nothing to save, still switched
+    run_idle()
+
+    old, new = built
+    assert old.destroyed and not new.destroyed
+    assert application._tray.refreshed == 1

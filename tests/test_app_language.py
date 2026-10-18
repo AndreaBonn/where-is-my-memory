@@ -1,5 +1,7 @@
 import logging
 import os
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -89,8 +91,34 @@ def test_language_exported_by_a_test_never_reaches_the_next(
     assert "LANGUAGE" in os.environ
 
 
-def test_language_is_absent_again_in_the_next_test() -> None:
-    assert "LANGUAGE" not in os.environ
+def test_the_real_conftest_leaves_no_language_behind_after_the_last_test(tmp_path: Path) -> None:
+    # Runs tests/conftest.py itself in a child pytest: the variable is absent before the
+    # session, a test exports it, and the probe reads the environment once the session ends.
+    probe = tmp_path / "language_after_session.txt"
+    conftest = (Path(__file__).parent / "conftest.py").read_text(encoding="utf-8")
+    (tmp_path / "conftest.py").write_text(
+        conftest
+        + "\n\nimport os\n\n\ndef pytest_unconfigure(config):\n"
+        + f"    open({str(probe)!r}, 'w').write(os.environ.get('LANGUAGE', '<absent>'))\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "test_export.py").write_text(
+        "import os\n\n\ndef test_export():\n    os.environ['LANGUAGE'] = 'it'\n",
+        encoding="utf-8",
+    )
+    child_env = {key: value for key, value in os.environ.items() if key != "LANGUAGE"}
+    result = subprocess.run(
+        [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "addopts=", "."],
+        cwd=tmp_path,
+        env=child_env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "1 passed" in result.stdout
+    assert probe.read_text(encoding="utf-8") == "<absent>"
 
 
 def test_log_field_errors_warns_with_the_field_name_and_its_error(

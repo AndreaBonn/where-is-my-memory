@@ -11,7 +11,7 @@ from tests.tray.conftest import Bus
 from tests.tray.menu_helpers import base_snapshot, make_group, with_groups
 from wimm.model.snapshot import Snapshot
 from wimm.tray.dbus_menu import DBUSMENU_IFACE
-from wimm.tray.menu_model import ICON_NORMAL, ICON_WARNING
+from wimm.tray.menu_model import CALLBACK_OPEN, ICON_NORMAL, ICON_WARNING
 from wimm.tray.status_notifier import MENU_OBJECT_PATH, SNI_IFACE, SNI_OBJECT_PATH
 from wimm.tray.tray import MUTE_DURATION_S, Tray
 
@@ -195,8 +195,13 @@ def test_refresh_failure_is_logged_not_raised(
 @pytest.mark.dbus
 def test_close_stops_following_the_service(bus: Bus, caplog: pytest.LogCaptureFixture) -> None:
     harness = Harness(bus)
-    harness.tray.close()
     harness.service.broken = True
+    with caplog.at_level(logging.ERROR):
+        harness.service.publish(base_snapshot())
+        harness.service.fail()
+    assert caplog.text.count("Tray refresh failed") == 2  # followed before close
+    caplog.clear()
+    harness.tray.close()
     with caplog.at_level(logging.ERROR):
         harness.service.publish(base_snapshot())
         harness.service.fail()
@@ -219,3 +224,19 @@ def test_monitoring_error_entry_opens_the_panel_without_quitting(harness: Harnes
     spin_until(predicate=lambda: bool(harness.opened))
     assert harness.opened == [None]
     assert harness.quits == 0
+
+
+@pytest.mark.dbus
+def test_an_unknown_menu_callback_is_logged_and_triggers_no_action(
+    harness: Harness, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING):
+        # No menu the tray builds carries an unknown id, so the handler is reached directly.
+        harness.tray._clicked("no-such-callback")
+    assert "Unknown menu callback no-such-callback" in caplog.text
+    assert (harness.opened, harness.quits, harness.service.snooze_all_calls) == ([], 0, [])
+    caplog.clear()
+    with caplog.at_level(logging.WARNING):
+        harness.tray._clicked(CALLBACK_OPEN)
+    assert harness.opened == [None]
+    assert "Unknown menu callback" not in caplog.text

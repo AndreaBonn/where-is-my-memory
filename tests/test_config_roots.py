@@ -43,7 +43,7 @@ def test_expand_root_handles_tilde_and_absolute(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize("value", ["", "relative/dir"])
 def test_expand_root_rejects_empty_and_relative(tmp_path: Path, value: str) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Expected an absolute directory path"):
         expand_root(value=value, home=tmp_path)
 
 
@@ -63,7 +63,7 @@ def test_decode_roots_accepts_existing_dir_within_home(tmp_path: Path) -> None:
 
 
 def test_decode_roots_rejects_an_empty_list(tmp_path: Path) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Expected at least one directory"):
         decode_roots(value=[], home=tmp_path)
 
 
@@ -77,7 +77,7 @@ def test_decode_roots_keeps_a_root_outside_home_for_the_policy_to_judge(tmp_path
 
 @pytest.mark.parametrize("roots", [[Path("/a")], [], (Path("rel"),), ("/a",)])
 def test_validate_roots_rejects_non_tuple_relative_or_str(roots: object) -> None:
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="devdirs_roots must be a tuple of absolute paths"):
         validate_roots(roots=roots)
 
 
@@ -97,7 +97,7 @@ def test_decode_roots_keeps_a_missing_root_within_home(tmp_path: Path) -> None:
 
 def test_decode_roots_rejects_a_root_that_is_a_file(tmp_path: Path) -> None:
     (tmp_path / "file").write_text("x", encoding="utf-8")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="Expected existing directories or paths not yet created"):
         decode_roots(value=["~/file"], home=tmp_path)
 
 

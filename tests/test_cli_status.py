@@ -2,10 +2,12 @@ import json
 from collections.abc import Callable
 from dataclasses import replace
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
 from gi.repository import GLib
 
+import wimm.service.sampler as sampler_module
 from wimm import model as m
 from wimm.cli_status import (
     EXIT_NO_STATE,
@@ -13,6 +15,7 @@ from wimm.cli_status import (
     PROXY_TIMEOUT_MS,
     StatusSources,
     run_status,
+    sample_locally,
     snapshot_from_instance,
 )
 from wimm.cli_status_text import printable
@@ -181,3 +184,50 @@ def test_redacted_json_masks_credentials_in_paths_and_reasons(snapshot: m.Snapsh
     assert LEAKED_VALUE in snapshot_to_json(snapshot=leaking)
 
     assert LEAKED_VALUE not in redacted_snapshot_json(snapshot=leaking)
+
+
+class SamplerStub:
+    """Stands in for Sampler: returns the snapshot it was given, or raises on the cycle."""
+
+    built: ClassVar[list[dict[str, object]]] = []
+    result: m.Snapshot | None = None
+    failure: Exception | None = None
+
+    def __init__(self, **kwargs: object) -> None:
+        SamplerStub.built.append(kwargs)
+
+    def run_cycle(self) -> m.Snapshot | None:
+        if SamplerStub.failure is not None:
+            raise SamplerStub.failure
+        return SamplerStub.result
+
+
+@pytest.fixture
+def sampler_stub(monkeypatch: pytest.MonkeyPatch) -> type[SamplerStub]:
+    SamplerStub.built, SamplerStub.result, SamplerStub.failure = [], None, None
+    monkeypatch.setattr(target=sampler_module, name="Sampler", value=SamplerStub)
+    monkeypatch.setattr(sampler_module, "default_collectors", lambda *, environment: "collectors")
+    return SamplerStub
+
+
+def test_sample_locally_returns_the_snapshot_of_one_cycle(
+    sampler_stub: type[SamplerStub], snapshot: m.Snapshot, capsys: pytest.CaptureFixture[str]
+) -> None:
+    sampler_stub.result = snapshot
+    assert sample_locally() == snapshot
+    (built,) = sampler_stub.built
+    assert built["collectors"] == "collectors"
+    assert capsys.readouterr().err == ""
+
+
+def test_a_failing_local_sample_prints_the_reason_and_status_exits_3(
+    sampler_stub: type[SamplerStub], capsys: pytest.CaptureFixture[str]
+) -> None:
+    sampler_stub.failure = RuntimeError("cannot read /proc")
+    assert sample_locally() is None
+    assert capsys.readouterr().err == "wimm: cannot read /proc\n"
+    chosen = StatusSources(from_instance=lambda: None, sample_locally=sample_locally)
+    assert run_status(arguments=[], sources=chosen) == EXIT_NO_STATE
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert captured.err.startswith("wimm: cannot read /proc\n")
