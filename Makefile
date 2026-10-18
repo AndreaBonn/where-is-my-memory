@@ -35,15 +35,20 @@ lint:
 	# Every user-visible string goes through gettext and po/en.po covers them all.
 	uv run python scripts/check_i18n.py
 
+# Isolated tool environments: installed in the venv, pip-audit's requests 2.34 shadowed the
+# apt one and broke python3-docker 5.0.3 (tests/test_lockfile.py).
+BANDIT := bandit@1.9.4
+PIP_AUDIT := pip-audit@2.10.1
+
 # Security scan. The runtime has no PyPI dependencies (psutil, docker and PyGObject come
 # from apt), so pip-audit covers the development group exported by uv. The export is fully
 # pinned, so pip-audit skips its own resolution (--no-deps --disable-pip): resolving would
 # build PyGObject, which only exists as a stub dependency here.
 audit:
-	uv run bandit -c pyproject.toml -r src -q
+	uvx $(BANDIT) -c pyproject.toml -r src -q
 	@req="$$(mktemp)" && trap 'rm -f "$$req"' EXIT && \
 		uv export --no-hashes --no-emit-project > "$$req" && \
-		uv run pip-audit --no-deps --disable-pip -r "$$req"
+		uvx $(PIP_AUDIT) --no-deps --disable-pip -r "$$req"
 
 # Extract every marked string into the (unversioned) template.
 pot:
