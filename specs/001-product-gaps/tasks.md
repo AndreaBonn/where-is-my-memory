@@ -213,3 +213,13 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T040 | b6c3c76 | titoli dei tipi nuovi e testi delle conseguenze
 - T042 | d897c08 | prima scansione +20%
 - T043 | (questo commit) | code-reviewer e security-reviewer su L3 eseguiti; aperti: `go clean` reale non provato, test di integrazione Docker instabile (pre-esistente)
+- T044 | 5afcc8f | endpoint locali (S8), socket di Docker Desktop ammesso solo esatto e dell'utente
+- T046 | 7293a17 | scope libpod
+- T047 | 9210b62 | refactor di categorize
+- T051 | 9297b27 | etichette degli strumenti; review: falsi positivi per nome di cartella corretti
+- T048 T052 T053 | e5efaac 6038e89 | Podman protetto se non visto, gruppi e rischio per etichetta, rischio del piano allineato al badge
+- T045 T049 | 4a42b09 7fb579f | collector e servizi sui motori risolti, nessun `docker.from_env`; pool thread-safe e backoff degli endpoint lenti (review)
+- S9 | 3ad1466 | identità dei motori nel piano e controllo nell'esecutore
+- T050 | e22eac9 | executor contro risposte stile Podman, M-24
+- T054 | 56a3cef | DEVIATIONS
+- T055 | (questo commit) | code-reviewer su ogni blocco di L4. Aperti: Podman e Docker Desktop mai provati su macchina reale (M-24); un motore che risponde a `info()` ma blocca `list()` costa ancora il timeout; gli avvisi parziali dei motori non sono mostrati nella UI quando almeno un motore risponde
