@@ -23,7 +23,8 @@ from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import Category
 from wimm.model.snapshot import ProcessMember, Snapshot
 from wimm.serialize import snapshot_from_json
-from wimm.service.inspector_dbus import INTERFACE, OBJECT_PATH, Inspector, snapshot_for_dbus
+from wimm.service.inspector_dbus import INTERFACE, OBJECT_PATH, Inspector
+from wimm.snapshot_redaction import redacted_snapshot_json
 
 # Allow Gio.Application startup and the first sample on a private bus.
 APP_STARTUP_TIMEOUT_S = 45
@@ -59,7 +60,7 @@ def sensitive_snapshot() -> Snapshot:
 
 def test_snapshot_redaction_preserves_model_and_json_contract() -> None:
     snapshot = sensitive_snapshot()
-    redacted = snapshot_from_json(text=snapshot_for_dbus(snapshot=snapshot))
+    redacted = snapshot_from_json(text=redacted_snapshot_json(snapshot=snapshot))
     member = redacted.groups[0].members[0]
     original = snapshot.groups[0].members[0]
     assert isinstance(member, ProcessMember)
@@ -303,6 +304,6 @@ def test_redact_cmdline_handles_spaces_and_separate_values(
     arguments: list[str],
     expected: list[str],
 ) -> None:
-    from wimm.service.inspector_dbus import redact_cmdline
+    from wimm.snapshot_redaction import redact_cmdline
 
     assert redact_cmdline(arguments=arguments) == expected

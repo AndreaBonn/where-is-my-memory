@@ -1,7 +1,9 @@
 import re
 
 REDACTED = "[REDACTED]"
-CREDENTIAL_PATTERN = r"(?:[\w-]*(?:key|token|password|secret))"
+# Short forms (pass, passwd, pwd, auth, credential) only as a whole option or variable name:
+# per-command flags such as `mysql -pSECRET` or `curl -u user:pw` are a known gap.
+CREDENTIAL_PATTERN = r"(?:[\w-]*(?:key|token|password|secret|passwd|pwd|pass|auth|credentials?))"
 SECRET_ARGUMENT = re.compile(
     rf"""(?P<prefix>(?<![\w-])(?:--{CREDENTIAL_PATTERN}(?:\s*=\s*|\s+)|"""
     rf"""['\"]?{CREDENTIAL_PATTERN}['\"]?\s*[:=]\s*))"""
