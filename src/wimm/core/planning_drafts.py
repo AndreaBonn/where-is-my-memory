@@ -19,6 +19,7 @@ from wimm.model.snapshot import ContainerMember, Group, ProcessMember
 
 from .assemble_members import STOPPABLE_STATES
 from .risk import RiskAssessment, RiskTarget, TargetKind, assess_risk
+from .tool_labels import ToolLabel
 
 # `app_close` targets desktop apps, browsers and terminals (sections 5.3 and 8.4).
 APP_CLOSE_KINDS: Mapping[Category, TargetKind] = {
@@ -91,6 +92,8 @@ def process_draft(*, member: ProcessMember, kind: ActionKind) -> Draft:
         has_documents=member.has_documents,
         process_name=member.name,
         cwd=member.cwd,
+        # Same label as the badge of the list (assemble_members), so both show one risk.
+        tool=None if member.tool_label is None else ToolLabel(member.tool_label),
     )
     fingerprint = ProcessFingerprint(
         pid=member.pid,
