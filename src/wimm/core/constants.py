@@ -111,6 +111,8 @@ DB_PROCESS_NAMES = ("postgres", "mysqld", "mariadbd", "mongod", "redis-server")
 
 CGROUP_RECORD_PREFIX = "0::"
 DOCKER_SCOPE_PATTERNS = ("docker-*.scope",)
+PODMAN_SCOPE_PATTERNS = ("libpod-*.scope", "libpod-conmon-*.scope")
+PODMAN_SCOPE_TEMPLATE = "libpod-{container_id}.scope"
 VTE_SCOPE_PATTERNS = ("vte-spawn-*.scope",)
 APP_SLICE = "app.slice"
 SESSION_SLICE = "session.slice"

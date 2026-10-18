@@ -173,3 +173,53 @@ def test_unreadable_container_metric_returns_unavailable(tmp_path: Path, filenam
         if name != filename:
             (scope / name).write_text(text)
     assert read_container_metrics(container_id="abc", pid=42, roots=(tmp_path, tmp_path)) is None
+
+
+LIBPOD_ID = "a" * 64
+OTHER_LIBPOD_ID = "b" * 64
+
+
+def _rootless_libpod_dir(root: Path, uid: int, name: str) -> Path:
+    path = root / f"user.slice/user-{uid}.slice/user@{uid}.service/user.slice" / name
+    path.mkdir(parents=True)
+    return path
+
+
+def test_locate_libpod_scope(tmp_path: Path) -> None:
+    from wimm.collectors.cgroups import locate_libpod_scope
+
+    scope = _rootless_libpod_dir(tmp_path, 1000, f"libpod-{LIBPOD_ID}.scope")
+    _rootless_libpod_dir(tmp_path, 1000, f"libpod-conmon-{LIBPOD_ID}.scope")
+    assert locate_libpod_scope(container_id=LIBPOD_ID, uid=1000, cgroup_root=tmp_path) == scope
+    assert locate_libpod_scope(container_id=OTHER_LIBPOD_ID, uid=1000, cgroup_root=tmp_path) is None
+
+
+def test_locate_libpod_scope_ignores_other_users_and_conmon_only(tmp_path: Path) -> None:
+    from wimm.collectors.cgroups import locate_libpod_scope
+
+    _rootless_libpod_dir(tmp_path, 1001, f"libpod-{LIBPOD_ID}.scope")
+    _rootless_libpod_dir(tmp_path, 1000, f"libpod-conmon-{OTHER_LIBPOD_ID}.scope")
+    assert locate_libpod_scope(container_id=LIBPOD_ID, uid=1000, cgroup_root=tmp_path) is None
+    assert locate_libpod_scope(container_id=OTHER_LIBPOD_ID, uid=1000, cgroup_root=tmp_path) is None
+
+
+@pytest.mark.parametrize("container_id", ["", "../x", "a/b", "*", "abc-def"])
+def test_locate_libpod_scope_rejects_malformed_ids(tmp_path: Path, container_id: str) -> None:
+    from wimm.collectors.cgroups import locate_libpod_scope
+
+    _rootless_libpod_dir(tmp_path, 1000, f"libpod-{LIBPOD_ID}.scope")
+    assert locate_libpod_scope(container_id=container_id, uid=1000, cgroup_root=tmp_path) is None
+
+
+def test_podman_scope_patterns_match_container_and_conmon() -> None:
+    from fnmatch import fnmatchcase
+
+    from wimm.core.constants import PODMAN_SCOPE_PATTERNS
+
+    def matches(name: str) -> bool:
+        return any(fnmatchcase(name, pattern) for pattern in PODMAN_SCOPE_PATTERNS)
+
+    assert matches(f"libpod-{LIBPOD_ID}.scope")
+    assert matches(f"libpod-conmon-{LIBPOD_ID}.scope")
+    assert not matches(f"docker-{LIBPOD_ID}.scope")
+    assert not matches(f"libpod-{LIBPOD_ID}.service")

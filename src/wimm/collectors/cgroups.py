@@ -2,12 +2,15 @@ import logging
 import re
 from pathlib import Path
 
+from wimm.core.constants import PODMAN_SCOPE_TEMPLATE, USER_UNIT_TEMPLATE
+
 from . import CollectorResult
 
 LOGGER = logging.getLogger(__name__)
 PROC_ROOT = Path("/proc")
 CGROUP_V2_PREFIX = "0::"
 DOCKER_SCOPE = re.compile(r"(?:/sys/fs/cgroup)?/system\.slice/docker-[^/]+\.scope(?:/.*)?")
+CONTAINER_ID_PATTERN = re.compile(r"[0-9a-fA-F]+")
 STAT_PGRP_INDEX = 2
 STAT_TPGID_INDEX = 5
 
@@ -219,4 +222,34 @@ def _read_container_files(
         return max(0, memory - inactive), cpu, net
     except (OSError, ValueError, IndexError) as error:
         LOGGER.debug("Container metrics unavailable at %s: %s", scope, error)
+        return None
+
+
+def locate_libpod_scope(
+    container_id: str, uid: int, cgroup_root: Path = CGROUP_ROOT
+) -> Path | None:
+    """Locate the cgroup of a rootless podman container under the user's systemd manager.
+
+    Parameters
+    ----------
+    container_id : str
+        Hexadecimal container identifier (full or abbreviated); anything else yields None.
+    uid : int
+        Owner of the rootless podman, whose `user@<uid>.service` is searched.
+    cgroup_root : Path
+        Cgroup v2 mount point.
+
+    Returns
+    -------
+    Path | None
+        The `libpod-<id>.scope` directory, if present. The conmon scope is not a match.
+    """
+    if CONTAINER_ID_PATTERN.fullmatch(container_id) is None:
+        return None
+    manager = cgroup_root / f"user.slice/user-{uid}.slice" / USER_UNIT_TEMPLATE.format(uid=uid)
+    name = PODMAN_SCOPE_TEMPLATE.format(container_id=container_id)
+    try:
+        return next((path for path in manager.rglob(name) if path.is_dir()), None)
+    except OSError as error:
+        LOGGER.debug("Podman scope search failed under %s: %s", manager, error)
         return None
