@@ -276,7 +276,7 @@ def _configure_options(application: "Gio.Application") -> None:
 
 def main(argv: list[str] | None = None) -> int:
     arguments = sys.argv[1:] if argv is None else argv
-    if arguments == ["--version"]:
+    if "--version" in arguments and arguments[:1] != ["status"]:
         print(f"wimm {__version__}")
         return SUCCESS
     if arguments[:1] == ["status"]:

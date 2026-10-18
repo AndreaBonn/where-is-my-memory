@@ -22,6 +22,30 @@ def test_main_version_exits_successfully(capsys: pytest.CaptureFixture[str]) -> 
     assert captured.err == ""
 
 
+def test_main_version_is_honoured_anywhere_in_the_arguments(
+    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def no_application() -> None:
+        # Fail loudly instead of starting a real application if the flag is ignored.
+        pytest.fail("the application must not start")
+
+    monkeypatch.setattr("wimm.app.create_application", no_application)
+    assert main(argv=["--background", "--version"]) == SUCCESS
+    assert capsys.readouterr().out == f"wimm {__version__}\n"
+
+
+def test_main_status_keeps_its_own_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[list[str]] = []
+
+    def recording_status(*, arguments: list[str]) -> int:
+        seen.append(arguments)
+        return SUCCESS
+
+    monkeypatch.setattr("wimm.cli_status.run_status", recording_status)
+    assert main(argv=["status", "--version"]) == SUCCESS
+    assert seen == [["--version"]]
+
+
 def test_main_reads_process_arguments(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(target=sys, name="argv", value=["wimm", "--version"])
     assert main() == SUCCESS
