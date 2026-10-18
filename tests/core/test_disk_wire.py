@@ -160,3 +160,19 @@ def test_schema_version_future_report_is_rejected(document: dict[str, Any]) -> N
 
     with pytest.raises(SnapshotFormatError, match="schema"):
         disk_report_from_json(text=json.dumps(document))
+
+
+@pytest.mark.parametrize("record", ["image", 7, [1], None])
+def test_a_record_that_is_not_an_object_is_rejected(
+    document: dict[str, Any], record: object
+) -> None:
+    text = _mutated(document, ("docker", "images", 0), record)
+
+    with pytest.raises(SnapshotFormatError, match=r"docker\.images\[0\]: expected dict"):
+        disk_report_from_json(text=text)
+
+
+@pytest.mark.parametrize("text", [None, b"{}", 3])
+def test_text_that_is_not_a_str_is_rejected_before_parsing(text: object) -> None:
+    with pytest.raises(SnapshotFormatError, match="disk report: expected str"):
+        disk_report_from_json(text=cast(str, text))

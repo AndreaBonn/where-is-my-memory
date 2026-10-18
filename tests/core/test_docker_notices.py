@@ -10,15 +10,39 @@ from wimm.core.docker_notices import (
     rejection_notice,
 )
 
+EXPECTED_REJECTION_TEXT = {
+    RejectionReason.UNSUPPORTED_SCHEME: (
+        "Endpoint Docker tcp://example:2375 ignorato: sono accettati solo socket locali (unix://)"
+    ),
+    RejectionReason.PATH_NOT_ABSOLUTE: (
+        "Endpoint Docker tcp://example:2375 ignorato: il percorso del socket non è valido"
+    ),
+    RejectionReason.LOCATION_NOT_ALLOWED: (
+        "Endpoint Docker tcp://example:2375 ignorato: il socket non è in una posizione consentita"
+    ),
+    RejectionReason.RUNTIME_DIR_NOT_PRIVATE: (
+        "Endpoint Docker tcp://example:2375 ignorato: la cartella runtime non è privata"
+    ),
+    RejectionReason.SOCKET_MISSING: (
+        "Endpoint Docker tcp://example:2375 non trovato: il socket manca"
+    ),
+    RejectionReason.NOT_A_SOCKET: (
+        "Endpoint Docker tcp://example:2375 ignorato: il percorso non è un socket"
+    ),
+    RejectionReason.CONTEXT_NOT_FOUND: "Contesto Docker tcp://example:2375 non trovato",
+    RejectionReason.CONTEXT_INVALID: "Contesto Docker tcp://example:2375 non valido",
+}
 
-def test_every_rejection_reason_has_a_notice_code_and_a_readable_text() -> None:
-    for reason in RejectionReason:
-        rejected = RejectedEndpoint(
-            source=EndpointSource.DOCKER_HOST, endpoint="tcp://example:2375", reason=reason
-        )
-        text = notice_text(notice=rejection_notice(rejected=rejected))
-        assert "example" in text or "Docker" in text
-        assert text.strip() == text and text != ""
+
+@pytest.mark.parametrize("reason", list(RejectionReason))
+def test_every_rejection_reason_has_its_own_italian_text(reason: RejectionReason) -> None:
+    rejected = RejectedEndpoint(
+        source=EndpointSource.DOCKER_HOST, endpoint="tcp://example:2375", reason=reason
+    )
+
+    assert (
+        notice_text(notice=rejection_notice(rejected=rejected)) == EXPECTED_REJECTION_TEXT[reason]
+    )
 
 
 def test_tcp_host_is_explained_as_not_local() -> None:
@@ -69,10 +93,33 @@ def test_notices_text_joins_in_order_and_is_empty_for_no_notices() -> None:
     assert notices_text(notices=()) == ""
 
 
+EXPECTED_CODE_TEXT = {
+    NoticeCode.UNSUPPORTED_SCHEME: (
+        "Endpoint Docker /x ignorato: sono accettati solo socket locali (unix://)"
+    ),
+    NoticeCode.PATH_NOT_ABSOLUTE: (
+        "Endpoint Docker /x ignorato: il percorso del socket non è valido"
+    ),
+    NoticeCode.LOCATION_NOT_ALLOWED: (
+        "Endpoint Docker /x ignorato: il socket non è in una posizione consentita"
+    ),
+    NoticeCode.RUNTIME_DIR_NOT_PRIVATE: (
+        "Endpoint Docker /x ignorato: la cartella runtime non è privata"
+    ),
+    NoticeCode.SOCKET_MISSING: "Endpoint Docker /x non trovato: il socket manca",
+    NoticeCode.NOT_A_SOCKET: "Endpoint Docker /x ignorato: il percorso non è un socket",
+    NoticeCode.CONTEXT_NOT_FOUND: "Contesto Docker /x non trovato",
+    NoticeCode.CONTEXT_INVALID: "Contesto Docker /x non valido",
+    NoticeCode.UNREACHABLE: "Motore container su /x non raggiungibile: why",
+    NoticeCode.NO_ENGINE: "nessun socket Docker o Podman trovato",
+}
+
+
 @pytest.mark.parametrize("code", list(NoticeCode))
-def test_every_code_formats_without_missing_placeholders(code: NoticeCode) -> None:
+def test_every_code_formats_its_endpoint_and_detail_into_the_text(code: NoticeCode) -> None:
     text = notice_text(notice=EngineNotice(code=code, endpoint="/x", detail="why"))
-    assert "{" not in text
+
+    assert text == EXPECTED_CODE_TEXT[code]
 
 
 def test_unreachable_detail_with_credentials_never_reaches_the_text() -> None:

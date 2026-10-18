@@ -9,6 +9,7 @@ from .helpers import process
 
 CLOSE = ActionOffer(kind=ActionKind.APP_CLOSE, risk=Risk.CAUTION)
 TERMINATE_CAUTION = ActionOffer(kind=ActionKind.PROCESS_TERMINATE, risk=Risk.CAUTION)
+TERMINATE_SAFE = ActionOffer(kind=ActionKind.PROCESS_TERMINATE, risk=Risk.SAFE)
 GROUP_STOP_SAFE = ActionOffer(kind=ActionKind.GROUP_STOP, risk=Risk.SAFE)
 
 
@@ -42,7 +43,7 @@ def test_assemble_shell_member_has_no_actions_while_terminal_group_closes() -> N
     (group,) = assemble_snapshot(inputs=build_input(drafts, pairs=[server, shell])).groups
 
     assert group.members[1].actions == ()
-    assert group.members[0].actions != ()
+    assert group.members[0].actions == (TERMINATE_CAUTION,)
     assert group.primary_action == CLOSE
 
 
@@ -118,9 +119,8 @@ def test_assemble_process_without_start_time_offers_no_action() -> None:
     blind, identified = group.members
     assert isinstance(blind, ProcessMember)
     assert (blind.create_time, blind.cmdline, blind.actions) == (0.0, (), ())
-    assert identified.actions != ()
-    assert group.primary_action is not None
-    assert group.primary_action.kind is ActionKind.PROCESS_TERMINATE
+    assert identified.actions == (TERMINATE_SAFE,)
+    assert group.primary_action == TERMINATE_SAFE
 
 
 def test_assemble_foreground_server_is_caution() -> None:

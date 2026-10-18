@@ -153,7 +153,17 @@ def test_symlink_in_runtime_dir_pointing_outside_is_rejected() -> None:
     assert reasons(resolution) == [RejectionReason.LOCATION_NOT_ALLOWED]
 
 
-@pytest.mark.parametrize(("mode", "owned"), [(0o755, True), (0o770, True), (0o700, False)])
+@pytest.mark.parametrize(
+    ("mode", "owned"),
+    [
+        (0o755, True),
+        (0o770, True),
+        (0o700, False),
+        (0o1700, True),
+        (0o2700, True),
+        (0o4700, True),
+    ],
+)
 def test_runtime_dir_must_be_private_and_owned(mode: int, owned: bool) -> None:
     fixture = Fixture({PODMAN_SOCKET: sock(PODMAN_SOCKET)})
     fixture.facts[RUNTIME] = runtime_dir(mode=mode, owned=owned)
@@ -404,3 +414,44 @@ def test_default_socket_resolving_into_a_private_runtime_dir_is_accepted() -> No
     fixture = Fixture({DEFAULT_SOCKET: sock(DEFAULT_SOCKET, realpath=target)})
     resolution = fixture.resolve()
     assert paths(resolution) == [DEFAULT_SOCKET]
+
+
+def test_nul_in_the_socket_path_is_not_a_valid_path() -> None:
+    resolution = Fixture().resolve(environ={"DOCKER_HOST": f"unix://{RUNTIME}/docker\0.sock"})
+
+    assert resolution.endpoints == ()
+    assert reasons(resolution) == [RejectionReason.PATH_NOT_ABSOLUTE]
+
+
+@pytest.mark.parametrize(
+    "runtime", ["", "run/user/1000", "/run/user/1000/", "/run/user/../user/1000", "/run//user/1000"]
+)
+def test_a_runtime_dir_that_is_relative_or_not_normalized_gets_no_podman_candidate(
+    runtime: str,
+) -> None:
+    podman = f"{runtime}/podman/podman.sock"
+    fixture = Fixture({podman: sock(podman), runtime: runtime_dir()})
+
+    resolution = fixture.resolve(environ={"XDG_RUNTIME_DIR": runtime})
+
+    assert resolution.endpoints == ()
+    assert resolution.rejected == ()
+
+
+@pytest.mark.parametrize(
+    ("home", "desktop"),
+    [
+        ("/", "/.docker/desktop/docker.sock"),
+        ("/home/user/", DESKTOP_SOCKET),
+        ("/home/./user", DESKTOP_SOCKET),
+    ],
+)
+def test_docker_desktop_socket_is_refused_when_home_is_root_or_not_normalized(
+    home: str, desktop: str
+) -> None:
+    fixture = Fixture({desktop: sock(desktop)})
+
+    resolution = fixture.resolve(environ={"HOME": home, "DOCKER_HOST": f"unix://{desktop}"})
+
+    assert resolution.endpoints == ()
+    assert reasons(resolution) == [RejectionReason.LOCATION_NOT_ALLOWED]

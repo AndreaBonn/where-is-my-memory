@@ -71,6 +71,25 @@ def test_stopped_containers_exclude_running_and_paused() -> None:
     ]
 
 
+def test_a_dead_container_counts_as_stopped_and_a_restarting_one_does_not() -> None:
+    states = {"zombie": "dead", "loop": "restarting", "busy": "running"}
+    df: dict[str, Any] = {
+        "Images": [],
+        "Volumes": [],
+        "Containers": [
+            {"Id": f"{n:064x}", "Names": [f"/{name}"], "State": state, "SizeRw": 100 + n}
+            for n, (name, state) in enumerate(states.items())
+        ],
+        "BuildCache": [],
+    }
+
+    docker = parse_docker_df(df=df)
+
+    assert [(c.name, c.state, c.size) for c in docker.stopped_containers] == [
+        ("zombie", "dead", 100)
+    ]
+
+
 def test_build_cache_total_sums_every_entry() -> None:
     assert parse_docker_df(df=load_df()).build_cache_size == 100 * MB
 

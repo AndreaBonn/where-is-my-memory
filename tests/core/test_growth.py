@@ -58,6 +58,14 @@ def test_growth_trend_short_span_is_none() -> None:
     assert growth_trend(points=points, now=NOW) is None
 
 
+def test_growth_trend_enough_points_over_a_too_short_span_is_none() -> None:
+    # 8 points (above GROWTH_MIN_POINTS) every 5 minutes: 35 minutes, under the minimum span
+    points = [(NOW - timedelta(seconds=300 * (7 - i)), (100 + 400 * i) * MIB) for i in range(8)]
+
+    assert len(points) > c.GROWTH_MIN_POINTS
+    assert growth_trend(points=points, now=NOW) is None
+
+
 def test_growth_trend_single_spike_is_not_growth() -> None:
     for spike in ([100] * 6 + [3000] + [100] * 6, [100] * 12 + [3000], [3000] + [100] * 12):
         assert growth_trend(points=series(megabytes=spike), now=NOW) is None
@@ -94,8 +102,8 @@ def test_growth_trend_ignores_points_older_than_the_window() -> None:
 def test_growth_trend_tolerates_small_dips_in_a_real_rise() -> None:
     noisy = [1000, 1060, 1050, 1130, 1200, 1190, 1280, 1350, 1340, 1420, 1500, 1560]
     trend = growth_trend(points=series(megabytes=noisy), now=NOW)
-    assert trend is not None
-    assert trend.delta_bytes > 256 * MIB
+    # medians of the first and last third: 1055 and 1460 MiB
+    assert trend == GrowthTrend(delta_bytes=405 * MIB, span_s=11 * STEP_S)
 
 
 def test_growth_trend_leak_with_sampling_jitter_is_growth() -> None:
@@ -105,8 +113,8 @@ def test_growth_trend_leak_with_sampling_jitter_is_growth() -> None:
 
     trend = growth_trend(points=series(megabytes=leak), now=NOW)
 
-    assert trend is not None
-    assert trend.delta_bytes >= 256 * MIB
+    # medians of the first and last third: 1060 and 1360 MiB
+    assert trend == GrowthTrend(delta_bytes=300 * MIB, span_s=17 * STEP_S)
 
 
 def test_growth_trend_falls_just_under_the_noise_floor_are_ignored() -> None:
@@ -130,5 +138,7 @@ def test_growth_min_points_cover_the_minimum_span_at_the_sampling_interval() -> 
     assert (c.GROWTH_MIN_POINTS - 2) * c.GROWTH_SAMPLE_INTERVAL_S < c.GROWTH_MIN_SPAN_S
 
 
-def test_growth_trend_seven_points_one_hour_apart_ends_is_growth() -> None:
-    assert growth_trend(points=series(megabytes=[500 + 100 * i for i in range(7)]), now=NOW)
+def test_growth_trend_seven_points_over_exactly_the_minimum_span_is_growth() -> None:
+    trend = growth_trend(points=series(megabytes=[500 + 100 * i for i in range(7)]), now=NOW)
+
+    assert trend == GrowthTrend(delta_bytes=500 * MIB, span_s=c.GROWTH_MIN_SPAN_S)

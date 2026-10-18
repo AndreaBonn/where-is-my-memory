@@ -157,3 +157,49 @@ def test_group_is_idle_when_no_process_was_in_foreground() -> None:
 def test_group_stays_unknown_when_foreground_is_unavailable() -> None:
     group = assess_group_activity(members=[_member(value=None), _member(value=None)])
     assert group.state is ActivityState.UNKNOWN
+
+
+def test_foreground_sample_exactly_at_the_window_start_is_active() -> None:
+    history = fg_series(FULL, seen_at=(-WINDOW,))
+
+    result = assess_activity(inputs=inputs(history, category=Category.BROWSER), config=CONFIG)
+
+    assert (result.state, result.since) == (ActivityState.ACTIVE, at(-WINDOW))
+
+
+def test_foreground_sample_one_second_before_the_window_start_does_not_count() -> None:
+    offsets = [-WINDOW - 1, *FULL]
+    history = fg_series(offsets, seen_at=(-WINDOW - 1,))
+
+    result = assess_activity(inputs=inputs(history, category=Category.BROWSER), config=CONFIG)
+
+    assert result.state is ActivityState.IDLE
+
+
+def test_foreground_category_with_empty_history_is_observing() -> None:
+    result = assess_activity(inputs=inputs((), category=Category.BROWSER), config=CONFIG)
+
+    assert (result.state, result.since) == (ActivityState.UNKNOWN, None)
+    assert result.reason == "in osservazione da meno di 1 minuto"
+
+
+def test_foreground_empty_history_with_a_recent_persisted_instant_is_still_observing() -> None:
+    recent = NOW - timedelta(minutes=10)
+
+    result = assess_activity(
+        inputs=inputs((), category=Category.BROWSER, persisted_last_active=recent), config=CONFIG
+    )
+
+    assert (result.state, result.since) == (ActivityState.UNKNOWN, None)
+
+
+def test_foreground_empty_history_with_an_old_persisted_instant_is_idle() -> None:
+    persisted = NOW - timedelta(hours=1)
+
+    result = assess_activity(
+        inputs=inputs((), category=Category.BROWSER, persisted_last_active=persisted),
+        config=CONFIG,
+    )
+
+    assert (result.state, result.since) == (ActivityState.IDLE, persisted)
+    assert result.reason.startswith("inattivo da 60 minuti")

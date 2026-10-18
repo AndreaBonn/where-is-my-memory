@@ -67,7 +67,9 @@ def test_parity_excludes_what_the_plans_rate_above_safe() -> None:
     local = _plan(kind=ActionKind.IMAGE_REMOVE, disk=data, target=data.docker.images[3].id)
     trash = _plan(kind=ActionKind.TRASH_EMPTY, disk=data)
 
-    assert local.risk is not Risk.SAFE
-    assert trash.risk is not Risk.SAFE
+    assert local.risk is Risk.CAUTION
+    assert trash.risk is Risk.DANGER
     assert local.estimated_reclaim_disk == 30 * MB
-    assert safe_reclaimable_bytes(report=data) < (3 + 2 + 8 + 15 + 25 + 30 + 11) * MB
+    assert trash.estimated_reclaim_disk == 11 * MB
+    # The headline is the safe total only: neither the local build nor the trash is added.
+    assert safe_reclaimable_bytes(report=data) == 53 * MB

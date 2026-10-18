@@ -133,7 +133,22 @@ def test_build_groups_ai_cli_beats_dev_process_but_not_dev_server() -> None:
         )
     )
 
+    assert len(mixed) == 1
     assert mixed[0].category is Category.AI_CLI
+
+
+def test_build_groups_dev_server_beats_ai_cli_in_the_same_project() -> None:
+    cwd = "/work/x"
+    mixed = build(
+        pairs=(
+            dev(10, cwd=cwd, category=Category.AI_CLI),
+            dev(11, cwd=cwd, category=Category.DEV_SERVER),
+        )
+    )
+
+    assert len(mixed) == 1
+    assert mixed[0].process_pids == (10, 11)
+    assert mixed[0].category is Category.DEV_SERVER
 
 
 def test_build_groups_different_roots_make_different_groups() -> None:

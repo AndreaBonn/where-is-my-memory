@@ -195,3 +195,11 @@ def test_the_android_sdk_keeps_its_command_line_tools_and_licenses() -> None:
 def test_huggingface_and_avd_are_emptied_as_a_whole() -> None:
     assert CacheKind.HUGGINGFACE not in CLEAN_SUBDIRS
     assert CacheKind.ANDROID_AVD not in CLEAN_SUBDIRS
+
+
+def test_cargo_registry_and_git_are_cleaned_by_subfolder_and_keep_the_index() -> None:
+    registry = CLEAN_SUBDIRS[CacheKind.CARGO_REGISTRY]
+
+    assert registry == ("cache", "src")
+    assert "index" not in registry
+    assert CLEAN_SUBDIRS[CacheKind.CARGO_GIT] == ("db", "checkouts")

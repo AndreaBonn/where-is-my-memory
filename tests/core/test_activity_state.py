@@ -296,3 +296,13 @@ def test_last_active_at_is_none_without_activity_in_the_window() -> None:
     assert last_active_at(inputs=inputs(cpu_series(FULL, active_at={-30})), config=CONFIG) == at(
         -30
     )
+
+
+def test_last_active_at_is_none_for_a_not_evaluated_category_even_with_cpu() -> None:
+    from wimm.core.activity import last_active_at
+
+    busy = cpu_series(FULL, active_at=set(FULL))
+
+    assert last_active_at(inputs=inputs(busy, category=Category.SYSTEM), config=CONFIG) is None
+    # Positive pair: the same series on an evaluated category reports its last active step.
+    assert last_active_at(inputs=inputs(busy), config=CONFIG) == at(0)
