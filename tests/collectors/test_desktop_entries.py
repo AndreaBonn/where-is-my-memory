@@ -59,11 +59,18 @@ def test_missing_directory_can_appear(tmp_path: Path) -> None:
     assert index.collect().data["new"].name == "New"
 
 
-def test_desktop_directory_error(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:
-    target = tmp_path / "file"
-    target.touch()
-    result = DesktopEntryIndex(directories=(target,)).collect()
-    assert result.error and result.data == {}
+def test_unreadable_directory_is_skipped_and_the_others_are_kept(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    readable = tmp_path / "readable"
+    readable.mkdir()
+    (readable / "good.desktop").write_text("[Desktop Entry]\nName=Good\n")
+    unreadable = tmp_path / "file"
+    unreadable.touch()
+    with caplog.at_level(level=logging.WARNING):
+        result = DesktopEntryIndex(directories=(unreadable, readable)).collect()
+    assert dict(result.data) == {"good": DesktopEntry(name="Good", categories=())}
+    assert str(unreadable) in caplog.text
     assert "WARNING" in caplog.text
 
 

@@ -49,6 +49,9 @@ def directory_stamp(path: Path) -> tuple[int, int] | None:
         directory_mtime = path.stat().st_mtime_ns
     except FileNotFoundError:
         return None
+    except OSError as error:
+        LOGGER.warning("Cannot stat desktop directory %s: %s", path, error)
+        return None
     latest_mtime = 0
     for entry in path.glob("*.desktop"):
         try:
@@ -64,7 +67,12 @@ def build_index(directories: tuple[Path, ...]) -> Mapping[str, DesktopEntry]:
     for directory in directories:
         if directory_stamp(path=directory) is None:
             continue
-        for path in sorted(directory.iterdir()):
+        try:
+            paths = sorted(directory.iterdir())
+        except OSError as error:
+            LOGGER.warning("Skipping unreadable desktop directory %s: %s", directory, error)
+            continue
+        for path in paths:
             if path.suffix != ".desktop" or not path.is_file():
                 continue
             parsed = read_desktop_entry(path=path)

@@ -256,7 +256,7 @@ Funzione pura `build_groups(processes, containers, config) -> list[Group]`. Chia
 2. Processi figli di un'app desktop o del browser: il gruppo dell'antenato più vicino in `DESKTOP_APP`/`BROWSER`/`TERMINAL`.
 3. Processi lanciati da terminale (`DEV_SERVER`, `DEV_PROCESS`, `AI_CLI`): radice del progetto ricavata dalla directory di lavoro (`Process.cwd()`), risalendo fino alla prima cartella che contiene uno fra `.git`, `pyproject.toml`, `package.json`, `compose.yaml`, `docker-compose.yml`, `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`, `build.gradle.kts`. Senza radice trovata: la `cwd` stessa.
 4. Fusione: se la radice di un gruppo di processi coincide con il `working_dir` di un progetto compose (o ne è antenata o discendente), i due gruppi si fondono in un unico gruppo di progetto. È il caso "whitebox: 6 container + uvicorn sulla 8000".
-5. App desktop: un gruppo per scope `app-gnome-<appid>-*` o `snap.<nome>.*`; il nome è il campo `Name` del `.desktop` trovato in `/usr/share/applications`, `~/.local/share/applications`, `/var/lib/snapd/desktop/applications`, `/var/lib/flatpak/exports/share/applications`; in mancanza, l'appid.
+5. App desktop: un gruppo per scope `app-gnome-<appid>-*` o `snap.<nome>.*`; il nome è il campo `Name` del `.desktop` trovato in `/usr/share/applications`, `~/.local/share/applications`, `/var/lib/snapd/desktop/applications`, `/var/lib/flatpak/exports/share/applications`; in mancanza, l'appid. Una directory illeggibile si salta con un avviso e le voci delle altre restano.
 6. Tutto il resto: un gruppo per processo radice.
 
 L'ID di un gruppo deve essere stabile fra campioni (serve a notifiche, silenzi e storia): hash di (categoria, chiave di raggruppamento), non di PID.
