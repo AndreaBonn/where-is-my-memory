@@ -6,12 +6,8 @@ from pathlib import Path
 
 from wimm.collectors.devdir_context import read_devdir_context
 from wimm.collectors.devdirs import project_age_days
-from wimm.core.constants import (
-    CACHE_COMMAND_TIMEOUT_S,
-    CACHE_ENV_VARS,
-    CACHE_RELATIVE_PATHS,
-    TRASH_CONTENT_DIRS,
-)
+from wimm.core.cache_catalog import CACHE_ENV_VARS, CACHE_RELATIVE_PATHS
+from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S, TRASH_CONTENT_DIRS
 from wimm.core.devdir_rules import MARKERS_BY_NAME, classify_devdir
 from wimm.model.actions import DirFingerprint, PlanStep
 from wimm.model.enums import ActionKind

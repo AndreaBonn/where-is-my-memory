@@ -20,7 +20,8 @@ from tests.service.fs_fakes import (
     make_trash,
 )
 from wimm.config import Config
-from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S, CACHE_ENV_VARS
+from wimm.core.cache_catalog import CACHE_ENV_VARS
+from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S
 from wimm.model.actions import DirFingerprint
 from wimm.model.enums import ActionKind
 from wimm.service.control_protocols import StepStatus

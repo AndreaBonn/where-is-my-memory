@@ -5,10 +5,10 @@ import pytest
 
 from wimm.core.disk_rules import build_disk_report, parse_docker_df
 from wimm.core.disk_wire import disk_report_from_json, disk_report_to_json
-from wimm.model.disk import CacheKind
+from wimm.model.disk import CacheKind, DiskReport
 from wimm.serialize import SnapshotFormatError
 
-from .disk_helpers import FIXTURES, SCANNED_AT, load_df
+from .disk_helpers import FIXTURES, MB, SCANNED_AT, cache, load_df, report
 
 SAMPLE = FIXTURES / "disk_report_sample.json"
 
@@ -102,3 +102,41 @@ def test_devdir_marker_of_the_wrong_type_is_rejected(document: dict[str, Any]) -
 
     with pytest.raises(SnapshotFormatError, match="marker"):
         disk_report_from_json(text=json.dumps(document))
+
+
+def _report_with_kinds(*kinds: CacheKind) -> DiskReport:
+    return report(caches=tuple(cache(kind=kind, size=MB) for kind in kinds))
+
+
+def test_a_cache_of_a_new_type_survives_a_roundtrip() -> None:
+    built = _report_with_kinds(CacheKind.CARGO_REGISTRY, CacheKind.JETBRAINS, CacheKind.GO_MOD)
+
+    decoded = disk_report_from_json(text=disk_report_to_json(report=built))
+
+    assert decoded == built
+    assert [entry.kind.value for entry in decoded.caches] == [
+        "cargo_registry",
+        "jetbrains",
+        "go_mod",
+    ]
+
+
+def test_a_report_saved_with_the_old_five_types_still_decodes() -> None:
+    old = _report_with_kinds(
+        CacheKind.UV, CacheKind.NPM, CacheKind.PIP, CacheKind.TRASH, CacheKind.THUMBNAILS
+    )
+    text = disk_report_to_json(report=old)
+
+    assert disk_report_from_json(text=text) == old
+    assert [entry["kind"] for entry in json.loads(text)["caches"]] == [
+        "uv",
+        "npm",
+        "pip",
+        "trash",
+        "thumbnails",
+    ]
+
+
+def test_a_type_outside_the_catalog_is_still_rejected(document: dict[str, Any]) -> None:
+    with pytest.raises(SnapshotFormatError, match="CacheKind"):
+        disk_report_from_json(text=_mutated(document, ("caches", 0, "kind"), "cargo"))

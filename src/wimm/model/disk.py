@@ -12,6 +12,18 @@ class CacheKind(Enum):
     PIP = "pip"
     THUMBNAILS = "thumbnails"
     TRASH = "trash"
+    CARGO_REGISTRY = "cargo_registry"
+    CARGO_GIT = "cargo_git"
+    GRADLE = "gradle"
+    MAVEN = "maven"
+    GO_MOD = "go_mod"
+    GO_BUILD = "go_build"
+    YARN = "yarn"
+    PNPM = "pnpm"
+    BUN = "bun"
+    CONDA = "conda"
+    PLAYWRIGHT = "playwright"
+    JETBRAINS = "jetbrains"
 
 
 def _require_text(value: str, field: str) -> None:

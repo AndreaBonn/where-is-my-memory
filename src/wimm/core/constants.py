@@ -192,14 +192,6 @@ DIRSIZE_PAUSE_S = 0.01
 DISK_CACHE_FILENAME = "disk-cache.json"
 DISK_CACHE_VERSION = 1
 
-# SPECIFICHE 7.6 (disk report): cache folders relative to HOME, keyed by CacheKind.value.
-CACHE_RELATIVE_PATHS = (
-    ("uv", ".cache/uv"),
-    ("npm", ".npm/_cacache"),
-    ("pip", ".cache/pip"),
-    ("trash", ".local/share/Trash"),
-    ("thumbnails", ".cache/thumbnails"),
-)
 # SPECIFICHE 7.6 (dependency folders): the project subfolder whose first level counts for
 # the age. The searched names live in core.devdir_rules.
 DEVDIR_SOURCE_DIRNAME = "src"
@@ -207,8 +199,6 @@ SECONDS_PER_DAY = 86400
 # SPECIFICHE 8.4 (caches): pip falls back to removing the folder content when the tool is not
 # on PATH. Thumbnails and trash have no command.
 CACHE_COMMAND_TIMEOUT_S = 300
-# Variables that redirect a cache tool away from the planned folder: removed from its environment.
-CACHE_ENV_VARS = ("UV_CACHE_DIR", "PIP_CACHE_DIR", "npm_config_cache")
 # SPECIFICHE 8.4 (trash): the folders under the trash whose content is removed.
 TRASH_CONTENT_DIRS = ("files", "info")
 MOUNTINFO_PATH = "/proc/self/mountinfo"

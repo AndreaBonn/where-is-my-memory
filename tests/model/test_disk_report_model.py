@@ -122,7 +122,25 @@ def test_cache_and_devdir_reject_negative_numbers() -> None:
 
 
 def test_cache_kinds_cover_the_spec_list() -> None:
-    assert {k.value for k in CacheKind} == {"uv", "npm", "pip", "thumbnails", "trash"}
+    assert {k.value for k in CacheKind} == {
+        "uv",
+        "npm",
+        "pip",
+        "thumbnails",
+        "trash",
+        "cargo_registry",
+        "cargo_git",
+        "gradle",
+        "maven",
+        "go_mod",
+        "go_build",
+        "yarn",
+        "pnpm",
+        "bun",
+        "conda",
+        "playwright",
+        "jetbrains",
+    }
 
 
 def test_devdir_marker_defaults_to_empty_and_must_be_text() -> None:

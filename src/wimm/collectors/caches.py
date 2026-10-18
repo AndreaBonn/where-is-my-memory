@@ -6,7 +6,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from wimm.collectors.dirsize import measure_dir_size
-from wimm.core.constants import CACHE_RELATIVE_PATHS
+from wimm.core.cache_catalog import CACHE_RELATIVE_PATHS
 from wimm.model.disk import CacheEntry, CacheKind
 
 LOGGER = logging.getLogger(__name__)
