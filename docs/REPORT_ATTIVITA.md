@@ -377,3 +377,54 @@ L'app si può usare in italiano o in inglese. La lingua si sceglie dalle Prefere
 - **Complessità:** alta (12 commit)
 - **Stato:** interfaccia bilingue completata e verificata con test automatici; avvio reale con `make run` non verificato.
 - **Prossimo:** provare l'app con `make run` su uno schermo reale.
+
+
+## 2026-10-18 | Sessione #6 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Il lavoro copre 18 commit, dal piano `d40bd18` alla misura dell'apertura della finestra `0cc31ac`, con workflow RPI sul piano `specs/001-product-gaps`. Chiudono il lotto L1 e quasi tutto il lotto L2.
+
+### Richiesta
+
+L'utente ha chiesto un audit di prodotto e l'esecuzione del piano che ne deriva, con workflow Research, Plan, Implement.
+
+### Azioni Eseguite
+
+**Audit e piano** (`d40bd18`)
+- Audit di prodotto con 17 proposte (F1-F17). Il piano `specs/001-product-gaps/plan.md` le raggruppa in 12 lotti (L1-L12).
+- L'architect ha dato rilievi su tre punti: ADR-006 su Wayland, motori container, distribuzione. Il security-reviewer ha elencato 18 rilievi (S1-S18).
+- Decisioni: le domande Q1-Q7 seguono il default proposto. La Q8 (URL della homepage e del bug tracker) è aperta, quindi il task T025 è sospeso.
+
+**L1, primo avvio senza configurazione** (`670c590` ... `c3181fc`)
+- Le radici dei progetti si rilevano in automatico sotto la home (`d09e8e3`, `f42d904`, `47e9021`, `e4b6244`) invece di usare il percorso personale dell'autore. Il riconoscimento dei progetti include Rust, Go, Java e Gradle (`afd05a1`).
+- Una cartella di progetto mancante genera un avviso e uno stato vuoto con il pulsante "Scegli una cartella" (`bd7c20c`).
+- Fuori dalle locali italiane l'interfaccia parte in inglese (`f031619`).
+- Le cartelle di dipendenze ricostruibili sono classificate per ecosistema, con marker per Rust, Java, Gradle e Next (`cad1cca`, `35f9f5c`). Sulla home reale le cartelle trovate passano da 76 a 88, con un aumento di durata del 3% (`1e0d9ef`, `docs/PERF.md`).
+- La conferma di pulizia mostra il comando di ricostruzione.
+- `docs/DEVIATIONS.md` registra radici rilevate, inglese predefinito e nuove cartelle (`c3181fc`).
+
+**L2, qualità e distribuzione** (`0581767`, `63afd9c`, `928d839`, `0cc31ac`)
+- `make audit` esegue bandit e pip-audit ed è in CI.
+- Il pacchetto `.deb` include la pagina di manuale di `wimm`.
+- Misura dell'apertura della finestra: 236 ms alla prima apertura, 10 ms alla riapertura. Le voci M-17..M-23 dei controlli manuali sono elencate.
+- T025 resta sospeso in attesa della Q8.
+
+**Problemi trovati e corretti in corsa**
+- pip-audit come dipendenza di sviluppo portava `requests` 2.34 nel venv e rompeva `python3-docker`: in sviluppo Docker risultava non disponibile. Bandit e pip-audit ora girano in ambienti `uvx` isolati, con un test di guardia (`928d839`).
+- Nel click-through reale il pulsante "Scegli una cartella" selezionava tutto il testo, e il primo tasto premuto cancellava le cartelle salvate. Corretto.
+- Il controllo delle radici mancanti faceva I/O sul thread della UI a ogni snapshot. Ora a ogni snapshot si confronta solo l'elenco salvato, senza toccare il disco; la verifica delle cartelle avviene solo dopo una scansione o un cambio delle preferenze.
+- Dalla review di sicurezza di L1 (nessun P0 o P1): `user-dirs.dirs` letto senza seguire link e con un limite di dimensione, mount di rete esclusi prima di ogni accesso al disco, cartella documenti nascosta (per esempio `~/.cargo`) rifiutata come radice.
+
+### Punti aperti
+
+- Pre-esistente, fuori scope, non corretto: a 375 px il banner "L'icona nella barra richiede l'estensione AppIndicator" copre l'intestazione della vista Disco e il pulsante "Controlla ora".
+- Q8 aperta: servono l'URL della homepage e quello del bug tracker per chiudere T025.
+
+### Note per il Cliente (linguaggio NON tecnico)
+
+Al primo avvio l'app trova da sola le cartelle dei progetti, senza bisogno di indicare un percorso. Se una cartella non esiste più lo segnala e propone di sceglierne un'altra. Fuori da un computer in italiano l'app si apre in inglese. Riconosce più tipi di progetto (Rust, Java, Gradle, Next) e li propone per la pulizia, mostrando anche il comando per ricostruire ciò che viene eliminato. L'app si apre in circa un quarto di secondo la prima volta e quasi subito le volte successive. Durante le prove è stato corretto un difetto che, scegliendo una cartella, poteva cancellare quelle già salvate. Resta da sistemare un banner che su schermi molto stretti copre un pulsante.
+
+### Riepilogo
+
+- **Complessità:** alta (18 commit)
+- **Stato:** L1 completato; L2 completato tranne T025 (sospeso per la Q8).
+- **Prossimo:** lotto L3 (cache degli sviluppatori), poi L4-L12.
