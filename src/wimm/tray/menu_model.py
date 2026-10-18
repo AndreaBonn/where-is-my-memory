@@ -1,3 +1,4 @@
+import zlib
 from datetime import datetime
 
 from wimm.i18n import N_, _
@@ -28,6 +29,7 @@ QUIT_TEXT = N_("Esci")
 
 # Fixed dbusmenu ids: a click may arrive for the layout the user saw before a refresh,
 # so an id must never move to another entry (the old "Silenzia" id must not become "Esci").
+# Group ids derive from the group id, so they survive a reorder of the groups.
 ERROR_ID = 1
 RAM_ID = 2
 DISK_ID = 3
@@ -36,8 +38,17 @@ QUIT_ID = 5
 OPEN_ID = 6
 GROUPS_HEADER_ID = 7
 GROUP_BASE_ID = 100
+GROUP_ID_SPAN = 2**31 - GROUP_BASE_ID
 
 Entry = tuple[int, str, bool, str]
+
+
+def _group_item_id(*, group_id: str, taken: set[int]) -> int:
+    """A dbusmenu id stable per group id; probes upward only on a (rare) clash in one menu."""
+    item_id = GROUP_BASE_ID + zlib.crc32(group_id.encode()) % GROUP_ID_SPAN
+    while item_id in taken:
+        item_id = GROUP_BASE_ID + (item_id - GROUP_BASE_ID + 1) % GROUP_ID_SPAN
+    return item_id
 
 
 def _percent(*, part: int, total: int) -> int:
@@ -110,10 +121,12 @@ def _summary_entries(*, snapshot: Snapshot) -> list[Entry]:
     idle = _idle_groups(snapshot=snapshot)
     if idle:
         entries.append((GROUPS_HEADER_ID, _(GROUPS_HEADER_TEXT), False, ""))
-    for slot, group in enumerate(idle):
-        size = format_size(size=group.memory.reclaimable)
-        label = f"{group.name} ({size})"
-        entries.append((GROUP_BASE_ID + slot, label, True, f"{GROUP_PREFIX}{group.id}"))
+    taken: set[int] = set()
+    for group in idle:
+        item_id = _group_item_id(group_id=group.id, taken=taken)
+        taken.add(item_id)
+        label = f"{group.name} ({format_size(size=group.memory.reclaimable)})"
+        entries.append((item_id, label, True, f"{GROUP_PREFIX}{group.id}"))
     return entries
 
 

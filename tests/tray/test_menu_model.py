@@ -205,3 +205,28 @@ def test_idle_groups_with_equal_reclaimable_list_the_one_using_more_memory_first
         "mid (1,0 GB)",
         "alpha (1,0 GB)",
     ]
+
+
+def group_callbacks_by_id(items: list[MenuItem]) -> dict[int, str]:
+    return {item.id: item.callback_id for item in items if item.callback_id.startswith("group:")}
+
+
+def test_group_item_id_from_a_superseded_layout_never_opens_another_group() -> None:
+    alpha = make_group("a", reclaimable=3 * GB)
+    beta = make_group("b", reclaimable=GB)
+    gamma = make_group("c", reclaimable=2 * GB)
+    first = mm.build_menu(snapshot=with_groups(alpha, beta, gamma), consecutive_failures=0)
+    reordered = with_groups(replace(beta, memory=MemoryUse(used=9 * GB, reclaimable=5 * GB)), alpha)
+    second = mm.build_menu(snapshot=reordered, consecutive_failures=0)
+    old, new = group_callbacks_by_id(first), group_callbacks_by_id(second)
+    assert len(old) == 3 and len(new) == 2  # the guard below is not vacuous
+    for item_id, callback in old.items():
+        assert new.get(item_id, callback) == callback
+
+
+def test_group_item_ids_are_distinct_and_clear_of_the_fixed_ids() -> None:
+    groups = [make_group(name, reclaimable=GB + i) for i, name in enumerate("abcde")]
+    items = mm.build_menu(snapshot=with_groups(*groups), consecutive_failures=0)
+    ids = list(group_callbacks_by_id(items))
+    assert len(ids) == 5 and len(set(ids)) == 5
+    assert all(mm.GROUP_BASE_ID <= item_id < 2**31 for item_id in ids)
