@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 import pytest
+from gi.repository import Adw
 
 from tests.core.planning_helpers import container, group, proc, snapshot
 from tests.ui.conftest import FakeActionService, WindowFactory, main_context_iterate
@@ -74,18 +75,36 @@ def test_a_finished_stop_of_processes_only_offers_no_restart(
 
 
 def test_restart_targets_the_plan_of_the_toast_even_after_a_later_action(
-    window_factory: WindowFactory,
+    window_factory: WindowFactory, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    window, service, plan_id = stop_project(window_factory)
-    button = button_labelled(window, RESTART)
-    assert button is not None
+    # The later outcome replaces the toast on screen, so its button widget is being
+    # dismissed: clicking that widget raced the close animation. The toast object keeps
+    # its own handler, which is what must stay bound to the plan it announced.
+    window, service = ready(window_factory)
+    added: list[Adw.Toast] = []
+    add_toast = window.toasts.add_toast
+
+    def record(toast: Adw.Toast) -> None:
+        added.append(toast)
+        add_toast(toast)
+
+    monkeypatch.setattr(window.toasts, "add_toast", record)
+    service.publish(project_snapshot())
+    main_context_iterate()
+    plan = confirmed(window, service)
+    outcomes = tuple(StepOutcome(order=s.order, status=StepStatus.DONE) for s in plan.steps)
+    service.stopped[plan.plan_id] = (StoppedContainer(id="c1", label="name-c1"),)
+    service.emit("action-finished", plan.plan_id, outcomes)
+    main_context_iterate()
+    (restart,) = [toast for toast in added if toast.get_button_label() == RESTART]
+
     later = StepOutcome(order=1, status=StepStatus.DONE)
     service.emit("action-finished", "a-later-plan", (later,))
     main_context_iterate()
+    restart.emit("button-clicked")
 
-    button.emit("clicked")
-
-    assert service.planned[-1].target_id == TargetId(plan_id)
+    assert service.planned[-1].kind is ActionKind.RESTART_STOPPED
+    assert service.planned[-1].target_id == TargetId(plan.plan_id)
 
 
 def test_a_container_that_was_already_gone_is_not_offered_for_restart(

@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from tests.ui.conftest import main_context_iterate
+from tests.ui.conftest import wait_until
 from wimm.ui import toasts
 from wimm.ui.toasts import clear_if_local, copy_to_clipboard
 
@@ -14,7 +14,6 @@ gi.require_version("Gdk", "4.0")
 from gi.repository import Gdk, Gio
 
 pytestmark = pytest.mark.ui
-ITERATIONS = 200
 HINT = "x-kde-passwordManagerHint"
 
 
@@ -29,10 +28,8 @@ def test_copy_to_clipboard_makes_the_text_readable_back() -> None:
         read.append(source.read_text_finish(result))
 
     clipboard.read_text_async(None, done)
-    for _ in range(ITERATIONS):
-        if read:
-            break
-        main_context_iterate()
+    # A fixed count of non-blocking iterations ends before a slow X server answers.
+    wait_until(lambda: bool(read), description="the clipboard text to be read back")
 
     assert read == ["cd '/a b' && node x.js\ncd /c && y"]
 
