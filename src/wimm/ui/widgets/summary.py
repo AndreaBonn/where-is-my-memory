@@ -86,7 +86,7 @@ def _build_stop_all(*, on_stop_all: Callable[[], None] | None) -> Gtk.Button:
 
 
 class SummaryPanel(Gtk.Box):
-    """RAM bar, disk usage, reclaimable totals and the (phase 3) stop-all button."""
+    """RAM bar, disk usage, reclaimable totals and the stop-all button."""
 
     def __init__(self, *, on_stop_all: Callable[[], None] | None = None) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=SECTION_SPACING)

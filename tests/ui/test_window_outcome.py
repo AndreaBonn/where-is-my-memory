@@ -106,7 +106,7 @@ def test_finished_with_a_failure_offers_details_with_each_step_in_italian(
     finish(service, plan, StepStatus.FAILED)
     main_context_iterate()
 
-    shown(window, "Alcune operazioni non sono riuscite")
+    shown(window, "whitebox: operazione non riuscita")
     assert outcome_rows(open_details(window)) == [(label, "Non riuscito")]
 
 
@@ -118,7 +118,7 @@ def test_finished_all_done_offers_no_details(window_factory: WindowFactory) -> N
     finish(service, plan, StepStatus.DONE)
     main_context_iterate()
 
-    shown(window, "Fatto")
+    shown(window, "whitebox: arresto completato")
     assert button_labelled(window, DETAILS) is None
 
 
@@ -371,5 +371,33 @@ def test_a_partly_failed_plan_offers_details_even_if_another_step_succeeded(
     service.emit("action-finished", plan.plan_id, outcomes)
     main_context_iterate()
 
-    shown(window, "Alcune operazioni non sono riuscite")
+    shown(window, "1 su 2 fermati, 1 non riuscito")
     assert button_labelled(window, DETAILS) is not None
+
+
+def test_the_late_close_of_the_old_dialog_keeps_the_reference_to_the_replanned_one(
+    window_factory: WindowFactory,
+) -> None:
+    window, service = ready(window_factory)
+    plan = confirmed(window, service)
+    old_dialog = flow_of(window).dialog
+    service.emit("action-rejected", plan.plan_id, TargetChanged())
+    main_context_iterate()
+    new_dialog = flow_of(window).dialog
+    assert new_dialog is not None and new_dialog is not old_dialog
+
+    assert old_dialog is not None
+    old_dialog.emit("closed")
+
+    assert flow_of(window).dialog is new_dialog
+
+
+def test_closing_the_current_dialog_clears_the_reference(window_factory: WindowFactory) -> None:
+    window, _service = ready(window_factory)
+    primary_button(window).emit("clicked")
+    dialog = flow_of(window).dialog
+    assert dialog is not None
+
+    dialog.emit("closed")
+
+    assert flow_of(window).dialog is None

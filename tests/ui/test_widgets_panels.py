@@ -90,7 +90,7 @@ def test_summary_panel_shows_totals_and_a_disabled_stop_all_button(
     (button,) = [w for w in descendants(panel) if w.get_name() == "stop-all-idle"]
     assert isinstance(button, Gtk.Button)
     assert not button.get_sensitive()
-    assert button.get_tooltip_text() == "Disponibile con le azioni (fase 3)"
+    assert button.get_tooltip_text() == "Le azioni non sono attive in questa finestra"
 
 
 def test_summary_panel_opens_with_a_status_sentence_in_the_pressure_style(

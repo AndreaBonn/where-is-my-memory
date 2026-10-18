@@ -42,7 +42,7 @@ def test_a_finished_stop_of_containers_offers_to_start_them_again(
     window_factory: WindowFactory,
 ) -> None:
     window, service, plan_id = stop_project(window_factory)
-    shown(window, "Fatto")
+    shown(window, "whitebox: arresto completato")
     button = button_labelled(window, RESTART)
     assert button is not None
 
@@ -69,7 +69,7 @@ def test_a_finished_stop_of_processes_only_offers_no_restart(
     service.emit("action-finished", plan.plan_id, (StepOutcome(order=1, status=StepStatus.DONE),))
     main_context_iterate()
 
-    shown(window, "Fatto")
+    shown(window, "whitebox: arresto completato")
     assert button_labelled(window, RESTART) is None
 
 
@@ -108,5 +108,5 @@ def test_a_container_that_was_already_gone_is_not_offered_for_restart(
     service.emit("action-finished", plan.plan_id, outcomes)
     main_context_iterate()
 
-    shown(window, "Fatto")
+    shown(window, "whitebox: arresto completato")
     assert button_labelled(window, RESTART) is None

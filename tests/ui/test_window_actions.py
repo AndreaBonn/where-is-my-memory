@@ -16,6 +16,7 @@ from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind, Category, GroupId, Risk, TargetId
 from wimm.model.errors import ProtectedTarget
 from wimm.model.snapshot import ActionOffer, Member, Snapshot
+from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE
 from wimm.ui.widgets.group_row import PRIMARY_ACTION_NAME
 from wimm.ui.widgets.summary import SummaryPanel
@@ -82,10 +83,11 @@ def test_finished_action_tells_the_user_it_is_done(window_factory: WindowFactory
     window = window_factory(service)
     present_and_settle(window)
 
-    service.emit("action-finished", "p-1", ())
+    done = (StepOutcome(order=0, status=StepStatus.DONE),)
+    service.emit("action-finished", "p-1", done)
     main_context_iterate()
 
-    assert "Fatto" in toast_texts(window)
+    assert "1 elemento: operazione completata" in toast_texts(window)
 
 
 def test_without_an_action_service_the_button_stays_disabled(

@@ -33,7 +33,7 @@ def test_the_toast_warns_about_secrets_before_offering_the_copy(
 ) -> None:
     window, _service, _plan_id = stop_processes(window_factory, commands=(FIRST,))
 
-    shown(window, f"Fatto. {WARNING}")
+    shown(window, f"whitebox: arresto completato. {WARNING}")
     assert button_labelled(window, COPY) is not None
 
 
@@ -60,7 +60,7 @@ def test_copy_puts_one_command_per_line_on_the_clipboard(
 def test_no_command_means_no_copy_button(window_factory: WindowFactory) -> None:
     window, _service, _plan_id = stop_processes(window_factory, commands=())
 
-    shown(window, "Fatto")
+    shown(window, "whitebox: arresto completato")
     assert button_labelled(window, COPY) is None
 
 

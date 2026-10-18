@@ -5,7 +5,7 @@ from gi.repository import Adw
 
 from tests.core.disk_helpers import docker_disk, report, volume
 from tests.core.planning_helpers import group, proc, snapshot
-from tests.service.executor_fakes import container_step, make_plan
+from tests.service.executor_fakes import container_step, make_plan, process_step
 from tests.ui.conftest import descendants
 from tests.ui.test_confirm_dialog import entry_rows, labels, open_dialog, stop
 from wimm.model.actions import ActionRequest
@@ -65,13 +65,22 @@ def test_a_mixed_selection_and_the_totals_read_in_english() -> None:
 
 
 def test_the_outcome_texts_are_in_english() -> None:
+    plan = make_plan(steps=[process_step(order=1, pid=1), process_step(order=2, pid=2)])
     done = (StepOutcome(order=0, status=StepStatus.DONE),)
     stuck = (StepOutcome(order=0, status=StepStatus.NOT_RESPONDING),)
     failed = (StepOutcome(order=0, status=StepStatus.FAILED),)
+    second = StepOutcome(order=1, status=StepStatus.FAILED)
+    third = StepOutcome(order=2, status=StepStatus.NOT_RESPONDING)
 
-    assert summary_text(outcomes=done) == "Done"
-    assert summary_text(outcomes=failed) == "Some operations failed"
-    assert summary_text(outcomes=stuck) == "A process did not answer the close request"
+    assert summary_text(outcomes=done, subject="whitebox") == "whitebox: operation completed"
+    assert summary_text(outcomes=done, plan=plan, subject="whitebox") == "whitebox: stop completed"
+    assert summary_text(outcomes=(*done, *done), plan=plan) == "2 items: stop completed"
+    assert summary_text(outcomes=(*done, second), plan=plan) == "1 of 2 stopped, 1 failed"
+    assert summary_text(outcomes=(*stuck, *done, third), plan=plan) == (
+        "1 of 3 stopped, 2 not responding"
+    )
+    assert summary_text(outcomes=stuck, subject="firefox") == "firefox: not responding"
+    assert summary_text(outcomes=failed, subject="firefox") == "firefox: operation failed"
     assert freed_text(delta=ReclaimDelta(freed_ram=GB, freed_disk=2 * GB)) == (
         "Freed 1.0 GB of RAM and 2.0 GB of disk"
     )

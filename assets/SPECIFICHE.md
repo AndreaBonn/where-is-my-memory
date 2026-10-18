@@ -621,7 +621,7 @@ Formati: dimensioni con `GLib.format_size` (unità SI, separatore decimale della
 | Dialogo di conferma | pulsante in loading durante l'esecuzione, campi bloccati | n/d | esito per bersaglio con causa; i bersagli riusciti restano segnati come riusciti | piano scaduto: messaggio "La situazione è cambiata, ricalcolo…" e nuovo piano |
 | Icona | icona normale senza etichetta finché non arriva il primo snapshot | etichetta assente sotto 100 MB | icona di avviso e "Monitor non attivo" | |
 
-Ogni esito di azione appare come `Adw.Toast` ("whitebox fermato, liberati 1,0 GB"), con il pulsante "Dettagli" se qualche bersaglio è fallito.
+Ogni esito di azione appare come `Adw.Toast` che nomina il soggetto e l'esito ("whitebox: arresto completato. Liberati 1,0 GB di RAM"; la forma "soggetto: esito" evita gli errori di accordo di genere), con il pulsante "Dettagli" se qualche bersaglio è fallito.
 
 ### 10.4 Accessibilità
 

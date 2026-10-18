@@ -44,7 +44,7 @@ def test_actionable_group_row_has_exactly_one_disabled_primary_button(group_row:
     assert isinstance(buttons[0], Gtk.Button)
     assert buttons[0].get_label() == "Ferma"
     assert not buttons[0].get_sensitive()
-    assert buttons[0].get_tooltip_text() == "Disponibile con le azioni (fase 3)"
+    assert buttons[0].get_tooltip_text() == "Le azioni non sono attive in questa finestra"
 
 
 def test_group_without_primary_action_has_no_button_and_says_so_in_the_badge(

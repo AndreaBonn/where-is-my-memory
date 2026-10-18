@@ -897,52 +897,52 @@ msgstr "See and decide"
 msgid "Non ora (24 h)"
 msgstr "Not now (24 h)"
 
-#: src/wimm/tray/menu_model.py:23
+#: src/wimm/tray/menu_model.py:24
 msgid "Monitoraggio in errore: apri il pannello per i dettagli"
 msgstr "Monitoring failed: open the panel for details"
 
-#: src/wimm/tray/menu_model.py:24
+#: src/wimm/tray/menu_model.py:25
 msgid "Apri Where Is My Memory"
 msgstr "Open Where Is My Memory"
 
-#: src/wimm/tray/menu_model.py:25
+#: src/wimm/tray/menu_model.py:26
 msgid "Da liberare:"
 msgstr "To free up:"
 
-#: src/wimm/tray/menu_model.py:26
+#: src/wimm/tray/menu_model.py:27
 msgid "Silenzia notifiche per 1 h"
 msgstr "Mute notifications for 1 h"
 
-#: src/wimm/tray/menu_model.py:27 src/wimm/ui/window_notify.py:68
+#: src/wimm/tray/menu_model.py:28 src/wimm/ui/window_notify.py:68
 msgid "Esci"
 msgstr "Quit"
 
-#: src/wimm/tray/menu_model.py:52
+#: src/wimm/tray/menu_model.py:63
 #, python-brace-format
 msgid "{size} liberi"
 msgstr "{size} free"
 
-#: src/wimm/tray/menu_model.py:59
+#: src/wimm/tray/menu_model.py:70
 #, python-brace-format
 msgid "{size} da liberare"
 msgstr "{size} to free up"
 
-#: src/wimm/tray/menu_model.py:67
+#: src/wimm/tray/menu_model.py:78
 #, no-python-format, python-brace-format
 msgid "Memoria usata {percent}%, disco: {disk}"
 msgstr "Memory used {percent}%, disk: {disk}"
 
-#: src/wimm/tray/menu_model.py:104
+#: src/wimm/tray/menu_model.py:115
 #, python-brace-format
 msgid "Memoria usata: {percent}%"
 msgstr "Memory used: {percent}%"
 
-#: src/wimm/tray/menu_model.py:108
+#: src/wimm/tray/menu_model.py:119
 #, python-brace-format
 msgid "Disco: {disk}"
 msgstr "Disk: {disk}"
 
-#: src/wimm/tray/menu_model.py:124 src/wimm/ui/window_notify.py:14
+#: src/wimm/tray/menu_model.py:137 src/wimm/ui/window_notify.py:14
 #, python-brace-format
 msgid "Notifiche silenziate fino alle {until}"
 msgstr "Notifications muted until {until}"
@@ -2043,58 +2043,162 @@ msgstr "%m/%d"
 msgid "+{size} in {duration}"
 msgstr "+{size} in {duration}"
 
-#: src/wimm/ui/outcome.py:14
-msgid "Fatto"
-msgstr "Done"
-
-#: src/wimm/ui/outcome.py:15
-msgid "Alcune operazioni non sono riuscite"
-msgstr "Some operations failed"
-
 #: src/wimm/ui/outcome.py:16
-msgid "Un processo non ha risposto alla chiusura"
-msgstr "A process did not answer the close request"
+msgid "Nessuna operazione eseguita"
+msgstr "No operation performed"
 
-#: src/wimm/ui/outcome.py:17
+#: src/wimm/ui/outcome.py:19
+msgid "arresto completato"
+msgstr "stop completed"
+
+#: src/wimm/ui/outcome.py:19
+msgid "fermati"
+msgstr "stopped"
+
+#: src/wimm/ui/outcome.py:19 src/wimm/ui/outcome.py:20
+msgid "già chiuso"
+msgstr "already closed"
+
+#: src/wimm/ui/outcome.py:20
+msgid "chiusi a forza"
+msgstr "force-closed"
+
+#: src/wimm/ui/outcome.py:20
+msgid "chiusura forzata completata"
+msgstr "forced close completed"
+
+#: src/wimm/ui/outcome.py:21
+msgid "già rimosso"
+msgstr "already removed"
+
+#: src/wimm/ui/outcome.py:21
+msgid "rimossi"
+msgstr "removed"
+
+#: src/wimm/ui/outcome.py:21
+msgid "rimozione completata"
+msgstr "removal completed"
+
+#: src/wimm/ui/outcome.py:22
+msgid "già pulito"
+msgstr "already clean"
+
+#: src/wimm/ui/outcome.py:22
+msgid "puliti"
+msgstr "cleaned"
+
+#: src/wimm/ui/outcome.py:22
+msgid "pulizia completata"
+msgstr "cleanup completed"
+
+#: src/wimm/ui/outcome.py:23
+msgid "già acceso"
+msgstr "already running"
+
+#: src/wimm/ui/outcome.py:23
+msgid "riavviati"
+msgstr "restarted"
+
+#: src/wimm/ui/outcome.py:23
+msgid "riavvio completato"
+msgstr "restart completed"
+
+#: src/wimm/ui/outcome.py:24
+msgid "completati"
+msgstr "completed"
+
+#: src/wimm/ui/outcome.py:24
+msgid "già a posto"
+msgstr "already done"
+
+#: src/wimm/ui/outcome.py:24
+msgid "operazione completata"
+msgstr "operation completed"
+
+#: src/wimm/ui/outcome.py:49
 #, python-brace-format
 msgid "Passo {order}"
 msgstr "Step {order}"
 
-#: src/wimm/ui/outcome.py:20
+#: src/wimm/ui/outcome.py:52
 msgid "Chiuso"
 msgstr "Closed"
 
-#: src/wimm/ui/outcome.py:21
+#: src/wimm/ui/outcome.py:53
 msgid "Già chiuso"
 msgstr "Already closed"
 
-#: src/wimm/ui/outcome.py:22
+#: src/wimm/ui/outcome.py:54
 msgid "Non risponde"
 msgstr "Not responding"
 
-#: src/wimm/ui/outcome.py:23
+#: src/wimm/ui/outcome.py:55
 msgid "Non riuscito"
 msgstr "Failed"
 
-#: src/wimm/ui/outcome.py:28
+#: src/wimm/ui/outcome.py:60
 msgid "Già acceso"
 msgstr "Already running"
 
-#: src/wimm/ui/outcome.py:28
+#: src/wimm/ui/outcome.py:60
 msgid "Riacceso"
 msgstr "Started again"
 
-#: src/wimm/ui/outcome.py:79 src/wimm/ui/outcome.py:91
+#: src/wimm/ui/outcome.py:112
+#, python-brace-format
+msgid "{count} elemento"
+msgid_plural "{count} elementi"
+msgstr[0] "{count} item"
+msgstr[1] "{count} items"
+
+#: src/wimm/ui/outcome.py:117
+#, python-brace-format
+msgid "{ok} su {total} {done}"
+msgstr "{ok} of {total} {done}"
+
+#: src/wimm/ui/outcome.py:119
+#, python-brace-format
+msgid "{count} non risponde"
+msgid_plural "{count} non rispondono"
+msgstr[0] "{count} not responding"
+msgstr[1] "{count} not responding"
+
+#: src/wimm/ui/outcome.py:122
+#, python-brace-format
+msgid "{count} non riuscito"
+msgid_plural "{count} non riusciti"
+msgstr[0] "{count} failed"
+msgstr[1] "{count} failed"
+
+#: src/wimm/ui/outcome.py:141
+#, python-brace-format
+msgid "{subject}: {done}"
+msgstr "{subject}: {done}"
+
+#: src/wimm/ui/outcome.py:143
+msgid "non risponde"
+msgstr "not responding"
+
+#: src/wimm/ui/outcome.py:143
+msgid "operazione non riuscita"
+msgstr "operation failed"
+
+#: src/wimm/ui/outcome.py:144
+#, python-brace-format
+msgid "{subject}: {problem}"
+msgstr "{subject}: {problem}"
+
+#: src/wimm/ui/outcome.py:151 src/wimm/ui/outcome.py:163
 #, python-brace-format
 msgid "Liberati {size} di disco"
 msgstr "Freed {size} of disk"
 
-#: src/wimm/ui/outcome.py:87
+#: src/wimm/ui/outcome.py:159
 #, python-brace-format
 msgid "Liberati {ram} di RAM e {disk} di disco"
 msgstr "Freed {ram} of RAM and {disk} of disk"
 
-#: src/wimm/ui/outcome.py:89
+#: src/wimm/ui/outcome.py:161
 #, python-brace-format
 msgid "Liberati {size} di RAM"
 msgstr "Freed {size} of RAM"
@@ -2396,8 +2500,8 @@ msgid "avvisi in pausa fino al {date} alle {time}"
 msgstr "alerts paused until {date} at {time}"
 
 #: src/wimm/ui/widgets/__init__.py:10
-msgid "Disponibile con le azioni (fase 3)"
-msgstr "Available with actions (phase 3)"
+msgid "Le azioni non sono attive in questa finestra"
+msgstr "Actions are not active in this window"
 
 #: src/wimm/ui/widgets/context_menu.py:25
 msgid "Copia comando"

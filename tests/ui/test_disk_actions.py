@@ -294,7 +294,7 @@ def test_the_outcome_toast_says_how_much_was_freed_without_details(
     service.emit("action-finished", service.last_plan.plan_id, (done,))
     main_context_iterate()
 
-    assert "Fatto. Liberati 100 MB di disco" in toast_texts(window)
+    assert "Cache di build: pulizia completata. Liberati 100 MB di disco" in toast_texts(window)
     buttons = [w.get_label() for w in descendants(window) if isinstance(w, Gtk.Button)]
     assert "Dettagli" not in buttons
 
@@ -313,7 +313,7 @@ def test_a_failed_target_is_reported_as_partial_with_details(
     main_context_iterate()
 
     texts = toast_texts(window)
-    assert "Alcune operazioni non sono riuscite" in texts
+    assert "pgdata: operazione non riuscita" in texts
     assert not any(t.startswith("Fatto") for t in texts)
 
 

@@ -4,16 +4,48 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from types import MappingProxyType
 
-from wimm.i18n import N_, _
+from wimm.i18n import N_, _, ngettext
 from wimm.model.actions import Plan, ProcessFingerprint
 from wimm.model.enums import ActionKind
 from wimm.service.actions import ReclaimDelta
 from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.ui.format import format_size
 
-DONE_TEXT = N_("Fatto")
-PARTIAL_TEXT = N_("Alcune operazioni non sono riuscite")
-NOT_RESPONDING_TEXT = N_("Un processo non ha risposto alla chiusura")
+# The toast names the subject and a fixed noun phrase, so no label needs gender agreement.
+GENERIC_FAMILY = "generic"
+NOTHING_DONE_TEXT = N_("Nessuna operazione eseguita")
+FAMILY_TEXTS = MappingProxyType(
+    {
+        "stop": (N_("arresto completato"), N_("fermati"), N_("già chiuso")),
+        "kill": (N_("chiusura forzata completata"), N_("chiusi a forza"), N_("già chiuso")),
+        "remove": (N_("rimozione completata"), N_("rimossi"), N_("già rimosso")),
+        "clean": (N_("pulizia completata"), N_("puliti"), N_("già pulito")),
+        "start": (N_("riavvio completato"), N_("riavviati"), N_("già acceso")),
+        GENERIC_FAMILY: (N_("operazione completata"), N_("completati"), N_("già a posto")),
+    }
+)
+FAMILY_OF = MappingProxyType(
+    {
+        ActionKind.PROCESS_TERMINATE: "stop",
+        ActionKind.APP_CLOSE: "stop",
+        ActionKind.CONTAINER_STOP: "stop",
+        ActionKind.GROUP_STOP: "stop",
+        ActionKind.COMPOSE_DOWN: "stop",
+        ActionKind.COMPOSE_DOWN_VOLUMES: "stop",
+        ActionKind.PROCESS_KILL: "kill",
+        ActionKind.CONTAINER_REMOVE: "remove",
+        ActionKind.IMAGE_REMOVE: "remove",
+        ActionKind.VOLUME_REMOVE: "remove",
+        ActionKind.DEVDIR_DELETE: "remove",
+        ActionKind.IMAGES_PRUNE_DANGLING: "clean",
+        ActionKind.IMAGES_PRUNE_UNUSED: "clean",
+        ActionKind.BUILDER_PRUNE: "clean",
+        ActionKind.CONTAINERS_PRUNE_STOPPED: "clean",
+        ActionKind.CACHE_CLEAN: "clean",
+        ActionKind.TRASH_EMPTY: "clean",
+        ActionKind.CONTAINER_START: "start",
+    }
+)
 STEP_FALLBACK = N_("Passo {order}")
 STATUS_TEXTS = MappingProxyType(
     {
@@ -65,12 +97,52 @@ def step_reports(*, plan: Plan | None, outcomes: Sequence[StepOutcome]) -> tuple
     return tuple(reports)
 
 
-def summary_text(*, outcomes: Sequence[StepOutcome]) -> str:
-    """The toast sentence: done, a process that does not answer, or a partial failure."""
-    statuses = {outcome.status for outcome in outcomes}
-    if StepStatus.NOT_RESPONDING in statuses:
-        return _(NOT_RESPONDING_TEXT)
-    return _(DONE_TEXT) if statuses <= OK_STATUSES else _(PARTIAL_TEXT)
+def _family_texts(*, plan: Plan | None) -> tuple[str, str, str]:
+    """The (done, plural participle, already gone) phrases of the plan's one action family."""
+    kinds = set() if plan is None else {step.kind for step in plan.steps}
+    families = {FAMILY_OF.get(kind, GENERIC_FAMILY) for kind in kinds}
+    return FAMILY_TEXTS[families.pop() if len(families) == 1 else GENERIC_FAMILY]
+
+
+def _subject_text(*, plan: Plan | None, subject: str | None, count: int) -> str:
+    if subject:
+        return subject
+    if plan is not None and len(plan.steps) == 1:
+        return plan.steps[0].target_label
+    return ngettext("{count} elemento", "{count} elementi", count).format(count=count)
+
+
+def _partial_text(*, participle: str, ok: int, stuck: int, failed: int) -> str:
+    total = ok + stuck + failed
+    parts = [_("{ok} su {total} {done}").format(ok=ok, total=total, done=_(participle))]
+    if stuck:
+        text = ngettext("{count} non risponde", "{count} non rispondono", stuck)
+        parts.append(text.format(count=stuck))
+    if failed:
+        text = ngettext("{count} non riuscito", "{count} non riusciti", failed)
+        parts.append(text.format(count=failed))
+    return ", ".join(parts)
+
+
+def summary_text(
+    *, outcomes: Sequence[StepOutcome], plan: Plan | None = None, subject: str | None = None
+) -> str:
+    """The toast sentence: what happened to whom, or how many worked out of how many."""
+    total = len(outcomes)
+    if total == 0:
+        return _(NOTHING_DONE_TEXT)
+    done, participle, gone = _family_texts(plan=plan)
+    # ALREADY_GONE counts as reached: the target is where the user wanted it.
+    ok = sum(1 for outcome in outcomes if outcome.status in OK_STATUSES)
+    stuck = sum(1 for outcome in outcomes if outcome.status is StepStatus.NOT_RESPONDING)
+    who = _subject_text(plan=plan, subject=subject, count=total)
+    if ok == total:
+        all_gone = all(outcome.status is StepStatus.ALREADY_GONE for outcome in outcomes)
+        return _("{subject}: {done}").format(subject=who, done=_(gone if all_gone else done))
+    if total == 1:
+        problem = _("non risponde") if stuck else _("operazione non riuscita")
+        return _("{subject}: {problem}").format(subject=who, problem=problem)
+    return _partial_text(participle=participle, ok=ok, stuck=stuck, failed=total - ok - stuck)
 
 
 def outcomes_freed_text(*, outcomes: Sequence[StepOutcome]) -> str | None:

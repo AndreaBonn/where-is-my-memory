@@ -159,7 +159,7 @@ class ActionFlow:
                 _Pending(plan=confirmed, subject=subject, may_replan=may_replan), typed
             ),
         )
-        dialog.connect("closed", self._on_closed)
+        dialog.connect("closed", partial(self._on_closed, dialog))
         self.dialog = dialog
         dialog.present(self._parent)
 
@@ -176,8 +176,10 @@ class ActionFlow:
             LOGGER.exception("Executing plan %s failed", plan_id)
             self._reject(plan_id=plan_id, error=WimmError())
 
-    def _on_closed(self, *_args: object) -> None:
-        self.dialog = None
+    def _on_closed(self, dialog: ConfirmDialog, *_args: object) -> None:
+        # A replan may have opened a newer dialog before this one finished closing.
+        if self.dialog is dialog:
+            self.dialog = None
 
     def _release(self, *, plan_id: str) -> _Pending | None:
         """Forget a plan that has an outcome and enable the buttons if none is left."""
@@ -189,11 +191,12 @@ class ActionFlow:
     def _on_finished(self, _source: object, plan_id: str, outcomes: Sequence[StepOutcome]) -> None:
         pending = self._release(plan_id=plan_id)
         plan = None if pending is None else pending.plan
+        subject = None if pending is None else pending.subject
         steps = step_reports(plan=plan, outcomes=outcomes)
         restartable = _stopped_containers(plan=plan, outcomes=outcomes)
         self._report = _Report(
             plan_id=PlanId(plan_id),
-            summary=summary_text(outcomes=outcomes),
+            summary=summary_text(outcomes=outcomes, plan=plan, subject=subject),
             steps=steps,
             freed=outcomes_freed_text(outcomes=outcomes),
             restartable=restartable,

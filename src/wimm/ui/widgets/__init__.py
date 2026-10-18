@@ -7,7 +7,7 @@ from gi.repository import Adw, Gdk, Gtk
 from wimm.i18n import N_
 from wimm.model.enums import Risk
 
-ACTIONS_UNAVAILABLE_TOOLTIP = N_("Disponibile con le azioni (fase 3)")
+ACTIONS_UNAVAILABLE_TOOLTIP = N_("Le azioni non sono attive in questa finestra")
 NARROW_CLASS = "wimm-narrow"
 
 # GTK 4.14 has no public getter for an accessible label: name_icon_button also keeps the
