@@ -1,5 +1,75 @@
 # Report attività
 
+## 2026-10-17/18 | Sessione #8 [TEST]
+
+Progetto: where-is-my-memory (comando `wimm`). Audit di copertura e qualità dei test, seguito da rinforzo dei test, correzione dei difetti di produzione trovati e allineamento della specifica. Tutti i commit sono su main, senza push.
+
+### Richiesta
+
+Audit completo di copertura e qualità dei test: ogni test classificato BUONO, DEBOLE o DA_RISCRIVERE, gap analysis e piano di rimedio. Poi: rinforzare i test deboli, correggere i difetti di produzione emersi e allineare la specifica dove il codice è sensato, oppure implementare il comportamento migliore che la specifica descrive. Commit atomici su main, nessun push.
+
+### Metodo
+
+- Coverage di riga e di ramo.
+- Worker di audit in sola lettura, uno per area.
+- Mutation testing con mutanti scelti a mano, eseguiti in una copia del repository e mai nel working tree.
+- Test di rimedio scritti per area e visti fallire sotto il mutante del finding che li ha motivati.
+- `code-reviewer` su ogni lotto prima del commit.
+
+### Risultati
+
+| Misura | Prima | Dopo |
+|---|---|---|
+| Copertura di riga | 97,4% | 99,25% (13336 istruzioni, 100 scoperte) |
+| Copertura di ramo | 94,8% | 98,6% (2750 rami, 38 scoperti) |
+
+Suite finale: 3875 test passati, 6 deselezionati (performance e simili). `make lint` pulito (ruff, mypy su `src` e `tests`, `check_i18n`).
+
+### Difetti di produzione corretti (un commit ciascuno)
+
+- La nuova configurazione arriva all'esecutore anche quando il sampler fallisce.
+- `--version` è riconosciuto in qualunque posizione, tranne dopo `status`.
+- Una cartella `.desktop` illeggibile viene saltata, invece di far perdere l'intero indice.
+- Gli id delle voci di gruppo nel menu della tray restano stabili fra un aggiornamento e l'altro (crc32 del group id, con probing sulle collisioni).
+- `GetLayout` con id sconosciuto risponde con l'errore D-Bus `InvalidMenuItemId`.
+- La guida dell'etichetta della tray si traduce al momento dell'invio e segue il cambio di lingua.
+- Una risposta `df` malformata di Docker produce il messaggio "Docker ha risposto in un formato inatteso".
+- Nel dialogo di conferma la cartella di riavvio compare solo se tutti i processi fermati la condividono.
+- Lo stato vuoto della conferma compare solo se tutte le voci sono escluse.
+- Il toast dell'esito nomina il soggetto e i conteggi, per esempio "whitebox: arresto completato" o "3 su 4 fermati, 1 non risponde".
+
+### Specifica e codice morto
+
+- `assets/SPECIFICHE.md` allineata dove il codice era corretto e la specifica indietro: §5.2, §5.5, §7.6, §8.2, §8.4, §10.1-10.3, tabella dei rischi, elenco `ActionKind`.
+- Codice morto rimosso in un commit separato, dopo verifica con grep sui chiamanti.
+
+### Test rinforzati
+
+Aree: core, service, collectors, model, ui, tray, app/config/cli, integrazione X11.
+
+- Il test X11 è ora marcato `integration`, quindi `make test` non legge più il display dello sviluppatore.
+- Gli sleep temporizzati sono sostituiti da attese su condizione.
+- Ogni asserzione negativa ha il suo caso positivo.
+- Gli oracoli sono calcolati a mano. Esempio: il "4,3 GB" della pagina Disco è documentato nel test.
+
+### Limiti noti, non risolti
+
+- Il probing degli id del menu, in caso di collisione crc32, dipende dall'ordine dei gruppi.
+- Alcune guardie di narrowing per mypy in `executor.py` e `sampler.py` restano: non sono raggiungibili a runtime ma servono al type checker.
+- Alcuni file di test superavano già le 300 righe prima della sessione (`test_executor_disk_fs.py`, `test_planning.py` e altri).
+- Il test di `dirsize_faults` ricava dall'esecuzione sana quale chiamata `lstat` far fallire.
+- Alcuni match di errore in `test_config` e `test_cgroups` dipendono dal testo della libreria standard.
+
+### Note per il Cliente
+
+I controlli automatici dell'applicazione ora coprono quasi tutto il codice (dal 97,4% al 99,25%) e sono stati messi alla prova introducendo di proposito errori nel programma, per verificare che i controlli li rilevino. Nel farlo sono emersi dieci difetti reali, ora corretti. Per chi usa l'applicazione cambia questo: i messaggi di esito dopo uno stop dicono quali programmi sono stati fermati e quanti; il menu nella barra non si confonde più fra un aggiornamento e l'altro; un errore di Docker viene spiegato in modo chiaro; la lingua dell'interfaccia si applica anche alla guida dell'etichetta. La documentazione tecnica è stata allineata a come il programma si comporta davvero.
+
+### Prossimo passo
+
+Push di main, da fare solo su richiesta dell'utente.
+
+---
+
 ## 2026-10-16/17 | Sessione #1 [FEATURE]
 
 Progetto: where-is-my-memory (comando `wimm`), app GNOME per Ubuntu che mostra quali programmi occupano memoria e permette di fermare quelli inattivi. Il lavoro copre le 28 modifiche successive al commit 6fdde89, dal 16 ottobre alle 20:43 al 17 ottobre alle 04:03. Le specifiche di riferimento sono in `assets/SPECIFICHE.md`, il piano in `specs/where-is-my-memory/`.
