@@ -436,6 +436,7 @@ def test_folders_action_opens_the_advanced_page_on_the_folders_entry(
         lambda: (focus := opened.get_focus()) is not None and focus.is_ancestor(entry),
         description="focus back on the folders entry",
     )
+    _spin(seconds=0.5)  # The page was pushed again: the caret is settled in idle, as above.
     assert not entry.get_selection_bounds()
     assert entry.get_position() == len("/x/code, /x/work")
     row = opened.fields["devdirs_roots"].row

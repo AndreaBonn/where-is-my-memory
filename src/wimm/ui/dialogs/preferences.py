@@ -91,6 +91,11 @@ class PreferencesDialog(Adw.PreferencesDialog):
         page.add(self.language.group)
         essentials = [self._build_group(group=group) for group in ESSENTIAL_GROUPS]
         self.advanced = self._build_advanced()
+        # Mapped is not on screen: a page still mapped during its pop animation would take the
+        # focus and then vanish, so track the navigation state from the page's own signals.
+        self._advanced_on_screen = False
+        self.advanced.connect("showing", lambda *_a: setattr(self, "_advanced_on_screen", True))
+        self.advanced.connect("hiding", lambda *_a: setattr(self, "_advanced_on_screen", False))
         self._presets = PresetPicker(fields=self.fields)
         for group in (self._presets.group, *essentials, self._build_advanced_link()):
             page.add(group)
@@ -184,7 +189,7 @@ class PreferencesDialog(Adw.PreferencesDialog):
         """Open the advanced page with the cursor in the folders entry (the "Scegli" action)."""
         row = self.fields[ROOTS_KEY].row
         entry = row.get_activatable_widget()
-        if entry.get_mapped():
+        if self._advanced_on_screen:
             focus_at_end(row=row, entry=entry)
             return
         # The entry takes focus only once the page is on screen.
