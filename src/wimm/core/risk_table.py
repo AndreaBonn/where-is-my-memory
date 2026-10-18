@@ -11,6 +11,7 @@ from .tool_labels import ToolLabel
 
 class ConsequenceKey(StrEnum):
     IDLE = "idle"
+    IDLE_PROGRAM = "idle_program"
     ACTIVE = "active"
     FOREGROUND = "foreground"
     AGENT = "agent"
@@ -55,6 +56,7 @@ class ConsequenceKey(StrEnum):
 
 CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.IDLE: N_("Il server si ferma."),
+    ConsequenceKey.IDLE_PROGRAM: N_("Il programma si ferma."),
     ConsequenceKey.ACTIVE: N_("È in uso adesso: chi lo sta usando perde la connessione."),
     ConsequenceKey.FOREGROUND: N_(
         "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."

@@ -782,3 +782,24 @@ def test_status_names_the_disk_when_the_disk_drives_the_pressure(snapshot: Snaps
     assert (warning.status_title, warning.status_level) == ("Il disco si sta riempiendo", "warning")
     assert critical.status_title == "Il disco è quasi pieno"
     assert warning.status_text == "Fai spazio dalla scheda Disco: lì trovi cosa si può cancellare."
+
+
+def test_a_one_program_group_is_titled_with_its_name_of_use(
+    snapshot: Snapshot, now: datetime
+) -> None:
+    # F7: "gitstatusd-linux-x86_64" alone says nothing to whoever must decide to stop it.
+    from tests.core.planning_helpers import proc
+
+    name = "gitstatusd-linux-x86_64"
+    # One gitstatusd per open terminal: the real group has several copies of it.
+    copies = tuple(proc(pid=pid, name=name, category=Category.DEV_PROCESS) for pid in (7, 70))
+    alone = make_group(name, members=copies)
+    project = make_group("vite", members=(proc(pid=8, name="node"), proc(pid=9, name="vite")))
+
+    titles_now = titles(with_groups(snapshot, alone, project), now)
+
+    assert "Stato git del terminale (gitstatusd-linux-x86_64)" in titles_now
+    # A project that happens to share a known name keeps its own name.
+    assert "vite" in titles_now
+    lone = make_group("ollama", category=Category.PROJECT, members=(proc(pid=5, name="ollama"),))
+    assert titles(with_groups(snapshot, lone), now) == ["ollama"]

@@ -5,7 +5,7 @@ from wimm.core.risk import RiskTarget, assess_risk
 from wimm.core.sizes import format_size
 from wimm.model.enums import ActionKind, ActivityState, Category
 
-SERVER = RiskTarget(kind="process", category=Category.DEV_PROCESS, activity=ActivityState.IDLE)
+SERVER = RiskTarget(kind="process", category=Category.DEV_SERVER, activity=ActivityState.IDLE)
 
 
 def snapshot_texts() -> tuple[object, ...]:

@@ -24,7 +24,7 @@ from .format import (
     format_size,
     short_date,
 )
-from .plain import friendly_container_name, friendly_process_name, plain_reason, titled_name
+from .plain import group_title, member_title, plain_reason
 from .summary import build_summary as build_summary
 from .views import (
     ActionButton,
@@ -80,7 +80,7 @@ def _process_row(*, member: ProcessMember, now: datetime) -> MemberRow:
         key=str(member.pid),
         kind="process",
         name=member.name,
-        title=titled_name(name=member.name, friendly=friendly_process_name(name=member.name)),
+        title=member_title(member=member),
         command=shlex.join(member.cmdline) if member.cmdline else None,
         cwd=member.cwd,
         ports=ports_text(ports=member.listen_ports),
@@ -99,7 +99,7 @@ def _container_row(*, member: ContainerMember, now: datetime) -> MemberRow:
         key=member.id,
         kind="container",
         name=member.name,
-        title=titled_name(name=member.name, friendly=friendly_container_name(image=member.image)),
+        title=member_title(member=member),
         command=None,
         cwd=None,
         ports="",
@@ -173,7 +173,7 @@ def _group_row(*, group: Group, now: datetime) -> GroupRow:
     primary = group.primary_action
     return GroupRow(
         id=group.id,
-        title=group.name,
+        title=group_title(group=group),
         subtitle=_group_subtitle(group=group, now=now),
         detail=plain_reason(activity=group.activity, now=now),
         technical=_detail(group=group),

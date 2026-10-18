@@ -4,8 +4,8 @@ from datetime import datetime
 
 from wimm.core.text import AT_LEAST_MARK, NO_CONNECTIONS_MARK, OBSERVING_PREFIX, spoken_duration
 from wimm.i18n import N_, _
-from wimm.model.enums import ActivityState
-from wimm.model.snapshot import ActivityAssessment
+from wimm.model.enums import ActivityState, Category
+from wimm.model.snapshot import ActivityAssessment, Group, Member, ProcessMember
 
 ACTIVE_TEXT = N_("Lo stai usando adesso.")
 OBSERVING_TEXT = N_("Lo stiamo osservando: tra poco sappiamo se lo usi.")
@@ -44,6 +44,8 @@ PROCESS_NAMES = (
     ("celery", N_("Lavori in background")),
     ("ollama", N_("Modelli AI locali")),
     ("kubectl", N_("Collegamento a Kubernetes")),
+    # The git status daemon of the zsh prompt (powerlevel10k): one per open terminal.
+    ("gitstatusd", N_("Stato git del terminale")),
 )
 NAME_SEPARATORS = "-_."
 
@@ -88,3 +90,27 @@ def friendly_process_name(*, name: str) -> str | None:
     for separator in NAME_SEPARATORS:
         head = head.split(separator, 1)[0]
     return next((_(label) for key, label in PROCESS_NAMES if head == key), None)
+
+
+def group_title(*, group: Group) -> str:
+    """F7: a group that is one named program reads with its name of use first.
+
+    Only when every member is that program (one gitstatusd per terminal makes several),
+    and never for a project: a project called "vite" or "ollama" keeps its own name.
+    """
+    named = all(
+        isinstance(member, ProcessMember) and member.name == group.name for member in group.members
+    )
+    # A project keeps its own name even when its only process shares it.
+    if not group.members or not named or group.category is Category.PROJECT:
+        return group.name
+    return titled_name(name=group.name, friendly=friendly_process_name(name=group.name))
+
+
+def member_title(*, member: Member) -> str:
+    """P11: a member's name of use first, from its process name or container image."""
+    if isinstance(member, ProcessMember):
+        friendly = friendly_process_name(name=member.name)
+    else:
+        friendly = friendly_container_name(image=member.image)
+    return titled_name(name=member.name, friendly=friendly)

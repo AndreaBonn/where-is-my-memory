@@ -146,7 +146,11 @@ def _process_category_assessment(target: RiskTarget) -> RiskAssessment:
     if target.activity is not ActivityState.IDLE:
         return _assessment(level=Risk.CAUTION, key=ConsequenceKey.ACTIVE)
     # How to restart it is the dialog's "Per riaccenderlo" line (C3), not a consequence.
-    return _assessment(level=Risk.SAFE, key=ConsequenceKey.IDLE)
+    # F7: only a server is called one; gitstatusd or a watcher is a program.
+    server = target.category is Category.DEV_SERVER
+    return _assessment(
+        level=Risk.SAFE, key=ConsequenceKey.IDLE if server else ConsequenceKey.IDLE_PROGRAM
+    )
 
 
 def _applicable_actions(target: RiskTarget) -> tuple[ActionKind, ...]:

@@ -15,6 +15,7 @@ FOREGROUND_TEXT = (
     "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
 )
 IDLE_TEXT = "Il server si ferma."
+IDLE_PROGRAM_TEXT = "Il programma si ferma."
 ACTIVE_TEXT = "È in uso adesso: chi lo sta usando perde la connessione."
 AGENT_TEXT = (
     "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
@@ -39,7 +40,7 @@ CONTAINER_TIMEOUT_TEXT = "Se il container non si ferma da solo, Docker lo termin
     ("text", "case"),
     {
         ("Il server si ferma."): (
-            replace(PROCESS, cwd="/work"),
+            replace(PROCESS, cwd="/work", category=Category.DEV_SERVER),
             Action.PROCESS_TERMINATE,
             Risk.SAFE,
         ),
@@ -235,7 +236,7 @@ class TestRiskBehavior:
         assert result.consequences == (
             "Eventuali file non salvati possono andare persi."
             if has_documents
-            else "Il server si ferma.",
+            else "Il programma si ferma.",
         )
 
     @pytest.mark.parametrize("kind", ["process", "desktop_app", "browser"])
@@ -280,7 +281,7 @@ class TestRiskBehavior:
             (Category.OTHER, ActivityState.IDLE, Risk.CAUTION, OTHER_TEXT),
             (Category.PROJECT, ActivityState.IDLE, Risk.CAUTION, APP_TEXT),
             (Category.DEV_SERVER, ActivityState.IDLE, Risk.SAFE, IDLE_TEXT),
-            (Category.DEV_PROCESS, ActivityState.IDLE, Risk.SAFE, IDLE_TEXT),
+            (Category.DEV_PROCESS, ActivityState.IDLE, Risk.SAFE, IDLE_PROGRAM_TEXT),
             (Category.SYSTEM, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
             (Category.CONTAINER, ActivityState.ACTIVE, Risk.CAUTION, APP_TEXT),
             (Category.AI_CLI, ActivityState.ACTIVE, Risk.CAUTION, AGENT_TEXT),
@@ -358,3 +359,21 @@ def test_user_facing_consequences_carry_no_markdown_backticks() -> None:
     assert all("`" not in text for text in CONSEQUENCES.values())
     assert any("Docker" in text for text in CONSEQUENCES.values())  # positive pair
     assert not any("docker start" in text for text in CONSEQUENCES.values())
+
+
+@pytest.mark.parametrize(
+    ("category", "text"),
+    [
+        (Category.DEV_SERVER, "Il server si ferma."),
+        # F7: gitstatusd is a development process, not a server.
+        (Category.DEV_PROCESS, "Il programma si ferma."),
+    ],
+)
+def test_an_idle_development_process_is_called_a_server_only_when_it_is_one(
+    category: Category, text: str
+) -> None:
+    target = replace(PROCESS, category=category)
+
+    result = assess_risk(target=target, action=Action.PROCESS_TERMINATE)
+
+    assert (result.level, result.consequences) == (Risk.SAFE, (text,))

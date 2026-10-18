@@ -13,7 +13,7 @@ def test_consequences_are_translated_when_the_plan_is_assessed() -> None:
 
     assessment = assess_risk(target=target, action=ActionKind.PROCESS_TERMINATE)
 
-    assert assessment.consequences == ("The server stops.",)
+    assert assessment.consequences == ("The program stops.",)
 
 
 def test_volume_consequence_keeps_the_volume_names() -> None:
