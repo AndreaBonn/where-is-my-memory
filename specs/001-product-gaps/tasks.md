@@ -223,3 +223,10 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T050 | e22eac9 | executor contro risposte stile Podman, M-24
 - T054 | 56a3cef | DEVIATIONS
 - T055 | (questo commit) | code-reviewer su ogni blocco di L4. Aperti: Podman e Docker Desktop mai provati su macchina reale (M-24); un motore che risponde a `info()` ma blocca `list()` costa ancora il timeout; gli avvisi parziali dei motori non sono mostrati nella UI quando almeno un motore risponde
+- T056 T057 T058 T065 | ecfc4f0 | voci del kernel nel dettaglio della RAM, "Non attribuita" da 1,30 a 0,32 GiB; regola PSI; decoder generici in wire_decoders
+- T061 | cc04dd7 | memoria video NVIDIA e AMD; review: nvidia-smi spostato in un thread (un driver bloccato sopravvive al timeout)
+- T064 T066 | f748b18 | PSI e contatore oom_kill; notifica OOM; tipi delle notifiche in notify_types
+- T059 T060 T062 | 911e7bd | serialize_memory, schema 3, `memory.video`
+- T067 | 83431da | collector nuovi nel ciclo, ciclo reale 0,52 -> 0,56 s (nel rumore); review: errori non OSError dei collector loggati come warning
+- T063 | d38bbb8 | UI del riepilogo, click-through a 1280 e 375 px; review: la legenda non si ricostruisce più a ogni campione (chiudeva l'aiuto aperto)
+- T068 | (questo commit) | DEVIATIONS, M-25..M-27; contatore oom_kill provato dal vivo (da 6 a 7). Aperti: zram, AMD e nvidia-smi bloccato non provati su macchina reale; una APU AMD può comparire come memoria video; il lettore OOM del coordinatore si sostituisce con un setter

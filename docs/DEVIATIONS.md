@@ -540,3 +540,17 @@ Limiti: kind si riconosce solo dalla CLI; minikube con driver Docker non si rico
 **Schema.** Lo schema dello snapshot resta 2: `ProcessMember` guadagna `tool_label` e `tool_reason`.
 
 **Non provato su macchina reale.** Podman e Docker Desktop non sono installati sulla macchina di sviluppo. Le verifiche manuali sono in `docs/DELIVERY_REPORT.md`.
+
+## Memoria del kernel, memoria video, PSI e OOM (001-product-gaps, lotto L5)
+
+**Voci nuove della RAM.** Il dettaglio della RAM ha quattro voci in più: memoria condivisa e file temporanei, memoria del kernel non recuperabile (`SUnreclaim`, `KernelStack`, `PageTables`), zram e zswap. La somma di tutte le voci resta uguale a `MemTotal - MemFree`. Sulla macchina di sviluppo "Non attribuita" è scesa da 1,30 GiB a 0,32 GiB. La memoria condivisa conta il minimo fra `Shmem` e i byte usati dai tmpfs: la parte di `Shmem` che non sta in un tmpfs (memfd, memoria condivisa SysV) resta in "Non attribuita", circa 760 MB sulla macchina di sviluppo. Le voci a zero non si mostrano. Codice: `src/wimm/core/memory.py`, `src/wimm/collectors/kernel_memory.py`.
+
+**Memoria video.** È un campo a parte dello snapshot (`memory.video`, una voce per GPU) e non entra mai nella somma della RAM. NVIDIA si legge con `nvidia-smi` ogni 5 cicli in un thread separato: un driver bloccato sopravvive al timeout del processo, e il ciclo usa l'ultima lettura finita. AMD si legge da sysfs. Una APU AMD può comparire con la memoria che riserva alla grafica: filtrare su `mem_info_vram_vendor` nasconderebbe anche schede dedicate senza quel dato nel firmware, e quella memoria è già esclusa da `MemTotal`, quindi non è contata due volte.
+
+**PSI.** La pressione dello snapshot è la peggiore fra la regola su RAM e disco e la pressione di stallo del kernel (`/proc/pressure/memory`): media a 60 s di `some` dal 10% in su dà attenzione, di `full` dal 5% in su dà critico. Senza PSI leggibile vale la regola di prima. La regola sta in `pressure_with_psi` e non dentro `pressure()`, che ha già i quattro parametri consentiti.
+
+**Notifica OOM.** Quando il contatore `oom_kill` del cgroup `user@<uid>.service` cresce fra due cicli parte una notifica con i tre gruppi più grandi, fuori dal limite orario come la pressione. Il primo ciclo dopo l'avvio legge il contatore senza notificare, perché il valore visto non si salva. Durante il silenzio globale il valore visto resta fermo, quindi a fine silenzio parte una sola notifica che conta tutti i kill.
+
+**Schema 3.** Lo schema dello snapshot passa a 3 (decisione Q4=A): le quattro voci sono sempre scritte e obbligatorie, e c'è `memory.video`. Il report del disco condivide la stessa `SCHEMA_VERSION` e passa a 3 anche lui, senza cambiare forma. Uno snapshot o un report con schema 2 viene rifiutato.
+
+**Non provato su macchina reale.** zram attivo, una GPU AMD e un `nvidia-smi` bloccato: la macchina di sviluppo non li ha. Le verifiche manuali sono in `docs/DELIVERY_REPORT.md` (M-25..M-27). Il contatore `oom_kill` è stato provato dal vivo: un processo in uno scope con `MemoryMax=50M` è stato ucciso e il contatore letto da wimm è salito da 6 a 7.

@@ -79,7 +79,7 @@ Fonte: `docs/security/T-6.1-security-baseline.md` (2026-10-17). Esito: soddisfat
 - Conteggio: P0 0, P1 0, P2 6 (uno corretto dopo la revisione), Info 3.
 - Limiti della verifica: `bandit` e `pip-audit` non sono stati eseguiti (offline, non installati) e la suite di test non è stata eseguita dal revisore. La suite è stata poi eseguita in T-6.4.
 
-## 3. Controlli manuali M-1..M-24
+## 3. Controlli manuali M-1..M-27
 
 Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono il vostro computer: sessione grafica reale, logout, `sudo`, clic veri o azioni su risorse vostre. Nessuno è stato eseguito da chi ha sviluppato l'applicazione.
 
@@ -109,6 +109,9 @@ Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono i
 | [ ] | M-22 | Hardening | Dopo il primo push (lo fate voi): `gh run list --limit 3` e `gh run watch` | La CI remota è verde, compreso il passo `make audit` |
 | [ ] | M-23 | Futuro | Podman, sessione Wayland, radici su dischi esterni, comportamento con poca memoria (OOM) | Nessun comando ancora: sono ambiti dichiarati ma non provati, da definire quando servono |
 | [ ] | M-24 | Podman | Con Podman installato e il socket utente attivo (`systemctl --user enable --now podman.socket`): `podman run -d --name wimm-podman-test docker.io/library/alpine:3 sleep 600`. In Panoramica cercare `wimm-podman-test`, premere "Ferma" e confermare. Pulizia: `podman rm -f wimm-podman-test` | Il contenitore compare come container e non come processo sciolto; "Ferma" lo ferma (`podman ps -a` lo mostra `Exited`) e l'esito è positivo. L'esecuzione su un client finto è già provata in `tests/service/test_executor_podman.py` |
+| [ ] | M-25 | Notifica OOM | Con l'app in esecuzione: `systemd-run --user --scope -p MemoryMax=50M -p MemorySwapMax=0 python3 -c "b = bytearray(300 * 1024 * 1024)"` | Il comando esce con codice 137; entro un ciclo di campionamento arriva la notifica "Il sistema ha chiuso 1 programma per mancanza di memoria" con i gruppi più grandi. Il contatore è già provato dal vivo (da 6 a 7), la notifica sul desktop no |
+| [ ] | M-26 | zram | Su una macchina con zram attivo (`zramctl` mostra un dispositivo in uso): aprire la Panoramica | La legenda della RAM mostra "Swap compresso in RAM (zram)" con un valore vicino alla colonna `TOTAL` di `zramctl`; il "?" accanto apre l'aiuto |
+| [ ] | M-27 | GPU AMD | Su una macchina con una scheda AMD dedicata: aprire la Panoramica | Il blocco "Memoria video" mostra "AMD <usata> di <totale>", vicino a quanto riporta `amdgpu_top` o `radeontop`. Con una APU può comparire la memoria riservata alla grafica (vedi DEVIATIONS) |
 
 ## 4. Premesse chiuse
 
