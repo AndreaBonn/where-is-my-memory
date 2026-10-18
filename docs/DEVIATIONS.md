@@ -554,3 +554,15 @@ Limiti: kind si riconosce solo dalla CLI; minikube con driver Docker non si rico
 **Schema 3.** Lo schema dello snapshot passa a 3 (decisione Q4=A): le quattro voci sono sempre scritte e obbligatorie, e c'è `memory.video`. Il report del disco condivide la stessa `SCHEMA_VERSION` e passa a 3 anche lui, senza cambiare forma. Uno snapshot o un report con schema 2 viene rifiutato.
 
 **Non provato su macchina reale.** zram attivo, una GPU AMD e un `nvidia-smi` bloccato: la macchina di sviluppo non li ha. Le verifiche manuali sono in `docs/DELIVERY_REPORT.md` (M-25..M-27). Il contatore `oom_kill` è stato provato dal vivo: un processo in uno scope con `MemoryMax=50M` è stato ucciso e il contatore letto da wimm è salito da 6 a 7.
+
+## Modelli AI e Android fra le cache (001-product-gaps, lotto L6)
+
+**Voci nuove.** La scheda Disco misura quattro voci da riscaricare a caro prezzo: i modelli di HuggingFace (`HF_HUB_CACHE`, poi `HF_HOME/hub`, poi `XDG_CACHE_HOME/huggingface/hub`), i modelli di ollama (`OLLAMA_MODELS`, poi `~/.ollama/models`), gli emulatori Android (`~/.android/avd`) e l'SDK Android (`ANDROID_HOME`, poi `ANDROID_SDK_ROOT`, poi `~/Android/Sdk`). Il rischio segue la decisione Q2: HuggingFace e SDK Attenzione, ollama ed emulatori Pericolo con conferma digitata. Nessuna delle quattro entra mai in "Libera spazio", che prende solo voci sicure.
+
+**Cosa cancella la pulizia.** HuggingFace svuota la cartella hub. ollama svuota solo `blobs` e `manifests`, perché una cartella rediretta può contenere altro. L'SDK svuota solo le parti che `sdkmanager` riscarica (immagini di sistema, piattaforme, build-tools, platform-tools, emulatore, NDK, CMake, sorgenti); `cmdline-tools` e `licenses` restano, così l'SDK resta utilizzabile. Gli emulatori vengono cancellati tutti, e il testo chiede di chiuderli prima: un emulatore aperto tiene i file finché non si chiude.
+
+**Cartelle redirette.** Una variabile d'ambiente passa dalle stesse difese delle altre cache (S5). In più serve un segno che sia davvero quella cache: `.locks` per HuggingFace, `manifests/registry.ollama.ai` per ollama, `licenses/android-sdk-license` o `platform-tools/adb` per l'SDK. Nomi di cartella come `platforms` e `build-tools` non bastano, perché li hanno anche i progetti Cordova e Ionic. Senza il segno la voce resta solo misurata. `ANDROID_AVD_HOME` e `ANDROID_USER_HOME` non sono onorati: emulatori in una posizione diversa non vengono né misurati né puliti.
+
+**ollama in esecuzione.** L'esecutore rifiuta la pulizia dei modelli se c'è un processo `ollama serve`, anche di un altro utente come il servizio di sistema. Un processo che si chiama `ollama` e di cui non si leggono gli argomenti conta come server: nel dubbio non si cancella. Un ollama rinominato (binario con un altro nome) non viene riconosciuto. Fra il controllo e la cancellazione resta una finestra di millisecondi: un server avviato lì costerebbe un nuovo download, non un dato perso per sempre.
+
+**Titolo "Puoi liberare fino a".** Conta anche le voci Attenzione, come già faceva per Maven e JetBrains dal lotto L3; con HuggingFace e SDK la cifra può crescere di diversi GB.
