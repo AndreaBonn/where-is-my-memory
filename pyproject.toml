@@ -42,6 +42,8 @@ select = ["E", "F", "W", "I", "B", "UP", "S", "SIM", "RUF"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101"]
+# SYSTEM_PATH_PREFIXES lists /tmp as a path to refuse, not as a temporary file to use.
+"src/wimm/core/constants.py" = ["S108"]
 # Integration tests spawn only fixed argv lists that they create themselves.
 "tests/integration/live_targets.py" = ["S603"]
 # PyGObject requires gi.require_version() before the gi.repository imports.

@@ -25,6 +25,24 @@ BUILD_PRUNE_TIMEOUT_S = 600
 NETWORK_FSTYPES = frozenset(
     ("nfs", "nfs4", "cifs", "smb3", "smbfs", "afs", "ceph", "glusterfs", "9p", "autofs")
 )
+# ADR-007: a development root never sits at or below these (the root "/" is too shallow anyway).
+SYSTEM_PATH_PREFIXES = (
+    "/usr",
+    "/etc",
+    "/var",
+    "/boot",
+    "/proc",
+    "/sys",
+    "/dev",
+    "/run",
+    "/opt",
+    "/snap",
+    "/root",
+    "/srv",
+    "/tmp",
+)
+# ADR-007: a root needs more than two path components, so "/mnt/data" is refused.
+ROOT_MIN_COMPONENTS = 3
 DEVDIRS_MIN_AGE_DAYS = 90
 DEVDIRS_MAX_DEPTH = 6
 DISK_SCAN_INTERVAL_S = 21600
