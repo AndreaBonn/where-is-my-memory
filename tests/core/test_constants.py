@@ -50,6 +50,7 @@ def test_protected_names_specification() -> None:
         "gnome-keyring-daemon",
         "ssh-agent",
         "gpg-agent",
+        "mosh-server*",
         "snapd*",
     )
 
@@ -89,7 +90,7 @@ def test_document_desktop_categories_specification() -> None:
 
 
 def test_execution_and_project_lists_specification() -> None:
-    assert c.SHELL_NAMES == ("bash", "zsh", "fish", "sh", "dash")
+    assert c.SHELL_NAMES == ("bash", "zsh", "fish", "sh", "dash", "ksh", "tcsh", "csh", "nu")
     assert c.AI_CLI_NAMES == ("claude", "codex", "gemini", "agy", "aider")
     assert c.DB_PROCESS_NAMES == ("postgres", "mysqld", "mariadbd", "mongod", "redis-server")
     assert c.PROJECT_ROOT_MARKERS == (

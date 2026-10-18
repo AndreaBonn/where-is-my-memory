@@ -39,7 +39,9 @@ def build_actions(*, config: Any, owner_uid: int, home: Path | None = None) -> A
         LOGGER.warning("Docker compose unavailable, project actions disabled", exc_info=True)
         compose = None
     processes = PsutilProcessControl(
-        owner_uid=owner_uid, extra_protected_names=config.extra_protected_names
+        owner_uid=owner_uid,
+        extra_protected_names=config.extra_protected_names,
+        remote_sessions_actionable=config.remote_sessions_actionable,
     )
     executor = PlanExecutor(
         processes=processes,

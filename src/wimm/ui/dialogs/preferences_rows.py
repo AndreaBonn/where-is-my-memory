@@ -31,6 +31,13 @@ TEXTS = {
         N_("Conta come in uso il programma in primo piano"),
         N_("Il programma della finestra che stai usando non viene proposto"),
     ),
+    "remote_sessions_actionable": (
+        N_("Gestisci anche i programmi lanciati via SSH"),
+        N_(
+            "Chiudere un programma lanciato via SSH interrompe il lavoro di chi è collegato. "
+            "Il server SSH e la shell di accesso restano sempre protetti"
+        ),
+    ),
     CATEGORIES_KEY: (
         N_("Avvisami per questi tipi di programma"),
         N_("Gli altri non mandano avvisi"),

@@ -78,36 +78,36 @@ msgstr "Give absolute folder paths"
 msgid "Indica una lista di nomi di processo"
 msgstr "Enter a list of process names"
 
-#: src/wimm/config_messages.py:14
+#: src/wimm/config_messages.py:14 src/wimm/config_messages.py:15
 msgid "Deve essere un valore booleano"
 msgstr "Must be true or false"
 
-#: src/wimm/config_messages.py:15
+#: src/wimm/config_messages.py:16
 msgid "Scegli una lingua disponibile"
 msgstr "Choose an available language"
 
-#: src/wimm/config_messages.py:18
+#: src/wimm/config_messages.py:19
 msgid "Deve essere minore della soglia di avviso"
 msgstr "Must be lower than the warning threshold"
 
-#: src/wimm/config_messages.py:23
+#: src/wimm/config_messages.py:24
 msgid "un numero"
 msgstr "a number"
 
-#: src/wimm/config_messages.py:23
+#: src/wimm/config_messages.py:24
 msgid "un numero intero"
 msgstr "a whole number"
 
-#: src/wimm/config_messages.py:24
+#: src/wimm/config_messages.py:25
 msgid " secondi"
 msgstr " seconds"
 
-#: src/wimm/config_messages.py:26
+#: src/wimm/config_messages.py:27
 #, python-brace-format
 msgid "Deve essere {number} almeno {lower}{unit}"
 msgstr "Must be {number}, at least {lower}{unit}"
 
-#: src/wimm/config_messages.py:29
+#: src/wimm/config_messages.py:30
 #, python-brace-format
 msgid "Deve essere {number} fra {lower} e {upper}{unit}"
 msgstr "Must be {number} between {lower} and {upper}{unit}"
@@ -1310,26 +1310,34 @@ msgid "Il programma della finestra che stai usando non viene proposto"
 msgstr "The program of the window you are using is not offered"
 
 #: src/wimm/ui/dialogs/preferences_rows.py:35
+msgid "Gestisci anche i programmi lanciati via SSH"
+msgstr "Also manage programs started over SSH"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:37
+msgid "Chiudere un programma lanciato via SSH interrompe il lavoro di chi è collegato. Il server SSH e la shell di accesso restano sempre protetti"
+msgstr "Closing a program started over SSH interrupts the work of whoever is connected. The SSH server and the login shell always stay protected"
+
+#: src/wimm/ui/dialogs/preferences_rows.py:42
 msgid "Avvisami per questi tipi di programma"
 msgstr "Alert me for these kinds of program"
 
-#: src/wimm/ui/dialogs/preferences_rows.py:36
+#: src/wimm/ui/dialogs/preferences_rows.py:43
 msgid "Gli altri non mandano avvisi"
 msgstr "The others send no alerts"
 
-#: src/wimm/ui/dialogs/preferences_rows.py:39
+#: src/wimm/ui/dialogs/preferences_rows.py:46
 msgid "Programmi da non toccare mai"
 msgstr "Programs never to touch"
 
-#: src/wimm/ui/dialogs/preferences_rows.py:40
+#: src/wimm/ui/dialogs/preferences_rows.py:47
 msgid "Nomi dei processi separati da virgola, in aggiunta a quelli già protetti"
 msgstr "Process names separated by commas, in addition to the ones already protected"
 
-#: src/wimm/ui/dialogs/preferences_rows.py:43
+#: src/wimm/ui/dialogs/preferences_rows.py:50
 msgid "Cartelle in cui cercare"
 msgstr "Folders to search"
 
-#: src/wimm/ui/dialogs/preferences_rows.py:44
+#: src/wimm/ui/dialogs/preferences_rows.py:51
 msgid "Percorsi di cartelle, anche fuori dalla tua cartella personale, separati da virgola"
 msgstr "Folder paths, also outside your home folder, separated by commas"
 

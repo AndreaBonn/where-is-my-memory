@@ -61,3 +61,18 @@ def test_apply_config_resizes_the_history_to_the_new_window(tmp_path: Path) -> N
     for cycle in range(1, 30):
         _next_cycle_state(sampler=sampler, records=records, seconds=30 * cycle)
     assert len(sampler.history.history_for(key=(20, 1.0))) == 11
+
+
+def test_apply_config_opens_ssh_session_processes_in_the_next_cycle(tmp_path: Path) -> None:
+    sampler = make_sampler(tmp_path=tmp_path)
+    ssh_scope = "/user.slice/user-1000.slice/session-5.scope"
+    proc = process(pid=20, name="node", cmdline=("node",), cgroup=ssh_scope)
+    sshd = process(pid=10, name="sshd-session", cgroup=ssh_scope)
+    sampler.collectors = replace(
+        sampler.collectors, processes=lambda: CollectorResult(data=(sshd, proc))
+    )
+    assert sampler.run_cycle().groups == ()
+    sampler.apply_config(config=Config(remote_sessions_actionable=True))
+    groups = sampler.run_cycle().groups
+    member = next(m for g in groups for m in g.members if getattr(m, "pid", None) == 20)
+    assert member.protection is Protection.ACTIONABLE

@@ -379,3 +379,23 @@ def test_admitted_roots_leave_out_the_refused_ones(tmp_path: Path) -> None:
 
     assert [root for root, _reason in config.refused_roots] == [outside]
     assert config.admitted_roots == (inside,)
+
+
+def test_remote_sessions_flag_defaults_to_off() -> None:
+    assert Config().remote_sessions_actionable is False
+
+
+def test_remote_sessions_flag_round_trip(paths: UserPaths, tmp_path: Path) -> None:
+    save_config(
+        paths=paths, config=replace(Config(), remote_sessions_actionable=True), home=tmp_path
+    )
+    assert load_config(paths=paths, home=tmp_path).config.remote_sessions_actionable is True
+
+
+def test_remote_sessions_flag_rejects_a_non_boolean(tmp_path: Path) -> None:
+    result = parse_config(raw={"remote_sessions_actionable": 1}, home=tmp_path)
+    assert "remote_sessions_actionable" in result.field_errors
+    assert result.config.remote_sessions_actionable is False
+    invalid: dict[str, Any] = {"remote_sessions_actionable": "yes"}
+    with pytest.raises(ValueError):
+        replace(Config(), **invalid)

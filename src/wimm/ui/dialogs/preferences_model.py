@@ -20,7 +20,7 @@ MAX_MIN_BYTES_MIB = 1024 * 1024
 LIST_SEPARATOR = ","
 LIST_KEYS = ("devdirs_roots", "extra_protected_names")
 CATEGORIES_KEY = "notify_categories"
-BOOLEAN_KEYS = ("foreground_tracking",)
+BOOLEAN_KEYS = ("foreground_tracking", "remote_sessions_actionable")
 # Applied by their own row as soon as they change: never part of "Applica" or of a reset.
 IMMEDIATE_KEYS = ("language",)
 
@@ -168,7 +168,7 @@ ADVANCED_GROUPS = (
     FieldGroup(
         N_("Chiusura dei programmi"),
         N_("Quanto si aspetta e quali programmi non si toccano mai."),
-        ("terminate_timeout_s", "extra_protected_names"),
+        ("terminate_timeout_s", "extra_protected_names", "remote_sessions_actionable"),
     ),
     FieldGroup(
         N_("Cartelle di sviluppo"),

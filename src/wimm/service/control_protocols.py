@@ -108,6 +108,10 @@ class ProcessControl(Protocol):
         """Replace the user's extra protected process names, effective at the next inspect."""
         ...
 
+    def set_remote_sessions_actionable(self, *, enabled: bool) -> None:
+        """Let the user's own processes in SSH sessions follow the normal rules (R28)."""
+        ...
+
     def self_lineage(self) -> frozenset[int]:
         """Return the pid of wimm and of all its ancestors."""
         ...

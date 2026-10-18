@@ -29,6 +29,7 @@ from .constants import (
     REASON_OTHER,
     REASON_PODMAN_UNSEEN,
     REASON_PROTECTED_NAME,
+    REASON_REMOTE_LOGIN,
     REASON_SELF,
     REASON_SESSION,
     REASON_SYSTEM,
@@ -42,6 +43,7 @@ from .constants import (
     USER_UNIT_TEMPLATE,
     VTE_SCOPE_PATTERNS,
 )
+from .remote_sessions import in_remote_session, is_login_infrastructure
 
 INHERITED_CATEGORIES = (Category.BROWSER, Category.DESKTOP_APP)
 
@@ -63,8 +65,9 @@ def _early_decision(proc: RawProcess, context: CategorizationContext) -> Categor
     podman = _podman_decision(proc=proc, context=context)
     if podman is not None:
         return podman
-    if proc.uid != context.own_uid or USER_UNIT_TEMPLATE.format(uid=context.own_uid) not in parts:
-        return CategoryDecision(category=Category.SYSTEM, reason_code=REASON_SYSTEM)
+    outside = _outside_user_manager(proc=proc, parts=parts, context=context)
+    if outside is not None:
+        return outside
     if _is_session(proc=proc):
         return CategoryDecision(category=Category.SESSION, reason_code=REASON_SESSION)
     if any(
@@ -74,6 +77,25 @@ def _early_decision(proc: RawProcess, context: CategorizationContext) -> Categor
         return CategoryDecision(category=Category.SESSION, reason_code=REASON_PROTECTED_NAME)
     if is_direct_user_service(proc=proc) and not is_terminal(proc=proc):
         return CategoryDecision(category=Category.OTHER, reason_code=REASON_USER_SERVICE)
+    return None
+
+
+def _outside_user_manager(
+    proc: RawProcess, parts: tuple[str, ...], context: CategorizationContext
+) -> CategoryDecision | None:
+    """Protect what is not the user's own, unless an opted-in SSH session process (R28)."""
+    system = CategoryDecision(category=Category.SYSTEM, reason_code=REASON_SYSTEM)
+    if proc.uid != context.own_uid:
+        return system
+    if USER_UNIT_TEMPLATE.format(uid=context.own_uid) in parts:
+        return None
+    if not (
+        context.remote_sessions_actionable
+        and in_remote_session(proc=proc, scopes=context.remote_scopes)
+    ):
+        return system
+    if is_login_infrastructure(proc=proc, processes=context.processes):
+        return CategoryDecision(category=Category.SYSTEM, reason_code=REASON_REMOTE_LOGIN)
     return None
 
 

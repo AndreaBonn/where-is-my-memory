@@ -58,12 +58,13 @@ class PlanExecutor:
     terminate_timeout_s: float = TERMINATE_TIMEOUT_S
 
     def apply_config(self, *, config: Config) -> None:
-        """Adopt the terminate timeout and protected names of a new configuration.
+        """Adopt the terminate timeout, protected names and SSH option of a new configuration.
 
         Called on the worker that runs plans, so it never lands in the middle of one.
         """
         self.terminate_timeout_s = config.terminate_timeout_s
         self.processes.set_extra_protected_names(names=config.extra_protected_names)
+        self.processes.set_remote_sessions_actionable(enabled=config.remote_sessions_actionable)
         if self.disk_fs is not None:
             self.disk_fs = replace(
                 self.disk_fs, roots=config.admitted_roots, min_age_days=config.devdirs_min_age_days

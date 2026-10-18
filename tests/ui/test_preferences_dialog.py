@@ -484,3 +484,29 @@ def test_refused_project_folder_shows_its_reason_in_the_folders_row(
     entry = row.get_activatable_widget()
     assert str(refused) in entry.get_text()
     assert str(home / "dev") not in row.get_subtitle().split("\n", 1)[1]
+
+
+def test_remote_sessions_switch_is_off_and_explains_the_risk(dialog: PreferencesDialog) -> None:
+    row = dialog.fields["remote_sessions_actionable"].row
+    assert isinstance(row, Adw.SwitchRow)
+    assert row.get_active() is False
+    assert "interrompe il lavoro di chi è collegato" in (row.get_subtitle() or "")
+    assert "SSH" in (row.get_title() or "")
+
+
+def test_remote_sessions_switch_is_in_the_advanced_page(dialog: PreferencesDialog) -> None:
+    row = dialog.fields["remote_sessions_actionable"].row
+    assert row.get_ancestor(Adw.NavigationPage) is dialog.advanced
+
+
+def test_remote_sessions_switch_applies_only_that_field(
+    dialog: PreferencesDialog, service: FakeActionService
+) -> None:
+    row = dialog.fields["remote_sessions_actionable"].row
+    assert isinstance(row, Adw.SwitchRow)
+    row.set_active(True)
+
+    dialog.apply()
+
+    assert service.config_updates == [{"remote_sessions_actionable": True}]
+    assert service.config().remote_sessions_actionable is True

@@ -1,5 +1,5 @@
 from collections.abc import Iterator, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from wimm.model.enums import Category
 from wimm.model.raw import RawProcess
@@ -31,6 +31,7 @@ from .constants import (
     TERMINAL_NAMES,
     VTE_SCOPE_PATTERNS,
 )
+from .remote_sessions import remote_login_scopes
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,6 +54,15 @@ class CategorizationContext:
     # Ids of the containers the engine API lists; empty when it is not reachable. A
     # `libpod-*.scope` process is dropped only if its container is in here.
     engine_container_ids: frozenset[str] = frozenset()
+    # R28: the user opted in to act on their own processes inside SSH sessions.
+    remote_sessions_actionable: bool = False
+    # Logind scopes holding an sshd or a mosh-server, computed once when the context is built.
+    remote_scopes: frozenset[str] = field(init=False, default=frozenset())
+
+    def __post_init__(self) -> None:
+        if self.remote_sessions_actionable:
+            scopes = remote_login_scopes(processes=self.processes.values())
+            object.__setattr__(self, "remote_scopes", scopes)
 
 
 def libpod_container_id(proc: RawProcess) -> str | None:

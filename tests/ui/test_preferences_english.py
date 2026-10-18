@@ -26,7 +26,7 @@ def test_the_dialog_titles_and_alert_rows_are_in_english(
     )
     assert spin(dialog, "notify_min_bytes").get_title() == "Alert me only if it frees at least (MB)"
     assert dialog.advanced_row.get_title() == "Advanced settings"
-    assert "closing and folders (14 items)" in (dialog.advanced_row.get_subtitle() or "")
+    assert "closing and folders (15 items)" in (dialog.advanced_row.get_subtitle() or "")
     assert any(
         isinstance(w, Gtk.Button) and w.get_label() == "Restore the recommended values"
         for w in tree(dialog)

@@ -12,6 +12,7 @@ FIELD_MESSAGES = MappingProxyType(
         "devdirs_roots": N_("Indica percorsi assoluti di cartelle"),
         "extra_protected_names": N_("Indica una lista di nomi di processo"),
         "foreground_tracking": N_("Deve essere un valore booleano"),
+        "remote_sessions_actionable": N_("Deve essere un valore booleano"),
         "language": N_("Scegli una lingua disponibile"),
     }
 )

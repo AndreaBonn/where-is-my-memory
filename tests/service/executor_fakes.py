@@ -41,6 +41,7 @@ class FakeProcesses:
     broken_trees: frozenset[int] = frozenset()
     on_wait: Callable[[], None] = lambda: None
     extra_protected: tuple[str, ...] = ()
+    remote_sessions_actionable: bool = False
     signals: list[tuple[int, signal.Signals]] = field(default_factory=list)
     waits: list[tuple[tuple[int, ...], float]] = field(default_factory=list)
 
@@ -52,6 +53,9 @@ class FakeProcesses:
 
     def set_extra_protected_names(self, *, names: tuple[str, ...]) -> None:
         self.extra_protected = names
+
+    def set_remote_sessions_actionable(self, *, enabled: bool) -> None:
+        self.remote_sessions_actionable = enabled
 
     def self_lineage(self) -> frozenset[int]:
         return self.lineage

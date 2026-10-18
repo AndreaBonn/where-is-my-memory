@@ -22,7 +22,7 @@ def test_only_the_alert_settings_are_in_view() -> None:
     keys = [key for group in ESSENTIAL_GROUPS for key in group.keys]
 
     assert keys == ["notify_after_s", "notify_min_bytes", CATEGORIES_KEY]
-    assert len([key for group in ADVANCED_GROUPS for key in group.keys]) == 14
+    assert len([key for group in ADVANCED_GROUPS for key in group.keys]) == 15
 
 
 def test_labels_read_as_sentences_in_everyday_units() -> None:

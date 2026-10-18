@@ -74,3 +74,12 @@ def test_psutil_control_protects_a_name_added_after_construction() -> None:
         protected = control.inspect(pid=child.pid)
         assert protected is not None
         assert protected.protected
+
+
+def test_apply_config_hands_the_remote_sessions_option_to_the_process_control() -> None:
+    processes = single_process()
+    executor = build(processes=processes)
+    executor.apply_config(config=Config(remote_sessions_actionable=True))
+    assert processes.remote_sessions_actionable is True
+    executor.apply_config(config=Config())
+    assert processes.remote_sessions_actionable is False

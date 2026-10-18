@@ -42,6 +42,7 @@ RANGES: Mapping[str, tuple[int | float, int | float | None]] = MappingProxyType(
     }
 )
 FLOAT_FIELDS = frozenset({"cpu_active_threshold_pct"})
+BOOLEAN_FIELDS = ("foreground_tracking", "remote_sessions_actionable")
 _PRESSURE_FIELDS = frozenset({"pressure_warning_pct", "pressure_critical_pct"})
 
 
@@ -66,6 +67,7 @@ class Config:
     disk_scan_interval_s: int = c.DISK_SCAN_INTERVAL_S
     extra_protected_names: tuple[str, ...] = c.EXTRA_PROTECTED_NAMES
     foreground_tracking: bool = c.FOREGROUND_TRACKING
+    remote_sessions_actionable: bool = c.REMOTE_SESSIONS_ACTIONABLE
     # None follows the system locale (wimm.i18n.resolve_default).
     language: str | None = None
 
@@ -73,8 +75,9 @@ class Config:
         for name in RANGES:
             _validate_number(name=name, value=getattr(self, name))
         _validate_collections(config=self)
-        if type(self.foreground_tracking) is not bool:
-            raise ValueError("foreground_tracking must be a boolean")
+        for name in BOOLEAN_FIELDS:
+            if type(getattr(self, name)) is not bool:
+                raise ValueError(f"{name} must be a boolean")
         if self.language is not None and self.language not in LANGUAGES:
             raise ValueError("language must be a supported language code")
         if self.pressure_critical_pct >= self.pressure_warning_pct:
@@ -138,7 +141,7 @@ def _decode_field(name: str, value: object, home: Path) -> Any:
     if name in RANGES:
         _validate_number(name=name, value=value)
         return value
-    if name == "foreground_tracking":
+    if name in BOOLEAN_FIELDS:
         if type(value) is not bool:
             raise ValueError("Expected boolean")
         return value

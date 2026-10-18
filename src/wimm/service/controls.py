@@ -49,13 +49,23 @@ class PsutilProcessControl:
     was reused, so a recycled PID is never signalled.
     """
 
-    def __init__(self, *, owner_uid: int, extra_protected_names: tuple[str, ...] = ()) -> None:
+    def __init__(
+        self,
+        *,
+        owner_uid: int,
+        extra_protected_names: tuple[str, ...] = (),
+        remote_sessions_actionable: bool = False,
+    ) -> None:
         self._owner_uid = owner_uid
         self._extra_protected_names = extra_protected_names
+        self._remote_sessions_actionable = remote_sessions_actionable
         self._known: dict[int, psutil.Process] = {}
 
     def set_extra_protected_names(self, *, names: tuple[str, ...]) -> None:
         self._extra_protected_names = names
+
+    def set_remote_sessions_actionable(self, *, enabled: bool) -> None:
+        self._remote_sessions_actionable = enabled
 
     def inspect(self, *, pid: int) -> LiveProcess | None:
         try:
@@ -128,6 +138,7 @@ class PsutilProcessControl:
             listen_ports_by_pid={},
             extra_protected_names=self._extra_protected_names,
             desktop_categories={},
+            remote_sessions_actionable=self._remote_sessions_actionable,
         )
         category = categorize_process(target, context).category
         return category is None or protection_of(category=category) is Protection.PROTECTED
