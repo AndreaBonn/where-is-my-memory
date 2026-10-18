@@ -230,3 +230,6 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T067 | 83431da | collector nuovi nel ciclo, ciclo reale 0,52 -> 0,56 s (nel rumore); review: errori non OSError dei collector loggati come warning
 - T063 | d38bbb8 | UI del riepilogo, click-through a 1280 e 375 px; review: la legenda non si ricostruisce più a ogni campione (chiudeva l'aiuto aperto)
 - T068 | (questo commit) | DEVIATIONS, M-25..M-27; contatore oom_kill provato dal vivo (da 6 a 7). Aperti: zram, AMD e nvidia-smi bloccato non provati su macchina reale; una APU AMD può comparire come memoria video; il lettore OOM del coordinatore si sostituisce con un setter
+- T069 T070 T072 | 3711b4d | cache HuggingFace, ollama, emulatori e SDK Android; security review: marcatori dell'SDK troppo generici (progetti Cordova pulibili), corretti
+- T071 | cdd104d | `ollama serve` vivo blocca la pulizia; review: argomenti illeggibili ora bloccano
+- T073 | 84b88a5 (questo commit) | security-reviewer su L6 e su T071. Aperti: ollama rinominato non riconosciuto; `ANDROID_AVD_HOME` non onorato; "Puoi liberare fino a" conta le voci Attenzione
