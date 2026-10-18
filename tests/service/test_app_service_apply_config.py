@@ -1,3 +1,4 @@
+import logging
 import threading
 from pathlib import Path
 
@@ -32,8 +33,20 @@ def paths(tmp_path: Path) -> UserPaths:
     )
 
 
-def started_service(*, executor: RecordingExecutor) -> tuple[AppService, FakeSampler]:
-    sampler = FakeSampler()
+class FailingSampler(FakeSampler):
+    def apply_config(self, *, config: Config) -> None:
+        raise RuntimeError("sampler refused the configuration")
+
+
+class FailingExecutor(RecordingExecutor):
+    def apply_config(self, *, config: Config) -> None:
+        raise RuntimeError("executor refused the configuration")
+
+
+def started_service(
+    *, executor: RecordingExecutor, sampler: FakeSampler | None = None
+) -> tuple[AppService, FakeSampler]:
+    sampler = sampler or FakeSampler()
     sampler.proceed.set()
     setup = ActionSetup(executor=executor, owner_uid=OWNER_UID)
     service = AppService(sampler=sampler, config=Config(), actions=setup)
@@ -117,3 +130,36 @@ def test_update_config_after_stop_saves_nothing(paths: UserPaths, tmp_path: Path
 
     assert service.config() == Config()
     assert not (paths.config_dir / "config.json").exists()
+
+
+def test_executor_adopts_the_config_even_if_the_sampler_fails(
+    paths: UserPaths, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    # extra_protected_names is a safety guarantee (SPECIFICHE 8.2): it must reach the executor.
+    executor = RecordingExecutor()
+    service, _ = started_service(executor=executor, sampler=FailingSampler())
+    try:
+        with caplog.at_level(level=logging.ERROR):
+            service.update_config(
+                changes={"extra_protected_names": ["postgres"]}, paths=paths, home=tmp_path
+            )
+            spin_until(predicate=lambda: bool(executor.configs))
+        assert [config.extra_protected_names for config, _ in executor.configs] == [("postgres",)]
+        assert "sampler refused" in caplog.text
+    finally:
+        service.stop()
+
+
+def test_sampler_adopts_the_config_even_if_the_executor_fails(
+    paths: UserPaths, tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    service, sampler = started_service(executor=FailingExecutor())
+    try:
+        with caplog.at_level(level=logging.ERROR):
+            changes = {"cpu_active_threshold_pct": 5}
+            service.update_config(changes=changes, paths=paths, home=tmp_path)
+            spin_until(predicate=lambda: bool(sampler.configs))
+            spin_until(predicate=lambda: "executor refused" in caplog.text)
+        assert [config for config, _ in sampler.configs] == [service.config()]
+    finally:
+        service.stop()

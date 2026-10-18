@@ -159,13 +159,21 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         return self._last_sampled
 
     def _apply_config(self, config: Config) -> None:
-        """Worker side: the sampler's history is not thread-safe, so it changes only here."""
+        """Worker side: the sampler's history is not thread-safe, so it changes only here.
+
+        Each part adopts the configuration on its own: a failing sampler must not leave the
+        executor without the protected names and roots the user just saved.
+        """
         try:
             self._sampler.apply_config(config=config)
-            if self._actions is not None:
-                self._actions.executor.apply_config(config=config)
         except Exception:
-            LOGGER.exception("Cannot apply the new configuration")
+            LOGGER.exception("Cannot apply the new configuration to the sampler")
+        if self._actions is None:
+            return
+        try:
+            self._actions.executor.apply_config(config=config)
+        except Exception:
+            LOGGER.exception("Cannot apply the new configuration to the executor")
 
     def _run_action(
         self, executor: ActionExecutor, plan: Plan
