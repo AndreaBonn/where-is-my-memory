@@ -11,6 +11,7 @@ if TYPE_CHECKING:
     from wimm.ui.disk_model import DiskSectionView
 
 MISSING_ROOT_TEXT = N_("La cartella {path} non esiste")
+REFUSED_ROOT_TEXT = N_("La cartella {path} non viene usata. {reason}")
 NO_ROOTS_TITLE = N_("Nessuna cartella di progetti trovata")
 NO_ROOTS_TEXT = N_("Indica dove tieni i tuoi progetti e cerco le librerie che si possono liberare.")
 CHOOSE_FOLDER_LABEL = N_("Scegli una cartella")

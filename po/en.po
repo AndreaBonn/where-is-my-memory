@@ -885,7 +885,7 @@ msgstr "The item no longer exists"
 msgid "La cache è un collegamento: puliscila con il comando dello strumento"
 msgstr "The cache is a link: clean it with the tool's own command"
 
-#: src/wimm/service/executor_disk_fs.py:42
+#: src/wimm/service/executor_disk_fs.py:43
 msgid "Chiudi ollama (ollama serve) prima di cancellare i modelli"
 msgstr "Close ollama (ollama serve) before deleting the models"
 
@@ -1047,53 +1047,53 @@ msgstr "Result"
 msgid "Forza chiusura"
 msgstr "Force close"
 
-#: src/wimm/ui/dialogs/preferences.py:30 src/wimm/ui/window_notify.py:65
+#: src/wimm/ui/dialogs/preferences.py:38 src/wimm/ui/window_notify.py:65
 msgid "Preferenze"
 msgstr "Preferences"
 
-#: src/wimm/ui/dialogs/preferences.py:31
+#: src/wimm/ui/dialogs/preferences.py:39
 msgid "Applica"
 msgstr "Apply"
 
-#: src/wimm/ui/dialogs/preferences.py:32
+#: src/wimm/ui/dialogs/preferences.py:40
 msgid "Preferenze applicate."
 msgstr "Preferences applied."
 
-#: src/wimm/ui/dialogs/preferences.py:33
+#: src/wimm/ui/dialogs/preferences.py:41
 msgid "Nessuna modifica."
 msgstr "No changes."
 
-#: src/wimm/ui/dialogs/preferences.py:34
+#: src/wimm/ui/dialogs/preferences.py:42
 msgid "Alcuni valori non sono validi: restano quelli in uso."
 msgstr "Some values are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:35
+#: src/wimm/ui/dialogs/preferences.py:43
 #, python-brace-format
 msgid "Impossibile salvare le preferenze: {reason}. Riprova."
 msgstr "Cannot save the preferences: {reason}. Try again."
 
-#: src/wimm/ui/dialogs/preferences.py:36
+#: src/wimm/ui/dialogs/preferences.py:44
 msgid "Ripristina i valori consigliati"
 msgstr "Restore the recommended values"
 
-#: src/wimm/ui/dialogs/preferences.py:38
+#: src/wimm/ui/dialogs/preferences.py:46
 msgid "Tornano come all'inizio anche i tipi di programma per cui ricevi avvisi; i programmi da non toccare e le cartelle in cui cercare restano come sono."
 msgstr "The kinds of program you get alerts for also go back to how they were at the start; the programs never to touch and the folders to search stay as they are."
 
-#: src/wimm/ui/dialogs/preferences.py:42
+#: src/wimm/ui/dialogs/preferences.py:50
 msgid "Alcuni valori in Impostazioni avanzate non sono validi: restano quelli in uso."
 msgstr "Some values in Advanced settings are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:44
+#: src/wimm/ui/dialogs/preferences.py:52
 msgid "Impostazioni avanzate"
 msgstr "Advanced settings"
 
-#: src/wimm/ui/dialogs/preferences.py:45
+#: src/wimm/ui/dialogs/preferences.py:53
 #, python-brace-format
 msgid "Come si capisce se è in uso, soglie, chiusura e cartelle ({count} voci)"
 msgstr "How to tell if it is in use, thresholds, closing and folders ({count} items)"
 
-#: src/wimm/ui/dialogs/preferences.py:48
+#: src/wimm/ui/dialogs/preferences.py:56
 msgid "Non disponibile su questo desktop: funziona solo con X11"
 msgstr "Not available on this desktop: it only works with X11"
 
@@ -1129,152 +1129,152 @@ msgstr "Language"
 msgid "La lingua di finestra, menu e notifiche. Il cambio vale subito."
 msgstr "The language of the window, menus and notifications. The change applies at once."
 
-#: src/wimm/ui/dialogs/preferences_model.py:58
+#: src/wimm/ui/dialogs/preferences_model.py:62
 msgid "Controlla la memoria ogni (secondi)"
 msgstr "Check the memory every (seconds)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:59
+#: src/wimm/ui/dialogs/preferences_model.py:63
 msgid "Più spesso è più preciso, ma usa un po' più di processore"
 msgstr "More often is more precise, but uses a bit more processor"
 
-#: src/wimm/ui/dialogs/preferences_model.py:63
+#: src/wimm/ui/dialogs/preferences_model.py:67
 msgid "Per decidere se è in uso, guarda gli ultimi (minuti)"
 msgstr "To decide if it is in use, look at the last (minutes)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:64
+#: src/wimm/ui/dialogs/preferences_model.py:68
 msgid "Un programma è in uso se ha lavorato in questo tempo"
 msgstr "A program is in use if it has worked during this time"
 
-#: src/wimm/ui/dialogs/preferences_model.py:69
+#: src/wimm/ui/dialogs/preferences_model.py:73
 msgid "È fermo se usa meno del processore di (%)"
 msgstr "It is idle if it uses less processor than (%)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:70
-#: src/wimm/ui/dialogs/preferences_model.py:77
+#: src/wimm/ui/dialogs/preferences_model.py:74
+#: src/wimm/ui/dialogs/preferences_model.py:81
 msgid "Media sul tempo osservato"
 msgstr "Average over the observed time"
 
-#: src/wimm/ui/dialogs/preferences_model.py:76
+#: src/wimm/ui/dialogs/preferences_model.py:80
 msgid "È fermo se scambia in rete meno di (kB al secondo)"
 msgstr "It is idle if it exchanges less over the network than (kB per second)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:84
+#: src/wimm/ui/dialogs/preferences_model.py:88
 msgid "Avvisami se non lo usi da (minuti)"
 msgstr "Alert me if you have not used it for (minutes)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:85
+#: src/wimm/ui/dialogs/preferences_model.py:89
 msgid "Prima di questo tempo non arriva nessun avviso"
 msgstr "No alert arrives before this time"
 
-#: src/wimm/ui/dialogs/preferences_model.py:90
+#: src/wimm/ui/dialogs/preferences_model.py:94
 msgid "Avvisami solo se libero almeno (MB)"
 msgstr "Alert me only if it frees at least (MB)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:91
+#: src/wimm/ui/dialogs/preferences_model.py:95
 msgid "Per i programmi più piccoli non arriva nessun avviso"
 msgstr "No alert arrives for smaller programs"
 
-#: src/wimm/ui/dialogs/preferences_model.py:97
+#: src/wimm/ui/dialogs/preferences_model.py:101
 msgid "Avvisi singoli in un'ora"
 msgstr "Single alerts in an hour"
 
-#: src/wimm/ui/dialogs/preferences_model.py:98
+#: src/wimm/ui/dialogs/preferences_model.py:102
 msgid "Gli altri arrivano insieme in uno solo; memoria o disco pieni si segnalano sempre"
 msgstr "The others arrive together in one; full memory or disk is always reported"
 
-#: src/wimm/ui/dialogs/preferences_model.py:102
+#: src/wimm/ui/dialogs/preferences_model.py:106
 msgid "Quasi pieno quando resta libero meno del (%)"
 msgstr "Almost full when less than (%) is left free"
 
-#: src/wimm/ui/dialogs/preferences_model.py:103
+#: src/wimm/ui/dialogs/preferences_model.py:107
 msgid "Vale per la memoria e per il disco: da qui compare l'avviso"
 msgstr "Applies to memory and disk: the alert appears from here"
 
-#: src/wimm/ui/dialogs/preferences_model.py:107
+#: src/wimm/ui/dialogs/preferences_model.py:111
 msgid "Pieno quando resta libero meno del (%)"
 msgstr "Full when less than (%) is left free"
 
-#: src/wimm/ui/dialogs/preferences_model.py:108
+#: src/wimm/ui/dialogs/preferences_model.py:112
 msgid "Deve essere minore della soglia precedente"
 msgstr "Must be lower than the previous threshold"
 
-#: src/wimm/ui/dialogs/preferences_model.py:112
+#: src/wimm/ui/dialogs/preferences_model.py:116
 msgid "Se non si chiude, proponi la chiusura forzata dopo (secondi)"
 msgstr "If it does not close, offer a forced close after (seconds)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:113
+#: src/wimm/ui/dialogs/preferences_model.py:117
 msgid "Il tempo che un programma ha per chiudersi da solo"
 msgstr "The time a program has to close by itself"
 
-#: src/wimm/ui/dialogs/preferences_model.py:117
+#: src/wimm/ui/dialogs/preferences_model.py:121
 msgid "Proponi le cartelle non usate da almeno (giorni)"
 msgstr "Offer the folders not used for at least (days)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:118
+#: src/wimm/ui/dialogs/preferences_model.py:122
 msgid "Le cartelle di dipendenze più recenti restano fuori"
 msgstr "More recent dependency folders are left out"
 
-#: src/wimm/ui/dialogs/preferences_model.py:122
+#: src/wimm/ui/dialogs/preferences_model.py:126
 msgid "Cerca fino a questi livelli di sottocartelle"
 msgstr "Search down to this many levels of subfolders"
 
-#: src/wimm/ui/dialogs/preferences_model.py:123
+#: src/wimm/ui/dialogs/preferences_model.py:127
 msgid "Più livelli trovano di più, ma la ricerca dura di più"
 msgstr "More levels find more, but the search takes longer"
 
-#: src/wimm/ui/dialogs/preferences_model.py:127
+#: src/wimm/ui/dialogs/preferences_model.py:131
 msgid "Ricontrolla il disco ogni (ore)"
 msgstr "Check the disk again every (hours)"
 
-#: src/wimm/ui/dialogs/preferences_model.py:128
+#: src/wimm/ui/dialogs/preferences_model.py:132
 msgid "Il controllo calcola quanto occupano cartelle e cache"
 msgstr "The check works out how much folders and caches take up"
 
-#: src/wimm/ui/dialogs/preferences_model.py:137
+#: src/wimm/ui/dialogs/preferences_model.py:141
 msgid "Avvisi"
 msgstr "Alerts"
 
-#: src/wimm/ui/dialogs/preferences_model.py:138
+#: src/wimm/ui/dialogs/preferences_model.py:142
 msgid "Quando ti avvisiamo di un programma acceso che non usi."
 msgstr "When we alert you about a running program you do not use."
 
-#: src/wimm/ui/dialogs/preferences_model.py:144
+#: src/wimm/ui/dialogs/preferences_model.py:148
 msgid "Come si capisce se un programma è in uso"
 msgstr "How to tell if a program is in use"
 
-#: src/wimm/ui/dialogs/preferences_model.py:145
+#: src/wimm/ui/dialogs/preferences_model.py:149
 msgid "Quanto spesso si controlla e quando un programma conta come fermo."
 msgstr "How often to check and when a program counts as idle."
 
-#: src/wimm/ui/dialogs/preferences_model.py:155
+#: src/wimm/ui/dialogs/preferences_model.py:159
 msgid "Quanti avvisi"
 msgstr "How many alerts"
 
-#: src/wimm/ui/dialogs/preferences_model.py:156
+#: src/wimm/ui/dialogs/preferences_model.py:160
 msgid "Il limite di avvisi, oltre a quanto scelto in Avvisi."
 msgstr "The alert limit, on top of what you chose in Alerts."
 
-#: src/wimm/ui/dialogs/preferences_model.py:160
+#: src/wimm/ui/dialogs/preferences_model.py:164
 msgid "Memoria e disco quasi pieni"
 msgstr "Memory and disk almost full"
 
-#: src/wimm/ui/dialogs/preferences_model.py:161
+#: src/wimm/ui/dialogs/preferences_model.py:165
 msgid "Le soglie in percentuale di spazio libero."
 msgstr "The thresholds as a percentage of free space."
 
-#: src/wimm/ui/dialogs/preferences_model.py:165
+#: src/wimm/ui/dialogs/preferences_model.py:169
 msgid "Chiusura dei programmi"
 msgstr "Closing programs"
 
-#: src/wimm/ui/dialogs/preferences_model.py:166
+#: src/wimm/ui/dialogs/preferences_model.py:170
 msgid "Quanto si aspetta e quali programmi non si toccano mai."
 msgstr "How long to wait and which programs are never touched."
 
-#: src/wimm/ui/dialogs/preferences_model.py:170
+#: src/wimm/ui/dialogs/preferences_model.py:174
 msgid "Cartelle di sviluppo"
 msgstr "Development folders"
 
-#: src/wimm/ui/dialogs/preferences_model.py:171
+#: src/wimm/ui/dialogs/preferences_model.py:175
 msgid "Dove cercare le cartelle di dipendenze e ogni quanto."
 msgstr "Where to look for dependency folders, and how often."
 
@@ -1330,8 +1330,8 @@ msgid "Cartelle in cui cercare"
 msgstr "Folders to search"
 
 #: src/wimm/ui/dialogs/preferences_rows.py:44
-msgid "Percorsi nella tua cartella personale, separati da virgola"
-msgstr "Paths inside your home folder, separated by commas"
+msgid "Percorsi di cartelle, anche fuori dalla tua cartella personale, separati da virgola"
+msgstr "Folder paths, also outside your home folder, separated by commas"
 
 #: src/wimm/ui/dialogs/session.py:25
 msgid "La situazione è cambiata: chiudi e riapri per vedere l'elenco aggiornato."
@@ -1547,107 +1547,112 @@ msgid "La cartella {path} non esiste"
 msgstr "The folder {path} does not exist"
 
 #: src/wimm/ui/disk_texts.py:14
+#, python-brace-format
+msgid "La cartella {path} non viene usata. {reason}"
+msgstr "Folder {path} is not used. {reason}"
+
+#: src/wimm/ui/disk_texts.py:15
 msgid "Nessuna cartella di progetti trovata"
 msgstr "No project folder found"
 
-#: src/wimm/ui/disk_texts.py:15
+#: src/wimm/ui/disk_texts.py:16
 msgid "Indica dove tieni i tuoi progetti e cerco le librerie che si possono liberare."
 msgstr "Tell me where you keep your projects and I will look for libraries you can free."
 
-#: src/wimm/ui/disk_texts.py:16
+#: src/wimm/ui/disk_texts.py:17
 msgid "Scegli una cartella"
 msgstr "Choose a folder"
 
-#: src/wimm/ui/disk_texts.py:17
+#: src/wimm/ui/disk_texts.py:18
 msgid "Niente da liberare sul disco"
 msgstr "Nothing to free on the disk"
 
-#: src/wimm/ui/disk_texts.py:18
+#: src/wimm/ui/disk_texts.py:19
 msgid "Ogni bottone ti mostra prima cosa succede e chiede conferma."
 msgstr "Every button first shows you what will happen and asks for confirmation."
 
-#: src/wimm/ui/disk_texts.py:21
+#: src/wimm/ui/disk_texts.py:22
 msgid "Docker serve a far girare programmi in contenitori separati."
 msgstr "Docker runs programs in separate containers."
 
-#: src/wimm/ui/disk_texts.py:22
+#: src/wimm/ui/disk_texts.py:23
 msgid "Copie scaricate per avviare i contenitori. Se servono di nuovo, si riscaricano."
 msgstr "Copies downloaded to start containers. If they are needed again, they are downloaded again."
 
-#: src/wimm/ui/disk_texts.py:23
+#: src/wimm/ui/disk_texts.py:24
 msgid "Contenitori spenti che occupano ancora un po' di spazio."
 msgstr "Stopped containers that still take up some space."
 
-#: src/wimm/ui/disk_texts.py:24
+#: src/wimm/ui/disk_texts.py:25
 msgid "Dati salvati dai contenitori, per esempio un database."
 msgstr "Data saved by containers, for example a database."
 
-#: src/wimm/ui/disk_texts.py:25
+#: src/wimm/ui/disk_texts.py:26
 msgid "Pezzi salvati per costruire i contenitori più in fretta: si ricreano."
 msgstr "Data saved to build containers faster: it is recreated."
 
-#: src/wimm/ui/disk_texts.py:26
+#: src/wimm/ui/disk_texts.py:27
 msgid "File temporanei dei programmi di sviluppo: si ricreano da soli."
 msgstr "Temporary files of development tools: they recreate themselves."
 
-#: src/wimm/ui/disk_texts.py:27
+#: src/wimm/ui/disk_texts.py:28
 msgid "Librerie scaricate per progetti vecchi: si reinstallano se riapri il progetto."
 msgstr "Libraries downloaded for old projects: they are reinstalled if you reopen the project."
 
-#: src/wimm/ui/disk_texts.py:28
+#: src/wimm/ui/disk_texts.py:29
 msgid "File che hai già cancellato: svuotandolo spariscono per sempre."
 msgstr "Files you have already deleted: emptying it removes them for good."
 
-#: src/wimm/ui/disk_texts.py:34
+#: src/wimm/ui/disk_texts.py:35
 msgid "Modelli HuggingFace"
 msgstr "HuggingFace models"
 
-#: src/wimm/ui/disk_texts.py:35
+#: src/wimm/ui/disk_texts.py:36
 msgid "Modelli ollama"
 msgstr "ollama models"
 
-#: src/wimm/ui/disk_texts.py:36
+#: src/wimm/ui/disk_texts.py:37
 msgid "Emulatori Android (AVD)"
 msgstr "Android emulators (AVD)"
 
-#: src/wimm/ui/disk_texts.py:37
+#: src/wimm/ui/disk_texts.py:38
 msgid "SDK Android"
 msgstr "Android SDK"
 
-#: src/wimm/ui/disk_texts.py:43
+#: src/wimm/ui/disk_texts.py:44
 msgid "Si libera senza pensarci"
 msgstr "Free it without a second thought"
 
-#: src/wimm/ui/disk_texts.py:44
+#: src/wimm/ui/disk_texts.py:45
 msgid "Da guardare prima"
 msgstr "Take a look first"
 
-#: src/wimm/ui/disk_texts.py:45
+#: src/wimm/ui/disk_texts.py:46
 msgid "Attenzione: cancella dati"
 msgstr "Caution: deletes data"
 
-#: src/wimm/ui/disk_texts.py:48
+#: src/wimm/ui/disk_texts.py:49
 msgid "Si ricrea da solo quando serve."
 msgstr "It recreates itself when needed."
 
-#: src/wimm/ui/disk_texts.py:49
+#: src/wimm/ui/disk_texts.py:50
 msgid "Si può riscaricare o ricreare, ma con un po' di lavoro."
 msgstr "It can be downloaded or recreated again, but it takes some work."
 
-#: src/wimm/ui/disk_texts.py:50
+#: src/wimm/ui/disk_texts.py:51
 msgid "Dentro possono esserci database o file che non si recuperano."
 msgstr "It may hold databases or files that cannot be recovered."
 
-#: src/wimm/ui/disk_texts.py:62
+#: src/wimm/ui/disk_texts.py:63
 msgid "Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano."
 msgstr "Only cleans what recreates itself: the trash and your data stay."
 
-#: src/wimm/ui/disk_texts.py:73 src/wimm/ui/summary_status.py:106
+#: src/wimm/ui/disk_texts.py:74 src/wimm/ui/summary_status.py:106
 #, python-brace-format
 msgid "Libera {size} senza rischi"
 msgstr "Free {size} with no risk"
 
-#: src/wimm/ui/disk_texts.py:93
+#: src/wimm/ui/disk_texts.py:94
 #, python-brace-format
 msgid "Puoi liberare fino a {size}"
 msgstr "You can free up to {size}"

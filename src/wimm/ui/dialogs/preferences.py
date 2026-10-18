@@ -13,6 +13,7 @@ from gi.repository import Adw, Gtk
 
 from wimm.collectors.foreground import X11_SESSION
 from wimm.config import config_to_raw
+from wimm.config_messages import root_refusal_message
 from wimm.i18n import N_, _
 from wimm.model.errors import WimmError
 from wimm.paths import UserPaths
@@ -20,10 +21,17 @@ from wimm.ui.dialogs.preferences_alerts import PresetPicker
 from wimm.ui.dialogs.preferences_focus import focus_at_end
 from wimm.ui.dialogs.preferences_ignored import IgnoredGroups, can_unignore
 from wimm.ui.dialogs.preferences_language import LanguageGroup, request_language
-from wimm.ui.dialogs.preferences_model import ADVANCED_GROUPS, ESSENTIAL_GROUPS, collect_changes
+from wimm.ui.dialogs.preferences_model import (
+    ADVANCED_GROUPS,
+    ESSENTIAL_GROUPS,
+    RootState,
+    RootStatus,
+    collect_changes,
+    root_statuses,
+)
 from wimm.ui.dialogs.preferences_presets import recommended_values
 from wimm.ui.dialogs.preferences_rows import ERROR_CLASS, Field, build_field
-from wimm.ui.disk_texts import MISSING_ROOT_TEXT
+from wimm.ui.disk_texts import MISSING_ROOT_TEXT, REFUSED_ROOT_TEXT
 from wimm.ui.format import home_relative
 
 LOGGER = logging.getLogger(__name__)
@@ -47,6 +55,17 @@ FOREGROUND_KEY = "foreground_tracking"
 ROOTS_KEY = "devdirs_roots"
 NO_X11_TEXT = N_("Non disponibile su questo desktop: funziona solo con X11")
 STATUS_SPACING = 12
+
+
+def _root_note(*, status: RootStatus) -> str:
+    """The plain-language line under the folders entry for a missing or refused folder."""
+    shown = home_relative(path=status.path, home=Path.home())
+    if status.state is RootState.MISSING:
+        return _(MISSING_ROOT_TEXT).format(path=shown)
+    if status.state is RootState.REFUSED and status.reason is not None:
+        reason = root_refusal_message(reason=status.reason)
+        return _(REFUSED_ROOT_TEXT).format(path=shown, reason=reason)
+    return ""
 
 
 class PreferencesDialog(Adw.PreferencesDialog):
@@ -158,11 +177,8 @@ class PreferencesDialog(Adw.PreferencesDialog):
         for key, item in self.fields.items():
             item.load(raw[key])
         self._presets.refresh()
-        missing = (
-            _(MISSING_ROOT_TEXT).format(path=home_relative(path=path, home=Path.home()))
-            for path in self._config.missing_roots
-        )
-        self.fields[ROOTS_KEY].set_note(lines=tuple(missing))
+        notes = (_root_note(status=status) for status in root_statuses(config=self._config))
+        self.fields[ROOTS_KEY].set_note(lines=tuple(note for note in notes if note))
 
     def show_folders(self) -> None:
         """Open the advanced page with the cursor in the folders entry (the "Scegli" action)."""

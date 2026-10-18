@@ -20,6 +20,7 @@ from tests.ui.conftest import (
 from tests.ui.test_window_chrome import menu_item_states
 from wimm.app import _install_preferences
 from wimm.config import Config
+from wimm.core.root_policy import RootRefusal
 from wimm.model.enums import Category, GroupId
 from wimm.model.snapshot import Snapshot
 from wimm.paths import UserPaths
@@ -376,8 +377,13 @@ def test_apply_without_changes_clears_a_previous_invalid_status(
 
 
 def test_missing_project_folder_is_flagged_in_the_folders_row(
-    display: None, snapshot: Snapshot, paths: UserPaths, home: Path
+    display: None,
+    snapshot: Snapshot,
+    paths: UserPaths,
+    home: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    monkeypatch.setattr(Config, "refused_roots", property(lambda _self: ()))
     gone = home / "gone"
     config = replace(Config(), devdirs_roots=(home / "dev", gone))
     dialog = PreferencesDialog(
@@ -455,3 +461,28 @@ def _spin(*, seconds: float) -> None:
     context = GLib.MainContext.default()
     while GLib.get_monotonic_time() < deadline:
         context.iteration(False)
+
+
+def test_refused_project_folder_shows_its_reason_in_the_folders_row(
+    display: None,
+    snapshot: Snapshot,
+    paths: UserPaths,
+    home: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refused = Path("/usr/share/fonts")
+    monkeypatch.setattr(
+        Config, "refused_roots", property(lambda _s: ((refused, RootRefusal.SYSTEM_PATH),))
+    )
+    config = replace(Config(), devdirs_roots=(home / "dev", refused))
+    dialog = PreferencesDialog(
+        source=FakeActionService(snapshot=snapshot, config=config), paths=paths, home=home
+    )
+    row = dialog.fields["devdirs_roots"].row
+    assert (
+        f"La cartella {refused} non viene usata. La cartella appartiene al sistema"
+        in row.get_subtitle()
+    )
+    entry = row.get_activatable_widget()
+    assert str(refused) in entry.get_text()
+    assert str(home / "dev") not in row.get_subtitle().split("\n", 1)[1]

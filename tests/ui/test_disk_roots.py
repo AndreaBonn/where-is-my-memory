@@ -10,6 +10,7 @@ from tests.core.disk_helpers import report
 from tests.ui.conftest import descendants
 from tests.ui.fakes import FakeDiskSource
 from wimm.config import Config
+from wimm.core.root_policy import RootRefusal
 from wimm.model.disk import DiskReport
 from wimm.model.snapshot import Snapshot
 from wimm.ui.disk_model import RootsState
@@ -114,8 +115,14 @@ class ConfigSource(FakeDiskSource):
 
 
 def test_binding_reads_the_missing_roots_from_the_config(
-    display: None, now: datetime, snapshot: Snapshot, tmp_path: Path
+    display: None,
+    now: datetime,
+    snapshot: Snapshot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    # tmp_path sits under /tmp, which the real policy refuses; this test is about "missing".
+    monkeypatch.setattr(Config, "refused_roots", property(lambda _self: ()))
     gone = tmp_path / "gone"
     config = Config(devdirs_roots=(tmp_path, gone))
     source = ConfigSource(snapshot=snapshot, config=config, report_=report())
@@ -179,3 +186,35 @@ def test_binding_does_not_probe_the_disk_on_every_snapshot(
     source.config_value = Config(devdirs_roots=(tmp_path / "gone",))
     source.emit("snapshot-updated")
     assert len(probes) == before + 1
+
+
+def test_binding_shows_the_empty_state_when_every_root_is_refused(
+    display: None,
+    now: datetime,
+    snapshot: Snapshot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refused = ((tmp_path, RootRefusal.SYSTEM_PATH),)
+    monkeypatch.setattr(Config, "refused_roots", property(lambda _self: refused))
+    source = ConfigSource(
+        snapshot=snapshot, config=Config(devdirs_roots=(tmp_path,)), report_=report()
+    )
+    binding = DiskBinding(source=source, clock=lambda: now, on_choose_folder=lambda: None)
+    assert EMPTY_TITLE in row_titles(binding.page)
+    assert button(binding.page, CHOOSE) is not None
+
+
+def test_binding_keeps_the_page_usable_when_only_some_roots_are_refused(
+    display: None,
+    now: datetime,
+    snapshot: Snapshot,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    refused = ((tmp_path / "sys", RootRefusal.SYSTEM_PATH),)
+    monkeypatch.setattr(Config, "refused_roots", property(lambda _self: refused))
+    config = Config(devdirs_roots=(tmp_path, tmp_path / "sys"))
+    source = ConfigSource(snapshot=snapshot, config=config, report_=report())
+    binding = DiskBinding(source=source, clock=lambda: now, on_choose_folder=lambda: None)
+    assert EMPTY_TITLE not in row_titles(binding.page)

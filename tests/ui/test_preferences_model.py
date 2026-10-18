@@ -1,19 +1,24 @@
+from dataclasses import replace
+from pathlib import Path
 from typing import Any
 
 import pytest
 
 from wimm.config import RANGES, Config, config_to_raw
+from wimm.core.root_policy import RootRefusal
 from wimm.model.enums import Category
 from wimm.ui.dialogs.preferences_model import (
     GROUPS,
     IMMEDIATE_KEYS,
     NUMBER_FIELDS,
+    RootState,
     actionable_categories,
     collect_changes,
     display_value,
     format_list,
     parse_list,
     raw_value,
+    root_statuses,
 )
 
 
@@ -126,3 +131,51 @@ def test_collect_changes_sends_an_edited_list_even_with_commas_in_the_old_one() 
     shown = shown_from(raw)
     shown["extra_protected_names"] = "a,b, c"
     assert collect_changes(current=raw, shown=shown) == {"extra_protected_names": ["a", "b", "c"]}
+
+
+ROOT_A = Path("/srv/a")
+ROOT_B = Path("/srv/b")
+ROOT_C = Path("/srv/c")
+ROOT_D = Path("/srv/d")
+
+
+def config_with_roots(
+    *,
+    monkeypatch: pytest.MonkeyPatch,
+    roots: tuple[Path, ...],
+    refused: tuple[tuple[Path, RootRefusal], ...] = (),
+    missing: tuple[Path, ...] = (),
+) -> Config:
+    monkeypatch.setattr(Config, "refused_roots", property(lambda _self: refused))
+    monkeypatch.setattr(Config, "missing_roots", property(lambda _self: missing))
+    blocked = {*dict(refused), *missing}
+    admitted = tuple(r for r in roots if r not in blocked)
+    monkeypatch.setattr(Config, "admitted_roots", property(lambda _self: admitted))
+    return replace(Config(), devdirs_roots=roots)
+
+
+def test_root_statuses_tell_ok_missing_and_each_refusal_apart(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    reasons = (
+        (ROOT_A, RootRefusal.SYSTEM_PATH),
+        (ROOT_B, RootRefusal.NOT_OWNED),
+        (ROOT_C, RootRefusal.REMOTE_FS),
+    )
+    roots = (ROOT_A, ROOT_B, ROOT_C, ROOT_D, Path("/srv/gone"))
+    config = config_with_roots(
+        monkeypatch=monkeypatch, roots=roots, refused=reasons, missing=(Path("/srv/gone"),)
+    )
+    statuses = root_statuses(config=config)
+    assert [(s.path, s.state, s.reason) for s in statuses] == [
+        (ROOT_A, RootState.REFUSED, RootRefusal.SYSTEM_PATH),
+        (ROOT_B, RootState.REFUSED, RootRefusal.NOT_OWNED),
+        (ROOT_C, RootState.REFUSED, RootRefusal.REMOTE_FS),
+        (ROOT_D, RootState.OK, None),
+        (Path("/srv/gone"), RootState.MISSING, None),
+    ]
+
+
+def test_root_statuses_without_problems_are_all_ok(monkeypatch: pytest.MonkeyPatch) -> None:
+    config = config_with_roots(monkeypatch=monkeypatch, roots=(ROOT_D,))
+    assert [s.state for s in root_statuses(config=config)] == [RootState.OK]

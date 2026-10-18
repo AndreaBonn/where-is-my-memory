@@ -41,7 +41,7 @@ TEXTS = {
     ),
     "devdirs_roots": (
         N_("Cartelle in cui cercare"),
-        N_("Percorsi nella tua cartella personale, separati da virgola"),
+        N_("Percorsi di cartelle, anche fuori dalla tua cartella personale, separati da virgola"),
     ),
 }
 

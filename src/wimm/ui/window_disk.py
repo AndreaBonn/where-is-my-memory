@@ -8,6 +8,7 @@ import gi
 from wimm.core.constants import DEVDIRS_MIN_AGE_DAYS
 from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind, TargetId
+from wimm.ui.dialogs.preferences_model import RootState, root_statuses
 from wimm.ui.disk_model import DiskRowView, RootsState
 from wimm.ui.format import home_relative
 from wimm.ui.pages.disk import DiskPage
@@ -94,8 +95,9 @@ class DiskBinding:
         config = self._config()
         if config is None:
             return RootsState()
-        missing = config.missing_roots
-        usable = len(config.devdirs_roots) > len(missing)
+        statuses = root_statuses(config=config)
+        missing = (s.path for s in statuses if s.state is RootState.MISSING)
+        usable = any(status.state is RootState.OK for status in statuses)
         shown = tuple(home_relative(path=path, home=Path.home()) for path in missing)
         return RootsState(missing=shown, usable=usable)
 

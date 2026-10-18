@@ -2,8 +2,12 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any
 
 from wimm.config import FLOAT_FIELDS, RANGES
+from wimm.core.root_policy import RootRefusal
 from wimm.i18n import N_
 from wimm.model.enums import Category, Protection, protection_of
 
@@ -243,3 +247,35 @@ def collect_changes(
         if changed:
             changes[key] = raw
     return changes
+
+
+class RootState(Enum):
+    """What the dialog and the Disco page know about one configured project folder."""
+
+    OK = "ok"
+    MISSING = "missing"
+    REFUSED = "refused"
+
+
+@dataclass(frozen=True)
+class RootStatus:
+    """One configured folder, its state and, when refused, the ADR-007 reason."""
+
+    path: Path
+    state: RootState
+    reason: RootRefusal | None = None
+
+
+def root_statuses(*, config: Any) -> tuple[RootStatus, ...]:
+    """The state of every configured folder, in the order they were configured."""
+    refused = dict(config.refused_roots)
+    missing = frozenset(config.missing_roots)
+    statuses = []
+    for path in config.devdirs_roots:
+        if path in refused:
+            statuses.append(RootStatus(path, RootState.REFUSED, refused[path]))
+        elif path in missing:
+            statuses.append(RootStatus(path, RootState.MISSING))
+        else:
+            statuses.append(RootStatus(path, RootState.OK))
+    return tuple(statuses)
