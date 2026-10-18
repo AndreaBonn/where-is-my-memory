@@ -116,3 +116,23 @@ del commit misurato. Script `measure_devdirs.py` (nella cartella temporanea di s
 
 La prima riga di baseline (5,21 s) includeva un run a cache fredda: il confronto valido è fra le
 due righe misurate una dopo l'altra.
+
+## Apertura della finestra (RNF-04: sotto 1 s dal clic al primo render)
+
+Misura: `scripts/measure_open_time.py`, 10 ripetizioni per caso.
+
+```
+dbus-run-session -- xvfb-run -a uv run python -m scripts.measure_open_time --workdir <cartella temporanea>
+```
+
+Che cosa si cronometra: l'app parte come `python -m wimm --background` con HOME e XDG_* temporanei, `GSK_RENDERER=cairo` e `GDK_DEBUG=gl-disable,vulkan-disable`. Lo script invia `org.freedesktop.Application.Activate` sul bus (la stessa chiamata a cui porta il clic sull'icona) e interroga X (`xdotool search --onlyvisible --pid`) finché una finestra del processo risulta mappata. Il cronometro include circa 10 ms di avvio dei processi `gdbus` e `xdotool` e si ferma alla mappatura, non alla prima pittura del contenuto. Prima di misurare c'è un'apertura scartata: su un bus privato nuovo la prima apertura attiva il portale desktop e impiega circa 25 s, un artefatto della sessione di prova che non esiste su un desktop reale.
+
+Condizioni (2026-10-18, 02:09-02:10): Xvfb, bus di sessione privato, 16 core, load average 2,5 (3,8 alla fine) letto con `uptime`, app avviata 3 s prima di ogni misura. Prima apertura: processo nuovo a ogni ripetizione, GTK e libadwaita da caricare. Riaperture: stesso processo, finestra chiusa con WM_DELETE_WINDOW tra un campione e l'altro.
+
+| Caso | Campioni (ms) | Mediana | p90 | Limite | Verdetto |
+|---|---|---|---|---|---|
+| Prima apertura | 276, 272, 227, 292, 209, 205, 217, 234, 239, 246 | 236 ms | 276 ms | 1 s | rispettato |
+| Riapertura | 12, 10, 10, 10, 9, 8, 8, 11, 9, 10 | 10 ms | 11 ms | 1 s | rispettato |
+
+Riserve: Xvfb non dipinge su uno schermo reale e il "primo render" è approssimato dalla mappatura della finestra; i dati dello snapshot sono già pronti, come prevede la specifica, ma qui il campionamento ha avuto solo 3 s per finire. La prova sul display reale resta nel controllo manuale M-2.
+

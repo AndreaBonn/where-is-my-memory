@@ -21,7 +21,7 @@ Stati: fatto, fatto con deviazione, da verificare a mano, non fatto. Una voce è
 | N. | Voce (sintesi) | Stato | Evidenza |
 |---|---|---|---|
 | 1 | Dopo logout e login l'icona compare e `pgrep -f "/usr/bin/wimm"` trova un processo | da verificare a mano (M-6) | Il pacchetto installa l'autostart `wimm --background` (commit `85ac472`), verificato in container Ubuntu 24.04 da `make test-deb` (`2bca376`; vedi REPORT_ATTIVITA, sessione #1). `tests/integration/test_background.py` prova l'avvio in background su bus privato. Il pacchetto non è installato sull'host: logout e login li fate voi |
-| 2 | Il clic apre la finestra in meno di 1 s; RAM, swap e disco coerenti con `free -b` e `df -B1 /` (scarto < 2%); chiudere nasconde, "Esci" termina | da verificare a mano (M-2) | Coerenza con `free -b`: `tests/collectors/test_meminfo.py::test_meminfo_matches_free`, tolleranza 2% (`464a024`). Chiusura che nasconde: `tests/ui/test_window_clickthrough.py::test_closing_hides_the_window_without_destroying_it`. Il tempo di apertura sul display reale non è misurato: la finestra si crea alla prima apertura (docs/DEVIATIONS.md, "Processo residente senza GTK"), quindi la prima apertura va cronometrata a mano |
+| 2 | Il clic apre la finestra in meno di 1 s; RAM, swap e disco coerenti con `free -b` e `df -B1 /` (scarto < 2%); chiudere nasconde, "Esci" termina | da verificare a mano (M-2) | Coerenza con `free -b`: `tests/collectors/test_meminfo.py::test_meminfo_matches_free`, tolleranza 2% (`464a024`). Chiusura che nasconde: `tests/ui/test_window_clickthrough.py::test_closing_hides_the_window_without_destroying_it`. Il tempo di apertura è misurato solo su Xvfb (docs/PERF.md): la finestra si crea alla prima apertura (docs/DEVIATIONS.md, "Processo residente senza GTK"), quindi la prima apertura va cronometrata a mano |
 | 3 | I container compose raggruppati per progetto, memoria coerente con `docker stats` (scarto < 5%) | fatto | `tests/collectors/test_docker_source.py::test_real_total_container_memory_matches_docker_stats` confronta con `docker stats` sui container in esecuzione (`4e4f4b1`, `20a7b84`). Raggruppamento: `tests/core/test_grouping.py` con la fixture `tests/fixtures/snapshot_whitebox.json` (`28ef679`). I nomi `whitebox` e `luve-agent` compaiono solo nella fixture: i progetti reali si guardano nel percorso di M-16. Il test di confronto è risultato instabile una volta (sezione 6) |
 | 4 | `python3 -m http.server 8765` compare come dev server del progetto, `active` con `curl` ogni 10 s, `idle` dopo la finestra, con i numeri nel motivo | da verificare a mano (M-16) | La regola e il motivo con i numeri sono provati sui dati: `tests/core/test_activity_state.py` ("nessuna connessione in ingresso e CPU media 0,0% negli ultimi 30 minuti"), `tests/core/test_text.py`, `tests/collectors/test_sockets.py` (server avviato dal test). Non esiste un test end to end con il `curl` periodico e la finestra di 20 s previsto dal piano: va provato sull'installato |
 | 5 | Firefox gruppo `BROWSER` con PSS, rischio "Attenzione", attività misurata col primo piano | da verificare a mano (M-16) | Categoria: `tests/core/test_categorize.py` (scope `snap.firefox...` e `app-gnome-firefox-...` danno `BROWSER`). Memoria PSS: `tests/core/test_memory.py::test_process_memory_pss_uss_swap`. Primo piano su X11: `tests/core/test_activity_foreground.py`, `tests/integration/test_foreground_real.py` (`ffec336`, `c0e8c5c`). Il comportamento alla chiusura è stato misurato su Firefox snap 158.0 (docs/DEVIATIONS.md, "Firefox e SIGTERM"). La lettura sul vostro Firefox reale non è registrata |
@@ -64,7 +64,7 @@ Misurate il 2026-10-16 e 2026-10-17 sulla macchina di sviluppo, con circa 1300-1
 
 ### RNF-04
 
-Nessuna misura del tempo di apertura della finestra è registrata nel repository. È coperto dal controllo manuale M-2 e dalla voce 2 della sezione 1.
+Il tempo di apertura è misurato con `scripts/measure_open_time.py` (docs/PERF.md, RNF-04): mediana 236 ms alla prima apertura e 10 ms alle riaperture, su Xvfb. La prova sul display reale resta nel controllo manuale M-2.
 
 ### RNF-05: nessun privilegio elevato
 
@@ -79,7 +79,7 @@ Fonte: `docs/security/T-6.1-security-baseline.md` (2026-10-17). Esito: soddisfat
 - Conteggio: P0 0, P1 0, P2 6 (uno corretto dopo la revisione), Info 3.
 - Limiti della verifica: `bandit` e `pip-audit` non sono stati eseguiti (offline, non installati) e la suite di test non è stata eseguita dal revisore. La suite è stata poi eseguita in T-6.4.
 
-## 3. Controlli manuali M-1..M-16
+## 3. Controlli manuali M-1..M-23
 
 Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono il vostro computer: sessione grafica reale, logout, `sudo`, clic veri o azioni su risorse vostre. Nessuno è stato eseguito da chi ha sviluppato l'applicazione.
 
@@ -101,6 +101,13 @@ Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono i
 | [ ] | M-14 | Disco | Tenere Slack o un'app di prova in background oltre la finestra di osservazione | L'app risulta inattiva |
 | [ ] | M-15 | Hardening | Clone pulito in un'altra cartella e misure RNF sull'installato per 1 ora, a macchina quieta | Comandi verdi; numeri riportati nel report attività |
 | [ ] | M-16 | Hardening | Percorrere la Definition of Done della sezione 1 sull'installato | Le 14 voci risultano spuntate. Le voci 4 e 5 vanno provate qui per intero: server di prova con `curl` ogni 10 s e poi fermo, Firefox in lista con PSS |
+| [ ] | M-17 | Radici | Con un utente di prova senza configurazione (`sudo adduser --disabled-password prova`, poi sessione grafica come `prova`, oppure `HOME=$(mktemp -d) XDG_CONFIG_HOME=$HOME/.config make run`) creare `~/Progetti/x/node_modules` e avviare wimm | Le radici rilevate compaiono in Preferenze e in Disco, la cartella di prova è trovata |
+| [ ] | M-18 | Radici | Rinominare una radice configurata (`mv ~/Progetti ~/Progetti.old`), riaprire Disco e poi Preferenze | Disco e Preferenze mostrano l'avviso di cartella mancante, la radice non viene cancellata dalla configurazione; `mv ~/Progetti.old ~/Progetti` fa sparire l'avviso |
+| [ ] | M-19 | Disco | Sul proprio disco, in una radice con progetti Rust, Gradle e Next: `ls -d ~/Progetti/*/target ~/Progetti/*/.gradle ~/Progetti/*/.next`, poi in Disco aprire la conferma di pulizia di una di queste cartelle | Le tre famiglie sono elencate e la conferma riporta il comando di ricostruzione (`cargo build`, `./gradlew build`, `npm run build`); annullare la conferma non cancella nulla |
+| [ ] | M-20 | Lingua | `LANG=de_DE.UTF-8 LANGUAGE= make run` con configurazione vuota (`XDG_CONFIG_HOME=$(mktemp -d)`) | L'interfaccia è in inglese; in Preferenze la lingua si può cambiare in italiano e la finestra si ricostruisce subito |
+| [ ] | M-21 | Hardening | `make audit` dal clone | `bandit` e `pip-audit` finiscono senza segnalazioni non giustificate (serve rete per `pip-audit`) |
+| [ ] | M-22 | Hardening | Dopo il primo push (lo fate voi): `gh run list --limit 3` e `gh run watch` | La CI remota è verde, compreso il passo `make audit` |
+| [ ] | M-23 | Futuro | Podman, sessione Wayland, radici su dischi esterni, comportamento con poca memoria (OOM) | Nessun comando ancora: sono ambiti dichiarati ma non provati, da definire quando servono |
 
 ## 4. Premesse chiuse
 
