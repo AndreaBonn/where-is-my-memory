@@ -420,6 +420,11 @@ def test_folders_action_opens_the_advanced_page_on_the_folders_entry(
     assert saved_text
     assert not entry.get_selection_bounds()
     assert entry.get_position() == len(saved_text)
+    # Adwaita's late select-all grab, made deterministic: the caret must still end up last.
+    entry.grab_focus()
+    _spin(seconds=0.1)
+    assert not entry.get_selection_bounds()
+    assert entry.get_position() == len(saved_text)
     # The roots already typed must survive the first key press, and the row must be in view.
     entry.set_text("/x/code, /x/work")
     opened.pop_subpage()
