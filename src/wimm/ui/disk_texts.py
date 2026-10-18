@@ -29,6 +29,15 @@ SECTION_DESCRIPTIONS = {
 }
 
 
+# R24: the rows of the model and Android caches, whose cleaning costs more than a download.
+MODEL_CACHE_TITLES = {
+    "huggingface": N_("Modelli HuggingFace"),
+    "ollama": N_("Modelli ollama"),
+    "android_avd": N_("Emulatori Android (AVD)"),
+    "android_sdk": N_("SDK Android"),
+}
+
+
 # D3: sections grouped by what freeing them costs, cheapest first.
 TIER_TITLES = {
     "safe": N_("Si libera senza pensarci"),

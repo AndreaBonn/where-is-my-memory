@@ -28,6 +28,21 @@ PARENT_PLACEHOLDER = "{parent}"
 CLEAN_SUBDIRS: Mapping[CacheKind, tuple[str, ...]] = {
     CacheKind.CARGO_REGISTRY: ("cache", "src"),
     CacheKind.CARGO_GIT: ("db", "checkouts"),
+    # ollama keeps nothing else in its models folder; a redirected one may hold other files.
+    CacheKind.OLLAMA: ("blobs", "manifests"),
+    # What `sdkmanager` downloads again. `cmdline-tools` (sdkmanager itself) and `licenses`
+    # (the accepted ones) stay, or the SDK could not be reinstalled without a manual setup.
+    CacheKind.ANDROID_SDK: (
+        "system-images",
+        "platforms",
+        "build-tools",
+        "platform-tools",
+        "emulator",
+        "ndk",
+        "cmake",
+        "sources",
+        ".temp",
+    ),
 }
 # Their files are read-only, so emptying the folder fails halfway: only the tool's own command
 # can clean them, and without the tool (`withheld_kinds`) they are measured and never offered.

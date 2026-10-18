@@ -176,3 +176,27 @@ def test_a_single_clean_of_a_caution_cache_is_rated_caution() -> None:
     plan = plan_action(request=request, snapshot=snapshot(), context=context)
 
     assert plan.risk is Risk.CAUTION
+
+
+def test_disk_free_safe_never_includes_models() -> None:
+    models = (
+        CacheKind.HUGGINGFACE,
+        CacheKind.OLLAMA,
+        CacheKind.ANDROID_AVD,
+        CacheKind.ANDROID_SDK,
+    )
+    disk = report(
+        docker=unavailable_docker(error="no socket"),
+        caches=(
+            *(cache(kind=kind, size=5000 * MB, ino=50 + i) for i, kind in enumerate(models)),
+            cache(kind=CacheKind.UV, size=300 * MB, ino=60),
+        ),
+    )
+
+    plan = _plan(disk=disk)
+
+    # Paired: the SAFE cache beside them is included, so the filter can fail.
+    assert [step.target_label for step in plan.steps] == ["/home/u/.cache/uv"]
+    assert plan.risk is Risk.SAFE
+    assert plan.confirm_phrase is None
+    assert safe_reclaimable_bytes(report=disk) == 300 * MB

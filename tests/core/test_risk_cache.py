@@ -26,7 +26,9 @@ RATED_SAFE: set[CacheKind] = {
     K.CONDA,
     K.PLAYWRIGHT,
 }
-RATED_CAUTION: set[CacheKind] = {K.MAVEN, K.JETBRAINS}
+RATED_CAUTION: set[CacheKind] = {K.MAVEN, K.JETBRAINS, K.HUGGINGFACE, K.ANDROID_SDK}
+# Q2=A: not downloadable again for sure (`ollama create`, an AVD with its data).
+RATED_DANGER: set[CacheKind] = {K.OLLAMA, K.ANDROID_AVD}
 NOT_A_CLEANABLE_CACHE: set[CacheKind] = {K.TRASH}  # emptied by TRASH_EMPTY, never by CACHE_CLEAN
 
 
@@ -38,7 +40,7 @@ def _assess(kind: CacheKind | None) -> tuple[Risk, tuple[str, ...]]:
 
 
 def test_every_cache_kind_is_classified_by_hand() -> None:
-    listed = RATED_SAFE | RATED_CAUTION | NOT_A_CLEANABLE_CACHE
+    listed = RATED_SAFE | RATED_CAUTION | RATED_DANGER | NOT_A_CLEANABLE_CACHE
 
     assert listed == set(CacheKind), "classify the new CacheKind here and in CACHE_ASSESSMENTS"
 
@@ -105,3 +107,36 @@ def test_offers_carry_the_risk_of_the_cache_type() -> None:
 
     assert maven == (ActionOffer(kind=ActionKind.CACHE_CLEAN, risk=Risk.CAUTION),)
     assert uv == (ActionOffer(kind=ActionKind.CACHE_CLEAN, risk=Risk.SAFE),)
+
+
+def test_model_cache_risk() -> None:
+    """Q2=A: HuggingFace and the Android SDK come back; ollama models and AVDs may not."""
+    levels = {kind: _assess(kind)[0] for kind in (*RATED_CAUTION, *RATED_DANGER)}
+
+    assert levels[K.HUGGINGFACE] is Risk.CAUTION
+    assert levels[K.ANDROID_SDK] is Risk.CAUTION
+    assert levels[K.OLLAMA] is Risk.DANGER
+    assert levels[K.ANDROID_AVD] is Risk.DANGER
+
+
+@pytest.mark.parametrize("kind", sorted(RATED_DANGER, key=repr))
+def test_danger_caches_carry_one_text_of_their_own(kind: CacheKind) -> None:
+    level, consequences = _assess(kind)
+
+    assert level is Risk.DANGER
+    assert len(consequences) == 1 and consequences[0]
+
+
+def test_model_cache_consequences_say_how_to_get_the_data_back() -> None:
+    assert "GB" in _assess(K.HUGGINGFACE)[1][0]
+    assert "ollama pull" in _assess(K.OLLAMA)[1][0]
+    assert "sdkmanager" in _assess(K.ANDROID_SDK)[1][0]
+    assert "non si recuper" in _assess(K.ANDROID_AVD)[1][0]
+    kinds = (K.HUGGINGFACE, K.OLLAMA, K.ANDROID_AVD, K.ANDROID_SDK)
+    assert len({_assess(k)[1] for k in kinds}) == 4
+
+
+def test_offers_for_a_danger_cache_carry_danger() -> None:
+    offer = available_actions(target=RiskTarget(kind="cache", cache_kind=K.OLLAMA))
+
+    assert offer == (ActionOffer(kind=ActionKind.CACHE_CLEAN, risk=Risk.DANGER),)

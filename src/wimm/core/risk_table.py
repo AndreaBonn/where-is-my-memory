@@ -36,6 +36,10 @@ class ConsequenceKey(StrEnum):
     CACHE_BROWSERS = "cache_browsers"
     CACHE_MAVEN = "cache_maven"
     CACHE_JETBRAINS = "cache_jetbrains"
+    CACHE_HUGGINGFACE = "cache_huggingface"
+    CACHE_OLLAMA = "cache_ollama"
+    CACHE_ANDROID_AVD = "cache_android_avd"
+    CACHE_ANDROID_SDK = "cache_android_sdk"
     CACHE_UNLISTED = "cache_unlisted"
     TRASH = "trash"
     DEVDIR = "devdir"
@@ -126,6 +130,22 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
         "Gli IDE JetBrains ricostruiscono gli indici al prossimo avvio: "
         "l'apertura dei progetti sarà più lenta."
     ),
+    ConsequenceKey.CACHE_HUGGINGFACE: N_(
+        "Modelli di HuggingFace: si riscaricano quando servono, anche diversi GB."
+    ),
+    ConsequenceKey.CACHE_OLLAMA: N_(
+        "Modelli di ollama: si riscaricano con ollama pull, anche diversi GB. "
+        "Quelli creati in locale con ollama create non si riscaricano da nessuna parte."
+    ),
+    ConsequenceKey.CACHE_ANDROID_AVD: N_(
+        "Gli emulatori Android vengono cancellati con le app e i dati al loro interno: "
+        "non si recuperano. Chiudi prima gli emulatori aperti, altrimenti lo spazio torna "
+        "libero solo quando si chiudono."
+    ),
+    ConsequenceKey.CACHE_ANDROID_SDK: N_(
+        "Piattaforme, build-tools e immagini di sistema si riscaricano con sdkmanager: "
+        "finché non lo fai le build Android non funzionano."
+    ),
     ConsequenceKey.CACHE_UNLISTED: N_(
         "Questo tipo di cache non è stato classificato: potrebbe contenere dati "
         "che non si riscaricano."
@@ -201,6 +221,12 @@ CACHE_ASSESSMENTS: dict[CacheKind, tuple[Risk, ConsequenceKey]] = {
     CacheKind.CONDA: (Risk.SAFE, ConsequenceKey.CACHE),
     CacheKind.PLAYWRIGHT: (Risk.SAFE, ConsequenceKey.CACHE_BROWSERS),
     CacheKind.JETBRAINS: (Risk.CAUTION, ConsequenceKey.CACHE_JETBRAINS),
+    # Q2=A (R24): a model made locally or an AVD with data does not download again. DANGER
+    # asks for the typed confirmation and is never part of "Libera spazio".
+    CacheKind.HUGGINGFACE: (Risk.CAUTION, ConsequenceKey.CACHE_HUGGINGFACE),
+    CacheKind.OLLAMA: (Risk.DANGER, ConsequenceKey.CACHE_OLLAMA),
+    CacheKind.ANDROID_AVD: (Risk.DANGER, ConsequenceKey.CACHE_ANDROID_AVD),
+    CacheKind.ANDROID_SDK: (Risk.CAUTION, ConsequenceKey.CACHE_ANDROID_SDK),
 }
 UNLISTED_CACHE_ASSESSMENT = (Risk.CAUTION, ConsequenceKey.CACHE_UNLISTED)
 

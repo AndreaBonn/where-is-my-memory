@@ -220,6 +220,8 @@ def test_every_cache_type_has_a_title_and_the_badge_of_its_own_risk() -> None:
     assert (rows["Maven"].risk_text or "").startswith("Attenzione")
     assert (rows["Gradle"].risk_text or "").startswith("Sicuro")
     assert rows["Cargo (pacchetti)"].action_kind is ActionKind.CACHE_CLEAN
+    assert rows["Modelli ollama"].risk_text == "Pericolo: cancella dati"
+    assert (rows["SDK Android"].risk_text or "").startswith("Attenzione")
 
 
 def go_row(*, which: Callable[[str], str | None]) -> DiskRowView:

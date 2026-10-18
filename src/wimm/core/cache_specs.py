@@ -135,6 +135,35 @@ CACHE_SPECS: tuple[CacheSpec, ...] = (
         sentinel_files=(".links",),
     ),
     CacheSpec(kind=CacheKind.JETBRAINS, base=_XDG, relative="JetBrains"),
+    # HuggingFace: HF_HUB_CACHE, else HF_HOME/hub, else XDG_CACHE_HOME/huggingface/hub (R24).
+    # `.locks` is the folder the hub client creates beside the models.
+    CacheSpec(
+        kind=CacheKind.HUGGINGFACE,
+        base=_XDG,
+        relative="huggingface/hub",
+        env_var="HF_HUB_CACHE",
+        fallback_var="HF_HOME",
+        fallback_subpath="hub",
+        sentinel_files=(".locks",),
+    ),
+    CacheSpec(
+        kind=CacheKind.OLLAMA,
+        base=_HOME,
+        relative=".ollama/models",
+        env_var="OLLAMA_MODELS",
+        # blobs/manifests alone is the generic OCI layout; the registry folder is ollama's.
+        sentinel_files=("manifests/registry.ollama.ai",),
+    ),
+    CacheSpec(kind=CacheKind.ANDROID_AVD, base=_HOME, relative=".android/avd"),
+    CacheSpec(
+        kind=CacheKind.ANDROID_SDK,
+        base=_HOME,
+        relative="Android/Sdk",
+        env_var="ANDROID_HOME",
+        env_aliases=("ANDROID_SDK_ROOT",),
+        # Folder names are shared with Cordova and Ionic projects: only SDK files count.
+        sentinel_files=("licenses/android-sdk-license", "platform-tools/adb"),
+    ),
 )
 
 

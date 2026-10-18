@@ -140,6 +140,10 @@ def test_cache_kinds_cover_the_spec_list() -> None:
         "conda",
         "playwright",
         "jetbrains",
+        "huggingface",
+        "ollama",
+        "android_avd",
+        "android_sdk",
     }
 
 

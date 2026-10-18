@@ -29,12 +29,12 @@ NEW_KINDS = (
 )
 
 
-def test_cache_kind_has_the_twelve_new_types_beside_the_five_old_ones() -> None:
+def test_cache_kind_has_the_twelve_new_types_beside_the_five_old_ones_and_the_model_four() -> None:
     values = {kind.value for kind in CacheKind}
 
     assert set(NEW_KINDS) <= values
     assert {"uv", "npm", "pip", "trash", "thumbnails"} <= values
-    assert len(values) == 17
+    assert len(values) == 21
 
 
 def test_every_cache_kind_has_exactly_one_spec() -> None:
@@ -118,7 +118,7 @@ def test_resolve_cache_paths_without_variables_gives_the_default_folders() -> No
     assert found["cargo_registry"] == Path("/home/u/.cargo/registry")
     assert found["go_build"] == Path("/home/u/.cache/go-build")
     assert found["playwright"] == Path("/home/u/.cache/ms-playwright")
-    assert len(found) == 17
+    assert len(found) == 21
 
 
 def test_resolve_cache_paths_honours_xdg_and_tool_variables() -> None:
@@ -157,6 +157,10 @@ def test_resolve_cache_paths_honours_xdg_and_tool_variables() -> None:
         "conda": Path("/home/u/conda-a"),
         "playwright": Path("/home/u/browsers"),
         "jetbrains": Path("/home/u/xdg/JetBrains"),
+        "huggingface": Path("/home/u/xdg/huggingface/hub"),
+        "ollama": Path("/home/u/.ollama/models"),
+        "android_avd": Path("/home/u/.android/avd"),
+        "android_sdk": Path("/home/u/Android/Sdk"),
     }
 
 
@@ -226,10 +230,10 @@ def test_a_variable_above_a_root_is_refused_beside_its_accepted_twin() -> None:
 
 def test_an_unrelated_variable_pointing_at_a_root_is_not_a_cache() -> None:
     result = resolve_cache_paths(
-        environ={"HF_HOME": str(ROOT)}, home=HOME, roots=ROOTS, observed=CacheObservations()
+        environ={"UNRELATED_HOME": str(ROOT)}, home=HOME, roots=ROOTS, observed=CacheObservations()
     )
 
-    assert len(result.caches) == 17
+    assert len(result.caches) == 21
     assert result.rejected == ()
 
 
@@ -250,7 +254,7 @@ def test_xdg_cache_home_on_a_root_refuses_what_hangs_from_it_and_keeps_the_rest(
 def test_a_root_equal_to_the_home_does_not_refuse_the_default_folders() -> None:
     result = resolve_cache_paths(environ={}, home=HOME, roots=(HOME,), observed=CacheObservations())
 
-    assert len(result.caches) == 17
+    assert len(result.caches) == 21
     assert all(entry.access is CacheAccess.CLEANABLE for entry in result.caches)
 
 

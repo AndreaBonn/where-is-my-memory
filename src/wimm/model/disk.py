@@ -24,6 +24,10 @@ class CacheKind(Enum):
     CONDA = "conda"
     PLAYWRIGHT = "playwright"
     JETBRAINS = "jetbrains"
+    HUGGINGFACE = "huggingface"
+    OLLAMA = "ollama"
+    ANDROID_AVD = "android_avd"
+    ANDROID_SDK = "android_sdk"
 
 
 def _require_text(value: str, field: str) -> None:

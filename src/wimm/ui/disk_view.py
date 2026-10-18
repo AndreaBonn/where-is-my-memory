@@ -22,6 +22,7 @@ from wimm.ui.disk_model import (
 from wimm.ui.disk_texts import (
     CHOOSE_FOLDER_LABEL,
     MISSING_ROOT_TEXT,
+    MODEL_CACHE_TITLES,
     NO_ROOTS_TEXT,
     NO_ROOTS_TITLE,
     SECTION_DESCRIPTIONS,
@@ -49,6 +50,7 @@ CACHE_TITLES = {
     CacheKind.CONDA: "conda",
     CacheKind.PLAYWRIGHT: N_("Playwright"),
     CacheKind.JETBRAINS: "JetBrains",
+    **{CacheKind(value): title for value, title in MODEL_CACHE_TITLES.items()},
 }
 
 
