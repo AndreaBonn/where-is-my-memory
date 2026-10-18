@@ -47,3 +47,15 @@ def test_the_guard_ends_at_the_first_edit(display: None) -> None:
     entry.select_region(0, -1)
 
     assert entry.get_selection_bounds() == (0, len(SAVED) + len(", /x"))
+
+
+def test_a_partial_selection_is_left_alone_and_does_not_end_the_guard(display: None) -> None:
+    entry = _settled_entry()
+
+    entry.select_region(2, 5)
+
+    assert entry.get_selection_bounds() == (2, 5)
+    # Positive control: the guard is still armed, so a select-all is undone afterwards.
+    entry.select_region(0, -1)
+    assert not entry.get_selection_bounds()
+    assert entry.get_position() == len(SAVED)

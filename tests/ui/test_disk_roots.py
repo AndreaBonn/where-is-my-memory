@@ -40,6 +40,10 @@ def row_titles(page: DiskPage) -> list[str]:
     return [w.get_title() for w in descendants(page) if isinstance(w, Adw.ActionRow)]
 
 
+def page_texts(page: DiskPage) -> list[str]:
+    return [w.get_text() for w in descendants(page) if isinstance(w, Gtk.Label)]
+
+
 def button(page: DiskPage, label: str) -> Gtk.Button | None:
     buttons = (w for w in descendants(page) if isinstance(w, Gtk.Button))
     return next((b for b in buttons if b.get_label() == label), None)
@@ -71,6 +75,9 @@ def test_no_warning_when_nothing_is_missing(display: None, now: datetime) -> Non
     page = make_page()
     show(page, roots=RootsState(), now=now)
     assert not [t for t in row_titles(page) if t.startswith("La cartella")]
+    # Positive pair: the dev dirs section is rendered, with its "nothing old" line.
+    assert [t for t in page_texts(page) if NO_DEVDIRS in t]
+    assert button(page, CHOOSE) is None
 
 
 def test_no_usable_root_shows_the_empty_state_with_its_action(display: None, now: datetime) -> None:
@@ -82,8 +89,7 @@ def test_no_usable_root_shows_the_empty_state_with_its_action(display: None, now
     assert action is not None
     action.emit("clicked")
     assert chosen == ["choose"]
-    texts = [w.get_text() for w in descendants(page) if isinstance(w, Gtk.Label)]
-    assert not [t for t in texts if t.startswith(NO_DEVDIRS)]
+    assert not [t for t in page_texts(page) if NO_DEVDIRS in t]
 
 
 def test_all_roots_missing_shows_both_warnings_and_empty_state(
@@ -218,3 +224,6 @@ def test_binding_keeps_the_page_usable_when_only_some_roots_are_refused(
     source = ConfigSource(snapshot=snapshot, config=config, report_=report())
     binding = DiskBinding(source=source, clock=lambda: now, on_choose_folder=lambda: None)
     assert EMPTY_TITLE not in row_titles(binding.page)
+    # The valid root keeps the page working: its dev dirs section is rendered.
+    assert [t for t in page_texts(binding.page) if NO_DEVDIRS in t]
+    assert button(binding.page, CHOOSE) is None

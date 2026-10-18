@@ -58,9 +58,12 @@ def test_page_starts_waiting_with_no_scan_header(display: None, now: datetime) -
 def test_report_fills_sections_and_header(display: None, now: datetime, sample: DiskReport) -> None:
     page = make_page()
     show(page, report_=sample, now=now)
-    assert page.header_text.startswith("Ultimo controllo alle ")
-    assert page.headline_text is not None
-    assert page.headline_text.startswith("Puoi liberare fino a ")
+    # The sample report was scanned at 10:12 (scanned_at in the fixture).
+    assert page.header_text == "Ultimo controllo alle 10:12"
+    # D1 headline, by hand from the fixture: uv 3,0 GB + node_modules 0,70 + local image 0,45
+    # + dangling image 0,12 (unique size) + build cache 0,07 + stopped container 2 kB =
+    # 4,34 GB. The volume and the trash are "Pericolo" rows and do not count.
+    assert page.headline_text == "Puoi liberare fino a 4,3 GB"
     assert list(page.sections) == [
         "caches",
         "build_cache",
@@ -72,7 +75,9 @@ def test_report_fills_sections_and_header(display: None, now: datetime, sample: 
     ]
     tiers = [t for t in labels(page) if t in TIER_TITLES.values()]
     assert tiers == list(TIER_TITLES.values())
-    assert page.row_count > 0
+    # Rows in the fixture: 1 cache, 1 build cache, 2 images, 1 container, 1 dev dir,
+    # 2 volumes, 1 trash.
+    assert page.row_count == 9
     assert page.sections["devdirs"].row_count == len(sample.devdirs)
 
 
@@ -229,7 +234,9 @@ def test_window_disk_page_follows_the_service(
     window.disk.begin_scan()
     source.fail_scan()
     assert not window.disk.is_scanning
-    assert window.disk.notice_text is not None
+    assert window.disk.notice_text == (
+        "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
+    )
     assert window.disk.sections["devdirs"].row_count == 1
 
 

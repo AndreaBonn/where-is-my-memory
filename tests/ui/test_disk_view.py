@@ -47,7 +47,14 @@ def test_every_section_explains_what_it_holds() -> None:
     for section in sections:
         assert section.description == SECTION_DESCRIPTIONS[section.key]
         assert section.description
-    assert "si ricrea" in SECTION_DESCRIPTIONS["caches"]
+    by_key = sections_by_key(sections=sections)
+    # Hand-written oracle: the dict above cannot vouch for itself.
+    assert by_key["caches"].description == (
+        "File temporanei dei programmi di sviluppo: si ricreano da soli."
+    )
+    assert by_key["trash"].description == (
+        "File che hai già cancellato: svuotandolo spariscono per sempre."
+    )
 
 
 def test_disk_headline_sums_what_the_rows_can_free() -> None:

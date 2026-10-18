@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
-from gi.repository import Adw, Gio, GLib, Gtk
+from gi.repository import Adw, Gio, Gtk
 
 from tests.ui.conftest import (
     FakeActionService,
@@ -394,8 +394,16 @@ def test_missing_project_folder_is_flagged_in_the_folders_row(
     assert str(home / "dev") not in subtitle.split("\n", 1)[1]
 
 
-def test_existing_project_folders_add_no_warning(dialog: PreferencesDialog) -> None:
-    assert "non esiste" not in dialog.fields["devdirs_roots"].row.get_subtitle()
+def test_existing_project_folders_add_no_warning(
+    dialog: PreferencesDialog, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # tmp_path sits under /tmp, which the real policy refuses; this test is about "missing".
+    monkeypatch.setattr(Config, "refused_roots", property(lambda _self: ()))
+    dialog._load_all()
+    # Nothing to flag: the row keeps exactly its description, no note line appended.
+    assert dialog.fields["devdirs_roots"].row.get_subtitle() == (
+        "Percorsi di cartelle, anche fuori dalla tua cartella personale, separati da virgola"
+    )
 
 
 def test_folders_action_opens_the_advanced_page_on_the_folders_entry(
@@ -421,24 +429,32 @@ def test_folders_action_opens_the_advanced_page_on_the_folders_entry(
         lambda: (focus := opened.get_focus()) is not None and focus.is_ancestor(entry),
         description="focus on the folders entry",
     )
-    _spin(seconds=0.5)  # Adwaita may move the focus again once its transition ends.
     saved_text = entry.get_text()
     assert saved_text
+    # Adwaita may move the focus again once its transition ends: wait for the caret itself.
+    wait_until(
+        lambda: not entry.get_selection_bounds() and entry.get_position() == len(saved_text),
+        description="caret at the end of the saved folders",
+    )
     assert not entry.get_selection_bounds()
     assert entry.get_position() == len(saved_text)
     # The guard against Adwaita's late select-all has its own test, independent of the window
     # manager: a real compositor may spend the one-shot guard before any grab simulated here.
     # The roots already typed must survive the first key press, and the row must be in view.
-    entry.set_text("/x/code, /x/work")
+    typed = "/x/code, /x/work"
+    entry.set_text(typed)
     opened.pop_subpage()
     opened.show_folders()
     wait_until(
         lambda: (focus := opened.get_focus()) is not None and focus.is_ancestor(entry),
         description="focus back on the folders entry",
     )
-    _spin(seconds=0.5)  # The page was pushed again: the caret is settled in idle, as above.
+    wait_until(
+        lambda: not entry.get_selection_bounds() and entry.get_position() == len(typed),
+        description="caret at the end of the typed folders",
+    )
     assert not entry.get_selection_bounds()
-    assert entry.get_position() == len("/x/code, /x/work")
+    assert entry.get_position() == len(typed)
     row = opened.fields["devdirs_roots"].row
     viewport = row.get_ancestor(Gtk.Viewport)
 
@@ -452,13 +468,6 @@ def test_folders_action_opens_the_advanced_page_on_the_folders_entry(
     assert viewport.get_vadjustment().get_upper() > viewport.get_height()
     assert viewport.get_vadjustment().get_value() > 0
     opened.force_close()
-
-
-def _spin(*, seconds: float) -> None:
-    deadline = GLib.get_monotonic_time() + int(seconds * 1_000_000)
-    context = GLib.MainContext.default()
-    while GLib.get_monotonic_time() < deadline:
-        context.iteration(False)
 
 
 def test_refused_project_folder_shows_its_reason_in_the_folders_row(

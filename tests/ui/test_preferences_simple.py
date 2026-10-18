@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from gi.repository import Adw, Gtk
 
-from tests.ui.conftest import FakeActionService, descendants
+from tests.ui.conftest import FakeActionService, descendants, main_context_iterate
 from tests.ui.test_preferences_dialog import home, paths, service, spin, tree
 from wimm.config import Config
 from wimm.paths import UserPaths
@@ -137,3 +137,74 @@ def test_an_invalid_advanced_value_is_pointed_to_from_the_main_page(
     dialog.apply()
 
     assert "Impostazioni avanzate" in dialog.status_text
+
+
+def test_clicking_the_active_preset_again_keeps_it_chosen(
+    display: None, service: FakeActionService, paths: UserPaths, home: Path
+) -> None:
+    dialog = open_dialog(service=service, paths=paths, home=home)
+    normal = preset_button(dialog, "Normali")
+    sentence = dialog.preset_text
+    assert normal.get_active()
+
+    normal.set_active(False)  # what a click on the already chosen preset does
+
+    assert normal.get_active()
+    assert dialog.preset_text == sentence != CUSTOM_SENTENCE
+    assert spin(dialog, "notify_after_s").get_value() == 120
+    # Positive control: a different preset does move the choice away from this one.
+    preset_button(dialog, "Pochi").set_active(True)
+    assert not normal.get_active()
+
+
+def test_a_note_set_while_a_field_shows_an_error_waits_for_the_error_to_clear(
+    display: None, service: FakeActionService, paths: UserPaths, home: Path
+) -> None:
+    dialog = open_dialog(service=service, paths=paths, home=home)
+    item = dialog.fields["devdirs_roots"]
+    base = item.base_subtitle
+
+    item.set_note(lines=("nota uno",))
+    assert item.row.get_subtitle() == f"{base}\nnota uno"
+
+    item.show_error(message="non valido")
+    item.set_note(lines=("nota due",))
+    assert item.row.get_subtitle() == "non valido"
+
+    item.clear_error()
+    assert item.row.get_subtitle() == f"{base}\nnota due"
+
+
+def test_an_error_on_a_key_the_dialog_does_not_show_still_reports_invalid_values(
+    display: None, service: FakeActionService, paths: UserPaths, home: Path
+) -> None:
+    dialog = open_dialog(service=service, paths=paths, home=home)
+    service.scripted_errors = {"no_such_key": "messaggio"}
+    spin(dialog, "notify_after_s").set_value(90)
+
+    dialog.apply()
+
+    assert dialog.status_text == "Alcuni valori non sono validi: restano quelli in uso."
+    assert all(status.has_css_class("error") for status in dialog._statuses)
+    assert not any(item.error for item in dialog.fields.values())
+    # Positive control: an error on a shown key marks that row too.
+    service.scripted_errors = {"notify_after_s": "troppo basso"}
+    spin(dialog, "notify_after_s").set_value(95)
+    dialog.apply()
+    assert dialog.fields["notify_after_s"].error == "troppo basso"
+
+
+def test_folders_action_on_the_page_already_shown_puts_the_caret_at_the_end(
+    display: None, service: FakeActionService, paths: UserPaths, home: Path
+) -> None:
+    dialog = open_dialog(service=service, paths=paths, home=home)
+    entry = dialog.fields["devdirs_roots"].row.get_activatable_widget()
+    dialog.advanced.emit("showing")  # the advanced page is on screen
+    entry.set_text("/x/code, /x/work")
+    entry.set_position(0)
+
+    dialog.show_folders()
+    main_context_iterate()
+
+    assert entry.get_position() == len("/x/code, /x/work")
+    assert not entry.get_selection_bounds()

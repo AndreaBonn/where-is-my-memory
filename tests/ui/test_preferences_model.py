@@ -179,3 +179,28 @@ def test_root_statuses_tell_ok_missing_and_each_refusal_apart(
 def test_root_statuses_without_problems_are_all_ok(monkeypatch: pytest.MonkeyPatch) -> None:
     config = config_with_roots(monkeypatch=monkeypatch, roots=(ROOT_D,))
     assert [s.state for s in root_statuses(config=config)] == [RootState.OK]
+
+
+def test_display_value_rejects_a_stored_value_that_is_not_a_number() -> None:
+    field = NUMBER_FIELDS["activity_window_s"]
+    assert display_value(field=field, raw=1800) == 30
+    for wrong in ("1800", None, [1800]):
+        with pytest.raises(TypeError, match="activity_window_s: expected a number"):
+            display_value(field=field, raw=wrong)
+
+
+def test_format_list_rejects_a_stored_value_that_is_not_a_list() -> None:
+    assert format_list(items=["a", "b"]) == "a, b"
+    for wrong in ("a, b", None, 3):
+        with pytest.raises(TypeError, match="expected a list"):
+            format_list(items=wrong)
+
+
+def test_collect_changes_rejects_a_shown_number_of_the_wrong_type() -> None:
+    raw: dict[str, Any] = config_to_raw(config=Config())
+    ok = {"sample_interval_s": 45}
+    assert collect_changes(current=raw, shown=ok) == {"sample_interval_s": 45}
+    # A bool is an int to Python, but a switch state is not a number of seconds.
+    for wrong in ("45", None, True):
+        with pytest.raises(TypeError, match="sample_interval_s: expected a number"):
+            collect_changes(current=raw, shown={"sample_interval_s": wrong})
