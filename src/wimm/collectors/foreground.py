@@ -6,7 +6,10 @@ import subprocess
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from wimm.collectors.foreground_wayland import WaylandForegroundReader
 
 LOGGER = logging.getLogger(__name__)
 XPROP_TIMEOUT_S = 1.0
@@ -69,8 +72,17 @@ class ForegroundReader:
             self._xprop = which(XPROP_BINARY)
 
     @classmethod
-    def from_environment(cls, *, enabled: bool) -> "ForegroundReader":
-        return cls(enabled=enabled, session_type=os.environ.get("XDG_SESSION_TYPE"))
+    def from_environment(cls, *, enabled: bool) -> "ForegroundReader | WaylandForegroundReader":
+        """Pick the source: the GNOME extension reader on Wayland, xprop everywhere else."""
+        # Imported here: foreground_wayland builds on this module's state types.
+        from wimm.collectors.foreground_wayland import WaylandForegroundReader, is_wayland_session
+
+        session_type = os.environ.get("XDG_SESSION_TYPE")
+        if is_wayland_session(
+            session_type=session_type, wayland_display=os.environ.get("WAYLAND_DISPLAY")
+        ):
+            return WaylandForegroundReader(enabled=enabled)
+        return cls(enabled=enabled, session_type=session_type)
 
     def read(self) -> ForegroundState:
         if self._xprop is None:
