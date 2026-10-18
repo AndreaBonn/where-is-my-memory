@@ -17,6 +17,7 @@ PROJECT_LABEL = "com.docker.compose.project"
 TEST_LABEL = "wimm.test=1"
 VOLUME_NAME = "data"
 SERVICES = ("a", "b")
+HTTP_CONFLICT = 409
 
 
 def _compose_document() -> dict[str, Any]:
@@ -52,12 +53,26 @@ def project_resources(*, client: Any, project: str) -> dict[str, list[Any]]:
     }
 
 
+def _remove_container(*, container: Any) -> None:
+    """Remove a container; one already being removed counts as removed.
+
+    The `wimm.test=1` sweep also reaches containers of a concurrent test run, whose own
+    cleanup may be removing them right now: the engine then answers 409 Conflict.
+    """
+    try:
+        container.remove(force=True, v=True)
+    except docker.errors.NotFound:
+        return
+    except docker.errors.APIError as error:
+        if error.status_code != HTTP_CONFLICT:
+            raise
+
+
 def purge(*, client: Any, project: str) -> None:
     """Remove whatever is labelled `wimm.test=1` or belongs to the test project."""
     for flt in ({"label": [TEST_LABEL]}, {"label": [f"{PROJECT_LABEL}={project}"]}):
         for container in client.containers.list(all=True, filters=flt):
-            with suppress(docker.errors.NotFound):
-                container.remove(force=True, v=True)
+            _remove_container(container=container)
         for network in client.networks.list(filters=flt):
             with suppress(docker.errors.NotFound):
                 network.remove()
