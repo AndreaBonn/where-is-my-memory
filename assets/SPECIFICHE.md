@@ -91,7 +91,7 @@ Ogni requisito ha un ID citabile nei test e nei commit.
 - **RF-03** Il pannello elenca i gruppi ordinati per RAM recuperabile decrescente, con filtri: tutti / solo inattivi / per categoria / per classe di rischio.
 - **RF-04** Ogni gruppo mostra: nome, categoria, stato di attività, da quanto tempo è in quello stato, motivo dello stato in linguaggio piano, RAM (PSS e recuperabile USS), disco se rilevante, porte in ascolto, rischio dell'azione principale.
 - **RF-05** Espandendo un gruppo si vedono le entità che lo compongono: PID, comando, directory di lavoro, porte, utente, avvio, memoria; per i container immagine, stato, volumi montati, porte pubblicate.
-- **RF-06** Una vista "Disco" elenca: immagini Docker (in uso / inutilizzate / dangling / costruite in locale), container fermi, volumi (montati / orfani), build cache Docker, cache utente note (uv, npm, pip), cestino, cartelle `node_modules` e `.venv` di progetti non modificati da più di N giorni (default 90) nelle radici configurate.
+- **RF-06** Una vista "Disco" elenca: immagini Docker (in uso / inutilizzate / dangling / costruite in locale), container fermi, volumi (montati / orfani), build cache Docker, cache utente note (uv, npm, pip), cestino, le cartelle di dipendenze ricostruibili della §7.6 di progetti non modificati da più di N giorni (default 90) nelle radici configurate.
 - **RF-07** Una vista "Sistema" mostra in sola lettura i processi e i servizi protetti con la loro memoria, raggruppati (sessione GNOME, audio, servizi di sistema, altri utenti), con il motivo della protezione.
 - **RF-08** La classificazione di ogni gruppo è spiegata: un tooltip o una riga secondaria dice perché è in quella categoria e in quella classe ("lanciato dal terminale nella cartella `whitebox`, in ascolto sulla porta 8000").
 
@@ -105,7 +105,7 @@ Ogni requisito ha un ID citabile nei test e nei commit.
 
 - **RF-20** Azioni su processi: termina (SIGTERM all'albero del processo), forza chiusura (SIGKILL) offerta solo se dopo il timeout il processo è ancora vivo.
 - **RF-21** Azioni su container: ferma, rimuovi (solo se fermo, senza volumi), ferma progetto compose, rimuovi progetto compose senza volumi, rimuovi progetto compose con volumi (rischio `danger`).
-- **RF-22** Azioni su disco: rimuovi immagine inutilizzata, rimuovi immagini dangling, rimuovi tutte le immagini inutilizzate, svuota build cache, rimuovi container fermi, rimuovi volume orfano, pulisci cache uv/npm/pip, svuota cestino, elimina `node_modules`/`.venv` di un progetto inattivo.
+- **RF-22** Azioni su disco: rimuovi immagine inutilizzata, rimuovi immagini dangling, rimuovi tutte le immagini inutilizzate, svuota build cache, rimuovi container fermi, rimuovi volume orfano, pulisci cache uv/npm/pip, svuota cestino, elimina le cartelle di dipendenze ricostruibili della §7.6 di un progetto inattivo.
 - **RF-23** Azione di gruppo: "Ferma tutto il gruppo", che compone le azioni dei membri in un solo piano.
 - **RF-24** Azione multipla: "Ferma tutti i gruppi inattivi sicuri", che include solo gruppi `idle` e azioni `safe`.
 - **RF-25** Nessuna azione parte senza un'anteprima che mostra bersagli, conseguenze, rischio e recupero stimato. Le conferme crescono col rischio (sezione 8.3).
@@ -130,7 +130,7 @@ Ogni requisito ha un ID citabile nei test e nei commit.
 
 ### Impostazioni
 
-- **RF-50** Preferenze modificabili dal pannello: finestra di osservazione, soglia di notifica, soglia minima di recuperabile, soglie di pressione, intervallo di campionamento, radici da scansionare per `node_modules`/`.venv`, età minima delle cartelle, notifiche attive per categoria, lista dei gruppi ignorati.
+- **RF-50** Preferenze modificabili dal pannello: finestra di osservazione, soglia di notifica, soglia minima di recuperabile, soglie di pressione, intervallo di campionamento, radici da scansionare per le cartelle di dipendenze, età minima delle cartelle, notifiche attive per categoria, lista dei gruppi ignorati.
 
 ---
 
@@ -175,7 +175,7 @@ I processi helper di un editor (language server come `pyright`, `tsserver`, `rus
 
 Costante `PROTECTED_PROCESS_NAMES` in `core/constants.py`, estendibile da configurazione ma **non riducibile** (le voci di default non si possono rimuovere):
 
-`gnome-shell`, `gnome-session-binary`, `gnome-session-ctl`, `Xorg`, `Xwayland`, `systemd`, `dbus-daemon`, `dbus-broker`, `pipewire`, `pipewire-pulse`, `wireplumber`, `pulseaudio`, `gsd-*`, `gvfsd*`, `gvfs-*`, `xdg-desktop-portal*`, `xdg-document-portal`, `xdg-permission-store`, `at-spi*`, `ibus-*`, `tracker-miner-*`, `evolution-*`, `goa-*`, `gnome-keyring-daemon`, `ssh-agent`, `gpg-agent`, `snapd*`. Il processo di where-is-my-memory stesso si riconosce per PID (`os.getpid()`), non per nome, ed è `SELF`.
+`gnome-shell`, `gnome-session-binary`, `gnome-session-ctl`, `Xorg`, `Xwayland`, `systemd`, `dbus-daemon`, `dbus-broker`, `pipewire`, `pipewire-pulse`, `wireplumber`, `pulseaudio`, `gsd-*`, `gvfsd*`, `gvfs-*`, `xdg-desktop-portal*`, `xdg-document-portal`, `xdg-permission-store`, `at-spi*`, `ibus-*`, `tracker-miner-*`, `evolution-*`, `goa-*`, `gnome-keyring-daemon`, `ssh-agent`, `gpg-agent`, `mosh-server*`, `snapd*`. `mosh-server*` protegge il lato server delle sessioni mosh come `sshd` protegge quelle SSH (docs/DEVIATIONS.md, sessioni SSH). Il processo di where-is-my-memory stesso si riconosce per PID (`os.getpid()`), non per nome, ed è `SELF`.
 
 `gnome-terminal-server` non è protetto, è `TERMINAL` con rischio `caution`.
 
@@ -214,7 +214,7 @@ Tabella completa, implementata come funzione pura `assess_risk(entity, action) -
 | volume orfano | rimuovi | `danger` | "I dati del volume vengono cancellati in modo definitivo." |
 | cache uv / npm / pip | pulisci | `safe` | "I pacchetti si riscaricano quando servono." |
 | cestino | svuota | `danger` | "I file nel cestino vengono eliminati in modo definitivo." |
-| `node_modules` / `.venv` di progetto inattivo | elimina | `caution` | "Serve reinstallare le dipendenze (`npm install` / `uv sync`) prima di usare il progetto." |
+| cartella di dipendenze (§7.6) di progetto inattivo | elimina | `caution` | "Per usare di nuovo il progetto serve ricostruire la cartella con {comando}.", dove il comando è quello del suo ecosistema (`npm install`, `uv sync`, `cargo build`, `mvn package`, `gradle build`, `npm run build`, `composer install`); senza comando noto "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto." |
 
 Un'app è **"con documenti"** se il campo `Categories` del suo `.desktop` contiene almeno uno fra `TextEditor`, `IDE`, `Development`, `Office`, `WordProcessor`, `Spreadsheet`, `Presentation`, `Graphics`, `Email`, `Chat`, `InstantMessaging`; in mancanza del `.desktop`, se il nome del processo è in `DOCUMENT_APP_NAMES` (`code`, `codium`, `cursor`, `idea`, `pycharm`, `gedit`, `gnome-text-editor`, `soffice.bin`, `slack`, `discord`, `telegram-desktop`, `thunderbird`, `obsidian`). Entrambe le liste sono costanti in `core/constants.py`.
 
@@ -254,7 +254,7 @@ Funzione pura `build_groups(processes, containers, config) -> list[Group]`. Chia
 
 1. Container: label `com.docker.compose.project`; il gruppo prende anche `com.docker.compose.project.working_dir`. Container senza compose: gruppo singolo col nome del container.
 2. Processi figli di un'app desktop o del browser: il gruppo dell'antenato più vicino in `DESKTOP_APP`/`BROWSER`/`TERMINAL`.
-3. Processi lanciati da terminale (`DEV_SERVER`, `DEV_PROCESS`, `AI_CLI`): radice del progetto ricavata dalla directory di lavoro (`Process.cwd()`), risalendo fino alla prima cartella che contiene uno fra `.git`, `pyproject.toml`, `package.json`, `compose.yaml`, `docker-compose.yml`. Senza radice trovata: la `cwd` stessa.
+3. Processi lanciati da terminale (`DEV_SERVER`, `DEV_PROCESS`, `AI_CLI`): radice del progetto ricavata dalla directory di lavoro (`Process.cwd()`), risalendo fino alla prima cartella che contiene uno fra `.git`, `pyproject.toml`, `package.json`, `compose.yaml`, `docker-compose.yml`, `Cargo.toml`, `go.mod`, `pom.xml`, `build.gradle`, `build.gradle.kts`. Senza radice trovata: la `cwd` stessa.
 4. Fusione: se la radice di un gruppo di processi coincide con il `working_dir` di un progetto compose (o ne è antenata o discendente), i due gruppi si fondono in un unico gruppo di progetto. È il caso "whitebox: 6 container + uvicorn sulla 8000".
 5. App desktop: un gruppo per scope `app-gnome-<appid>-*` o `snap.<nome>.*`; il nome è il campo `Name` del `.desktop` trovato in `/usr/share/applications`, `~/.local/share/applications`, `/var/lib/snapd/desktop/applications`, `/var/lib/flatpak/exports/share/applications`; in mancanza, l'appid.
 6. Tutto il resto: un gruppo per processo radice.
@@ -476,7 +476,16 @@ Parsing di `/proc/meminfo` (valori in kB, convertiti in byte). Funzione pura `pa
   - pip: `~/.cache/pip`, pulizia con `pip cache purge` se `pip` esiste, altrimenti rimozione della cartella (`safe`);
   - cestino: `~/.local/share/Trash` (`danger`);
   - `~/.cache/thumbnails` (`safe`).
-- Cartelle di dipendenze: nelle radici configurate (default `~/Documenti/00_Lavoro`, dove stanno i progetti dell'utente; altre radici si aggiungono dalle preferenze) si cercano cartelle chiamate esattamente `node_modules` o `.venv` il cui progetto (la cartella padre) non ha file modificati da più di `devdirs_min_age_days` (default 90). La ricerca non scende dentro un `node_modules` o un `.venv` trovato, non segue symlink, salta le cartelle nascoste tranne `.venv`, e ha una profondità massima (default 6). Il "modificato" del progetto si stima sui file al primo livello e su `src/` (non su tutto l'albero, troppo costoso).
+- Cartelle di dipendenze: nelle radici configurate si cercano le cartelle ricostruibili elencate sotto, il cui progetto (la cartella padre) non ha file modificati da più di `devdirs_min_age_days` (default 90). Senza una scelta salvata le radici sono le cartelle candidate che contengono un repository `.git` entro 2 livelli: `~/code`, `~/projects`, `~/src`, `~/dev`, `~/git`, `~/workspace`, `~/Documents`, `~/Documenti` e la cartella documenti di `~/.config/user-dirs.dirs`, saltando i mount di rete, FUSE e autofs; altre radici si aggiungono dalle preferenze. La ricerca non scende dentro una cartella trovata, non segue symlink, salta le cartelle nascoste tranne i nomi dell'elenco, e ha una profondità massima (default 6). Un progetto che sta direttamente nella home è sempre escluso.
+  - `node_modules`;
+  - `.venv` e `venv`, solo con `pyvenv.cfg` dentro;
+  - `.tox`, con `tox.ini`, `pyproject.toml` o `setup.cfg` nel progetto;
+  - `target`, con `Cargo.toml` o `pom.xml`;
+  - `.gradle` e `build`, con `build.gradle`, `build.gradle.kts`, `settings.gradle` o `settings.gradle.kts`;
+  - `.next` e `.nuxt`, con `package.json`;
+  - `vendor`, solo con `composer.json`.
+  Per `target`, `vendor`, `build`, `.next`, `.nuxt` e `.gradle` il marker non basta: serve anche `CACHEDIR.TAG` dentro la cartella oppure il nome nel `.gitignore` del progetto, letto come testo senza eseguire git.
+  Il "modificato" del progetto si stima sui file al primo livello e su `src/` (non su tutto l'albero, troppo costoso).
 
 #### 7.6.1 Calcolo delle dimensioni
 
@@ -505,7 +514,7 @@ Sulla sessione X11 (`XDG_SESSION_TYPE=x11` **[MISURATO]**), l'app in primo piano
 
 Un piano si esegue una sola volta: dopo l'esecuzione o la scadenza viene eliminato.
 
-**Tipi di richiesta** (`ActionKind`, enum in `model.py`): `process_terminate`, `process_kill`, `app_close`, `container_stop`, `container_remove`, `group_stop`, `compose_down`, `compose_down_volumes`, `stop_all_idle_safe`, `image_remove`, `images_prune_dangling`, `images_prune_unused`, `builder_prune`, `containers_prune_stopped`, `volume_remove`, `cache_clean`, `trash_empty`, `devdir_delete`. `ActionRequest(kind, group_id | None, target_id | None)`.
+**Tipi di richiesta** (`ActionKind`, enum in `model/enums.py`): `process_terminate`, `process_kill`, `app_close`, `container_stop`, `container_remove`, `group_stop`, `compose_down`, `compose_down_volumes`, `stop_all_idle_safe`, `image_remove`, `images_prune_dangling`, `images_prune_unused`, `builder_prune`, `containers_prune_stopped`, `volume_remove`, `cache_clean`, `trash_empty`, `devdir_delete`, `disk_free_safe` (libera in un passo tutto ciò che sul disco è `safe`), `container_start` e `restart_stopped` (riaccende i container fermati da un piano precedente). `ActionRequest(kind, group_id | None, target_id | None)`.
 
 **Campi del piano** (`Plan`, dataclass frozen): `plan_id`, `request`, `created_at`, `expires_at`, `steps: tuple[PlanStep, ...]`, `risk` (il massimo degli step), `consequences: tuple[str, ...]`, `estimated_reclaim_ram`, `estimated_reclaim_disk`, `confirm_phrase: str | None` (solo `danger`). `PlanStep(order, kind, target_label, fingerprint, risk)`.
 
@@ -520,7 +529,7 @@ Un piano si esegue una sola volta: dopo l'esecuzione o la scadenza viene elimina
 | progetto compose | nome, insieme degli id dei container | stesso insieme di container |
 | immagine | `id` | non usata da alcun container al momento dell'esecuzione |
 | volume | `name` | `RefCount == 0` al momento dell'esecuzione |
-| cartella | path reale (`os.path.realpath`), `st_ino`, `st_dev` | non è un symlink, è dentro una radice configurata, il nome è esattamente `node_modules` o `.venv`, stesso inode |
+| cartella | path reale (`os.path.realpath`), `st_ino`, `st_dev` | non è un symlink, è dentro una radice configurata, il nome e il marker del progetto rispettano ancora la regola della §7.6, stesso inode |
 
 La protezione si ricontrolla nell'executor anche se il piano l'ha già esclusa: il controllo nel planner serve alla UI, quello nell'executor è la garanzia.
 
@@ -541,7 +550,7 @@ La protezione si ricontrolla nell'executor anche se il piano l'ha già esclusa: 
 - **Build cache**: `client.api.prune_builds()` (presente in 5.0.3 **[MISURATO]**).
 - **Volumi**: `client.volumes.get(name).remove()`.
 - **Cache**: comandi della 7.6 con `subprocess.run` a lista e timeout.
-- **Cartelle**: `shutil.rmtree(path)` dopo le validazioni della 8.2, con `onexc` che registra gli errori per file senza interrompere.
+- **Cartelle**: dopo le validazioni della 8.2, rimozione che apre ogni directory con `O_NOFOLLOW|O_DIRECTORY` e cancella con `dir_fd`, senza seguire symlink; una sottodirectory su un altro `st_dev` o elencata come mount in `/proc/self/mountinfo` resta intatta e viene registrata. Gli errori per voce si registrano senza interrompere.
 - **Cestino**: rimozione del contenuto di `~/.local/share/Trash/files` e `~/.local/share/Trash/info`.
 
 Ogni azione eseguita si registra con un log `INFO` strutturato: azione, bersaglio, esito, byte liberati.
@@ -568,7 +577,7 @@ Ogni azione eseguita si registra con un log `INFO` strutturato: azione, bersagli
 ### 10.1 Icona nella barra (`tray/`)
 
 - StatusNotifierItem portato da `sysbar` (6.3), registrato su `org.kde.StatusNotifierWatcher`, con `Id = "io.github.wimm.WhereIsMyMemory"` e `Category = "SystemServices"`. Icone a colori installate in `/usr/share/icons/hicolor/scalable/status/`: `wimm-normal` (il logo dell'app), `wimm-warning` e `wimm-critical` (il logo con un badge "!" giallo o rosso) (RF-41). Decisione dell'utente (2026-10-17): ovunque compaia un'icona dell'app, tray compresa, si mostra il logo di `assets/logo/wimm-logo.png`; tutte le icone si rigenerano da quel file con `uv run python scripts/build_icons.py`, cambiate con il segnale `NewIcon`.
-- Etichetta (RF-40) nella proprietà `XAyatanaLabel`, aggiornata con `XAyatanaNewLabel`; `XAyatanaLabelGuide` contiene la stringa più lunga prevista ("88,8 GB inattivi") per evitare che la barra cambi larghezza. Il tooltip ripete il riepilogo ("RAM 30,1/38,9 GB, disco 93%").
+- Etichetta (RF-40) nella proprietà `XAyatanaLabel`, aggiornata con `XAyatanaNewLabel`; `XAyatanaLabelGuide` contiene la stringa più lunga prevista ("88,8 GB inattivi") per evitare che la barra cambi larghezza. Il tooltip ripete il riepilogo a parole ("Memoria usata 79%, disco: 28 GB liberi").
 - `Activate` (clic sinistro) mostra la finestra e la porta in primo piano; se è già in primo piano non la nasconde. `SecondaryActivate` (clic centrale) fa lo stesso.
 - Il menu del clic destro (RF-42) è servito con `com.canonical.dbusmenu`. Il modello delle voci è una funzione pura `build_menu(snapshot) -> list[MenuItem]` in `tray/menu_model.py`; il layout si ripubblica (`LayoutUpdated`) solo se l'hash delle voci è cambiato, per evitare flicker.
 - Se il campionamento fallisce per 3 cicli di fila, l'icona passa allo stato di avviso e la prima voce del menu dice "Monitoraggio in errore: apri il pannello per i dettagli".
@@ -595,7 +604,7 @@ Struttura:
 ```
 
 - **Panoramica**: `Gtk.ListView` (o `Adw.PreferencesGroup` con `Adw.ExpanderRow` se i gruppi sono meno di 200) con un gruppo per riga. Titolo = nome; sottotitolo = categoria, stato e durata; seconda riga = motivo e porte; suffissi = RAM recuperabile, badge del rischio, pulsante dell'azione principale. Espandendo la riga si vedono i membri (RF-05), ciascuno con le sue azioni, e i pulsanti "Silenzia" e "Ignora". Menu contestuale con "Copia comando", "Apri cartella" (`Gio.AppInfo.launch_default_for_uri`), "Copia PID".
-- **Disco**: sezioni `Adw.PreferencesGroup`: Docker (immagini, container fermi, volumi, build cache), Cache, Cartelle di dipendenze, Cestino. Ogni riga ha dimensione, stato, rischio e azione. In testa, "Ultima scansione: 10:12" e il pulsante "Scansiona ora" con spinner durante la scansione.
+- **Disco**: sezioni `Adw.PreferencesGroup`: Docker (immagini, container fermi, volumi, build cache), Cache, Cartelle di dipendenze, Cestino. Ogni riga ha dimensione, stato, rischio e azione. In testa, "Ultimo controllo alle 10:12" e il pulsante "Controlla ora", che durante la scansione diventa "Controllo in corso" con lo spinner.
 - **Sistema**: elenco in sola lettura (RF-07) con il motivo della protezione.
 - **Preferenze**: `Adw.PreferencesDialog` con i campi della RF-50; i valori passano da `AppService.update_config` e si validano lì.
 
