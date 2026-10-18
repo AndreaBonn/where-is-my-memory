@@ -18,9 +18,13 @@ ENGLISH_MESSAGE = "Docker answered in an unexpected format"
 class _Api:
     def __init__(self, *, answer: Any) -> None:
         self.answer = answer
+        self.api_version = "1.41"
 
     def df(self) -> Any:
         return self.answer
+
+    def inspect_image(self, image: str) -> Any:
+        return {"Id": image}
 
 
 class _Client:
