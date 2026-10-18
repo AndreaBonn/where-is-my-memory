@@ -66,6 +66,10 @@ msgstr "Largest groups:"
 msgid "Disco: {free} liberi su {total} ({mount})"
 msgstr "Disk: {free} free of {total} ({mount})"
 
+#: src/wimm/collectors/disk_report.py:23
+msgid "Docker ha risposto in un formato inatteso"
+msgstr "Docker answered in an unexpected format"
+
 #: src/wimm/config_messages.py:11
 msgid "Scegli solo categorie su cui sono consentite azioni"
 msgstr "Choose only categories that allow actions"

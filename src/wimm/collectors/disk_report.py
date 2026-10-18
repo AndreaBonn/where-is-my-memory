@@ -8,6 +8,7 @@ from docker.errors import DockerException
 
 from wimm.core.disk_rules import parse_docker_df, unavailable_docker
 from wimm.core.docker_notices import notices_text
+from wimm.i18n import N_, _
 from wimm.model.disk import DockerDisk
 
 from . import CollectorResult
@@ -19,6 +20,14 @@ LOGGER = logging.getLogger(__name__)
 # report shows Docker as unavailable instead of blocking.
 DF_TIMEOUT_S = 120
 NO_ENGINE = "no container engine is reachable"
+UNEXPECTED_FORMAT = N_("Docker ha risposto in un formato inatteso")
+# What a structurally wrong `df` answer raises while it is classified (missing key, list
+# where an object is expected, wrong scalar type).
+MALFORMED_ANSWER = (KeyError, TypeError, AttributeError, ValueError)
+
+
+class MalformedDfError(Exception):
+    """The engine answered `/system/df` with a shape `parse_docker_df` cannot read."""
 
 
 class DockerApi(Protocol):
@@ -54,10 +63,21 @@ class DockerDiskSource:
                 raise DockerException(notices_text(notices=view.notices) or NO_ENGINE)
             engine = view.engines[0]
             client: DockerClient = engine.client
-            return CollectorResult(data=parse_docker_df(df=client.api.df()))
+            return CollectorResult(data=_classify(answer=client.api.df()))
         except Exception as error:
             if engine is not None and self._engines is not None:
                 self._engines.discard(engine=engine)
-            reason = str(error) or type(error).__name__
-            LOGGER.warning("Docker disk usage unavailable: %s", reason)
+            if isinstance(error, MalformedDfError):
+                reason = _(UNEXPECTED_FORMAT)
+                LOGGER.warning("Docker df answer is malformed: %r", error.__cause__, exc_info=error)
+            else:
+                reason = str(error) or type(error).__name__
+                LOGGER.warning("Docker disk usage unavailable: %s", reason)
             return CollectorResult(data=unavailable_docker(error=reason), error=reason)
+
+
+def _classify(*, answer: Mapping[str, Any]) -> DockerDisk:
+    try:
+        return parse_docker_df(df=answer)
+    except MALFORMED_ANSWER as error:
+        raise MalformedDfError from error
