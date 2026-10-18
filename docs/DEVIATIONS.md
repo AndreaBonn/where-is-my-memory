@@ -603,3 +603,18 @@ Limiti: kind si riconosce solo dalla CLI; minikube con driver Docker non si rico
 **Banner dell'icona.** Le istruzioni per far comparire l'icona seguono la distribuzione letta da `/etc/os-release` (o `/usr/lib/os-release`): Ubuntu e derivate come prima, Fedora, Arch e Debian con il comando del loro gestore di pacchetti, le altre con un rimando all'estensione su extensions.gnome.org. Il passo "esci e rientra" dopo l'installazione vale per Wayland; su X11 basterebbe riavviare la shell.
 
 **Test di confronto con `docker stats`.** `test_real_total_container_memory_matches_docker_stats` fallisce quando un container cambia molto memoria durante i circa 2 s del campione di `docker stats`, come durante una build: confronta due letture prese in momenti diversi. Senza container in build passa (3 su 3 il 2026-10-18).
+
+## Programma in primo piano su Wayland (001-product-gaps, lotto L11, ADR-006)
+
+**Come funziona.** Su X11 nulla cambia. In una sessione Wayland wimm legge il pid della finestra in primo piano da un'estensione GNOME Shell facoltativa, `wimm-focus@wimm.github.io`, che il .deb installa in `/usr/share/gnome-shell/extensions` senza attivarla: la attiva l'utente da «Estensioni». L'estensione pubblica sul bus di sessione solo la proprietà `FocusedPid` (e `Version`), in sola lettura. Senza estensione lo stato resta "non misurabile" come prima.
+
+**Fiducia.** wimm accetta il nome `io.github.wimm.Focus` solo se lo possiede `/usr/bin/gnome-shell` dello stesso utente: un altro programma che lo occupa per primo produce "non misurabile", mai un pid falso. Il pid in primo piano protegge il gruppo che l'utente sta usando; un pid sbagliato potrebbe far proporre quel gruppo come inattivo, ma ogni azione resta confermata dall'utente (N1).
+
+**Limiti noti.**
+
+- Dichiarata compatibile solo con GNOME Shell 46, l'unica versione provata; il campo `shell-version` va aggiornato a ogni release di GNOME.
+- Mai provata in una sessione GNOME Wayland reale: la prova è il controllo manuale M-29.
+- Qualunque programma della sessione può leggere il pid della finestra attiva dall'estensione: è l'informazione che Wayland di solito nasconde e che X11 rende già visibile.
+- Durante un aggiornamento di gnome-shell il suo eseguibile risulta `(deleted)` e wimm resta "non misurabile" fino al login successivo.
+- Se gnome-shell termina e il suo pid viene riusato da un programma che occupa il nome, la verifica in cache lo accetterebbe; su Wayland la fine di gnome-shell chiude la sessione, quindi il caso è teorico.
+- KWin e wlroots, e le euristiche su PipeWire e CPU previste dall'ADR, non sono implementati.

@@ -70,6 +70,14 @@ stage_files() {
     # Not listed in §12.2 but needed: inspector_dbus.introspection_path() falls back here.
     install -D -m 644 "${ROOT}/data/dbus/io.github.wimm.Inspector1.xml" \
         "${STAGING}/usr/share/${PACKAGE}/dbus/io.github.wimm.Inspector1.xml"
+    install -D -m 644 "${ROOT}/data/dbus/io.github.wimm.Focus1.xml" \
+        "${STAGING}/usr/share/${PACKAGE}/dbus/io.github.wimm.Focus1.xml"
+    # ADR-006: optional GNOME Shell extension; installed, never enabled for the user.
+    local extension="wimm-focus@wimm.github.io"
+    for file in metadata.json extension.js; do
+        install -D -m 644 "${ROOT}/data/gnome-shell-extension/${extension}/${file}" \
+            "${STAGING}/usr/share/gnome-shell/extensions/${extension}/${file}"
+    done
     install -D -m 644 "${ROOT}/packaging/debian/copyright" \
         "${STAGING}/usr/share/doc/${PACKAGE}/copyright"
     # Policy 12.1: man pages are gzipped with -9n (no name or timestamp, reproducible).

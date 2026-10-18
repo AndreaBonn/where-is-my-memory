@@ -249,3 +249,4 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T103 T104 | 2098ee4 | PKGBUILD e spec RPM, test in container verdi; review: permessi della cartella di lavoro, rimozione verificata
 - T105 | 5d033a6 | banner per distribuzione, fallback /usr/lib/os-release; click-through del percorso Ubuntu
 - T106 T107 | (questo commit) | DEVIATIONS di L12; testo README proposto all'utente, in attesa di ok. Aperti: pubblicazione AUR/COPR non fatta; email nel changelog RPM; Fedora, Arch e Debian a schermo provati solo nei test
+- T100 T101 T102 | (commit L11) | estensione GNOME (solo shell 46), collector Wayland con verifica del proprietario, estensione nel .deb; security review: DO_NOT_AUTO_START aggiunto. Aperti: M-29 su sessione Wayland reale; euristiche PipeWire/CPU; KWin e wlroots
