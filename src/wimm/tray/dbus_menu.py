@@ -16,6 +16,8 @@ DBUSMENU_VERSION = 3
 ROOT_ID = 0
 RECURSE_ALL = -1
 EVENT_CLICKED = "clicked"
+# libdbusmenu answers GetLayout for a missing id with its INVALID_MENUITEM_ID error.
+INVALID_ID_ERROR = "com.canonical.dbusmenu.Error.InvalidMenuItemId"
 LOGGER = logging.getLogger(__name__)
 
 INTROSPECTION = """
@@ -103,6 +105,10 @@ def build_layout(*, items: Sequence[MenuItem], depth: int, names: Sequence[str])
     return (ROOT_ID, root_properties(), children)
 
 
+class UnknownMenuItemError(LookupError):
+    """A call named a menu item id that is not in the current layout."""
+
+
 class DBusMenu:
     """Serve a flat list of MenuItem on com.canonical.dbusmenu at /MenuBar."""
 
@@ -168,6 +174,9 @@ class DBusMenu:
             return
         try:
             reply = handler(*params.unpack())
+        except UnknownMenuItemError as error:
+            invocation.return_dbus_error(INVALID_ID_ERROR, str(error))
+            return
         except Exception as error:
             # Answer anyway: an unanswered call leaves the shell waiting for the D-Bus timeout.
             LOGGER.exception("dbusmenu %s failed", method)
@@ -178,10 +187,12 @@ class DBusMenu:
         invocation.return_value(reply)
 
     def _get_layout(self, parent_id: int, depth: int, names: list[str]) -> GLib.Variant:
-        if parent_id == ROOT_ID or not any(item.id == parent_id for item in self._items):
+        if parent_id == ROOT_ID:
             layout = build_layout(items=self._items, depth=depth, names=names)
         else:
-            item = next(item for item in self._items if item.id == parent_id)
+            item = next((item for item in self._items if item.id == parent_id), None)
+            if item is None:
+                raise UnknownMenuItemError(f"The ID supplied {parent_id} is not a menu item")
             layout = (item.id, item_properties(item=item, names=names), [])
         return GLib.Variant("(u(ia{sv}av))", (self._revision, layout))
 

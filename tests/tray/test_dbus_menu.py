@@ -1,5 +1,5 @@
 import pytest
-from gi.repository import GLib
+from gi.repository import Gio, GLib
 
 from tests.service.test_app_service import spin_until
 from tests.tray.conftest import Bus
@@ -18,6 +18,7 @@ OPEN = MenuItem(id=1, label="Apri", callback_id="open")
 SEPARATOR = MenuItem(id=2, kind="separator")
 QUIT = MenuItem(id=3, label="Esci", callback_id="quit")
 ITEMS = [OPEN, SEPARATOR, QUIT]
+INVALID_ID_ERROR = "com.canonical.dbusmenu.Error.InvalidMenuItemId"
 
 
 def unboxed(variant: GLib.Variant) -> object:
@@ -119,5 +120,31 @@ def test_set_items_emits_layout_updated_only_when_the_items_change(bus: Bus) -> 
         assert menu.set_items([OPEN]) is True
         flush()
         assert updates == [(1, 0), (2, 0)]
+    finally:
+        menu.close()
+
+
+@pytest.mark.dbus
+def test_get_layout_of_an_unknown_parent_id_is_a_dbus_error_not_the_root(bus: Bus) -> None:
+    # Reference (libdbusmenu bus_get_layout, libdbusmenu-glib/server.c): a parentId that is not
+    # a menu item is answered with an error (INVALID_MENUITEM_ID); only the root is made up.
+    menu = DBusMenu(connection=bus.server, on_click=lambda _callback_id: None)
+    try:
+        menu.set_items(ITEMS)
+        with pytest.raises(GLib.Error) as raised:
+            bus.call(
+                path=MENU_OBJECT_PATH,
+                interface=DBUSMENU_IFACE,
+                method="GetLayout",
+                parameters=GLib.Variant("(iias)", (999, -1, [])),
+            )
+        assert Gio.DBusError.get_remote_error(raised.value) == INVALID_ID_ERROR
+        root = bus.call(
+            path=MENU_OBJECT_PATH,
+            interface=DBUSMENU_IFACE,
+            method="GetLayout",
+            parameters=GLib.Variant("(iias)", (0, 0, [])),
+        )
+        assert root.unpack()[1][0] == 0
     finally:
         menu.close()
