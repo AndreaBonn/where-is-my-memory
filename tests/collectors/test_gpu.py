@@ -138,6 +138,14 @@ def test_amd_cards_without_both_files_or_with_bad_values_are_skipped(tmp_path: P
     assert result == (GpuMemory(GpuVendor.AMD, 2, 9),)
 
 
+def test_amd_card_with_zero_used_and_nonzero_total_is_reported(tmp_path: Path) -> None:
+    _amd_card(tmp_path, "card0", used="0\n", total="9\n")
+
+    result = _collector(FakeRunner(output=""), drm=tmp_path, smi=None).collect()
+
+    assert result == (GpuMemory(GpuVendor.AMD, 0, 9),)
+
+
 def test_amd_is_read_every_cycle_while_nvidia_stays_cached(tmp_path: Path) -> None:
     _amd_card(tmp_path, "card1", used="1\n", total="9\n")
     runner = FakeRunner(output="3, 30\n")

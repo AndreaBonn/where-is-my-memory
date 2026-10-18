@@ -82,6 +82,33 @@ def test_has_git_repo_finds_repo_at_each_allowed_level(tmp_path: Path) -> None:
     assert not has_git_repo(path=tmp_path / "d")
 
 
+def test_has_git_repo_finds_a_repo_exactly_two_levels_below(tmp_path: Path) -> None:
+    make_repo(tmp_path / "p" / "q" / "r")
+    assert has_git_repo(path=tmp_path / "p")
+
+
+def test_documents_dir_ignores_a_symlinked_user_dirs_file(tmp_path: Path) -> None:
+    (tmp_path / "Documenti").mkdir()
+    real = tmp_path / "elsewhere.dirs"
+    real.write_text('XDG_DOCUMENTS_DIR="$HOME/Documenti"\n', encoding="utf-8")
+    (tmp_path / ".config").mkdir()
+    (tmp_path / ".config" / "user-dirs.dirs").symlink_to(real)
+    assert documents_dir(home=tmp_path) is None
+
+
+def test_is_safe_candidate_refuses_a_directory_whose_lstat_is_denied(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "code").mkdir()
+    assert is_safe_candidate(path=tmp_path / "code", home=tmp_path)
+
+    def denied(path: object) -> os.stat_result:
+        raise PermissionError(path)
+
+    monkeypatch.setattr(os, "lstat", denied)
+    assert not is_safe_candidate(path=tmp_path / "code", home=tmp_path)
+
+
 def test_has_git_repo_counts_git_at_the_root_itself(tmp_path: Path) -> None:
     make_repo(tmp_path)
     assert has_git_repo(path=tmp_path)

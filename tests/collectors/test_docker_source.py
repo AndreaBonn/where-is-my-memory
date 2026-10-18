@@ -16,7 +16,7 @@ from wimm.collectors.docker_source import (
     ContainerReader,
     DockerSource,
 )
-from wimm.collectors.docker_stats import STATS_MAX_PER_CYCLE
+from wimm.collectors.docker_stats import STATS_MAX_PER_CYCLE, stats_metrics
 from wimm.model.enums import MetricsSource
 from wimm.model.raw import RawContainer
 
@@ -120,6 +120,27 @@ def test_stopped_and_failed_stats_are_unavailable(tmp_path: Path) -> None:
     assert source.collect().data.containers[0].metrics_source is MetricsSource.UNAVAILABLE
     source.collect()
     assert stopped.calls == 1
+
+
+def test_container_that_stopped_and_restarted_gets_a_fresh_stats_read(tmp_path: Path) -> None:
+    container = FakeContainer()
+    clock = SimpleNamespace(now=0.0)
+    source = DockerSource(
+        reader=FakeReader(containers=[container]),
+        roots=(tmp_path, tmp_path),
+        clock=lambda: clock.now,
+    )
+    source.collect()
+    assert container.calls == 1
+    container.state["Status"] = "exited"
+    clock.now = 10.0
+    source.collect()
+    container.state["Status"] = "running"
+    clock.now = 20.0
+
+    source.collect()
+
+    assert container.calls == 2
 
 
 def test_cgroup_normal_cycle_never_calls_stats(tmp_path: Path) -> None:
@@ -390,3 +411,12 @@ def test_a_failing_refresh_is_unavailable_then_retried() -> None:
     assert (first.data.status.available, first.data.status.error) == (False, "socket missing")
     assert source.collect().data.status.available
     assert engines.attempts == 2
+
+
+def test_stats_memory_below_the_inactive_page_cache_is_clamped_to_zero() -> None:
+    stats = {"memory_stats": {"usage": 20, "stats": {"inactive_file": 30}}}
+
+    memory, _cpu, _network = stats_metrics(stats=stats, host_network=True)
+
+    assert memory == 0
+    assert stats_metrics(stats={"memory_stats": {"usage": 50}}, host_network=True)[0] == 50

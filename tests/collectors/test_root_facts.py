@@ -129,3 +129,39 @@ def test_read_root_facts_sees_a_superblock_remounted_read_only(tmp_path: Path) -
     facts = read_root_facts(path=root, read_mounts=mounts(ROOT_MOUNT + line))
     assert facts is not None
     assert facts.read_only is True
+
+
+def test_read_root_facts_takes_owner_group_and_mode_from_the_symlink_target(
+    tmp_path: Path,
+) -> None:
+    target = (tmp_path / "real").resolve()
+    target.mkdir()
+    link = tmp_path / "link"
+    link.symlink_to(target, target_is_directory=True)
+    target_uid, target_gid, target_mode = OWN_UID + 7, OWN_UID + 8, stat.S_IFDIR | 0o750
+
+    def read(path: Path) -> os.stat_result:
+        fields = list(os.lstat(path))
+        if path == target:
+            fields[0], fields[4], fields[5] = target_mode, target_uid, target_gid
+        elif path == link:
+            fields[4], fields[5] = OWN_UID + 100, OWN_UID + 101
+        return os.stat_result(fields)
+
+    facts = read_root_facts(path=link, read_stat=read, read_mounts=mounts(ROOT_MOUNT))
+    assert facts is not None
+    assert facts.is_symlink is True
+    assert (facts.st_uid, facts.st_gid, facts.mode) == (target_uid, target_gid, target_mode)
+
+
+def test_read_root_facts_lets_the_last_mount_on_the_same_point_win(tmp_path: Path) -> None:
+    root = (tmp_path / "code").resolve()
+    root.mkdir()
+    text = (
+        ROOT_MOUNT
+        + mount_line(point=str(root), fstype="nfs4", options="ro")
+        + mount_line(point=str(root), fstype="ext4", options="rw")
+    )
+    facts = read_root_facts(path=root, read_mounts=mounts(text))
+    assert facts is not None
+    assert (facts.fstype, facts.read_only) == ("ext4", False)
