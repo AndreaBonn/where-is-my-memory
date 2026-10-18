@@ -1,5 +1,5 @@
 {
-  "schema": 2,
+  "schema": 3,
   "taken_at": "2026-10-16T10:30:00+02:00",
   "monitor_started_at": "2026-10-16T08:00:00+02:00",
   "memory": {
@@ -7,7 +7,13 @@
     "swap_total": 4294967296, "swap_used": 120000000,
     "breakdown": {"CONTAINER": 950000000, "DEV_SERVER": 2100000000, "BROWSER": 9800000000,
                   "DESKTOP_APP": 3200000000, "AI_CLI": 2400000000, "kernel_cache": 6500000000,
-                  "unattributed": 1900000000}
+                  "unattributed": 1900000000,
+                  "shared_tmpfs": 300000000, "kernel_unreclaimable": 700000000,
+                  "zram": 150000000, "zswap": 0},
+    "video": [
+      {"vendor": "nvidia", "used_bytes": 2147483648, "total_bytes": 8589934592},
+      {"vendor": "amd", "used_bytes": 536870912, "total_bytes": 4294967296}
+    ]
   },
   "disk": {"mount": "/", "total": 375809638400, "used": 329638211584, "free": 27917287424},
   "reclaimable_now": {"ram": 4200000000, "disk": 7400000000},

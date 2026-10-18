@@ -24,6 +24,7 @@ from wimm.wire_decoders import (
 )
 
 from . import model as m
+from .serialize_memory import GPU_MEMORY_SCHEMA, MEMORY_SUMMARY_SCHEMA, encode_breakdown
 
 
 def record[T](cls: type[T]) -> Callable[[Any, str], T]:
@@ -51,27 +52,6 @@ def member(value: Any, path: str) -> m.Member:
     if kind == "container":
         return record(cls=m.ContainerMember)(value, path)
     raise SnapshotFormatError(f"{path}.kind: expected process or container")
-
-
-EXTRA_BREAKDOWN_VOICES = ("shared_tmpfs", "kernel_unreclaimable", "zram", "zswap")
-
-
-def breakdown(value: Any, path: str) -> m.MemoryBreakdown:
-    data = primitive(expected=dict)(value, path)
-    schema: Schema = {name: byte_count for name in ("kernel_cache", "unattributed")}
-    schema.update({name: byte_count for name in data if name in m.Category.__members__})
-    # Optional until the schema bump (T060): zero voices are omitted and read back as zero.
-    schema.update({name: byte_count for name in EXTRA_BREAKDOWN_VOICES if name in data})
-    values = fields(value=data, schema=schema, path=path)
-    categories = tuple(
-        (m.Category[name], size) for name, size in values.items() if name in m.Category.__members__
-    )
-    return m.MemoryBreakdown(
-        categories=categories,
-        kernel_cache=values["kernel_cache"],
-        unattributed=values["unattributed"],
-        **{name: values.get(name, 0) for name in EXTRA_BREAKDOWN_VOICES},
-    )
 
 
 ACTIVITY = record(cls=m.ActivityAssessment)
@@ -130,14 +110,8 @@ SCHEMAS: dict[type, Schema] = {
         "compose_project": nullable(decoder=TEXT),
         "members": sequence(decoder=member),
     },
-    m.MemorySummary: {
-        "total": byte_count,
-        "available": byte_count,
-        "used": byte_count,
-        "swap_total": byte_count,
-        "swap_used": byte_count,
-        "breakdown": breakdown,
-    },
+    m.MemorySummary: MEMORY_SUMMARY_SCHEMA,
+    m.GpuMemory: GPU_MEMORY_SCHEMA,
     m.DiskUsage: {"mount": TEXT, "total": byte_count, "used": byte_count, "free": byte_count},
     m.Reclaimable: {"ram": byte_count, "disk": byte_count},
     m.DockerStatus: {"available": BOOLEAN, "error": nullable(decoder=TEXT)},
@@ -167,16 +141,7 @@ def encode(value: Any) -> Any:
     if isinstance(value, tuple):
         return [encode(value=item) for item in value]
     if isinstance(value, m.MemoryBreakdown):
-        return {
-            **{category.name: size for category, size in value.categories},
-            "kernel_cache": value.kernel_cache,
-            "unattributed": value.unattributed,
-            **{
-                name: getattr(value, name)
-                for name in EXTRA_BREAKDOWN_VOICES
-                if getattr(value, name)
-            },
-        }
+        return encode_breakdown(value=value)
     if type(value) in SCHEMAS:
         data = {
             name: encode(value=getattr(value, name))
@@ -190,7 +155,7 @@ def encode(value: Any) -> Any:
 
 
 def snapshot_to_json(snapshot: m.Snapshot) -> str:
-    """Encode a snapshot using the explicit version-one wire contract.
+    """Encode a snapshot using the explicit version-three wire contract.
 
     Parameters
     ----------
@@ -214,7 +179,7 @@ def snapshot_from_json(text: str) -> m.Snapshot:
     Parameters
     ----------
     text : str
-        Version-one snapshot JSON.
+        Version-three snapshot JSON.
 
     Returns
     -------

@@ -38,7 +38,7 @@ def test_fixture_roundtrip_exact_json_values_and_model(
     encoded = snapshot_to_json(snapshot=snapshot)
     assert json.loads(encoded) == document
     assert snapshot_from_json(text=encoded) == snapshot
-    assert SCHEMA_VERSION == 2
+    assert SCHEMA_VERSION == 3
     group = snapshot.groups[0]
     assert group.category is Category.PROJECT
     assert group.protection is Protection.ACTIONABLE
@@ -121,7 +121,8 @@ def set_path(document: dict[str, Any], path: tuple[str | int, ...], value: objec
     "path,value",
     [
         (("schema",), 1),
-        (("schema",), 3),
+        (("schema",), 2),
+        (("schema",), 4),
         (("schema",), True),
         (("schema",), 1.0),
         (("pressure",), "bad"),
@@ -325,10 +326,102 @@ def test_process_risk_facts_reject_invalid_values(
         snapshot_from_json(text=json.dumps(document))
 
 
-def test_roundtrip_keeps_new_memory_breakdown_voices(snapshot: m.Snapshot) -> None:
+BREAKDOWN_VOICES = ("shared_tmpfs", "kernel_unreclaimable", "zram", "zswap")
+
+
+def test_roundtrip_keeps_every_breakdown_voice(snapshot: m.Snapshot) -> None:
     breakdown = replace(
         snapshot.memory.breakdown, shared_tmpfs=11, kernel_unreclaimable=22, zram=33, zswap=44
     )
     updated = replace(snapshot, memory=replace(snapshot.memory, breakdown=breakdown))
-    decoded = snapshot_from_json(text=snapshot_to_json(snapshot=updated))
-    assert decoded.memory.breakdown == breakdown
+
+    encoded = json.loads(snapshot_to_json(snapshot=updated))
+
+    assert {name: encoded["memory"]["breakdown"][name] for name in BREAKDOWN_VOICES} == {
+        "shared_tmpfs": 11,
+        "kernel_unreclaimable": 22,
+        "zram": 33,
+        "zswap": 44,
+    }
+    assert snapshot_from_json(text=json.dumps(encoded)).memory.breakdown == breakdown
+
+
+def test_zero_breakdown_voices_are_always_written(snapshot: m.Snapshot) -> None:
+    zero = replace(
+        snapshot.memory.breakdown, shared_tmpfs=0, kernel_unreclaimable=0, zram=0, zswap=0
+    )
+    updated = replace(snapshot, memory=replace(snapshot.memory, breakdown=zero))
+
+    written = json.loads(snapshot_to_json(snapshot=updated))["memory"]["breakdown"]
+
+    assert all(written[name] == 0 for name in BREAKDOWN_VOICES)
+
+
+@pytest.mark.parametrize("voice", BREAKDOWN_VOICES)
+def test_breakdown_missing_voice_is_rejected(document: dict[str, Any], voice: str) -> None:
+    del document["memory"]["breakdown"][voice]
+
+    with pytest.raises(SnapshotFormatError, match=voice):
+        snapshot_from_json(text=json.dumps(document))
+
+
+def test_schema_two_snapshot_is_rejected(document: dict[str, Any]) -> None:
+    document["schema"] = 2
+
+    with pytest.raises(SnapshotFormatError, match="schema"):
+        snapshot_from_json(text=json.dumps(document))
+
+
+def test_video_memory_roundtrips_two_gpus_outside_the_breakdown(
+    snapshot: m.Snapshot, document: dict[str, Any]
+) -> None:
+    assert snapshot.memory.video == (
+        m.GpuMemory(vendor=m.GpuVendor.NVIDIA, used_bytes=2147483648, total_bytes=8589934592),
+        m.GpuMemory(vendor=m.GpuVendor.AMD, used_bytes=536870912, total_bytes=4294967296),
+    )
+    encoded = json.loads(snapshot_to_json(snapshot=snapshot))
+    assert encoded["memory"]["video"] == document["memory"]["video"]
+    assert "video" not in encoded["memory"]["breakdown"]
+    assert snapshot_from_json(text=json.dumps(encoded)) == snapshot
+
+
+def test_no_gpu_means_empty_video_list(snapshot: m.Snapshot) -> None:
+    bare = replace(snapshot, memory=replace(snapshot.memory, video=()))
+
+    assert snapshot.memory.video != ()
+    assert json.loads(snapshot_to_json(snapshot=bare))["memory"]["video"] == []
+    assert snapshot_from_json(text=snapshot_to_json(snapshot=bare)).memory.video == ()
+
+
+def test_video_field_is_required(document: dict[str, Any]) -> None:
+    del document["memory"]["video"]
+
+    with pytest.raises(SnapshotFormatError, match="video"):
+        snapshot_from_json(text=json.dumps(document))
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("vendor", "intel"),
+        ("vendor", 1),
+        ("used_bytes", -1),
+        ("total_bytes", -1),
+        ("used_bytes", 1.5),
+        ("extra", 1),
+    ],
+)
+def test_video_entry_rejects_invalid_values(
+    document: dict[str, Any], field: str, value: object
+) -> None:
+    document["memory"]["video"][0][field] = value
+
+    with pytest.raises(SnapshotFormatError, match=field):
+        snapshot_from_json(text=json.dumps(document))
+
+
+def test_video_model_rejects_negative_bytes() -> None:
+    with pytest.raises(ValueError, match="used_bytes"):
+        m.GpuMemory(vendor=m.GpuVendor.AMD, used_bytes=-1, total_bytes=10)
+    with pytest.raises(ValueError, match="total_bytes"):
+        m.GpuMemory(vendor=m.GpuVendor.AMD, used_bytes=0, total_bytes=-1)

@@ -4,7 +4,7 @@ from typing import NewType
 GroupId = NewType("GroupId", str)
 PlanId = NewType("PlanId", str)
 TargetId = NewType("TargetId", str)
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class Category(Enum):
@@ -20,6 +20,11 @@ class Category(Enum):
     SELF = "SELF"
     OTHER = "OTHER"
     PROJECT = "PROJECT"
+
+
+class GpuVendor(Enum):
+    NVIDIA = "nvidia"
+    AMD = "amd"
 
 
 class Protection(Enum):

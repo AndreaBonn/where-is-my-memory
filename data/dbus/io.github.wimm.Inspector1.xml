@@ -2,8 +2,11 @@
   <!--
     Both methods return JSON with a top-level "schema" integer, the same for the
     snapshot and the disk report. Version 2 adds the DevDir "marker" field and
-    widens the cache "kind" values from 5 to 17. Readers accept only the version
-    they know: a document with another "schema" is rejected, never guessed.
+    widens the cache "kind" values from 5 to 17. Version 3 makes the memory
+    breakdown always carry shared_tmpfs, kernel_unreclaimable, zram and zswap,
+    and adds memory.video, a list of {vendor, used_bytes, total_bytes} kept
+    outside the breakdown. Readers accept only the version they know: a
+    document with another "schema" is rejected, never guessed.
   -->
   <interface name="io.github.wimm.Inspector1">
     <method name="GetSnapshot">

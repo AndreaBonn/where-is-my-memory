@@ -53,7 +53,7 @@ def _mutated(document: dict[str, Any], path: tuple[str | int, ...], value: objec
     [
         (("surprise",), 1, "surprise"),
         (("docker", "images", 0, "extra"), 1, "extra"),
-        (("schema",), 3, "schema"),
+        (("schema",), 4, "schema"),
         (("docker", "images", 0, "unique_size"), 450_000_001, "unique_size"),
         (("docker", "build_cache_reclaimable"), 100_000_001, "build_cache_reclaimable"),
         (("caches", 0, "kind"), "docs", "CacheKind"),
@@ -142,10 +142,10 @@ def test_a_type_outside_the_catalog_is_still_rejected(document: dict[str, Any]) 
         disk_report_from_json(text=_mutated(document, ("caches", 0, "kind"), "cargo"))
 
 
-def test_schema_version_written_is_two(document: dict[str, Any]) -> None:
+def test_schema_version_written_is_three(document: dict[str, Any]) -> None:
     decoded = disk_report_from_json(text=json.dumps(document))
 
-    assert json.loads(disk_report_to_json(report=decoded))["schema"] == 2
+    assert json.loads(disk_report_to_json(report=decoded))["schema"] == 3
 
 
 def test_schema_version_previous_report_is_rejected(document: dict[str, Any]) -> None:
@@ -156,7 +156,7 @@ def test_schema_version_previous_report_is_rejected(document: dict[str, Any]) ->
 
 
 def test_schema_version_future_report_is_rejected(document: dict[str, Any]) -> None:
-    document["schema"] = 3
+    document["schema"] = 4
 
     with pytest.raises(SnapshotFormatError, match="schema"):
         disk_report_from_json(text=json.dumps(document))

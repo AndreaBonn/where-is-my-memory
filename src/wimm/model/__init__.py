@@ -71,6 +71,9 @@ from .enums import (
     Category as Category,
 )
 from .enums import (
+    GpuVendor as GpuVendor,
+)
+from .enums import (
     GroupId as GroupId,
 )
 from .enums import MetricsSource as MetricsSource
@@ -100,6 +103,9 @@ from .enums import (
 )
 from .memory import (
     DiskUsage as DiskUsage,
+)
+from .memory import (
+    GpuMemory as GpuMemory,
 )
 from .memory import (
     MemoryBreakdown as MemoryBreakdown,

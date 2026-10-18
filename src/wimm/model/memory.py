@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from .enums import Category
+from .enums import Category, GpuVendor
 from .validation import ImmutableModel, require_bytes
 
 
@@ -40,6 +40,20 @@ class MemoryBreakdown(ImmutableModel):
 
 
 @dataclass(frozen=True, slots=True)
+class GpuMemory(ImmutableModel):
+    vendor: GpuVendor
+    used_bytes: int
+    total_bytes: int
+
+    def __post_init__(self) -> None:
+        ImmutableModel.__post_init__(self)
+        if not isinstance(self.vendor, GpuVendor):
+            raise ValueError("vendor must be a GpuVendor")
+        require_bytes(value=self.used_bytes, field="used_bytes")
+        require_bytes(value=self.total_bytes, field="total_bytes")
+
+
+@dataclass(frozen=True, slots=True)
 class MemorySummary(ImmutableModel):
     total: int
     available: int
@@ -47,6 +61,7 @@ class MemorySummary(ImmutableModel):
     swap_total: int
     swap_used: int
     breakdown: MemoryBreakdown
+    video: tuple[GpuMemory, ...] = ()
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)

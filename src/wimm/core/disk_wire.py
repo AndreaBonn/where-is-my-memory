@@ -125,7 +125,7 @@ def _encode(value: Any) -> Any:
 
 
 def disk_report_to_json(*, report: m.DiskReport) -> str:
-    """Encode a disk report as version-one JSON."""
+    """Encode a disk report as JSON of the current `SCHEMA_VERSION`."""
     data = {
         name: _encode(value=getattr(report, name)) for name in REPORT_SCHEMA if name != "schema"
     }
