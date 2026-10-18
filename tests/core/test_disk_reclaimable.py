@@ -61,3 +61,12 @@ def test_safe_reclaimable_bytes_uses_unique_image_size_and_reclaimable_build_cac
     )
 
     assert safe_reclaimable_bytes(report=report(docker=docker)) == 9 * MB
+
+
+def test_safe_reclaimable_bytes_counts_a_dangling_image_built_locally() -> None:
+    # Spec 5.3: dangling images are safe to remove, whether or not they were built here.
+    docker = docker_disk(
+        images=(image(char="d", tags=(), size=3 * MB, dangling=True, local_build=True),)
+    )
+
+    assert safe_reclaimable_bytes(report=report(docker=docker)) == 3 * MB

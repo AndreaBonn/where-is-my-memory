@@ -204,3 +204,11 @@ def test_root_policy_refuses_the_merged_usr_links_and_lost_found(path: str) -> N
 def test_root_policy_refuses_fuseblk_like_any_fuse_mount() -> None:
     # ntfs-3g and exfat through FUSE: owner and mode are declared by the daemon, not the disk.
     assert refusal("/mnt/data/code", fstype="fuseblk") is RootRefusal.REMOTE_FS
+
+
+def test_outside_root_is_not_other_home_when_home_is_a_two_component_path() -> None:
+    root_home = Path("/root")
+
+    result = root_refusal(facts=make_facts("/mnt/data/code"), home=root_home)
+
+    assert result is None

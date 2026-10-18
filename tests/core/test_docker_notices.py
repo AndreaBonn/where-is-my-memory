@@ -73,3 +73,14 @@ def test_notices_text_joins_in_order_and_is_empty_for_no_notices() -> None:
 def test_every_code_formats_without_missing_placeholders(code: NoticeCode) -> None:
     text = notice_text(notice=EngineNotice(code=code, endpoint="/x", detail="why"))
     assert "{" not in text
+
+
+def test_unreachable_detail_with_credentials_never_reaches_the_text() -> None:
+    notice = EngineNotice(
+        code=NoticeCode.UNREACHABLE,
+        endpoint="/run/docker.sock",
+        detail="cannot reach http://u:hunter2@h",
+    )
+    text = notice_text(notice=notice)
+    assert "hunter2" not in text
+    assert "@h" in text  # positive pair: the host of the detail is still shown

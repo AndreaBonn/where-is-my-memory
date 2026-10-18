@@ -62,6 +62,20 @@ def test_tool_label_risk_virtual_machine_is_danger_whatever_it_does() -> None:
         assert result.level is Risk.DANGER
 
 
+def test_tool_label_risk_foreground_virtual_machine_stays_danger() -> None:
+    foreground = RiskTarget(
+        kind="process",
+        category=Category.OTHER,
+        activity=ActivityState.IDLE,
+        is_foreground_on_tty=True,
+        tool=ToolLabel.VIRTUAL_MACHINE,
+    )
+
+    result = assess_risk(target=foreground, action=ActionKind.PROCESS_TERMINATE)
+
+    assert result.level is Risk.DANGER
+
+
 def test_tool_label_risk_kill_of_a_virtual_machine_is_danger_of_a_daemon_is_caution() -> None:
     vm = assess_risk(target=target(tool=ToolLabel.VIRTUAL_MACHINE), action=ActionKind.PROCESS_KILL)
     daemon = assess_risk(

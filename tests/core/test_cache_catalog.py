@@ -592,3 +592,42 @@ def test_xdg_cache_home_that_only_contains_cache_in_its_name_is_not_trusted() ->
 
     uv = next(entry for entry in result.caches if entry.kind is CacheKind.UV)
     assert uv.access is CacheAccess.MEASURE_ONLY
+
+
+def _linked(*, link: Path, target: Path, kind: CacheKind) -> CacheObservations:
+    sentinel = sentinel_candidates(kind=kind, path=target)[0]
+    return CacheObservations(real={link: target}, sentinels=frozenset({sentinel}))
+
+
+def test_a_redirect_through_a_link_is_measure_only_even_with_the_sentinel_on_its_target() -> None:
+    link = Path("/home/u/shortcut")
+    observed = _linked(link=link, target=Path("/home/u/gc"), kind=CacheKind.GO_BUILD)
+
+    entry = _resolved(environ={"GOCACHE": str(link)}, observed=observed)["go_build"]
+
+    assert entry.path == link
+    assert entry.access is CacheAccess.MEASURE_ONLY
+
+
+def test_a_desktop_xdg_cache_reached_through_a_link_is_measure_only() -> None:
+    xdg = HOME / ".local" / "cache"
+    link = xdg / "go-build"
+    observed = CacheObservations(real={link: Path("/home/u/gc")})
+
+    entry = _resolved(environ={"XDG_CACHE_HOME": str(xdg)}, observed=observed)["go_build"]
+
+    assert entry.path == link
+    assert entry.access is CacheAccess.MEASURE_ONLY
+
+
+@pytest.mark.parametrize("target", [".cache", ".local", ".config", ".cache/uv"])
+def test_a_harmless_looking_link_to_a_shared_or_other_cache_folder_is_refused(target: str) -> None:
+    link = Path("/home/u/shortcut")
+    observed = CacheObservations(real={link: HOME / target})
+
+    result = resolve_cache_paths(
+        environ={"GOCACHE": str(link)}, home=HOME, roots=ROOTS, observed=observed
+    )
+
+    assert "go_build" not in {entry.kind.value for entry in result.caches}
+    assert result.rejected[0].reason is RejectReason.COVERS_OTHER_CACHES

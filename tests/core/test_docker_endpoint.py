@@ -376,3 +376,31 @@ def test_docker_desktop_socket_under_a_symlinked_home_is_accepted() -> None:
     elsewhere = sock(DESKTOP_SOCKET, realpath=f"{real_home}/.docker/x.sock")
     other = Fixture({HOME: home_facts, DESKTOP_SOCKET: elsewhere})
     assert other.resolve(environ={"DOCKER_HOST": f"unix://{DESKTOP_SOCKET}"}).endpoints == ()
+
+
+def test_docker_host_in_a_sibling_runtime_dir_of_another_user_is_rejected() -> None:
+    other = "/run/user/10001/docker.sock"  # shares the "/run/user/1000" prefix, other user
+    fixture = Fixture({other: sock(other)})
+    resolution = fixture.resolve(environ={"DOCKER_HOST": f"unix://{other}"})
+    assert other not in paths(resolution)
+    assert RejectionReason.LOCATION_NOT_ALLOWED in reasons(resolution)
+
+
+def test_default_socket_resolving_into_a_non_private_runtime_dir_is_rejected() -> None:
+    target = f"{RUNTIME}/docker.sock"
+    fixture = Fixture(
+        {
+            RUNTIME: runtime_dir(mode=0o755),
+            DEFAULT_SOCKET: sock(DEFAULT_SOCKET, realpath=target),
+        }
+    )
+    resolution = fixture.resolve()
+    assert DEFAULT_SOCKET not in paths(resolution)
+    assert RejectionReason.RUNTIME_DIR_NOT_PRIVATE in reasons(resolution)
+
+
+def test_default_socket_resolving_into_a_private_runtime_dir_is_accepted() -> None:
+    target = f"{RUNTIME}/docker.sock"
+    fixture = Fixture({DEFAULT_SOCKET: sock(DEFAULT_SOCKET, realpath=target)})
+    resolution = fixture.resolve()
+    assert paths(resolution) == [DEFAULT_SOCKET]

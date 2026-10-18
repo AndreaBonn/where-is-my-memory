@@ -85,6 +85,14 @@ def test_plan_process_without_offered_actions_raises_protected_target() -> None:
         plan_action(request=_terminate(9), snapshot=snapshot(shell), context=context())
 
 
+def test_plan_actionable_process_without_offered_actions_raises_protected_target() -> None:
+    bare = replace(proc(pid=9, category=Category.DEV_PROCESS), actions=())
+    holder = group(gid="d", category=Category.DEV_PROCESS, members=(bare,))
+
+    with pytest.raises(ProtectedTarget):
+        plan_action(request=_terminate(9), snapshot=snapshot(holder), context=context())
+
+
 def test_plan_unknown_process_raises_invalid_request() -> None:
     with pytest.raises(InvalidRequest):
         plan_action(request=_terminate(99), snapshot=snapshot(), context=context())
@@ -268,6 +276,31 @@ def test_stop_all_idle_safe_plans_only_idle_safe_groups() -> None:
     assert [(s.target_label, s.risk) for s in plan.steps] == [("node (pid 1)", Risk.SAFE)]
     assert plan.risk is Risk.SAFE
     assert plan.confirm_phrase is None
+
+
+def test_stop_all_idle_safe_refuses_idle_group_mixing_safe_and_caution_members() -> None:
+    mixed = group(
+        gid="m",
+        category=Category.DEV_SERVER,
+        members=(proc(pid=1), proc(pid=2, category=Category.AI_CLI)),
+    )
+    request = ActionRequest(kind=ActionKind.STOP_ALL_IDLE_SAFE)
+
+    with pytest.raises(InvalidRequest):
+        plan_action(request=request, snapshot=snapshot(mixed), context=context())
+
+
+def test_group_stop_with_two_danger_steps_confirms_the_first_name() -> None:
+    vms = tuple(
+        replace(proc(pid=pid, name=name), tool_label="virtual_machine")
+        for pid, name in ((1, "qemu-first"), (2, "qemu-second"))
+    )
+    holder = group(gid="v", category=Category.DEV_SERVER, members=vms)
+
+    plan = plan_action(request=_stop("v"), snapshot=snapshot(holder), context=context())
+
+    assert [s.risk for s in plan.steps] == [Risk.DANGER, Risk.DANGER]
+    assert plan.confirm_phrase == "qemu-first"
 
 
 def test_stop_all_idle_safe_ignores_ignored_groups_and_raises_when_nothing_qualifies() -> None:

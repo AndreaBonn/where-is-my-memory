@@ -165,3 +165,17 @@ def test_assemble_excluded_process_cannot_reach_a_group() -> None:
 
     with pytest.raises(ValueError, match="excluded process 1"):
         assemble_snapshot(inputs=build_input(drafts, pairs=[pair(1, None)]))
+
+
+def test_assemble_project_group_risk_is_the_maximum_of_its_members() -> None:
+    server = pair(1, Category.DEV_SERVER, name="uvicorn", tpgid=77, pgid=77)
+    containers = [container("db"), container("cache")]
+    drafts = [
+        draft("g_p", name="proj", category=Category.PROJECT, pids=[1], containers=["db", "cache"])
+    ]
+
+    (group,) = assemble_snapshot(
+        inputs=build_input(drafts, pairs=[server], containers=containers)
+    ).groups
+
+    assert group.primary_action == ActionOffer(kind=ActionKind.GROUP_STOP, risk=Risk.CAUTION)
