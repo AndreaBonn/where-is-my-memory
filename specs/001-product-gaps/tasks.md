@@ -245,3 +245,7 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T085 T086 | f14c47a | storico di 3 h e crescita sostenuta; review: rumore sotto 32 MiB, orologio monotonic
 - T087 T088 | (commit snapshot) | `growth` nello snapshot, schema 4, riga "+620 MB in 2 h"
 - T089 | (questo commit) | PERF.md: RNF-01 sopra il limite (1,0-1,6%) per 930 processi da censire, L5-L8 dentro il rumore rispetto a L4; DEVIATIONS. Aperti: F-PERF (test del budget del censimento fallito due volte sotto carico); F-RST (test del toast di riavvio fallito una volta nella suite intera); G5 (storia persa per un gruppo assente un ciclo); riga del gruppo lunga a 375 px non osservata
+- T099 | 8dc45e1 | ADR-006 scritto (decisione D1 già accettata)
+- T103 T104 | 2098ee4 | PKGBUILD e spec RPM, test in container verdi; review: permessi della cartella di lavoro, rimozione verificata
+- T105 | 5d033a6 | banner per distribuzione, fallback /usr/lib/os-release; click-through del percorso Ubuntu
+- T106 T107 | (questo commit) | DEVIATIONS di L12; testo README proposto all'utente, in attesa di ok. Aperti: pubblicazione AUR/COPR non fatta; email nel changelog RPM; Fedora, Arch e Debian a schermo provati solo nei test
