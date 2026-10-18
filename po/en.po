@@ -11,15 +11,15 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
-#: src/wimm/app.py:265
+#: src/wimm/app.py:269
 msgid "Avvia senza aprire la finestra"
 msgstr "Start without opening the window"
 
-#: src/wimm/app.py:266
+#: src/wimm/app.py:270
 msgid "Mostra un gruppo"
 msgstr "Show a group"
 
-#: src/wimm/app.py:267
+#: src/wimm/app.py:271
 msgid "Mostra la versione"
 msgstr "Show the version"
 
@@ -927,26 +927,31 @@ msgid "{size} liberi"
 msgstr "{size} free"
 
 #: src/wimm/tray/menu_model.py:70
+#, no-python-format, python-brace-format
+msgid "Disco: {percent}% occupato"
+msgstr "Disk: {percent}% used"
+
+#: src/wimm/tray/menu_model.py:75
+#, python-brace-format
+msgid "{text} ({size} liberabili senza rischio)"
+msgstr "{text} ({size} can be freed safely)"
+
+#: src/wimm/tray/menu_model.py:84
 #, python-brace-format
 msgid "{size} da liberare"
 msgstr "{size} to free up"
 
-#: src/wimm/tray/menu_model.py:78
+#: src/wimm/tray/menu_model.py:92
 #, no-python-format, python-brace-format
 msgid "Memoria usata {percent}%, disco: {disk}"
 msgstr "Memory used {percent}%, disk: {disk}"
 
-#: src/wimm/tray/menu_model.py:115
+#: src/wimm/tray/menu_model.py:129
 #, python-brace-format
 msgid "Memoria usata: {percent}%"
 msgstr "Memory used: {percent}%"
 
-#: src/wimm/tray/menu_model.py:119
-#, python-brace-format
-msgid "Disco: {disk}"
-msgstr "Disk: {disk}"
-
-#: src/wimm/tray/menu_model.py:137 src/wimm/ui/window_notify.py:14
+#: src/wimm/tray/menu_model.py:151 src/wimm/ui/window_notify.py:14
 #, python-brace-format
 msgid "Notifiche silenziate fino alle {until}"
 msgstr "Notifications muted until {until}"
@@ -2584,11 +2589,11 @@ msgstr "Never again"
 msgid "Riattiva gli avvisi"
 msgstr "Turn alerts back on"
 
-#: src/wimm/ui/widgets/group_list.py:6
+#: src/wimm/ui/widgets/group_list.py:8
 msgid "Da liberare · non li usi da tempo"
 msgstr "To free up · you have not used them for a while"
 
-#: src/wimm/ui/widgets/group_list.py:7
+#: src/wimm/ui/widgets/group_list.py:9
 msgid "In uso adesso o non misurabile"
 msgstr "In use now or not measurable"
 

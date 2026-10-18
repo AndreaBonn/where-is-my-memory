@@ -63,6 +63,20 @@ def _disk_free(*, snapshot: Snapshot) -> str:
     return _("{size} liberi").format(size=format_round_size(size=snapshot.disk.free))
 
 
+def _disk_entry(*, snapshot: Snapshot) -> str:
+    """Disk use, plus what can be freed without losing data (the `safe` ratings, Q-6)."""
+    used = _percent(part=snapshot.disk.used, total=snapshot.disk.total)
+    # xgettext: no-python-format
+    text = _("Disco: {percent}% occupato").format(percent=used)
+    safe = snapshot.reclaimable_now.disk
+    if safe == 0:
+        # Also the value before the first disk scan: "0 B" would read as a measured nothing.
+        return text
+    return _("{text} ({size} liberabili senza rischio)").format(
+        text=text, size=format_size(size=safe)
+    )
+
+
 def tray_label(*, snapshot: Snapshot | None) -> str:
     """Short text beside the icon: the reclaimable RAM, nothing below 100 MB (RF-40)."""
     if snapshot is None or snapshot.reclaimable_now.ram < LABEL_MIN_BYTES:
@@ -116,7 +130,7 @@ def _summary_entries(*, snapshot: Snapshot) -> list[Entry]:
             False,
             "",
         ),
-        (DISK_ID, _("Disco: {disk}").format(disk=_disk_free(snapshot=snapshot)), False, ""),
+        (DISK_ID, _disk_entry(snapshot=snapshot), False, ""),
     ]
     idle = _idle_groups(snapshot=snapshot)
     if idle:

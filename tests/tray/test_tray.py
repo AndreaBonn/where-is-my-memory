@@ -120,7 +120,7 @@ def test_snapshot_update_refreshes_label_tooltip_icon_and_menu(harness: Harness)
     assert harness.labels() == [
         "Apri Where Is My Memory",
         "Memoria usata: 79%",
-        "Disco: 28 GB liberi",
+        "Disco: 88% occupato (7,4 GB liberabili senza rischio)",
         "Da liberare:",
         "whitebox (1,1 GB)",
         "Silenzia notifiche per 1 h",

@@ -96,7 +96,7 @@ def test_menu_lists_summary_groups_by_reclaimable_then_fixed_entries() -> None:
     assert labels(items) == [
         "Apri Where Is My Memory",
         "Memoria usata: 79%",
-        "Disco: 28 GB liberi",
+        "Disco: 88% occupato (7,4 GB liberabili senza rischio)",
         "Da liberare:",
         "big (3,0 GB)",
         "small (200 MB)",
@@ -107,6 +107,12 @@ def test_menu_lists_summary_groups_by_reclaimable_then_fixed_entries() -> None:
     assert not items[1].enabled and not items[2].enabled and not items[3].enabled
     big = next(item for item in items if item.label.startswith("big"))
     assert big.enabled and big.callback_id == "group:id-big"
+
+
+def test_menu_disk_entry_drops_the_safe_part_when_nothing_is_safe_to_free() -> None:
+    # Before the first disk scan the safe total is 0: "0 B" would read as a measured nothing.
+    snapshot = replace(base_snapshot(), reclaimable_now=Reclaimable(ram=0, disk=0))
+    assert "Disco: 88% occupato" in labels(mm.build_menu(snapshot=snapshot, consecutive_failures=0))
 
 
 def test_menu_ids_are_unique_and_positive() -> None:

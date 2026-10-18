@@ -39,7 +39,7 @@ def test_menu_entries_read_in_english() -> None:
     assert labels(mm.build_menu(snapshot=snapshot, consecutive_failures=0)) == [
         "Open Where Is My Memory",
         "Memory used: 79%",
-        "Disk: 28 GB free",
+        "Disk: 88% used (7.4 GB can be freed safely)",
         "To free up:",
         "big (3.0 GB)",
         "Mute notifications for 1 h",
