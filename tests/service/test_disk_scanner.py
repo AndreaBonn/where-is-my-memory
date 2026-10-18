@@ -24,6 +24,13 @@ class CancellingDocker:
         return CollectorResult(data=docker_disk())
 
 
+@pytest.fixture(autouse=True)
+def xdg_cache_at_the_fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """The scan reads the environment (R12): conftest points XDG_CACHE_HOME outside the fake
+    home, where the table rightly refuses it, so put it where these tests build their caches."""
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "home" / ".cache"))
+
+
 def _scanner(*, tmp_path: Path, docker: CancellingDocker) -> RealDiskScanner:
     home = tmp_path / "home"
     (home / ".cache" / "uv").mkdir(parents=True)

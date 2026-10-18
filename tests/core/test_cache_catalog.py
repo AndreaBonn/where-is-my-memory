@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 
 from wimm.core.cache_catalog import (
-    CACHE_RELATIVE_PATHS,
     CacheAccess,
     CacheObservations,
     RejectReason,
@@ -44,11 +43,19 @@ def test_every_cache_kind_has_exactly_one_spec() -> None:
     assert sorted(kind.value for kind in kinds) == sorted(kind.value for kind in CacheKind)
 
 
-def test_specs_keep_the_old_five_folders_where_they_always_were() -> None:
-    for value, relative in CACHE_RELATIVE_PATHS:
-        spec = spec_for(kind=CacheKind(value))
-        legacy_prefix = ".cache/" if spec.base is CacheBase.XDG_CACHE else ""
-        assert legacy_prefix + spec.relative == relative
+def test_the_five_original_caches_stay_where_they_always_were() -> None:
+    home = Path("/home/u")
+
+    found = {
+        cache.kind.value: cache.path
+        for cache in resolve_cache_paths(environ={}, home=home, roots=()).caches
+    }
+
+    assert found["uv"] == home / ".cache/uv"
+    assert found["npm"] == home / ".npm/_cacache"
+    assert found["pip"] == home / ".cache/pip"
+    assert found["trash"] == home / ".local/share/Trash"
+    assert found["thumbnails"] == home / ".cache/thumbnails"
 
 
 def test_a_spec_names_the_variable_that_moves_the_tool_and_its_native_command() -> None:
@@ -280,7 +287,8 @@ def test_a_redirected_folder_that_is_really_the_home_is_refused() -> None:
     )
 
     assert "go_build" not in refused
-    assert kept["go_build"] == Path("/home/u/gc")
+    # Behind a link: kept for measuring at its own path, never cleaned.
+    assert kept["go_build"] == link
 
 
 def test_a_redirected_folder_without_a_sentinel_is_measure_only() -> None:
@@ -423,10 +431,10 @@ def test_a_default_folder_that_resolves_outside_the_home_is_refused() -> None:
     assert reasons == [RejectReason.OUTSIDE_HOME]
 
 
-def test_a_default_folder_resolving_inside_the_home_stays_cleanable() -> None:
+def test_a_default_folder_behind_a_link_inside_the_home_is_measure_only() -> None:
     caches, reasons = _default_uv(real=Path("/home/u/elsewhere/uv"))
 
-    assert [c.access for c in caches] == [CacheAccess.CLEANABLE]
+    assert [c.access for c in caches] == [CacheAccess.MEASURE_ONLY]
     assert reasons == []
     assert _default_uv(real=None)[0][0].access is CacheAccess.CLEANABLE
 
@@ -459,3 +467,55 @@ def test_a_gopath_on_a_root_is_refused_like_any_other_redirection() -> None:
 
     assert "go_mod" not in {c.kind.value for c in result.caches}
     assert [r.reason for r in result.rejected] == [RejectReason.ROOT_CONFLICT]
+
+
+def test_xdg_cache_home_is_a_desktop_standard_and_needs_no_sentinel() -> None:
+    xdg = HOME / ".xdgcache"
+
+    result = resolve_cache_paths(
+        environ={"XDG_CACHE_HOME": str(xdg)}, home=HOME, roots=ROOTS, observed=CacheObservations()
+    )
+
+    by_kind = {entry.kind.value: entry for entry in result.caches}
+    for kind, name in (("uv", "uv"), ("thumbnails", "thumbnails"), ("go_build", "go-build")):
+        assert by_kind[kind].path == xdg / name
+        assert by_kind[kind].access is CacheAccess.CLEANABLE
+    assert by_kind["jetbrains"].access is CacheAccess.CLEANABLE
+
+
+def test_a_tool_variable_without_a_sentinel_stays_measure_only() -> None:
+    redirected = HOME / "elsewhere" / "uv"
+
+    result = resolve_cache_paths(
+        environ={"UV_CACHE_DIR": str(redirected)},
+        home=HOME,
+        roots=ROOTS,
+        observed=CacheObservations(real={redirected: redirected}),
+    )
+
+    uv = next(entry for entry in result.caches if entry.kind.value == "uv")
+    assert uv.access is CacheAccess.MEASURE_ONLY
+
+
+def test_a_default_cache_resolved_elsewhere_inside_the_home_is_not_cleanable() -> None:
+    default = HOME / ".cache" / "thumbnails"
+    docs = HOME / "Documents"
+
+    result = resolve_cache_paths(
+        environ={}, home=HOME, roots=ROOTS, observed=CacheObservations(real={default: docs})
+    )
+
+    thumbs = next(entry for entry in result.caches if entry.kind.value == "thumbnails")
+    assert thumbs.path == default and thumbs.access is CacheAccess.MEASURE_ONLY
+
+
+def test_xdg_cache_home_without_cache_in_its_name_keeps_the_sentinel_rule() -> None:
+    result = resolve_cache_paths(
+        environ={"XDG_CACHE_HOME": str(HOME / "Documents")},
+        home=HOME,
+        roots=ROOTS,
+        observed=CacheObservations(),
+    )
+
+    thumbs = next(entry for entry in result.caches if entry.kind.value == "thumbnails")
+    assert thumbs.access is CacheAccess.MEASURE_ONLY

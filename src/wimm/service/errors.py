@@ -44,3 +44,9 @@ class TargetGone(WimmError):
     code = "TARGET_GONE"
     message = "Action target no longer exists"
     user_message = N_("L'elemento non esiste più")
+
+
+class CacheIsLink(TargetChanged):
+    code = "CACHE_IS_LINK"
+    message = "Cache folder is a symlink"
+    user_message = N_("La cache è un collegamento: puliscila con il comando dello strumento")

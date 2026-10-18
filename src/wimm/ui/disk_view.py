@@ -3,6 +3,7 @@
 from dataclasses import replace
 from datetime import datetime
 
+from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
 from wimm.core.constants import DISK_SECTION_CAP
 from wimm.core.risk import RiskTarget
 from wimm.i18n import N_, _, ngettext
@@ -36,6 +37,18 @@ CACHE_TITLES = {
     CacheKind.PIP: "pip",
     CacheKind.THUMBNAILS: N_("Miniature"),
     CacheKind.TRASH: N_("Cestino"),
+    CacheKind.CARGO_REGISTRY: N_("Cargo (pacchetti)"),
+    CacheKind.CARGO_GIT: N_("Cargo (repository git)"),
+    CacheKind.GRADLE: N_("Gradle"),
+    CacheKind.MAVEN: N_("Maven"),
+    CacheKind.GO_MOD: N_("Go (moduli)"),
+    CacheKind.GO_BUILD: N_("Go (compilazione)"),
+    CacheKind.YARN: "yarn",
+    CacheKind.PNPM: "pnpm",
+    CacheKind.BUN: "bun",
+    CacheKind.CONDA: "conda",
+    CacheKind.PLAYWRIGHT: N_("Playwright"),
+    CacheKind.JETBRAINS: "JetBrains",
 }
 
 
@@ -52,15 +65,19 @@ def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:
 
 
 def _cache_row(*, entry: CacheEntry) -> DiskRowView:
-    trash = entry.kind is CacheKind.TRASH
-    action = ActionSpec(
-        kind=ActionKind.TRASH_EMPTY if trash else ActionKind.CACHE_CLEAN,
-        target=RiskTarget(kind="trash" if trash else "cache"),
-        # trash_empty takes no target (the planner finds the trash); a cache is named by kind.
-        target_id=None if trash else entry.kind.value,
-    )
+    action = None if entry.kind in COMMAND_ONLY_KINDS else _cache_action(entry=entry)
     return make_row(
         title=_(CACHE_TITLES[entry.kind]), subtitle=entry.path, size=entry.size, action=action
+    )
+
+
+def _cache_action(*, entry: CacheEntry) -> ActionSpec:
+    trash = entry.kind is CacheKind.TRASH
+    return ActionSpec(
+        kind=ActionKind.TRASH_EMPTY if trash else ActionKind.CACHE_CLEAN,
+        target=RiskTarget(kind="trash" if trash else "cache", cache_kind=entry.kind),
+        # trash_empty takes no target (the planner finds the trash); a cache is named by kind.
+        target_id=None if trash else entry.kind.value,
     )
 
 

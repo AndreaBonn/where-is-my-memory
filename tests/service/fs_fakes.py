@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from tests.service.executor_fakes import OWNER_UID, FakeProcesses, make_plan
+from wimm.collectors.cache_table import read_cache_table
 from wimm.model.actions import DirFingerprint, Plan, PlanStep
 from wimm.model.enums import ActionKind, Risk
 from wimm.service.errors import ControlFailed
@@ -66,10 +67,18 @@ class FsRig:
         )
 
 
-def build_rig(*, home: Path, which: str | None = "/usr/bin/pip") -> FsRig:
+def build_rig(
+    *, home: Path, which: str | None = "/usr/bin/pip", environ: Mapping[str, str] | None = None
+) -> FsRig:
+    """The control with the cache table of ``home`` under ``environ`` (no variables by default).
+
+    Create a redirected cache folder before calling this: the table reads the disk once.
+    """
     runner, cwds = FakeRunner(), FakeCwds()
+    (home / "work").mkdir(parents=True, exist_ok=True)
     control = DiskFsControl(
         home=home,
+        caches=read_cache_table(environ=environ or {}, home=home, roots=(home / "work",)),
         roots=(home / "work",),
         min_age_days=MIN_AGE_DAYS,
         runner=runner,
@@ -78,7 +87,6 @@ def build_rig(*, home: Path, which: str | None = "/usr/bin/pip") -> FsRig:
         mounts=lambda: frozenset(),
         clock=lambda: NOW,
     )
-    (home / "work").mkdir(parents=True, exist_ok=True)
     return FsRig(home=home, runner=runner, cwds=cwds, control=control)
 
 

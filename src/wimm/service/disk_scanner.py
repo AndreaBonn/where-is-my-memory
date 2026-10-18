@@ -20,6 +20,7 @@ from wimm.config import Config
 from wimm.core.disk_rules import build_disk_report, filter_devdirs
 from wimm.model.disk import DiskReport, DockerDisk
 from wimm.service.sampler import wall_clock
+from wimm.service.sampler_environment import resolve_cache_table
 
 LOGGER = logging.getLogger(__name__)
 
@@ -80,7 +81,8 @@ class RealDiskScanner:
         started = self._clock()
         docker = self._docker.collect().data
         self._check()
-        caches = collect_caches(home=self._home, cache_dir=self._cache_dir, sleep=self._pause)
+        table = resolve_cache_table(home=self._home, roots=config.devdirs_roots)
+        caches = collect_caches(table=table, cache_dir=self._cache_dir, sleep=self._pause)
         self._check()
         settings = DevDirSettings(
             roots=config.devdirs_roots, home=self._home, max_depth=config.devdirs_max_depth

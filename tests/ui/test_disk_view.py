@@ -204,6 +204,33 @@ def test_caches_and_trash_are_separate_sections() -> None:
     assert by_key["trash"].rows[0].risk_text == "Pericolo: cancella dati"
 
 
+def test_every_cache_type_has_a_title_and_the_badge_of_its_own_risk() -> None:
+    caches = tuple(
+        cache(kind=kind, size=MB, ino=100 + index)
+        for index, kind in enumerate(kind for kind in CacheKind if kind is not CacheKind.TRASH)
+    )
+    by_key = sections_by_key(
+        sections=build_disk_sections(report=report(caches=caches), min_age_days=MIN_AGE)
+    )
+    rows = {row.title: row for row in by_key["caches"].rows}
+
+    assert len(rows) == len(caches)
+    assert (rows["Maven"].risk_text or "").startswith("Attenzione")
+    assert (rows["Gradle"].risk_text or "").startswith("Sicuro")
+    assert rows["Cargo (pacchetti)"].action_kind is ActionKind.CACHE_CLEAN
+
+
+def test_the_go_module_cache_is_listed_with_its_size_but_without_an_action() -> None:
+    caches = (cache(kind=CacheKind.GO_MOD, size=7 * MB),)
+    by_key = sections_by_key(
+        sections=build_disk_sections(report=report(caches=caches), min_age_days=MIN_AGE)
+    )
+
+    row = by_key["caches"].rows[0]
+    assert (row.title, row.size_text) == ("Go (moduli)", "7 MB")
+    assert row.action_kind is None and row.risk_text is None
+
+
 def test_empty_devdirs_message_uses_configured_age() -> None:
     by_key = sections_by_key(sections=build_disk_sections(report=report(), min_age_days=45))
     assert by_key["devdirs"].message == (

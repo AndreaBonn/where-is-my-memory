@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import PurePath
 from typing import Protocol
 
+from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
 from wimm.i18n import N_, _
 from wimm.model.actions import (
     ActionRequest,
@@ -211,7 +212,10 @@ def _cache_draft(*, entry: CacheEntry | None, kind: ActionKind) -> list[Draft]:
         raise InvalidRequest(f"Action {kind.value} has no matching cache in the report")
     fingerprint = DirFingerprint(realpath=entry.path, st_ino=entry.st_ino, st_dev=entry.st_dev)
     name = _(TRASH_PHRASE) if entry.kind is CacheKind.TRASH else entry.path
-    return [_dir_draft(fingerprint=fingerprint, size=entry.size, kind=kind, name=name)]
+    draft = _dir_draft(fingerprint=fingerprint, size=entry.size, kind=kind, name=name)
+    # The risk depends on what the cache is: maven and the IDE caches are not free to refill.
+    target = RiskTarget(kind=DIR_RISK_KINDS[kind], cache_kind=entry.kind)
+    return [replace(draft, assessed=assess_draft(target=target, kind=kind))]
 
 
 def _caches(*, report: DiskReport | None) -> tuple[CacheEntry, ...]:
@@ -229,6 +233,8 @@ def plan_cache_clean(*, request: ActionRequest, report: DiskReport | None) -> li
         ),
         None,
     )
+    if entry is not None and entry.kind in COMMAND_ONLY_KINDS:
+        raise InvalidRequest(f"Cache {entry.kind.value} is cleaned only by its own command")
     return _cache_draft(entry=entry, kind=ActionKind.CACHE_CLEAN)
 
 

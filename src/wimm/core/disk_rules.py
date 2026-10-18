@@ -21,6 +21,7 @@ from wimm.model.disk import (
 from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import DockerStatus
 
+from .cache_catalog import COMMAND_ONLY_KINDS
 from .constants import DISK_SECTION_CAP
 from .risk import RiskTarget, assess_risk
 
@@ -204,6 +205,16 @@ def _is_safe(*, target: RiskTarget, action: ActionKind) -> bool:
     return assess_risk(target=target, action=action).level is Risk.SAFE
 
 
+def _cache_is_safe(*, entry: CacheEntry) -> bool:
+    """Rated with its own type, like the planner does; a go module cache is never offered."""
+    if entry.kind is CacheKind.TRASH:
+        return _is_safe(target=RiskTarget(kind="trash"), action=ActionKind.TRASH_EMPTY)
+    if entry.kind in COMMAND_ONLY_KINDS:
+        return False
+    target = RiskTarget(kind="cache", cache_kind=entry.kind)
+    return _is_safe(target=target, action=ActionKind.CACHE_CLEAN)
+
+
 def _safe_image_bytes(*, docker: DockerDisk) -> int:
     total = 0
     for item in docker.images:
@@ -224,13 +235,7 @@ def safe_reclaimable_bytes(*, report: DiskReport | None) -> int:
     """
     if report is None:
         return 0
-    cache_ok = _is_safe(target=RiskTarget(kind="cache"), action=ActionKind.CACHE_CLEAN)
-    trash_ok = _is_safe(target=RiskTarget(kind="trash"), action=ActionKind.TRASH_EMPTY)
-    total = sum(
-        entry.size
-        for entry in report.caches
-        if (trash_ok if entry.kind is CacheKind.TRASH else cache_ok)
-    )
+    total = sum(entry.size for entry in report.caches if _cache_is_safe(entry=entry))
     build_ok = _is_safe(target=RiskTarget(kind="build_cache"), action=ActionKind.BUILDER_PRUNE)
     return (
         total

@@ -188,17 +188,17 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:36 src/wimm/ui/disk_view.py:38
-#: src/wimm/ui/disk_view.py:124
+#: src/wimm/core/planning_disk.py:37 src/wimm/ui/disk_view.py:39
+#: src/wimm/ui/disk_view.py:141
 msgid "Cestino"
 msgstr "Trash"
 
-#: src/wimm/core/planning_disk.py:39
+#: src/wimm/core/planning_disk.py:40
 #, python-brace-format
 msgid "Il report mostra le {shown} voci più grandi: altre {hidden} restano e serve una nuova scansione dopo la pulizia."
 msgstr "The report shows the {shown} largest items: {hidden} more remain, and a new scan is needed after the cleanup."
 
-#: src/wimm/core/planning_disk.py:147 src/wimm/core/planning_disk.py:148
+#: src/wimm/core/planning_disk.py:148 src/wimm/core/planning_disk.py:149
 msgid "Build cache"
 msgstr "Build cache"
 
@@ -649,6 +649,10 @@ msgstr "Docker is not available"
 #: src/wimm/service/errors.py:46
 msgid "L'elemento non esiste più"
 msgstr "The item no longer exists"
+
+#: src/wimm/service/errors.py:52
+msgid "La cache è un collegamento: puliscila con il comando dello strumento"
+msgstr "The cache is a link: clean it with the tool's own command"
 
 #: src/wimm/service/notifier.py:21
 msgid "Vedi e decidi"
@@ -1381,51 +1385,79 @@ msgstr "Free {size} with no risk"
 msgid "Puoi liberare fino a {size}"
 msgstr "You can free up to {size}"
 
-#: src/wimm/ui/disk_view.py:32 src/wimm/ui/pages/disk.py:17
+#: src/wimm/ui/disk_view.py:33 src/wimm/ui/pages/disk.py:17
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
-#: src/wimm/ui/disk_view.py:37
+#: src/wimm/ui/disk_view.py:38
 msgid "Miniature"
 msgstr "Thumbnails"
 
-#: src/wimm/ui/disk_view.py:48
+#: src/wimm/ui/disk_view.py:40
+msgid "Cargo (pacchetti)"
+msgstr "Cargo (packages)"
+
+#: src/wimm/ui/disk_view.py:41
+msgid "Cargo (repository git)"
+msgstr "Cargo (git repositories)"
+
+#: src/wimm/ui/disk_view.py:42
+msgid "Gradle"
+msgstr "Gradle"
+
+#: src/wimm/ui/disk_view.py:43
+msgid "Maven"
+msgstr "Maven"
+
+#: src/wimm/ui/disk_view.py:44
+msgid "Go (moduli)"
+msgstr "Go (modules)"
+
+#: src/wimm/ui/disk_view.py:45
+msgid "Go (compilazione)"
+msgstr "Go (build)"
+
+#: src/wimm/ui/disk_view.py:50
+msgid "Playwright"
+msgstr "Playwright"
+
+#: src/wimm/ui/disk_view.py:61
 #, python-brace-format
 msgid "Ultimo controllo alle {time}"
 msgstr "Last check at {time}"
 
-#: src/wimm/ui/disk_view.py:49
+#: src/wimm/ui/disk_view.py:62
 #, python-brace-format
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:72
+#: src/wimm/ui/disk_view.py:89
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:101
+#: src/wimm/ui/disk_view.py:118
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:107
+#: src/wimm/ui/disk_view.py:124
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:122
+#: src/wimm/ui/disk_view.py:139
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:122
+#: src/wimm/ui/disk_view.py:139
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:124
+#: src/wimm/ui/disk_view.py:141
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 

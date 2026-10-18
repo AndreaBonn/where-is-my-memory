@@ -5,21 +5,23 @@ from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
+from typing import NamedTuple
 
 from wimm.core.cache_specs import CACHE_SPECS, CacheBase, CacheSpec, spec_for
 from wimm.model.disk import CacheKind
 
-# Legacy list (cache folders relative to HOME, keyed by CacheKind.value), kept until the
-# collector and the executor move to the resolved table (T032, T033).
-CACHE_RELATIVE_PATHS = (
-    ("uv", ".cache/uv"),
-    ("npm", ".npm/_cacache"),
-    ("pip", ".cache/pip"),
-    ("trash", ".local/share/Trash"),
-    ("thumbnails", ".cache/thumbnails"),
-)
 # Variables that redirect a cache tool away from the planned folder: removed from its environment.
 CACHE_ENV_VARS = ("UV_CACHE_DIR", "PIP_CACHE_DIR", "npm_config_cache")
+
+# Cleaned by emptying only these folders under the cache folder: cargo keeps `registry/index`
+# and everything else of CARGO_HOME (`bin/`, `config.toml`) out of reach (R14).
+CLEAN_SUBDIRS: Mapping[CacheKind, tuple[str, ...]] = {
+    CacheKind.CARGO_REGISTRY: ("cache", "src"),
+    CacheKind.CARGO_GIT: ("db", "checkouts"),
+}
+# Their files are read-only, so emptying the folder fails halfway: only the tool's own command
+# can clean them. Until it is wired (T036) they are measured and never offered.
+COMMAND_ONLY_KINDS = frozenset({CacheKind.GO_MOD})
 
 CACHEDIR_TAG = "CACHEDIR.TAG"
 XDG_CACHE_VAR = "XDG_CACHE_HOME"
@@ -105,20 +107,25 @@ def _first_entry(*, value: str, separator: str) -> str:
     return value.split(separator)[0].strip() if separator else value
 
 
-def _raw_value(*, spec: CacheSpec, environ: Mapping[str, str]) -> str | None:
+class _Raw(NamedTuple):
+    value: str
+    desktop: bool  # under an XDG_CACHE_HOME that looks like a cache folder: no sentinel needed
+
+
+def _raw_value(*, spec: CacheSpec, environ: Mapping[str, str]) -> _Raw | None:
     """The environment's own answer for this cache, or None when it says nothing."""
     names = (spec.env_var, *spec.env_aliases) if spec.env_var else ()
     for name in names:
         tool = _first_entry(value=environ.get(name, ""), separator=spec.list_separator)
         if tool:
-            return os.path.join(tool, spec.env_subpath) if spec.env_subpath else tool
+            return _Raw(os.path.join(tool, spec.env_subpath) if spec.env_subpath else tool, False)
     if spec.fallback_var:
         root = _first_entry(value=environ.get(spec.fallback_var, ""), separator=os.pathsep)
         if root:
-            return os.path.join(root, spec.fallback_subpath)
+            return _Raw(os.path.join(root, spec.fallback_subpath), False)
     xdg = environ.get(XDG_CACHE_VAR, "")
     if xdg and spec.base is CacheBase.XDG_CACHE:
-        return os.path.join(xdg, spec.relative)
+        return _Raw(os.path.join(xdg, spec.relative), "cache" in Path(xdg).name.lower())
     return None
 
 
@@ -133,29 +140,33 @@ def _at_default(
 ) -> ResolvedCache | RejectedCache:
     """A cache at its usual place; if the caller resolved it elsewhere, it is judged there."""
     roots, observed = scope
-    path = observed.real.get(default, default)
-    reason = _refusal(path=path, home=home, roots=roots) if path != default else None
+    real = observed.real.get(default, default)
+    reason = _refusal(path=real, home=home, roots=roots) if real != default else None
     if reason is not None:
         return RejectedCache(kind=spec.kind, value=str(default), reason=reason)
-    return ResolvedCache(kind=spec.kind, path=path, redirected=False, access=CacheAccess.CLEANABLE)
+    # A link on the way (the folder or a parent) is never cleaned: what is behind it is not
+    # the tool's. The lexical path stays, so the executor can look at the link itself.
+    access = CacheAccess.CLEANABLE if real == default else CacheAccess.MEASURE_ONLY
+    return ResolvedCache(kind=spec.kind, path=default, redirected=False, access=access)
 
 
 def _resolve_redirected(
-    *, spec: CacheSpec, raw: str, home: Path, scope: tuple[Collection[Path], CacheObservations]
+    *, spec: CacheSpec, raw: _Raw, home: Path, scope: tuple[Collection[Path], CacheObservations]
 ) -> ResolvedCache | RejectedCache:
     roots, observed = scope
-    lexical = Path(os.path.normpath(raw))
+    lexical = Path(os.path.normpath(raw.value))
     default = _default_path(spec=spec, home=home)
     if lexical == default:
         return _at_default(spec=spec, default=default, home=home, scope=scope)
     path = observed.real.get(lexical, lexical)
     reason = _refusal(path=path, home=home, roots=roots)
     if reason is not None:
-        return RejectedCache(kind=spec.kind, value=raw, reason=reason)
+        return RejectedCache(kind=spec.kind, value=raw.value, reason=reason)
     resolved = lexical in observed.real
     unlocked = resolved and _is_tool_cache(spec=spec, path=path, found=observed.sentinels)
-    access = CacheAccess.CLEANABLE if unlocked else CacheAccess.MEASURE_ONLY
-    return ResolvedCache(kind=spec.kind, path=path, redirected=True, access=access)
+    trusted = (raw.desktop or unlocked) and path == lexical
+    access = CacheAccess.CLEANABLE if trusted else CacheAccess.MEASURE_ONLY
+    return ResolvedCache(kind=spec.kind, path=lexical, redirected=True, access=access)
 
 
 def _resolve_one(
@@ -169,8 +180,8 @@ def _resolve_one(
     if raw is None:
         default = _default_path(spec=spec, home=home)
         return _at_default(spec=spec, default=default, home=home, scope=scope)
-    if not raw.startswith("/"):
-        return RejectedCache(kind=spec.kind, value=raw, reason=RejectReason.NOT_ABSOLUTE)
+    if not raw.value.startswith("/"):
+        return RejectedCache(kind=spec.kind, value=raw.value, reason=RejectReason.NOT_ABSOLUTE)
     return _resolve_redirected(spec=spec, raw=raw, home=home, scope=scope)
 
 
@@ -191,7 +202,8 @@ def resolve_cache_paths(
     unrelated to every root (equal, ancestor, inside): ``GOCACHE=$HOME`` must not turn the
     home into a "cache". One that passes is ``CLEANABLE`` only when its real path was
     resolved and it shows ``CACHEDIR.TAG``, a file specific to the tool or two of its
-    generic entries; otherwise ``MEASURE_ONLY``.
+    generic entries; otherwise ``MEASURE_ONLY``. A folder placed by ``XDG_CACHE_HOME`` takes the
+    same safety checks but needs no sentinel: it is a desktop standard, not a tool's redirect.
     """
     scope = (roots, observed or CacheObservations())
     kept: list[ResolvedCache] = []

@@ -10,6 +10,7 @@ from typing import Protocol
 
 import psutil
 
+from wimm.core.cache_catalog import CacheResolution
 from wimm.redaction import redact_text
 
 from .errors import ControlFailed
@@ -97,11 +98,14 @@ class PsutilCwds:
 class DiskFsControl:
     """What the folder actions need from the system.
 
-    `home` is the only place cache and trash are looked up; `roots` and `min_age_days` follow
-    the configuration. Everything else is injectable so tests never run a real command.
+    `caches` is the table of cache folders resolved once at start (the same function the
+    collector uses): a folder is a cache of some type only by its place in that table, never by
+    what a plan says. `roots` and `min_age_days` follow the configuration. Everything else is
+    injectable so tests never run a real command.
     """
 
     home: Path
+    caches: CacheResolution
     roots: tuple[Path, ...]
     min_age_days: int
     runner: CommandRunner

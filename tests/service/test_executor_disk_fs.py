@@ -25,7 +25,13 @@ from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S
 from wimm.model.actions import DirFingerprint
 from wimm.model.enums import ActionKind
 from wimm.service.control_protocols import StepStatus
-from wimm.service.errors import ControlFailed, InvalidRequest, ProtectedTarget, TargetChanged
+from wimm.service.errors import (
+    CacheIsLink,
+    ControlFailed,
+    InvalidRequest,
+    ProtectedTarget,
+    TargetChanged,
+)
 from wimm.service.executor import PlanExecutor
 from wimm.service.executor_disk_fs import check_disk_fs
 from wimm.service.fs_controls import CommandResult
@@ -555,3 +561,139 @@ def test_an_already_empty_trash_is_already_gone(rig: FsRig) -> None:
 
     assert rig.executor().execute(plan=plan)[0].status is StepStatus.ALREADY_GONE
     assert os.path.isdir(trash / "files")
+
+
+# --- the cache type comes from the table, never from the plan (R15) -------------------
+
+
+def make_tagged(*, folder: Path) -> Path:
+    """A cache folder in a custom place, carrying the tag that proves it is a tool cache."""
+    (folder / "sub").mkdir(parents=True)
+    (folder / "a.bin").write_bytes(b"a" * 4096)
+    (folder / "CACHEDIR.TAG").write_text("Signature: 8a477f597d28d172789f06886806bc55\n")
+    return folder
+
+
+def test_cache_outside_the_table_is_refused(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    stray = home / "custom" / "uv"
+    (stray / "sub").mkdir(parents=True)
+    (stray / "a.bin").write_bytes(b"a" * 4096)
+    rig = build_rig(home=home, environ={"UV_CACHE_DIR": str(stray)})
+    # Redirected but without a sentinel: the table keeps it for measuring only.
+    folder_in_home = home / ".cache" / "elsewhere"
+    (folder_in_home / "sub").mkdir(parents=True)
+
+    for target in (stray, folder_in_home):
+        with pytest.raises(ProtectedTarget):
+            rig.executor().execute(plan=dir_plan(kind=CLEAN, path=target))
+        assert target.is_dir()
+    assert (stray / "a.bin").exists() and (stray / "sub").exists()
+    assert rig.runner.calls == []
+
+
+def test_a_redirected_cache_that_the_table_lists_is_cleaned_where_it_is(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    custom = make_tagged(folder=home / "custom" / "uv")
+    rig = build_rig(home=home, environ={"UV_CACHE_DIR": str(custom)})
+
+    outcomes = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=custom))
+
+    assert [o.status for o in outcomes] == [StepStatus.DONE]
+    assert rig.runner.calls == [("uv", "cache", "prune", "--cache-dir", str(custom))]
+
+
+def test_a_cache_the_default_place_of_which_the_environment_moved_is_refused(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    custom = make_tagged(folder=home / "custom" / "uv")
+    old_place = make_cache(home=home, relative=".cache/uv")
+    rig = build_rig(home=home, environ={"UV_CACHE_DIR": str(custom)})
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=dir_plan(kind=CLEAN, path=old_place))
+    assert (old_place / "a.bin").exists()
+
+
+def test_a_new_cache_type_is_emptied_without_a_command(rig: FsRig) -> None:
+    folder = make_cache(home=rig.home, relative=".gradle/caches")
+
+    outcomes = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=folder))
+
+    assert outcomes[0].status is StepStatus.DONE
+    assert rig.runner.calls == []
+    assert folder.is_dir() and list(folder.iterdir()) == []
+
+
+def test_the_go_module_cache_is_not_touched_until_its_own_command_is_wired(rig: FsRig) -> None:
+    folder = make_cache(home=rig.home, relative="go/pkg/mod")
+    (folder / "sub" / "b.bin").chmod(0o444)
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=dir_plan(kind=CLEAN, path=folder))
+    assert (folder / "sub" / "b.bin").exists() and rig.runner.calls == []
+
+
+def test_a_cache_that_is_a_symlink_gets_its_own_message_and_is_not_followed(rig: FsRig) -> None:
+    folder = make_cache(home=rig.home, relative=".cache/thumbnails")
+    plan = dir_plan(kind=CLEAN, path=folder)
+    moved = rig.home / "moved"
+    folder.rename(moved)
+    folder.symlink_to(moved)
+
+    with pytest.raises(CacheIsLink) as caught:
+        rig.executor().execute(plan=plan)
+    assert caught.value.user_message == (
+        "La cache è un collegamento: puliscila con il comando dello strumento"
+    )
+    assert (moved / "a.bin").exists() and (moved / "sub" / "b.bin").exists()
+    assert rig.runner.calls == []
+
+
+def test_cargo_empties_only_its_four_download_folders_and_never_bin(rig: FsRig) -> None:
+    cargo = rig.home / ".cargo"
+    for relative in ("registry/cache", "registry/src", "registry/index", "git/db", "git/checkouts"):
+        (cargo / relative).mkdir(parents=True)
+        (cargo / relative / "x.crate").write_bytes(b"c" * 4096)
+    (cargo / "bin").mkdir()
+    (cargo / "bin" / "rustfmt").write_bytes(b"b")
+    (cargo / "config.toml").write_text("[net]\n", encoding="utf-8")
+
+    for relative in (".cargo/registry", ".cargo/git"):
+        outcomes = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=rig.home / relative))
+        assert outcomes[0].status is StepStatus.DONE
+
+    for emptied in ("registry/cache", "registry/src", "git/db", "git/checkouts"):
+        assert (cargo / emptied).is_dir() and list((cargo / emptied).iterdir()) == []
+    assert (cargo / "registry/index" / "x.crate").exists()
+    assert (cargo / "bin" / "rustfmt").exists() and (cargo / "config.toml").exists()
+    assert rig.runner.calls == []
+
+
+def test_a_default_cache_symlinked_onto_user_files_is_refused_and_the_files_survive(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    documents = home / "Documents"
+    documents.mkdir(parents=True)
+    (documents / "thesis.txt").write_text("mine", encoding="utf-8")
+    (home / ".cache").mkdir()
+    link = home / ".cache" / "thumbnails"
+    link.symlink_to(documents, target_is_directory=True)
+    rig = build_rig(home=home)
+
+    for target in (documents, link):
+        with pytest.raises((CacheIsLink, ProtectedTarget)):
+            rig.executor().execute(plan=dir_plan(kind=CLEAN, path=target))
+    assert (documents / "thesis.txt").read_text(encoding="utf-8") == "mine"
+
+
+def test_the_same_cache_as_a_real_folder_is_cleaned(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    folder = make_cache(home=home, relative=".cache/thumbnails")
+    rig = build_rig(home=home)
+
+    outcomes = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=folder))
+
+    assert outcomes[0].status is StepStatus.DONE

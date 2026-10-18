@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+from wimm.collectors.cache_table import read_cache_table
 from wimm.collectors.caches import collect_caches
 from wimm.model.disk import CacheEntry, CacheKind
 
@@ -20,8 +21,11 @@ def _make_cache(home: Path, kind: CacheKind, payload: int = 5000) -> Path:
     return folder
 
 
-def _collect(home: Path, tmp_path: Path) -> dict[CacheKind, CacheEntry]:
-    entries = collect_caches(home=home, cache_dir=tmp_path / "sizes", sleep=lambda _s: None)
+def _collect(
+    home: Path, tmp_path: Path, environ: dict[str, str] | None = None
+) -> dict[CacheKind, CacheEntry]:
+    table = read_cache_table(environ=environ or {}, home=home, roots=())
+    entries = collect_caches(table=table, cache_dir=tmp_path / "sizes", sleep=lambda _s: None)
     return {entry.kind: entry for entry in entries}
 
 
@@ -93,3 +97,38 @@ def test_collect_caches_file_instead_of_folder_is_skipped(tmp_path: Path) -> Non
     found = _collect(home, tmp_path)
     assert CacheKind.UV not in found
     assert CacheKind.THUMBNAILS in found
+
+
+def test_collect_caches_finds_the_new_types_where_the_home_and_xdg_put_them(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "fakehome"
+    xdg = home / "xdg-cache"
+    for folder in (xdg / "go-build", xdg / "JetBrains", home / ".gradle" / "caches"):
+        folder.mkdir(parents=True)
+        (folder / "data.bin").write_bytes(b"x" * 5000)
+    (home / ".cache").mkdir()
+    (home / ".cache" / "go-build").mkdir()  # the default place: XDG_CACHE_HOME moved it
+
+    found = _collect(home, tmp_path, environ={"XDG_CACHE_HOME": str(xdg)})
+
+    assert set(found) == {CacheKind.GO_BUILD, CacheKind.JETBRAINS, CacheKind.GRADLE}
+    assert found[CacheKind.GO_BUILD].path == str(xdg / "go-build")
+    assert found[CacheKind.GRADLE].path == str(home / ".gradle" / "caches")
+
+
+def test_collect_caches_follows_a_tool_variable_only_when_the_folder_is_the_tools(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "fakehome"
+    tagged, plain = home / "tools" / "bun", home / "docs" / "yarn"
+    for folder in (tagged, plain):
+        folder.mkdir(parents=True)
+        (folder / "data.bin").write_bytes(b"x" * 5000)
+    (tagged / "CACHEDIR.TAG").write_text("Signature: 8a477f597d28d172789f06886806bc55\n")
+    environ = {"BUN_INSTALL_CACHE_DIR": str(tagged), "YARN_CACHE_FOLDER": str(plain)}
+
+    found = _collect(home, tmp_path, environ=environ)
+
+    assert set(found) == {CacheKind.BUN}
+    assert found[CacheKind.BUN].path == str(tagged)

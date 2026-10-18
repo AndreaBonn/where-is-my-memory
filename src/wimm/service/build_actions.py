@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -7,10 +8,13 @@ LOGGER = logging.getLogger(__name__)
 
 def _disk_fs(*, config: Any, owner_uid: int, home: Path | None) -> Any:
     """Folder, cache and trash control: real commands, real process list, one home."""
+    from wimm.collectors.cache_table import read_cache_table
     from wimm.service.fs_controls import DiskFsControl, PsutilCwds, SubprocessRunner
 
+    base = Path.home() if home is None else home
     return DiskFsControl(
-        home=Path.home() if home is None else home,
+        home=base,
+        caches=read_cache_table(environ=os.environ, home=base, roots=config.devdirs_roots),
         roots=config.devdirs_roots,
         min_age_days=config.devdirs_min_age_days,
         runner=SubprocessRunner(),
