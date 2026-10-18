@@ -25,7 +25,7 @@ all'oggetto `/io/github/wimm/Inspector`, con due metodi e una proprietà, tutti 
 Nel codice la proprietà non è scrivibile (`set_property_closure=None`) e il gestore risponde solo
 a questi due metodi (`src/wimm/service/inspector_dbus.py`). Prima del primo campionamento
 `GetSnapshot` risponde con l'errore `io.github.wimm.Error.NotReady`, mentre `GetDiskReport`
-restituisce `{"schema":1,"available":false}`.
+restituisce `{"schema":2,"available":false}` (lo schema è la `SCHEMA_VERSION` corrente).
 
 Nessuna azione è esposta: chi può eseguire un piano è solo la UI, dopo la conferma
 dell'utente, tramite `AppService.plan` e `AppService.execute` (§6.3). L'esecuzione resta in un

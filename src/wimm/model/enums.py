@@ -4,7 +4,7 @@ from typing import NewType
 GroupId = NewType("GroupId", str)
 PlanId = NewType("PlanId", str)
 TargetId = NewType("TargetId", str)
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 
 class Category(Enum):

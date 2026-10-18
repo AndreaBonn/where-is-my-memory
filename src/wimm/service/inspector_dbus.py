@@ -7,6 +7,7 @@ from gi.repository import Gio, GLib
 from wimm import __version__
 from wimm.core.disk_wire import disk_report_to_json
 from wimm.model.disk import DiskReport
+from wimm.model.enums import SCHEMA_VERSION
 from wimm.model.snapshot import Snapshot
 from wimm.redaction import REDACTED, SECRET_ARGUMENT, redact_text
 from wimm.serialize import snapshot_to_json
@@ -17,7 +18,7 @@ XML_FILE = "io.github.wimm.Inspector1.xml"
 INSTALLED_XML_DIRECTORY = Path("/usr/share/where-is-my-memory/dbus")
 NOT_READY = "io.github.wimm.Error.NotReady"
 # Before the first scan there is no report: the reply says so instead of failing.
-DISK_REPORT = '{"schema":1,"available":false}'
+DISK_REPORT = json.dumps({"schema": SCHEMA_VERSION, "available": False})
 
 
 class SnapshotSource(Protocol):

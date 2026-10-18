@@ -172,7 +172,7 @@ def test_inspector_exports_only_read_only_members(private_connections: Any) -> N
         assert json.loads(
             call(connections=private_connections, method="GetDiskReport").unpack()[0]
         ) == {
-            "schema": 1,
+            "schema": 2,
             "available": False,
         }
         xml = call(

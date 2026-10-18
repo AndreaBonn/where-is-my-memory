@@ -38,7 +38,7 @@ def test_fixture_roundtrip_exact_json_values_and_model(
     encoded = snapshot_to_json(snapshot=snapshot)
     assert json.loads(encoded) == document
     assert snapshot_from_json(text=encoded) == snapshot
-    assert SCHEMA_VERSION == 1
+    assert SCHEMA_VERSION == 2
     group = snapshot.groups[0]
     assert group.category is Category.PROJECT
     assert group.protection is Protection.ACTIONABLE
@@ -120,7 +120,8 @@ def set_path(document: dict[str, Any], path: tuple[str | int, ...], value: objec
 @pytest.mark.parametrize(
     "path,value",
     [
-        (("schema",), 2),
+        (("schema",), 1),
+        (("schema",), 3),
         (("schema",), True),
         (("schema",), 1.0),
         (("pressure",), "bad"),
