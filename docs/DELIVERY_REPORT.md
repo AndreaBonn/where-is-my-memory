@@ -79,7 +79,7 @@ Fonte: `docs/security/T-6.1-security-baseline.md` (2026-10-17). Esito: soddisfat
 - Conteggio: P0 0, P1 0, P2 6 (uno corretto dopo la revisione), Info 3.
 - Limiti della verifica: `bandit` e `pip-audit` non sono stati eseguiti (offline, non installati) e la suite di test non è stata eseguita dal revisore. La suite è stata poi eseguita in T-6.4.
 
-## 3. Controlli manuali M-1..M-23
+## 3. Controlli manuali M-1..M-24
 
 Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono il vostro computer: sessione grafica reale, logout, `sudo`, clic veri o azioni su risorse vostre. Nessuno è stato eseguito da chi ha sviluppato l'applicazione.
 
@@ -108,6 +108,7 @@ Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono i
 | [ ] | M-21 | Hardening | `make audit` dal clone | `bandit` e `pip-audit` finiscono senza segnalazioni non giustificate (serve rete per `pip-audit`) |
 | [ ] | M-22 | Hardening | Dopo il primo push (lo fate voi): `gh run list --limit 3` e `gh run watch` | La CI remota è verde, compreso il passo `make audit` |
 | [ ] | M-23 | Futuro | Podman, sessione Wayland, radici su dischi esterni, comportamento con poca memoria (OOM) | Nessun comando ancora: sono ambiti dichiarati ma non provati, da definire quando servono |
+| [ ] | M-24 | Podman | Con Podman installato e il socket utente attivo (`systemctl --user enable --now podman.socket`): `podman run -d --name wimm-podman-test docker.io/library/alpine:3 sleep 600`. In Panoramica cercare `wimm-podman-test`, premere "Ferma" e confermare. Pulizia: `podman rm -f wimm-podman-test` | Il contenitore compare come container e non come processo sciolto; "Ferma" lo ferma (`podman ps -a` lo mostra `Exited`) e l'esito è positivo. L'esecuzione su un client finto è già provata in `tests/service/test_executor_podman.py` |
 
 ## 4. Premesse chiuse
 
