@@ -58,10 +58,35 @@ def test_marker_above_home_is_not_reached(tmp_path: Path) -> None:
     assert resolver(home=home).resolve(cwd=cwd) == cwd
 
 
-def test_outside_home_reaches_filesystem_root(tmp_path: Path) -> None:
+def test_outside_home_marker_in_ancestor_names_the_project() -> None:
     result = ProjectRootResolver(
-        is_marker=lambda path: path == Path("/.git"), home=tmp_path / "home"
-    ).resolve(cwd=tmp_path)
+        is_marker=lambda path: path == Path("/mnt/x/proj/.git"), home=Path("/home/u")
+    ).resolve(cwd=Path("/mnt/x/proj/src"))
+    assert result == Path("/mnt/x/proj")
+    assert result.name == "proj"
+
+
+def test_outside_home_without_markers_returns_cwd() -> None:
+    cwd = Path("/srv/app")
+    result = ProjectRootResolver(is_marker=lambda path: False, home=Path("/home/u")).resolve(
+        cwd=cwd
+    )
+    assert result == cwd
+    assert result != Path("/")
+
+
+def test_filesystem_root_is_never_a_candidate() -> None:
+    cwd = Path("/srv/app")
+    result = ProjectRootResolver(
+        is_marker=lambda path: path == Path("/.git"), home=Path("/home/u")
+    ).resolve(cwd=cwd)
+    assert result == cwd
+
+
+def test_cwd_at_filesystem_root_returns_root_itself() -> None:
+    result = ProjectRootResolver(is_marker=lambda path: True, home=Path("/home/u")).resolve(
+        cwd=Path("/")
+    )
     assert result == Path("/")
 
 

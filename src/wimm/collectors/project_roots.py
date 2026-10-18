@@ -3,6 +3,8 @@ from pathlib import Path
 
 from wimm.core.constants import PROJECT_ROOT_MARKERS
 
+FILESYSTEM_ROOT = Path("/")
+
 
 class ProjectRootResolver:
     """Resolve project roots with a cache that lives as long as the resolver.
@@ -26,8 +28,9 @@ class ProjectRootResolver:
     def resolve(self, cwd: Path) -> Path:
         """Find the nearest ancestor holding a project marker.
 
-        The home directory is never a candidate, so a dotfiles repository in
-        `~` cannot merge unrelated processes.
+        Neither the home directory nor the filesystem root is ever a candidate,
+        so a dotfiles repository in `~` or a stray marker in `/` cannot merge
+        unrelated processes. The walk works the same inside and outside home.
 
         Parameters
         ----------
@@ -47,6 +50,8 @@ class ProjectRootResolver:
         inside_home = cwd.is_relative_to(self._home)
         for candidate in (cwd, *cwd.parents):
             if inside_home and candidate == self._home:
+                break
+            if candidate == FILESYSTEM_ROOT:
                 break
             if any(self._is_marker(candidate / marker) for marker in PROJECT_ROOT_MARKERS):
                 return candidate
