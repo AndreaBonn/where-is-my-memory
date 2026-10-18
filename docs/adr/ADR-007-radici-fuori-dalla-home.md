@@ -1,6 +1,6 @@
 # ADR-007: radici di sviluppo fuori dalla home
 
-- Stato: Proposta
+- Stato: Accettata (2026-10-18), con la modifica sulla home descritta al motivo 4
 - Data: 2026-10-18
 
 ## Context
@@ -35,8 +35,10 @@ Motivi, valutati in questo ordine:
 2. `TOO_SHALLOW`: due componenti o meno (`/mnt/data`, `/data`).
 3. `SYSTEM_PATH`: `realpath` è uguale o discendente di `/`, `/usr`, `/etc`, `/var`, `/boot`, `/proc`,
    `/sys`, `/dev`, `/run`, `/opt`, `/snap`, `/root`, `/srv`, `/tmp` (costante in `core/constants.py`).
-4. `HOME_OR_ANCESTOR`: è la home o un suo antenato. La home resta fuori come in S3 e S15: contiene
-   `~/.gradle` e le cache, che hanno regole proprie.
+4. `HOME_ANCESTOR`: è un antenato della home (`/home`). La home stessa resta ammessa come oggi
+   (`~` in configurazione), per decisione dell'utente all'accettazione: nessuna configurazione
+   esistente si rompe. Le cache sotto la home (`~/.gradle`, `~/.cache`) restano protette dalle
+   loro regole, non da questa.
 5. `OTHER_HOME`: sta sotto `home.parent` senza stare sotto la home (`/home/bob/...`), anche se il
    file è nostro.
 6. `NOT_OWNED`: `st_uid != own_uid`.
@@ -82,8 +84,8 @@ registra come errore e non come danno.
 ## Consequences
 
 - `decode_roots` sostituisce `is_relative_to(home)` con `root_refusal`; una radice rifiutata
-  resta visibile con il motivo, come oggi `missing_roots`, invece di far cadere l'elenco. Una
-  configurazione esistente con `~` diventa rifiutata: va migrata con un messaggio.
+  resta visibile con il motivo, come oggi `missing_roots`, invece di far cadere l'elenco. Le
+  configurazioni esistenti, `~` compresa, restano valide.
 - La rilevazione automatica (`root_candidates.py`) resta dentro la home: una radice esterna nasce
   solo da una scelta esplicita dell'utente.
 - Esecutore (R27, T077): `_inside_a_root` ricalcola i fatti sulla radice reale al momento
