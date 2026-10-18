@@ -49,4 +49,6 @@ def build_actions(*, config: Any, owner_uid: int, home: Path | None = None) -> A
         owner_uid=owner_uid,
         terminate_timeout_s=config.terminate_timeout_s,
     )
-    return ActionSetup(executor=executor, owner_uid=owner_uid)
+    return ActionSetup(
+        executor=executor, owner_uid=owner_uid, engine_identities=containers.engine_identities
+    )

@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 from typing import Protocol
 
-from wimm.model.actions import ActionRequest, Plan, PlanStep
+from wimm.model.actions import ActionRequest, EngineIdentity, Plan, PlanStep
 from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind, ActivityState, PlanId, Protection, Risk
 from wimm.model.errors import InvalidRequest, ProtectedTarget
@@ -41,6 +41,8 @@ class PlanningContext:
     (spec 8.2 requires `uid == os.getuid()` at execution). The fingerprint carries the
     process's own uid, so the executor compares it against the live one. `disk_report` is
     the last disk scan, needed only by disk actions (images, volumes, caches, folders).
+    `engines` are the container engines the service saw at planning time; the plan carries
+    them so the executor refuses to act on another engine (S9).
     `stopped` holds, by plan id, the containers recent plans stopped (C4, «Riaccendi»).
     `which` tells whether a tool is on PATH; the service passes the real lookup, and without
     it no command-only cache (Go modules) is offered.
@@ -49,6 +51,7 @@ class PlanningContext:
     owner_uid: int
     disk_report: DiskReport | None = None
     stopped: Mapping[str, tuple[StoppedContainer, ...]] = field(default_factory=dict)
+    engines: tuple[EngineIdentity, ...] = ()
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
     new_plan_id: Callable[[], PlanId] = lambda: PlanId(secrets.token_urlsafe(PLAN_ID_BYTES))
     which: Callable[[str], str | None] = no_tool
@@ -200,6 +203,7 @@ def _build_plan(*, request: ActionRequest, drafts: list[Draft], context: Plannin
         estimated_reclaim_ram=sum(draft.reclaim_ram for draft in drafts),
         estimated_reclaim_disk=sum(draft.reclaim_disk for draft in drafts),
         confirm_phrase=_confirm_phrase(drafts=drafts),
+        engines=context.engines,
     )
 
 

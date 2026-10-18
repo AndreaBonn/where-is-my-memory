@@ -4,7 +4,13 @@ from dataclasses import dataclass
 
 from wimm.core.assemble_members import STOPPABLE_STATES
 from wimm.core.planning import cmdline_hash
-from wimm.model.actions import ContainerFingerprint, PlanStep, ProcessFingerprint
+from wimm.model.actions import (
+    ContainerFingerprint,
+    EngineIdentity,
+    Plan,
+    PlanStep,
+    ProcessFingerprint,
+)
 from wimm.model.enums import ActionKind
 
 from .control_protocols import DockerControl, LiveProcess, ProcessControl
@@ -18,6 +24,7 @@ CONTAINER_KINDS = frozenset(
     {ActionKind.CONTAINER_STOP, ActionKind.CONTAINER_REMOVE, ActionKind.CONTAINER_START}
 )
 DOCKER_KINDS = CONTAINER_KINDS | DISK_DOCKER_KINDS
+ENGINE_KINDS = DOCKER_KINDS | COMPOSE_KINDS
 SUPPORTED_KINDS = PROCESS_KINDS | DOCKER_KINDS | COMPOSE_KINDS | DISK_FS_KINDS
 
 
@@ -33,6 +40,12 @@ def check_supported(*, step: PlanStep) -> None:
     """Reject a step kind the executor does not execute, before anything is touched."""
     if step.kind not in SUPPORTED_KINDS:
         raise InvalidRequest(f"Executor does not support {step.kind.value}")
+
+
+def check_engines(*, plan: Plan, live: tuple[EngineIdentity, ...]) -> None:
+    """Reject a plan whose engines are not the ones the user saw when confirming (S9)."""
+    if frozenset(plan.engines) != frozenset(live):
+        raise TargetChanged("The container engines changed since the plan was built")
 
 
 def _unchanged(*, fingerprint: ProcessFingerprint, live: LiveProcess) -> bool:

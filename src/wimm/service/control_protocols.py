@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Protocol
 
+from wimm.model.actions import EngineIdentity
+
 from .errors import WimmError
 
 
@@ -124,6 +126,10 @@ class ProcessControl(Protocol):
 
 
 class DockerControl(Protocol):
+    def engine_identities(self) -> tuple[EngineIdentity, ...]:
+        """Identity of the engines the control would act on right now (S9)."""
+        ...
+
     def inspect(self, *, container_id: str) -> LiveContainer | None:
         """Return the live container, or None if it no longer exists."""
         ...
@@ -163,6 +169,10 @@ class DockerControl(Protocol):
 
 
 class ComposeControl(Protocol):
+    def engine_identities(self) -> tuple[EngineIdentity, ...]:
+        """Identity of the engines the control would act on right now (S9)."""
+        ...
+
     def container_ids(self, *, project: str) -> frozenset[str]:
         """Return the ids of every container, running or not, labelled with the project."""
         ...

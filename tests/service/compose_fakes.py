@@ -3,7 +3,7 @@
 from dataclasses import dataclass, field
 
 from tests.service.executor_fakes import make_plan
-from wimm.model.actions import ComposeFingerprint, Plan, PlanStep
+from wimm.model.actions import ComposeFingerprint, EngineIdentity, Plan, PlanStep
 from wimm.model.enums import ActionKind, Risk
 from wimm.service.errors import ControlFailed
 
@@ -18,6 +18,10 @@ class FakeCompose:
     after_listing: dict[str, frozenset[str]] = field(default_factory=dict)
     failing: frozenset[str] = frozenset()
     calls: list[tuple[str, bool]] = field(default_factory=list)
+    identities: tuple[EngineIdentity, ...] = ()
+
+    def engine_identities(self) -> tuple[EngineIdentity, ...]:
+        return self.identities
 
     def container_ids(self, *, project: str) -> frozenset[str]:
         ids = self.projects.get(project, frozenset())
@@ -50,6 +54,10 @@ def compose_step(
 
 
 def compose_plan(
-    *, ids: frozenset[str], kind: ActionKind = ActionKind.COMPOSE_DOWN, project: str = PROJECT
+    *,
+    ids: frozenset[str],
+    kind: ActionKind = ActionKind.COMPOSE_DOWN,
+    project: str = PROJECT,
+    engines: tuple[EngineIdentity, ...] = (),
 ) -> Plan:
-    return make_plan(steps=[compose_step(ids=ids, kind=kind, project=project)])
+    return make_plan(steps=[compose_step(ids=ids, kind=kind, project=project)], engines=engines)

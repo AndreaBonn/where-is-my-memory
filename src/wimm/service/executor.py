@@ -20,9 +20,11 @@ from .control_protocols import (
 from .errors import DockerUnavailable, InvalidRequest
 from .executor_checks import (
     DOCKER_KINDS,
+    ENGINE_KINDS,
     PROCESS_KINDS,
     ProcessRules,
     check_container,
+    check_engines,
     check_process,
     check_supported,
 )
@@ -90,6 +92,10 @@ class PlanExecutor:
         disk_fs = self.disk_fs
         if disk_fs is None and any(s.kind in DISK_FS_KINDS for s in plan.steps):
             raise InvalidRequest("Folder, cache and trash actions are not available")
+        if any(s.kind in ENGINE_KINDS for s in plan.steps):
+            source = containers or compose
+            if source is not None:
+                check_engines(plan=plan, live=source.engine_identities())
         for step in plan.steps:
             if step.kind in PROCESS_KINDS:
                 check_process(step=step, control=self.processes, rules=rules)

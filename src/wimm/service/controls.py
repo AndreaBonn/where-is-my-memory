@@ -15,6 +15,7 @@ from wimm.collectors.docker_engines import EngineProvider, EngineView
 from wimm.collectors.processes import collect_processes
 from wimm.core.categorize import CategorizationContext, categorize_process
 from wimm.core.docker_notices import notices_text
+from wimm.model.actions import EngineIdentity
 from wimm.model.enums import Protection, protection_of
 
 from .control_protocols import LiveContainer, LiveProcess
@@ -181,6 +182,9 @@ class DockerSdkControl(DiskSdkOps):
     def _client(self) -> DockerClientLike:
         client: DockerClientLike = self._view().engines[0].client
         return client
+
+    def engine_identities(self) -> tuple[EngineIdentity, ...]:
+        return tuple(engine.identity for engine in self._engines.refresh().engines)
 
     def inspect(self, *, container_id: str) -> LiveContainer | None:
         container = self._find(container_id=container_id, action="inspect")

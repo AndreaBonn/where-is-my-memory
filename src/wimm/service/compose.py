@@ -13,6 +13,7 @@ from wimm.core.constants import COMPOSE_TIMEOUT_S
 from wimm.core.docker_endpoint import UNIX_PREFIX
 from wimm.core.docker_notices import notices_text
 from wimm.core.grouping_keys import COMPOSE_PROJECT_LABEL
+from wimm.model.actions import EngineIdentity
 from wimm.redaction import redact_text
 
 from .errors import ControlFailed, DockerUnavailable, InvalidRequest
@@ -77,6 +78,9 @@ class DockerComposeControl:
         self._engines = engines
         self._docker_bin = docker_bin
         self._runner = runner
+
+    def engine_identities(self) -> tuple[EngineIdentity, ...]:
+        return tuple(engine.identity for engine in self._engines.refresh().engines)
 
     def container_ids(self, *, project: str) -> frozenset[str]:
         label = f"{COMPOSE_PROJECT_LABEL}={_checked(project=project)}"

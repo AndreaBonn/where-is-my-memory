@@ -16,6 +16,7 @@ import docker.errors
 import pytest
 
 from tests.integration.docker_targets import IMAGE, TEST_LABELS, connect
+from tests.integration.live_targets import LIVE_ENGINES
 from wimm.collectors.docker_engines import FixedEngines
 from wimm.model.actions import ActionRequest, ImageFingerprint, Plan, PlanStep, VolumeFingerprint
 from wimm.model.enums import ActionKind, PlanId, Risk, TargetId
@@ -65,6 +66,7 @@ def _run(*, executor: PlanExecutor, step: PlanStep) -> StepStatus:
         estimated_reclaim_ram=0,
         estimated_reclaim_disk=0,
         confirm_phrase=step.target_label if step.risk is Risk.DANGER else None,
+        engines=LIVE_ENGINES,
     )
     return executor.execute(plan=plan)[0].status
 

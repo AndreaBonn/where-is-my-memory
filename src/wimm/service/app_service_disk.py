@@ -15,7 +15,7 @@ from wimm.core.cache_catalog import withheld_kinds
 from wimm.core.disk_rules import safe_reclaimable_bytes
 from wimm.core.planning import PlanningContext
 from wimm.core.planning_restart import StoppedContainer
-from wimm.model.actions import Plan
+from wimm.model.actions import EngineIdentity, Plan
 from wimm.model.disk import DiskReport
 from wimm.service.actions import DISK_REQUEST_KINDS
 from wimm.service.disk_scanner import DiskScanner
@@ -65,7 +65,11 @@ class DiskMixin:
         self._disk_start_delay_s = start_delay_s
 
     def _planning_context(
-        self, *, owner_uid: int, stopped: Mapping[str, tuple[StoppedContainer, ...]]
+        self,
+        *,
+        owner_uid: int,
+        stopped: Mapping[str, tuple[StoppedContainer, ...]],
+        engines: tuple[EngineIdentity, ...],
     ) -> PlanningContext:
         """The planner's inputs; the real PATH lookup is injected here, never read in the core."""
         return PlanningContext(
@@ -73,6 +77,7 @@ class DiskMixin:
             now=self._clock,
             disk_report=self._disk_report,
             stopped=stopped,
+            engines=engines,
             which=shutil.which,
         )
 

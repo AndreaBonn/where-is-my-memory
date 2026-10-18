@@ -6,6 +6,7 @@ import pytest
 
 from tests.integration.compose_targets import VOLUME_NAME, compose_project, project_resources
 from tests.integration.docker_targets import connect
+from tests.integration.live_targets import LIVE_ENGINES
 from tests.service.compose_fakes import compose_plan
 from wimm.collectors.docker_engines import FixedEngines
 from wimm.model.enums import ActionKind
@@ -57,7 +58,9 @@ def test_down_removes_containers_and_network_and_keeps_the_volume(
             1,
         )
 
-        outcomes = executor.execute(plan=compose_plan(ids=ids, kind=DOWN, project=project))
+        outcomes = executor.execute(
+            plan=compose_plan(ids=ids, kind=DOWN, project=project, engines=LIVE_ENGINES)
+        )
 
         after = project_resources(client=client, project=project)
         assert [o.status for o in outcomes] == [StepStatus.DONE]
@@ -71,7 +74,9 @@ def test_down_volumes_also_removes_the_volume(
     with compose_project(client=client, directory=tmp_path) as project:
         ids = compose.container_ids(project=project)
 
-        outcomes = executor.execute(plan=compose_plan(ids=ids, kind=DOWN_VOLUMES, project=project))
+        outcomes = executor.execute(
+            plan=compose_plan(ids=ids, kind=DOWN_VOLUMES, project=project, engines=LIVE_ENGINES)
+        )
 
         after = project_resources(client=client, project=project)
         assert [o.status for o in outcomes] == [StepStatus.DONE]
@@ -87,7 +92,7 @@ def test_second_down_on_the_same_project_is_already_done(
 ) -> None:
     with compose_project(client=client, directory=tmp_path) as project:
         ids = compose.container_ids(project=project)
-        plan = compose_plan(ids=ids, kind=DOWN, project=project)
+        plan = compose_plan(ids=ids, kind=DOWN, project=project, engines=LIVE_ENGINES)
 
         executor.execute(plan=plan)
         outcomes = executor.execute(plan=plan)
@@ -102,6 +107,8 @@ def test_plan_with_a_different_container_set_changes_nothing(
         one = frozenset(sorted(compose.container_ids(project=project))[:1])
 
         with pytest.raises(TargetChanged):
-            executor.execute(plan=compose_plan(ids=one, kind=DOWN, project=project))
+            executor.execute(
+                plan=compose_plan(ids=one, kind=DOWN, project=project, engines=LIVE_ENGINES)
+            )
 
         assert len(project_resources(client=client, project=project)["containers"]) == 2

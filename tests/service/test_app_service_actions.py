@@ -8,7 +8,7 @@ from gi.repository import GLib
 
 from tests.core.disk_helpers import docker_disk, report
 from tests.core.disk_helpers import volume as disk_volume
-from tests.core.planning_helpers import NOW, group, proc, snapshot
+from tests.core.planning_helpers import NOW, container, group, proc, snapshot
 from tests.service.service_helpers import (
     TIMEOUT_S,
     FakeSampler,
@@ -18,7 +18,7 @@ from tests.service.service_helpers import (
     with_free_space,
 )
 from wimm.config import Config
-from wimm.model.actions import ActionRequest, Plan
+from wimm.model.actions import ActionRequest, EngineIdentity, Plan
 from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind, Category, PlanId, TargetId
 from wimm.model.snapshot import Snapshot
@@ -360,3 +360,42 @@ def test_each_plan_is_measured_against_its_own_baseline(rigs: RigFactory) -> Non
         (first.plan_id, ReclaimDelta(freed_ram=300, freed_disk=50)),
         (second.plan_id, ReclaimDelta(freed_ram=200, freed_disk=40)),
     ]
+
+
+def _plan_with_engine_probe(*, request: ActionRequest) -> tuple[Plan, list[int]]:
+    engines = (EngineIdentity(path="/var/run/docker.sock", st_ino=10, st_dev=5),)
+    reads: list[int] = []
+
+    def identities() -> tuple[EngineIdentity, ...]:
+        reads.append(1)
+        return engines
+
+    sampler = FakeSampler()
+    sampler.proceed.set()
+    sampler.current = snapshot(
+        group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=PID),)),
+        group(gid="db", category=Category.CONTAINER, members=(container(cid="up"),)),
+    )
+    setup = ActionSetup(executor=FakeExecutor(), owner_uid=OWNER_UID, engine_identities=identities)
+    service = AppService(sampler=sampler, config=Config(), clock=FixedClock(NOW), actions=setup)
+    service.start()
+    try:
+        spin_until(predicate=lambda: service.snapshot() is not None)
+        plan = service.plan(request=request)
+    finally:
+        service.stop()
+    return plan, reads
+
+
+def test_plan_records_the_engines_the_actions_currently_use() -> None:
+    stop = ActionRequest(kind=ActionKind.CONTAINER_STOP, target_id=TargetId("up"))
+    plan, reads = _plan_with_engine_probe(request=stop)
+    assert plan.engines == (EngineIdentity(path="/var/run/docker.sock", st_ino=10, st_dev=5),)
+    assert reads == [1]
+
+
+def test_a_process_plan_does_not_query_the_engines() -> None:
+    # A stuck socket must never delay planning a kill that has nothing to do with Docker.
+    plan, reads = _plan_with_engine_probe(request=terminate())
+    assert plan.engines == ()
+    assert reads == []

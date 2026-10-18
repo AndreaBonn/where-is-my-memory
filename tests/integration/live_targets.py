@@ -9,10 +9,12 @@ from pathlib import Path
 
 import psutil
 
+from wimm.collectors.docker_engines import FIXED_ENGINE_PATH
 from wimm.core.planning import cmdline_hash
 from wimm.model.actions import (
     ActionRequest,
     ContainerFingerprint,
+    EngineIdentity,
     Plan,
     PlanStep,
     ProcessFingerprint,
@@ -85,6 +87,11 @@ def container_step(
     )
 
 
+# The integration controls wrap the live client in FixedEngines; a plan must carry the same
+# engine identity or the executor refuses it (S9).
+LIVE_ENGINES = (EngineIdentity(path=FIXED_ENGINE_PATH, st_ino=0, st_dev=0),)
+
+
 def single_step_plan(*, step: PlanStep) -> Plan:
     now = datetime.now(UTC)
     return Plan(
@@ -96,6 +103,7 @@ def single_step_plan(*, step: PlanStep) -> Plan:
         consequences=(),
         estimated_reclaim_ram=0,
         estimated_reclaim_disk=0,
+        engines=LIVE_ENGINES,
     )
 
 

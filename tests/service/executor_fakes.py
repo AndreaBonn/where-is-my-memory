@@ -9,6 +9,7 @@ from wimm.core.planning import cmdline_hash
 from wimm.model.actions import (
     ActionRequest,
     ContainerFingerprint,
+    EngineIdentity,
     ImageFingerprint,
     Plan,
     PlanStep,
@@ -85,6 +86,10 @@ class FakeDocker:
     digests: dict[str, tuple[str, ...]] = field(default_factory=dict)
     prune_error: BaseException | None = None
     calls: list[tuple[str, str]] = field(default_factory=list)
+    identities: tuple[EngineIdentity, ...] = ()
+
+    def engine_identities(self) -> tuple[EngineIdentity, ...]:
+        return self.identities
 
     def inspect(self, *, container_id: str) -> LiveContainer | None:
         return self.live.get(container_id)
@@ -217,7 +222,12 @@ def builder_step(*, order: int) -> PlanStep:
     )
 
 
-def make_plan(*, steps: Sequence[PlanStep], request_kind: ActionKind | None = None) -> Plan:
+def make_plan(
+    *,
+    steps: Sequence[PlanStep],
+    request_kind: ActionKind | None = None,
+    engines: tuple[EngineIdentity, ...] = (),
+) -> Plan:
     if request_kind is not None:
         request = ActionRequest(kind=request_kind)
     elif len(steps) == 1 and steps[0].kind is ActionKind.BUILDER_PRUNE:
@@ -240,4 +250,5 @@ def make_plan(*, steps: Sequence[PlanStep], request_kind: ActionKind | None = No
         estimated_reclaim_ram=0,
         estimated_reclaim_disk=0,
         confirm_phrase=danger[0] if danger else None,
+        engines=engines,
     )

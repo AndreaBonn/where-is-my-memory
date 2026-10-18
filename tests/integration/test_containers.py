@@ -6,7 +6,7 @@ from typing import Any
 import pytest
 
 from tests.integration.docker_targets import connect, exists, started_container
-from tests.integration.live_targets import container_step, single_step_plan
+from tests.integration.live_targets import LIVE_ENGINES, container_step, single_step_plan
 from tests.service.executor_fakes import make_plan
 from wimm.collectors.docker_engines import FixedEngines
 from wimm.model.enums import ActionKind
@@ -110,7 +110,7 @@ def test_two_containers_are_stopped_in_one_plan(
         for n, c in enumerate(two_containers, start=1)
     ]
 
-    outcomes = executor.execute(plan=make_plan(steps=steps))
+    outcomes = executor.execute(plan=make_plan(steps=steps, engines=LIVE_ENGINES))
 
     assert [o.status for o in outcomes] == [StepStatus.DONE, StepStatus.DONE]
     for container in two_containers:

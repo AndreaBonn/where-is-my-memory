@@ -16,7 +16,7 @@ from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import PlanId
 from wimm.model.snapshot import Snapshot
 from wimm.paths import UserPaths
-from wimm.service.actions import ActionExecutor, ActionSetup
+from wimm.service.actions import ActionExecutor, ActionSetup, plan_engines
 from wimm.service.app_service_disk import DiskMixin
 from wimm.service.app_service_sampler import CycleSampler
 from wimm.service.app_service_signals import APP_SERVICE_SIGNALS
@@ -203,7 +203,11 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         setup = self._require_actions()
         if self._snapshot is None:
             raise InvalidRequest("No snapshot yet, cannot plan an action")
-        context = self._planning_context(owner_uid=setup.owner_uid, stopped=self._restart.stopped)
+        context = self._planning_context(
+            owner_uid=setup.owner_uid,
+            stopped=self._restart.stopped,
+            engines=plan_engines(setup=setup, kind=request.kind),
+        )
         plan = plan_action(request=request, snapshot=self._snapshot, context=context)
         self._plans.add(plan=plan, now=self._clock())
         return plan

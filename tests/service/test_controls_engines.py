@@ -120,3 +120,17 @@ def test_engines_are_resolved_again_for_every_operation() -> None:
     control.inspect(container_id="b")
 
     assert provider.refreshes == 2
+
+
+def test_engine_identities_lists_the_pool_engines_in_order() -> None:
+    docker = engine_at(path=DOCKER_SOCKET, client=object())
+    podman = engine_at(path=PODMAN_SOCKET, client=object())
+    control = DockerSdkControl(engines=FakeProvider(engines=(docker, podman)))
+
+    assert control.engine_identities() == (docker.identity, podman.identity)
+
+
+def test_engine_identities_is_empty_when_no_engine_answers() -> None:
+    control = DockerSdkControl(engines=FakeProvider(engines=()))
+
+    assert control.engine_identities() == ()
