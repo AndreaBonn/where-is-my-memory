@@ -103,7 +103,7 @@ def test_collect_caches_finds_the_new_types_where_the_home_and_xdg_put_them(
     tmp_path: Path,
 ) -> None:
     home = tmp_path / "fakehome"
-    xdg = home / "xdg-cache"
+    xdg = home / "xdg" / "cache"
     for folder in (xdg / "go-build", xdg / "JetBrains", home / ".gradle" / "caches"):
         folder.mkdir(parents=True)
         (folder / "data.bin").write_bytes(b"x" * 5000)

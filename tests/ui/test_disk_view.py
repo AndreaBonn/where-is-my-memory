@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 
@@ -11,10 +12,11 @@ from tests.core.disk_helpers import (
     stopped,
     volume,
 )
+from wimm.core.cache_catalog import withheld_kinds
 from wimm.model.disk import CacheKind, DockerDisk
 from wimm.model.enums import ActionKind
 from wimm.model.snapshot import DockerStatus
-from wimm.ui.disk_model import DiskSectionView, more_text
+from wimm.ui.disk_model import DiskRowView, DiskSectionView, more_text
 from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, TIER_TITLES, disk_headline, safe_label
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
 
@@ -220,15 +222,28 @@ def test_every_cache_type_has_a_title_and_the_badge_of_its_own_risk() -> None:
     assert rows["Cargo (pacchetti)"].action_kind is ActionKind.CACHE_CLEAN
 
 
-def test_the_go_module_cache_is_listed_with_its_size_but_without_an_action() -> None:
+def go_row(*, which: Callable[[str], str | None]) -> DiskRowView:
     caches = (cache(kind=CacheKind.GO_MOD, size=7 * MB),)
-    by_key = sections_by_key(
-        sections=build_disk_sections(report=report(caches=caches), min_age_days=MIN_AGE)
+    sections = build_disk_sections(
+        report=report(caches=caches), min_age_days=MIN_AGE, withheld=withheld_kinds(which=which)
     )
+    return sections_by_key(sections=sections)["caches"].rows[0]
 
-    row = by_key["caches"].rows[0]
+
+def test_the_go_module_cache_is_listed_with_its_size_but_without_an_action_without_go() -> None:
+    row = go_row(which=lambda _name: None)
+
     assert (row.title, row.size_text) == ("Go (moduli)", "7 MB")
     assert row.action_kind is None and row.risk_text is None
+
+
+def test_the_go_module_cache_gets_its_safe_action_when_go_is_on_the_path() -> None:
+    row = go_row(which=lambda name: f"/usr/bin/{name}")
+
+    assert (row.title, row.size_text) == ("Go (moduli)", "7 MB")
+    assert row.action_kind is ActionKind.CACHE_CLEAN
+    assert (row.risk_text or "").startswith("Sicuro")
+    assert row.target_id == "go_mod"
 
 
 def test_empty_devdirs_message_uses_configured_age() -> None:

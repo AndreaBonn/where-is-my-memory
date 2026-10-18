@@ -14,7 +14,7 @@ from wimm.model.snapshot import ContainerMember, Group, Member, ProcessMember, S
 
 from .assemble_members import STOPPABLE_STATES
 from .constants import PLAN_ID_BYTES, PLAN_TTL_S
-from .planning_disk import DISK_PLANNERS, DiskPlanner
+from .planning_disk import DISK_PLANNERS, plan_cache_clean
 from .planning_disk_safe import plan_disk_free_safe
 from .planning_drafts import (
     APP_CLOSE_KINDS,
@@ -28,6 +28,7 @@ from .planning_drafts import (
     process_draft,
 )
 from .planning_restart import StoppedContainer, plan_restart
+from .planning_tools import ToolPlanner, no_tool
 
 __all__ = ["PlanningContext", "cmdline_hash", "plan_action"]
 
@@ -41,6 +42,8 @@ class PlanningContext:
     process's own uid, so the executor compares it against the live one. `disk_report` is
     the last disk scan, needed only by disk actions (images, volumes, caches, folders).
     `stopped` holds, by plan id, the containers recent plans stopped (C4, «Riaccendi»).
+    `which` tells whether a tool is on PATH; the service passes the real lookup, and without
+    it no command-only cache (Go modules) is offered.
     """
 
     owner_uid: int
@@ -48,6 +51,7 @@ class PlanningContext:
     stopped: Mapping[str, tuple[StoppedContainer, ...]] = field(default_factory=dict)
     now: Callable[[], datetime] = lambda: datetime.now(UTC)
     new_plan_id: Callable[[], PlanId] = lambda: PlanId(secrets.token_urlsafe(PLAN_ID_BYTES))
+    which: Callable[[str], str | None] = no_tool
 
 
 class _Planner(Protocol):
@@ -154,8 +158,8 @@ _PLANNERS: dict[ActionKind, _Planner] = {
 }
 
 
-_DISK_PLANNERS: dict[ActionKind, DiskPlanner] = {
-    **DISK_PLANNERS,
+_TOOL_PLANNERS: dict[ActionKind, ToolPlanner] = {
+    ActionKind.CACHE_CLEAN: plan_cache_clean,
     ActionKind.DISK_FREE_SAFE: plan_disk_free_safe,
 }
 
@@ -226,7 +230,10 @@ def _drafts(*, request: ActionRequest, snapshot: Snapshot, context: PlanningCont
     """Pick the planner by what it reads: the stopped plans, the disk report or the snapshot."""
     if request.kind is ActionKind.RESTART_STOPPED:
         return plan_restart(request=request, stopped=context.stopped)
-    disk_planner = _DISK_PLANNERS.get(request.kind)
+    tool_planner = _TOOL_PLANNERS.get(request.kind)
+    if tool_planner is not None:
+        return tool_planner(request=request, report=context.disk_report, which=context.which)
+    disk_planner = DISK_PLANNERS.get(request.kind)
     if disk_planner is not None:
         return disk_planner(request=request, report=context.disk_report)
     planner = _PLANNERS.get(request.kind)

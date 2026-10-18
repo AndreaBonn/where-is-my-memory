@@ -205,11 +205,11 @@ def _is_safe(*, target: RiskTarget, action: ActionKind) -> bool:
     return assess_risk(target=target, action=action).level is Risk.SAFE
 
 
-def _cache_is_safe(*, entry: CacheEntry) -> bool:
-    """Rated with its own type, like the planner does; a go module cache is never offered."""
+def _cache_is_safe(*, entry: CacheEntry, withheld: frozenset[CacheKind]) -> bool:
+    """Rated with its own type, like the planner does; a withheld cache is never offered."""
     if entry.kind is CacheKind.TRASH:
         return _is_safe(target=RiskTarget(kind="trash"), action=ActionKind.TRASH_EMPTY)
-    if entry.kind in COMMAND_ONLY_KINDS:
+    if entry.kind in withheld:
         return False
     target = RiskTarget(kind="cache", cache_kind=entry.kind)
     return _is_safe(target=target, action=ActionKind.CACHE_CLEAN)
@@ -226,16 +226,21 @@ def _safe_image_bytes(*, docker: DockerDisk) -> int:
     return total
 
 
-def safe_reclaimable_bytes(*, report: DiskReport | None) -> int:
+def safe_reclaimable_bytes(
+    *, report: DiskReport | None, withheld: frozenset[CacheKind] = COMMAND_ONLY_KINDS
+) -> int:
     """Bytes of the report's items whose removal is rated `safe`; 0 before the first scan.
 
     Same ratings as the planner (decision Q-6): caches except the trash, the build cache
     and the images no container uses (dangling, or pullable again). Stopped containers,
-    volumes, development folders and the trash are never counted.
+    volumes, development folders and the trash are never counted. ``withheld`` are the caches
+    whose tool is missing (`withheld_kinds`); without it the Go module cache is not counted.
     """
     if report is None:
         return 0
-    total = sum(entry.size for entry in report.caches if _cache_is_safe(entry=entry))
+    total = sum(
+        entry.size for entry in report.caches if _cache_is_safe(entry=entry, withheld=withheld)
+    )
     build_ok = _is_safe(target=RiskTarget(kind="build_cache"), action=ActionKind.BUILDER_PRUNE)
     return (
         total

@@ -1,14 +1,20 @@
 """The disk scan on AppService: a second worker, a timer, a coalesced rescan."""
 
 import logging
+import shutil
+from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
+from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
 from gi.repository import GLib
 
 from wimm.config import Config
 from wimm.core import constants as c
+from wimm.core.cache_catalog import withheld_kinds
 from wimm.core.disk_rules import safe_reclaimable_bytes
+from wimm.core.planning import PlanningContext
+from wimm.core.planning_restart import StoppedContainer
 from wimm.model.actions import Plan
 from wimm.model.disk import DiskReport
 from wimm.service.actions import DISK_REQUEST_KINDS
@@ -29,6 +35,7 @@ class DiskMixin:
     _sampler: Any
     _config: Config
     _stopped: bool
+    _clock: Callable[[], datetime]
 
     if TYPE_CHECKING:
 
@@ -56,6 +63,18 @@ class DiskMixin:
         """
         self._disk_scanner = scanner
         self._disk_start_delay_s = start_delay_s
+
+    def _planning_context(
+        self, *, owner_uid: int, stopped: Mapping[str, tuple[StoppedContainer, ...]]
+    ) -> PlanningContext:
+        """The planner's inputs; the real PATH lookup is injected here, never read in the core."""
+        return PlanningContext(
+            owner_uid=owner_uid,
+            now=self._clock,
+            disk_report=self._disk_report,
+            stopped=stopped,
+            which=shutil.which,
+        )
 
     def disk_report(self) -> DiskReport | None:
         """The latest completed scan, or None before the first one."""
@@ -136,7 +155,7 @@ class DiskMixin:
 
     def _publish_reclaimable(self, *, report: DiskReport) -> None:
         """Hand the safe total to the sampler on its worker, then sample so it shows."""
-        total = safe_reclaimable_bytes(report=report)
+        total = safe_reclaimable_bytes(report=report, withheld=withheld_kinds(which=shutil.which))
         self._executor.submit(self._sampler.apply_reclaimable_disk, reclaimable_disk=total)
         self.request_cycle()
 

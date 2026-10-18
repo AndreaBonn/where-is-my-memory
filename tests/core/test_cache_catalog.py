@@ -10,7 +10,7 @@ from wimm.core.cache_catalog import (
     resolve_cache_paths,
     sentinel_candidates,
 )
-from wimm.core.cache_specs import CACHE_SPECS, CacheBase, spec_for
+from wimm.core.cache_specs import CACHE_COMMANDS, CACHE_SPECS, CacheBase, spec_for
 from wimm.model.disk import CacheKind
 
 NEW_KINDS = (
@@ -63,9 +63,9 @@ def test_a_spec_names_the_variable_that_moves_the_tool_and_its_native_command() 
     maven = spec_for(kind=CacheKind.MAVEN)
 
     assert go_mod.env_var == "GOMODCACHE"
-    assert go_mod.command == ("go", "clean", "-modcache")
+    assert CACHE_COMMANDS[CacheKind.GO_MOD].env_var == "GOMODCACHE"
     assert spec_for(kind=CacheKind.CARGO_REGISTRY).env_var == "CARGO_HOME"
-    assert spec_for(kind=CacheKind.CARGO_REGISTRY).command is None
+    assert CacheKind.CARGO_REGISTRY not in CACHE_COMMANDS
     assert maven.env_var is None
     assert maven.base is CacheBase.HOME
     assert maven.relative == ".m2/repository"
@@ -470,7 +470,7 @@ def test_a_gopath_on_a_root_is_refused_like_any_other_redirection() -> None:
 
 
 def test_xdg_cache_home_is_a_desktop_standard_and_needs_no_sentinel() -> None:
-    xdg = HOME / ".xdgcache"
+    xdg = HOME / ".local" / "cache"
 
     result = resolve_cache_paths(
         environ={"XDG_CACHE_HOME": str(xdg)}, home=HOME, roots=ROOTS, observed=CacheObservations()
@@ -519,3 +519,72 @@ def test_xdg_cache_home_without_cache_in_its_name_keeps_the_sentinel_rule() -> N
 
     thumbs = next(entry for entry in result.caches if entry.kind.value == "thumbnails")
     assert thumbs.access is CacheAccess.MEASURE_ONLY
+
+
+def _bun_at(*, folder: Path, tagged: bool) -> tuple[list[str], str | None]:
+    """Resolve BUN_INSTALL_CACHE_DIR=folder, with a CACHEDIR.TAG in it when ``tagged``."""
+    observed = CacheObservations(
+        real={folder: folder},
+        sentinels=frozenset({folder / "CACHEDIR.TAG"}) if tagged else frozenset(),
+    )
+    result = resolve_cache_paths(
+        environ={"BUN_INSTALL_CACHE_DIR": str(folder)}, home=HOME, roots=ROOTS, observed=observed
+    )
+    bun = next((c for c in result.caches if c.kind is CacheKind.BUN), None)
+    return [r.reason for r in result.rejected], None if bun is None else bun.access
+
+
+def test_a_redirect_onto_the_cache_folder_of_the_home_is_refused_even_with_a_cache_tag() -> None:
+    reasons, access = _bun_at(folder=HOME / ".cache", tagged=True)
+
+    assert reasons == [RejectReason.COVERS_OTHER_CACHES]
+    assert access is None
+
+
+@pytest.mark.parametrize(
+    "folder",
+    [
+        HOME / ".local",
+        HOME / ".local" / "share",
+        HOME / ".config",
+        HOME / ".cargo",
+        HOME / ".cache" / "uv",
+    ],
+)
+def test_a_redirect_onto_a_shared_folder_or_another_cache_is_refused(folder: Path) -> None:
+    reasons, access = _bun_at(folder=folder, tagged=True)
+
+    assert reasons == [RejectReason.COVERS_OTHER_CACHES]
+    assert access is None
+
+
+def test_a_redirect_to_a_folder_of_its_own_with_a_cache_tag_is_cleanable() -> None:
+    reasons, access = _bun_at(folder=HOME / "bun-cache", tagged=True)
+
+    assert reasons == []
+    assert access is CacheAccess.CLEANABLE
+
+
+def test_xdg_cache_home_named_exactly_cache_needs_no_sentinel_in_any_case() -> None:
+    for name in ("cache", "Cache"):
+        xdg = HOME / ".local" / name
+        result = resolve_cache_paths(
+            environ={"XDG_CACHE_HOME": str(xdg)},
+            home=HOME,
+            roots=ROOTS,
+            observed=CacheObservations(),
+        )
+
+        uv = next(entry for entry in result.caches if entry.kind is CacheKind.UV)
+        assert uv.path == xdg / "uv" and uv.access is CacheAccess.CLEANABLE
+
+
+def test_xdg_cache_home_that_only_contains_cache_in_its_name_is_not_trusted() -> None:
+    xdg = HOME / "Documents" / "cachet-notes"
+
+    result = resolve_cache_paths(
+        environ={"XDG_CACHE_HOME": str(xdg)}, home=HOME, roots=ROOTS, observed=CacheObservations()
+    )
+
+    uv = next(entry for entry in result.caches if entry.kind is CacheKind.UV)
+    assert uv.access is CacheAccess.MEASURE_ONLY

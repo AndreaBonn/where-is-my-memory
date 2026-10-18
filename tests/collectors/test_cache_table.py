@@ -118,10 +118,23 @@ def test_xdg_cache_home_on_a_plain_folder_still_needs_the_sentinel(tmp_path: Pat
     home = tmp_path / "home"
     (home / "Documents" / "thumbnails").mkdir(parents=True)
     (home / "Documents" / "thumbnails" / "report.pdf").write_bytes(b"x")
-    (home / ".xdgcache" / "uv").mkdir(parents=True)
+    (home / ".local" / "cache" / "uv").mkdir(parents=True)
 
     plain = _by_kind(home=home, environ={"XDG_CACHE_HOME": str(home / "Documents")})
-    cache_like = _by_kind(home=home, environ={"XDG_CACHE_HOME": str(home / ".xdgcache")})
+    cache_like = _by_kind(home=home, environ={"XDG_CACHE_HOME": str(home / ".local" / "cache")})
 
     assert plain[CacheKind.THUMBNAILS].access is CacheAccess.MEASURE_ONLY
     assert cache_like[CacheKind.UV].access is CacheAccess.CLEANABLE
+
+
+def test_xdg_cache_home_that_only_contains_cache_in_its_name_stays_measure_only(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    (home / "Documents" / "cachet-notes" / "uv").mkdir(parents=True)
+
+    table = _by_kind(
+        home=home, environ={"XDG_CACHE_HOME": str(home / "Documents" / "cachet-notes")}
+    )
+
+    assert table[CacheKind.UV].access is CacheAccess.MEASURE_ONLY

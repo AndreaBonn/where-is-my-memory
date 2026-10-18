@@ -1,17 +1,27 @@
 """Resolve where the user caches of the disk report are (SPECIFICHE 7.6, R12, S5)."""
 
 import os
-from collections.abc import Collection, Mapping
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from pathlib import Path
 from typing import NamedTuple
 
-from wimm.core.cache_specs import CACHE_SPECS, CacheBase, CacheSpec, spec_for
+from wimm.core.cache_specs import (
+    CACHE_COMMANDS,
+    CACHE_SPECS,
+    CacheBase,
+    CacheCommand,
+    CacheSpec,
+    spec_for,
+)
 from wimm.model.disk import CacheKind
 
-# Variables that redirect a cache tool away from the planned folder: removed from its environment.
-CACHE_ENV_VARS = ("UV_CACHE_DIR", "PIP_CACHE_DIR", "npm_config_cache")
+# A native cleaning command gets only these variables (S6), plus the one that aims it at the
+# planned folder: GOFLAGS, YARN_RC_FILENAME, LD_PRELOAD and the like never reach it.
+COMMAND_ENV_ALLOWLIST = ("PATH", "HOME", "LANG")
+FOLDER_PLACEHOLDER = "{folder}"
+PARENT_PLACEHOLDER = "{parent}"
 
 # Cleaned by emptying only these folders under the cache folder: cargo keeps `registry/index`
 # and everything else of CARGO_HOME (`bin/`, `config.toml`) out of reach (R14).
@@ -20,12 +30,16 @@ CLEAN_SUBDIRS: Mapping[CacheKind, tuple[str, ...]] = {
     CacheKind.CARGO_GIT: ("db", "checkouts"),
 }
 # Their files are read-only, so emptying the folder fails halfway: only the tool's own command
-# can clean them. Until it is wired (T036) they are measured and never offered.
+# can clean them, and without the tool (`withheld_kinds`) they are measured and never offered.
 COMMAND_ONLY_KINDS = frozenset({CacheKind.GO_MOD})
 
 CACHEDIR_TAG = "CACHEDIR.TAG"
 XDG_CACHE_VAR = "XDG_CACHE_HOME"
 XDG_DEFAULT_RELATIVE = ".cache"
+# Folders of the home that no per-tool variable may be, or hold: emptying one would wipe
+# the caches of other tools (BUN_INSTALL_CACHE_DIR=~/.cache) or user config.
+SHARED_HOME_FOLDERS = (".cache", ".local", ".local/share", ".config")
+XDG_DESKTOP_NAMES = frozenset({".cache", "cache"})
 MIN_GENERIC_SENTINELS = 2
 
 
@@ -38,6 +52,7 @@ class RejectReason(StrEnum):
     NOT_ABSOLUTE = "not_absolute"  # relative, "~" or a flag value such as "0"
     OUTSIDE_HOME = "outside_home"  # the home itself, an ancestor, or another tree
     ROOT_CONFLICT = "root_conflict"  # a project root, an ancestor of one, or inside one
+    COVERS_OTHER_CACHES = "covers_other_caches"  # is, or holds, another cache or a shared folder
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -76,6 +91,33 @@ class CacheResolution:
     rejected: tuple[RejectedCache, ...]
 
 
+def withheld_kinds(*, which: Callable[[str], str | None]) -> frozenset[CacheKind]:
+    """The command-only caches whose tool is not on PATH: nothing can clean them now."""
+    return frozenset(
+        kind for kind in COMMAND_ONLY_KINDS if which(CACHE_COMMANDS[kind].argv[0]) is None
+    )
+
+
+def command_argv(*, command: CacheCommand, tool: str, folder: str) -> tuple[str, ...]:
+    """The command with ``tool`` (an absolute path) first and the planned folder in place.
+
+    A token is replaced only when it is a whole argument, so a folder name that contains
+    ``{parent}`` stays one literal argument.
+    """
+    values = {FOLDER_PLACEHOLDER: folder, PARENT_PLACEHOLDER: str(Path(folder).parent)}
+    return (tool, *(values.get(arg, arg) for arg in command.argv[1:]))
+
+
+def command_env(
+    *, command: CacheCommand, folder: str, environ: Mapping[str, str]
+) -> dict[str, str]:
+    """The environment of a cleaning command: the allowlist and its own folder variable."""
+    env = {name: environ[name] for name in COMMAND_ENV_ALLOWLIST if name in environ}
+    if command.env_var is not None:
+        env[command.env_var] = folder
+    return env
+
+
 def sentinel_candidates(*, kind: CacheKind, path: Path) -> tuple[Path, ...]:
     """Every path worth probing to tell whether ``path`` is a cache of ``kind``.
 
@@ -103,6 +145,13 @@ def _refusal(*, path: Path, home: Path, roots: Collection[Path]) -> RejectReason
     return None
 
 
+def _covers_other_caches(*, spec: CacheSpec, path: Path, home: Path) -> bool:
+    """The path is, or is an ancestor of, another cache's usual place or a shared folder."""
+    protected = [home / name for name in SHARED_HOME_FOLDERS]
+    protected += [_default_path(spec=s, home=home) for s in CACHE_SPECS if s.kind is not spec.kind]
+    return any(place == path or place.is_relative_to(path) for place in protected)
+
+
 def _first_entry(*, value: str, separator: str) -> str:
     return value.split(separator)[0].strip() if separator else value
 
@@ -125,7 +174,7 @@ def _raw_value(*, spec: CacheSpec, environ: Mapping[str, str]) -> _Raw | None:
             return _Raw(os.path.join(root, spec.fallback_subpath), False)
     xdg = environ.get(XDG_CACHE_VAR, "")
     if xdg and spec.base is CacheBase.XDG_CACHE:
-        return _Raw(os.path.join(xdg, spec.relative), "cache" in Path(xdg).name.lower())
+        return _Raw(os.path.join(xdg, spec.relative), Path(xdg).name.lower() in XDG_DESKTOP_NAMES)
     return None
 
 
@@ -160,6 +209,10 @@ def _resolve_redirected(
         return _at_default(spec=spec, default=default, home=home, scope=scope)
     path = observed.real.get(lexical, lexical)
     reason = _refusal(path=path, home=home, roots=roots)
+    if reason is None and any(
+        _covers_other_caches(spec=spec, path=p, home=home) for p in (lexical, path)
+    ):
+        reason = RejectReason.COVERS_OTHER_CACHES
     if reason is not None:
         return RejectedCache(kind=spec.kind, value=raw.value, reason=reason)
     resolved = lexical in observed.real

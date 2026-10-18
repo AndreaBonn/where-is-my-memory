@@ -20,7 +20,6 @@ from tests.service.fs_fakes import (
     make_trash,
 )
 from wimm.config import Config
-from wimm.core.cache_catalog import CACHE_ENV_VARS
 from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S
 from wimm.model.actions import DirFingerprint
 from wimm.model.enums import ActionKind
@@ -37,7 +36,6 @@ from wimm.service.executor_disk_fs import check_disk_fs
 from wimm.service.fs_controls import CommandResult
 
 DELETE = ActionKind.DEVDIR_DELETE
-CACHE_ENV_LOWER = {name.lower() for name in CACHE_ENV_VARS}
 
 
 @pytest.fixture
@@ -364,9 +362,12 @@ CLEAN = ActionKind.CACHE_CLEAN
 def cache_argv(*, relative: str, folder: Path) -> tuple[str, ...]:
     """The command that must run for each cache, aimed at the planned folder."""
     return {
-        ".cache/uv": ("uv", "cache", "prune", "--cache-dir", str(folder)),
-        ".npm/_cacache": ("npm", "cache", "clean", "--force", "--cache", str(folder.parent)),
-        ".cache/pip": ("pip", "--cache-dir", str(folder), "cache", "purge"),
+        ".cache/uv": ("/usr/bin/uv", "cache", "prune", "--cache-dir", str(folder)),
+        ".npm/_cacache": (
+            "/usr/bin/npm",
+            *("cache", "clean", "--force", "--cache", str(folder.parent)),
+        ),
+        ".cache/pip": ("/usr/bin/pip", "--cache-dir", str(folder), "cache", "purge"),
     }[relative]
 
 
@@ -382,20 +383,20 @@ def test_a_cache_is_cleaned_with_its_exact_command(rig: FsRig, relative: str) ->
 
 
 @pytest.mark.parametrize("variable", ["UV_CACHE_DIR", "PIP_CACHE_DIR", "npm_config_cache"])
-def test_a_cache_command_runs_without_the_cache_variables_of_the_environment(
+def test_a_cache_command_runs_with_the_allowlisted_environment_only(
     rig: FsRig, monkeypatch: pytest.MonkeyPatch, variable: str
 ) -> None:
     folder = make_cache(home=rig.home, relative=".cache/uv")
     monkeypatch.setenv(variable, "/elsewhere")
-    monkeypatch.setenv(variable.upper(), "/elsewhere")
-    monkeypatch.setenv("WIMM_KEPT", "yes")
+    monkeypatch.setenv("WIMM_STRANGER", "yes")
+    monkeypatch.setenv("PATH", "/usr/bin")
+    monkeypatch.setenv("HOME", str(rig.home))
+    monkeypatch.setenv("LANG", "C.UTF-8")
 
     rig.executor().execute(plan=dir_plan(kind=CLEAN, path=folder))
 
     (env,) = rig.runner.envs
-    assert env is not None
-    assert not [name for name in env if name.lower() in CACHE_ENV_LOWER]
-    assert env["WIMM_KEPT"] == "yes"
+    assert env == {"PATH": "/usr/bin", "HOME": str(rig.home), "LANG": "C.UTF-8"}
 
 
 def test_a_cache_in_a_home_behind_a_symlink_is_cleaned(rig: FsRig, tmp_path: Path) -> None:
@@ -411,7 +412,7 @@ def test_a_cache_in_a_home_behind_a_symlink_is_cleaned(rig: FsRig, tmp_path: Pat
 
 
 def test_pip_without_the_tool_on_path_empties_the_folder_instead(tmp_path: Path) -> None:
-    rig = build_rig(home=tmp_path / "home", which=None)
+    rig = build_rig(home=tmp_path / "home", missing=("pip",))
     folder = make_cache(home=rig.home, relative=".cache/pip")
 
     outcomes = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=folder))
@@ -600,7 +601,7 @@ def test_a_redirected_cache_that_the_table_lists_is_cleaned_where_it_is(tmp_path
     outcomes = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=custom))
 
     assert [o.status for o in outcomes] == [StepStatus.DONE]
-    assert rig.runner.calls == [("uv", "cache", "prune", "--cache-dir", str(custom))]
+    assert rig.runner.calls == [("/usr/bin/uv", "cache", "prune", "--cache-dir", str(custom))]
 
 
 def test_a_cache_the_default_place_of_which_the_environment_moved_is_refused(
@@ -626,7 +627,8 @@ def test_a_new_cache_type_is_emptied_without_a_command(rig: FsRig) -> None:
     assert folder.is_dir() and list(folder.iterdir()) == []
 
 
-def test_the_go_module_cache_is_not_touched_until_its_own_command_is_wired(rig: FsRig) -> None:
+def test_the_go_module_cache_is_not_touched_without_go_on_the_path(tmp_path: Path) -> None:
+    rig = build_rig(home=tmp_path / "home", missing=("go",))
     folder = make_cache(home=rig.home, relative="go/pkg/mod")
     (folder / "sub" / "b.bin").chmod(0o444)
 

@@ -5,11 +5,12 @@ one removal step per id read from the report, so the executor can recheck each o
 (decision Q-13, docs/DEVIATIONS.md). `builder_prune` stays a single prune step.
 """
 
+from collections.abc import Callable
 from dataclasses import replace
 from pathlib import PurePath
 from typing import Protocol
 
-from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
+from wimm.core.cache_catalog import withheld_kinds
 from wimm.i18n import N_, _
 from wimm.model.actions import (
     ActionRequest,
@@ -22,6 +23,7 @@ from wimm.model.enums import ActionKind, Category
 from wimm.model.errors import InvalidRequest
 
 from .planning_drafts import Draft, assess_draft, volume_draft
+from .planning_tools import CacheToolMissing, no_tool
 from .risk import RiskTarget, TargetKind
 from .risk_table import devdir_consequence
 
@@ -224,7 +226,12 @@ def _caches(*, report: DiskReport | None) -> tuple[CacheEntry, ...]:
     return report.caches
 
 
-def plan_cache_clean(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
+def plan_cache_clean(
+    *,
+    request: ActionRequest,
+    report: DiskReport | None,
+    which: Callable[[str], str | None] = no_tool,
+) -> list[Draft]:
     entry = next(
         (
             c
@@ -233,8 +240,8 @@ def plan_cache_clean(*, request: ActionRequest, report: DiskReport | None) -> li
         ),
         None,
     )
-    if entry is not None and entry.kind in COMMAND_ONLY_KINDS:
-        raise InvalidRequest(f"Cache {entry.kind.value} is cleaned only by its own command")
+    if entry is not None and entry.kind in withheld_kinds(which=which):
+        raise CacheToolMissing(f"Cache {entry.kind.value} is cleaned only by its own command")
     return _cache_draft(entry=entry, kind=ActionKind.CACHE_CLEAN)
 
 
@@ -268,7 +275,6 @@ DISK_PLANNERS: dict[ActionKind, DiskPlanner] = {
     ActionKind.CONTAINERS_PRUNE_STOPPED: _plan_prune_containers,
     ActionKind.BUILDER_PRUNE: plan_builder_prune,
     ActionKind.VOLUME_REMOVE: _plan_volume_remove,
-    ActionKind.CACHE_CLEAN: plan_cache_clean,
     ActionKind.TRASH_EMPTY: _plan_trash_empty,
     ActionKind.DEVDIR_DELETE: _plan_devdir_delete,
 }

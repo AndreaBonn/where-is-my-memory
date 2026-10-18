@@ -1,8 +1,10 @@
+import shutil
 from collections.abc import Callable
 from datetime import datetime
 
 from gi.repository import Adw, Gtk
 
+from wimm.core.cache_catalog import withheld_kinds
 from wimm.i18n import N_, _
 from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind
@@ -132,7 +134,12 @@ class DiskPage(Gtk.Box):
         """Show a fresh report (or None before the first scan) and end the scan state."""
         self._has_report = report is not None
         self._notice.set_visible(False)
-        sections = build_disk_sections(report=report, min_age_days=min_age_days, roots=roots)
+        sections = build_disk_sections(
+            report=report,
+            min_age_days=min_age_days,
+            roots=roots,
+            withheld=withheld_kinds(which=shutil.which),
+        )
         self._header.fill(
             headline=disk_headline(sections=sections),
             scan_text=last_scan_text(report=report, now=now),

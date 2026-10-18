@@ -5,7 +5,9 @@ removal), so the executor rechecks each of them as usual. Only `safe` drafts are
 the same ratings `safe_reclaimable_bytes` sums for the header.
 """
 
-from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
+from collections.abc import Callable
+
+from wimm.core.cache_catalog import withheld_kinds
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import ActionKind, Risk, TargetId
@@ -13,20 +15,22 @@ from wimm.model.errors import InvalidRequest
 
 from .planning_disk import plan_builder_prune, plan_cache_clean, plan_image_remove
 from .planning_drafts import Draft
+from .planning_tools import no_tool
 
 
 def _single(*, kind: ActionKind, target: str | None) -> ActionRequest:
     return ActionRequest(kind=kind, target_id=None if target is None else TargetId(target))
 
 
-def _candidates(*, report: DiskReport) -> list[Draft]:
+def _candidates(*, report: DiskReport, which: Callable[[str], str | None]) -> list[Draft]:
     drafts: list[Draft] = []
+    withheld = withheld_kinds(which=which)
     for entry in report.caches:
         # An empty cache has nothing to free: no step of 0 B in the dialog.
-        offered = entry.kind is not CacheKind.TRASH and entry.kind not in COMMAND_ONLY_KINDS
+        offered = entry.kind is not CacheKind.TRASH and entry.kind not in withheld
         if offered and entry.size > 0:
             request = _single(kind=ActionKind.CACHE_CLEAN, target=entry.kind.value)
-            drafts += plan_cache_clean(request=request, report=report)
+            drafts += plan_cache_clean(request=request, report=report, which=which)
     docker = report.docker
     if not docker.status.available:
         return drafts
@@ -41,12 +45,17 @@ def _candidates(*, report: DiskReport) -> list[Draft]:
     return drafts
 
 
-def plan_disk_free_safe(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
+def plan_disk_free_safe(
+    *,
+    request: ActionRequest,
+    report: DiskReport | None,
+    which: Callable[[str], str | None] = no_tool,
+) -> list[Draft]:
     """Every safe cache, the build cache and the safe unused images, minus the excluded ones."""
     if report is None:
         raise InvalidRequest("Disk report not available yet")
     return [
         draft
-        for draft in _candidates(report=report)
+        for draft in _candidates(report=report, which=which)
         if draft.risk is Risk.SAFE and not draft.owner_ids & request.excluded_ids
     ]

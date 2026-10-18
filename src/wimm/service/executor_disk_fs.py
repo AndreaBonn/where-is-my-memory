@@ -1,5 +1,6 @@
 """Folder, cache and trash steps (SPECIFICHE 8.2, 8.4): revalidate, then remove safely."""
 
+import logging
 import os
 import stat
 from pathlib import Path
@@ -7,11 +8,14 @@ from pathlib import Path
 from wimm.collectors.devdir_context import read_devdir_context
 from wimm.collectors.devdirs import project_age_days
 from wimm.core.cache_catalog import (
-    CACHE_ENV_VARS,
     CLEAN_SUBDIRS,
     COMMAND_ONLY_KINDS,
     CacheAccess,
+    command_argv,
+    command_env,
+    withheld_kinds,
 )
+from wimm.core.cache_specs import CACHE_COMMANDS
 from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S, TRASH_CONTENT_DIRS
 from wimm.core.devdir_rules import MARKERS_BY_NAME, classify_devdir
 from wimm.model.actions import DirFingerprint, PlanStep
@@ -23,6 +27,7 @@ from .errors import CacheIsLink, ControlFailed, InvalidRequest, ProtectedTarget,
 from .fs_controls import DiskFsControl
 from .safe_tree import TreeRemoval, empty_directory, remove_directory
 
+LOGGER = logging.getLogger(__name__)
 DISK_FS_KINDS = frozenset(
     {ActionKind.CACHE_CLEAN, ActionKind.TRASH_EMPTY, ActionKind.DEVDIR_DELETE}
 )
@@ -100,11 +105,11 @@ def _cache_kind(*, fingerprint: DirFingerprint, control: DiskFsControl) -> Cache
     """The cache this folder is, by its place in the table resolved at start, never by the plan.
 
     Only a folder the table lists as `CLEANABLE` counts; a folder whose files only the tool's
-    own command can remove is refused until that command is wired.
+    own command can remove is refused while that tool is not on PATH.
     """
     for cache in control.caches.caches:
         if cache.access is CacheAccess.CLEANABLE and fingerprint.realpath == str(cache.path):
-            if cache.kind in COMMAND_ONLY_KINDS:
+            if cache.kind in withheld_kinds(which=control.which):
                 raise ProtectedTarget(f"{cache.kind.value} can only be cleaned by its own command")
             return cache.kind
     raise ProtectedTarget(f"{fingerprint.realpath} is not a cache folder of the table")
@@ -117,7 +122,11 @@ def _check_cache(*, step: PlanStep, control: DiskFsControl) -> bool:
         raise ProtectedTarget(f"{fingerprint.realpath} does not match {step.kind.value}")
     if os.path.islink(fingerprint.realpath):
         raise CacheIsLink(f"{fingerprint.realpath} is a symlink, it is not followed")
-    return _verify_directory(fingerprint=fingerprint)
+    if not _verify_directory(fingerprint=fingerprint):
+        return False
+    if control.owner_of(fingerprint.realpath) != control.uid:
+        raise ProtectedTarget(f"{fingerprint.realpath} is not owned by the current user")
+    return True
 
 
 def check_disk_fs(*, step: PlanStep, control: DiskFsControl) -> bool:
@@ -137,48 +146,69 @@ def _tree_outcome(*, step: PlanStep, removal: TreeRemoval, done: bool) -> StepOu
     return StepOutcome(order=step.order, status=status, freed_bytes=removal.freed_bytes)
 
 
-def _cache_argv(*, kind: CacheKind, folder: str) -> tuple[str, ...] | None:
-    """The cleaning command aimed at the planned folder, not at what the environment says.
-
-    uv: `uv cache prune --cache-dir <dir>`; pip: `pip --cache-dir <dir> cache purge`; npm: the
-    `--cache` option is the parent of `_cacache`, where npm keeps it.
-    """
-    if kind is CacheKind.UV:
-        return ("uv", "cache", "prune", "--cache-dir", folder)
-    if kind is CacheKind.PIP:
-        return ("pip", "--cache-dir", folder, "cache", "purge")
-    if kind is CacheKind.NPM:
-        return ("npm", "cache", "clean", "--force", "--cache", str(Path(folder).parent))
-    return None
+def _refuse_mount(*, fingerprint: DirFingerprint, control: DiskFsControl) -> None:
+    """A native command must not run on a mount point either (`empty_directory` refuses it)."""
+    if fingerprint.realpath in control.mounts():
+        raise TargetChanged(f"{fingerprint.realpath} is a mount point, nothing was touched")
 
 
-def _cache_env() -> dict[str, str]:
-    """The inherited environment without the variables that redirect a cache tool."""
-    hidden = {name.lower() for name in CACHE_ENV_VARS}
-    return {name: value for name, value in os.environ.items() if name.lower() not in hidden}
+def _tool_path(*, kind: CacheKind, control: DiskFsControl, command_name: str) -> str | None:
+    """The absolute path of the tool, None when it is missing and emptying is allowed."""
+    tool = control.which(command_name)
+    if tool is None:
+        if kind in COMMAND_ONLY_KINDS:
+            raise ProtectedTarget(f"{kind.value} can only be cleaned by its own command")
+        return None
+    if not os.path.isabs(tool):
+        raise ProtectedTarget(f"{command_name} resolved to a relative path: {tool}")
+    return tool
 
 
-def _run_command(*, step: PlanStep, control: DiskFsControl, argv: tuple[str, ...]) -> StepOutcome:
-    result = control.runner.run(argv=argv, timeout_s=CACHE_COMMAND_TIMEOUT_S, env=_cache_env())
-    if result.returncode != 0:
-        raise ControlFailed(f"{argv[0]} exited with code {result.returncode}: {result.output}")
-    return StepOutcome(order=step.order, status=StepStatus.DONE)
+def _run_command(
+    *, step: PlanStep, control: DiskFsControl, argv: tuple[str, ...], env: dict[str, str]
+) -> StepOutcome | None:
+    """DONE if the command succeeded; None for a yarn that failed (see `_run_cache`)."""
+    result = control.runner.run(argv=argv, timeout_s=CACHE_COMMAND_TIMEOUT_S, env=env)
+    if result.returncode == 0:
+        return StepOutcome(order=step.order, status=StepStatus.DONE)
+    if argv[1:3] == ("cache", "clean") and Path(argv[0]).name == "yarn":
+        # Yarn Berry has no cache to clean from the neutral directory the command runs in.
+        LOGGER.warning("yarn exited with code %s, the folder is emptied instead", result.returncode)
+        return None
+    raise ControlFailed(f"{argv[0]} exited with code {result.returncode}: {result.output}")
 
 
-def _run_cache(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
-    fingerprint = _fingerprint(step=step)
-    kind = _cache_kind(fingerprint=fingerprint, control=control)
-    argv = _cache_argv(kind=kind, folder=fingerprint.realpath)
-    if argv is not None and (
-        kind is not CacheKind.PIP or control.which(CacheKind.PIP.value) is not None
-    ):
-        return _run_command(step=step, control=control, argv=argv)
+def _empty_cache(*, step: PlanStep, control: DiskFsControl, kind: CacheKind) -> StepOutcome:
     removal = empty_directory(
-        fingerprint=fingerprint,
+        fingerprint=_fingerprint(step=step),
         subdirs=CLEAN_SUBDIRS.get(kind, ()),
         mountpoints=control.mounts(),
     )
     return _tree_outcome(step=step, removal=removal, done=False)
+
+
+def _run_cache(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
+    """The tool's own command aimed at the planned folder, or emptying when the tool is missing.
+
+    The tool is resolved once and run by its absolute path, with an allowlisted environment.
+    """
+    fingerprint = _fingerprint(step=step)
+    kind = _cache_kind(fingerprint=fingerprint, control=control)
+    command = CACHE_COMMANDS.get(kind)
+    tool = (
+        None
+        if command is None
+        else _tool_path(kind=kind, control=control, command_name=command.argv[0])
+    )
+    if command is None or tool is None:
+        return _empty_cache(step=step, control=control, kind=kind)
+    _refuse_mount(fingerprint=fingerprint, control=control)
+    folder = fingerprint.realpath
+    argv = command_argv(command=command, tool=tool, folder=folder)
+    env = command_env(command=command, folder=folder, environ=os.environ)
+    return _run_command(step=step, control=control, argv=argv, env=env) or _empty_cache(
+        step=step, control=control, kind=kind
+    )
 
 
 def _run_removal(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:

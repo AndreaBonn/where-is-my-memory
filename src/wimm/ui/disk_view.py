@@ -64,8 +64,8 @@ def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:
     )
 
 
-def _cache_row(*, entry: CacheEntry) -> DiskRowView:
-    action = None if entry.kind in COMMAND_ONLY_KINDS else _cache_action(entry=entry)
+def _cache_row(*, entry: CacheEntry, withheld: frozenset[CacheKind]) -> DiskRowView:
+    action = None if entry.kind in withheld else _cache_action(entry=entry)
     return make_row(
         title=_(CACHE_TITLES[entry.kind]), subtitle=entry.path, size=entry.size, action=action
     )
@@ -131,10 +131,16 @@ def _devdirs_section(
 
 
 def _local_sections(
-    *, report: DiskReport, min_age_days: int, roots: RootsState
+    *, report: DiskReport, min_age_days: int, roots: RootsState, withheld: frozenset[CacheKind]
 ) -> tuple[DiskSectionView, ...]:
-    caches = tuple(_cache_row(entry=e) for e in report.caches if e.kind is not CacheKind.TRASH)
-    trash = tuple(_cache_row(entry=e) for e in report.caches if e.kind is CacheKind.TRASH)
+    def rows(*, trash: bool) -> tuple[DiskRowView, ...]:
+        return tuple(
+            _cache_row(entry=e, withheld=withheld)
+            for e in report.caches
+            if (e.kind is CacheKind.TRASH) is trash
+        )
+
+    caches, trash = rows(trash=False), rows(trash=True)
     return (
         _listed(key="caches", title=_("Cache"), rows=caches, empty=_("Nessuna cache trovata")),
         _devdirs_section(report=report, min_age_days=min_age_days, roots=roots),
@@ -143,13 +149,20 @@ def _local_sections(
 
 
 def build_disk_sections(
-    *, report: DiskReport | None, min_age_days: int, roots: RootsState = ROOTS_FINE
+    *,
+    report: DiskReport | None,
+    min_age_days: int,
+    roots: RootsState = ROOTS_FINE,
+    withheld: frozenset[CacheKind] = COMMAND_ONLY_KINDS,
 ) -> tuple[DiskSectionView, ...]:
-    """All sections of the page; empty before the first scan."""
+    """All sections of the page; empty before the first scan.
+
+    ``withheld`` are the caches left without an action because their tool is missing
+    (`withheld_kinds`, computed by the caller)."""
     if report is None:
         return ()
     sections = docker_sections(report=report) + _local_sections(
-        report=report, min_age_days=min_age_days, roots=roots
+        report=report, min_age_days=min_age_days, roots=roots, withheld=withheld
     )
     # SECTION_TIERS lists the keys tier by tier: its order is the page order.
     order = list(SECTION_TIERS)

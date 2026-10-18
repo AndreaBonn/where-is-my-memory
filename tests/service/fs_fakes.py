@@ -1,7 +1,7 @@
 """Fakes and builders for the folder, cache and trash executor tests (tmpdir only)."""
 
 import os
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -68,9 +68,14 @@ class FsRig:
 
 
 def build_rig(
-    *, home: Path, which: str | None = "/usr/bin/pip", environ: Mapping[str, str] | None = None
+    *,
+    home: Path,
+    missing: Collection[str] = (),
+    environ: Mapping[str, str] | None = None,
 ) -> FsRig:
     """The control with the cache table of ``home`` under ``environ`` (no variables by default).
+
+    Every tool is on the fake PATH as ``/usr/bin/<name>`` except those in ``missing``.
 
     Create a redirected cache folder before calling this: the table reads the disk once.
     """
@@ -83,7 +88,7 @@ def build_rig(
         min_age_days=MIN_AGE_DAYS,
         runner=runner,
         cwds=cwds,
-        which=lambda _name: which,
+        which=lambda name: None if name in missing else f"/usr/bin/{name}",
         mounts=lambda: frozenset(),
         clock=lambda: NOW,
     )

@@ -1,10 +1,11 @@
 """Seams of the folder, cache and trash actions: commands, working directories, settings."""
 
+import os
 import shutil
 import subprocess
 import time
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Protocol
 
@@ -94,6 +95,11 @@ class PsutilCwds:
         return found
 
 
+def file_owner(path: str) -> int:
+    """The uid that owns ``path`` itself (a link is not followed)."""
+    return os.lstat(path).st_uid
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class DiskFsControl:
     """What the folder actions need from the system.
@@ -113,3 +119,5 @@ class DiskFsControl:
     which: Callable[[str], str | None] = shutil.which
     mounts: Callable[[], frozenset[str]] = read_mountpoints
     clock: Callable[[], float] = time.time
+    uid: int = field(default_factory=os.getuid)
+    owner_of: Callable[[str], int] = file_owner

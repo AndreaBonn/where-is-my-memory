@@ -11,7 +11,7 @@ from gi.repository import GLib, GObject
 from wimm.config import Config, ConfigParseResult, save_config, update_config
 from wimm.core import constants as c
 from wimm.core.assemble import UserState
-from wimm.core.planning import PlanningContext, plan_action
+from wimm.core.planning import plan_action
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import PlanId
 from wimm.model.snapshot import Snapshot
@@ -203,12 +203,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         setup = self._require_actions()
         if self._snapshot is None:
             raise InvalidRequest("No snapshot yet, cannot plan an action")
-        context = PlanningContext(
-            owner_uid=setup.owner_uid,
-            now=self._clock,
-            disk_report=self._disk_report,
-            stopped=self._restart.stopped,
-        )
+        context = self._planning_context(owner_uid=setup.owner_uid, stopped=self._restart.stopped)
         plan = plan_action(request=request, snapshot=self._snapshot, context=context)
         self._plans.add(plan=plan, now=self._clock())
         return plan

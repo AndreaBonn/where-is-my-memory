@@ -188,17 +188,17 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:37 src/wimm/ui/disk_view.py:39
-#: src/wimm/ui/disk_view.py:141
+#: src/wimm/core/planning_disk.py:39 src/wimm/ui/disk_view.py:39
+#: src/wimm/ui/disk_view.py:147
 msgid "Cestino"
 msgstr "Trash"
 
-#: src/wimm/core/planning_disk.py:40
+#: src/wimm/core/planning_disk.py:42
 #, python-brace-format
 msgid "Il report mostra le {shown} voci più grandi: altre {hidden} restano e serve una nuova scansione dopo la pulizia."
 msgstr "The report shows the {shown} largest items: {hidden} more remain, and a new scan is needed after the cleanup."
 
-#: src/wimm/core/planning_disk.py:148 src/wimm/core/planning_disk.py:149
+#: src/wimm/core/planning_disk.py:150 src/wimm/core/planning_disk.py:151
 msgid "Build cache"
 msgstr "Build cache"
 
@@ -206,6 +206,10 @@ msgstr "Build cache"
 #, python-brace-format
 msgid "{name} (pid {pid})"
 msgstr "{name} (pid {pid})"
+
+#: src/wimm/core/planning_tools.py:26
+msgid "Lo strumento che pulisce questa cache non è installato"
+msgstr "The tool that cleans this cache is not installed"
 
 #: src/wimm/core/risk.py:170
 msgid "associati al progetto"
@@ -1385,7 +1389,7 @@ msgstr "Free {size} with no risk"
 msgid "Puoi liberare fino a {size}"
 msgstr "You can free up to {size}"
 
-#: src/wimm/ui/disk_view.py:33 src/wimm/ui/pages/disk.py:17
+#: src/wimm/ui/disk_view.py:33 src/wimm/ui/pages/disk.py:19
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
@@ -1449,15 +1453,15 @@ msgstr[1] "No dependency folder older than {days} days in the configured roots"
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:139
+#: src/wimm/ui/disk_view.py:145
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:139
+#: src/wimm/ui/disk_view.py:145
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:141
+#: src/wimm/ui/disk_view.py:147
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 
@@ -1784,19 +1788,19 @@ msgstr "Freed {ram} of RAM and {disk} of disk"
 msgid "Liberati {size} di RAM"
 msgstr "Freed {size} of RAM"
 
-#: src/wimm/ui/pages/disk.py:18
+#: src/wimm/ui/pages/disk.py:20
 msgid "Il primo controllo parte poco dopo l'avvio. Puoi avviarlo con Controlla ora."
 msgstr "The first check starts shortly after launch. You can start it with Check now."
 
-#: src/wimm/ui/pages/disk.py:19
+#: src/wimm/ui/pages/disk.py:21
 msgid "Controllo in corso…"
 msgstr "Checking…"
 
-#: src/wimm/ui/pages/disk.py:20
+#: src/wimm/ui/pages/disk.py:22
 msgid "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
 msgstr "The check failed: the list shows the last result."
 
-#: src/wimm/ui/pages/disk.py:21
+#: src/wimm/ui/pages/disk.py:23
 msgid "Il controllo non è riuscito. Riprova con Controlla ora."
 msgstr "The check failed. Try again with Check now."
 

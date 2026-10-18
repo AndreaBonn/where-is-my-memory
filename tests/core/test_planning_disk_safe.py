@@ -1,7 +1,10 @@
 """D2: one plan that frees, on the disk, everything rated safe and nothing else."""
 
+from collections.abc import Callable
+
 import pytest
 
+from wimm.core.cache_catalog import withheld_kinds
 from wimm.core.disk_rules import safe_reclaimable_bytes, unavailable_docker
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.model.actions import ActionRequest, Plan
@@ -13,13 +16,19 @@ from .disk_helpers import MB, cache, devdir, docker_disk, image, report, stopped
 from .planning_helpers import NOW, OWNER_UID, snapshot
 
 
-def _plan(*, disk: DiskReport | None, excluded: frozenset[str] = frozenset()) -> Plan:
+def _plan(
+    *,
+    disk: DiskReport | None,
+    excluded: frozenset[str] = frozenset(),
+    which: Callable[[str], str | None] = lambda _name: None,
+) -> Plan:
     request = ActionRequest(kind=ActionKind.DISK_FREE_SAFE, excluded_ids=excluded)
     context = PlanningContext(
         owner_uid=OWNER_UID,
         now=lambda: NOW,
         new_plan_id=lambda: PlanId("p-1"),
         disk_report=disk,
+        which=which,
     )
     return plan_action(request=request, snapshot=snapshot(), context=context)
 
@@ -129,6 +138,30 @@ def test_disk_free_safe_leaves_the_go_module_cache_to_its_own_command() -> None:
 
     assert [step.target_label for step in plan.steps] == ["/home/u/.cache/npm"]
     assert safe_reclaimable_bytes(report=disk) == 20 * MB
+
+
+def test_disk_free_safe_includes_the_go_module_cache_when_go_is_on_the_path() -> None:
+    disk = report(
+        docker=unavailable_docker(error="no socket"),
+        caches=(
+            cache(kind=CacheKind.GO_MOD, size=500 * MB, ino=41),
+            cache(kind=CacheKind.NPM, size=20 * MB, ino=42),
+        ),
+    )
+    withheld = withheld_kinds(which=_found)
+
+    plan = _plan(disk=disk, which=_found)
+
+    assert sorted(step.target_label for step in plan.steps) == [
+        "/home/u/.cache/go_mod",
+        "/home/u/.cache/npm",
+    ]
+    assert plan.estimated_reclaim_disk == 520 * MB
+    assert safe_reclaimable_bytes(report=disk, withheld=withheld) == 520 * MB
+
+
+def _found(name: str) -> str:
+    return f"/usr/bin/{name}"
 
 
 def test_a_single_clean_of_a_caution_cache_is_rated_caution() -> None:
