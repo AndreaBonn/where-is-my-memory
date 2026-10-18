@@ -85,6 +85,7 @@ class FakeActionService(GObject.Object):
         self.last_plan: Plan | None = None
         self.disk_report: DiskReport | None = None
         self.stopped: dict[str, tuple[StoppedContainer, ...]] = {}
+        self.commands: dict[str, tuple[str, ...]] = {}
         self.snoozed: list[tuple[GroupId, float]] = []
         self.ignored: list[tuple[GroupId, bool]] = []
         self.snoozed_all: list[float] = []
@@ -93,6 +94,9 @@ class FakeActionService(GObject.Object):
 
     def snapshot(self) -> Snapshot:
         return self._snapshot
+
+    def restart_commands(self, *, plan_id: str) -> tuple[str, ...]:
+        return self.commands.get(plan_id, ())
 
     def publish(self, snapshot: Snapshot) -> None:
         self._snapshot = snapshot

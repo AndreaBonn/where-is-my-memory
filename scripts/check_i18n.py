@@ -114,6 +114,10 @@ EXEMPT = {
         "Chat",
         "InstantMessaging",
     },
+    # Unicode general-category codes matched against unicodedata, never shown.
+    "core/planning_restart.py": {"Cc", "Cf", "Zl", "Zp"},
+    # Clipboard MIME type that password managers read; fixed by the protocol.
+    "ui/toasts.py": {"x-kde-passwordManagerHint"},
     "core/risk_table.py": {
         # Shell commands shown verbatim inside the translated rebuild sentence.
         "npm install",

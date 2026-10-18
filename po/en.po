@@ -23,45 +23,45 @@ msgstr "Show a group"
 msgid "Mostra la versione"
 msgstr "Show the version"
 
-#: src/wimm/cli_status.py:103
+#: src/wimm/cli_status.py:104
 msgid "Mostra lo stato"
 msgstr "Show the status"
 
-#: src/wimm/cli_status.py:104
+#: src/wimm/cli_status.py:106
 msgid "Stampa lo stato come JSON"
 msgstr "Print the status as JSON"
 
-#: src/wimm/cli_status.py:119
+#: src/wimm/cli_status.py:121
 msgid "Nessuno stato disponibile"
 msgstr "No status available"
 
-#: src/wimm/cli_status_text.py:14
+#: src/wimm/cli_status_text.py:16
 msgid "normale"
 msgstr "normal"
 
-#: src/wimm/cli_status_text.py:15
+#: src/wimm/cli_status_text.py:17
 msgid "attenzione"
 msgstr "warning"
 
-#: src/wimm/cli_status_text.py:16
+#: src/wimm/cli_status_text.py:18
 msgid "critica"
 msgstr "critical"
 
-#: src/wimm/cli_status_text.py:34
+#: src/wimm/cli_status_text.py:36
 #, python-brace-format
 msgid "Memoria: {used} usati su {total}"
 msgstr "Memory: {used} used of {total}"
 
-#: src/wimm/cli_status_text.py:37
+#: src/wimm/cli_status_text.py:39
 #, python-brace-format
 msgid "Pressione: {level}"
 msgstr "Pressure: {level}"
 
-#: src/wimm/cli_status_text.py:38
+#: src/wimm/cli_status_text.py:40
 msgid "Gruppi più grandi:"
 msgstr "Largest groups:"
 
-#: src/wimm/cli_status_text.py:45
+#: src/wimm/cli_status_text.py:47
 #, python-brace-format
 msgid "Disco: {free} liberi su {total} ({mount})"
 msgstr "Disk: {free} free of {total} ({mount})"
@@ -487,6 +487,42 @@ msgstr "You need to reinstall the dependencies (npm install or uv sync) before u
 #, python-brace-format
 msgid "Per usare di nuovo il progetto serve ricostruire la cartella con {command}."
 msgstr "To use the project again, rebuild the folder with {command}."
+
+#: src/wimm/core/root_policy.py:33
+msgid "La cartella è un collegamento simbolico: indica la cartella vera"
+msgstr "The folder is a symbolic link: point to the real folder"
+
+#: src/wimm/core/root_policy.py:34
+msgid "La cartella è troppo vicina alla radice del disco"
+msgstr "The folder is too close to the top of the disk"
+
+#: src/wimm/core/root_policy.py:35
+msgid "La cartella appartiene al sistema"
+msgstr "The folder belongs to the system"
+
+#: src/wimm/core/root_policy.py:36
+msgid "La cartella contiene la tua home"
+msgstr "The folder contains your home"
+
+#: src/wimm/core/root_policy.py:37
+msgid "La cartella appartiene alla home di un altro utente"
+msgstr "The folder belongs to another user's home"
+
+#: src/wimm/core/root_policy.py:38
+msgid "La cartella non è tua"
+msgstr "The folder is not yours"
+
+#: src/wimm/core/root_policy.py:40
+msgid "Una cartella del percorso può essere modificata da altri utenti"
+msgstr "A folder on the path can be changed by other users"
+
+#: src/wimm/core/root_policy.py:42
+msgid "La cartella sta su un disco di rete o su un filesystem FUSE"
+msgstr "The folder is on a network disk or a FUSE filesystem"
+
+#: src/wimm/core/root_policy.py:43
+msgid "La cartella sta su un disco in sola lettura"
+msgstr "The folder is on a read-only disk"
 
 #: src/wimm/core/text.py:17
 msgid "i browser"
@@ -915,26 +951,42 @@ msgstr "Notifications muted until {until}"
 msgid "88,8 GB da liberare"
 msgstr "88.8 GB to free up"
 
-#: src/wimm/ui/action_flow.py:34
+#: src/wimm/ui/action_flow.py:35
 msgid "Non c'è niente da fermare senza rischi"
 msgstr "There is nothing to stop without risk"
 
-#: src/wimm/ui/action_flow.py:35
+#: src/wimm/ui/action_flow.py:36
 msgid "Non c'è niente da liberare senza rischi sul disco"
 msgstr "There is nothing to free on the disk without risk"
 
-#: src/wimm/ui/action_flow.py:41
+#: src/wimm/ui/action_flow.py:42
 msgid "La situazione è cambiata, ricalcolo…"
 msgstr "Things have changed, recalculating…"
 
-#: src/wimm/ui/action_flow.py:42
+#: src/wimm/ui/action_flow.py:43
 msgid "Dettagli"
 msgstr "Details"
 
-#: src/wimm/ui/action_flow.py:43 src/wimm/ui/format.py:88
+#: src/wimm/ui/action_flow.py:44 src/wimm/ui/format.py:88
 #: src/wimm/ui/format.py:89
 msgid "Riaccendi"
 msgstr "Start again"
+
+#: src/wimm/ui/action_flow.py:45
+msgid "Copia comando di riavvio"
+msgstr "Copy restart command"
+
+#: src/wimm/ui/action_flow.py:48
+msgid "Il comando può contenere password o token; resta copiato per un minuto."
+msgstr "The command may contain passwords or tokens; it stays copied for one minute."
+
+#: src/wimm/ui/action_flow.py:50
+msgid "Comando copiato"
+msgstr "Command copied"
+
+#: src/wimm/ui/action_flow.py:51
+msgid "Non riesco a copiare negli appunti"
+msgstr "Cannot copy to the clipboard"
 
 #: src/wimm/ui/dialogs/facts.py:19
 msgid "Cosa succede"

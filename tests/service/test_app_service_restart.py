@@ -35,3 +35,18 @@ def test_containers_stopped_by_a_plan_can_be_started_again(rigs: RigFactory) -> 
     assert [(s.kind, s.target_label) for s in plan.steps] == [
         (ActionKind.CONTAINER_START, "name-c1")
     ]
+
+
+def test_processes_stopped_by_a_plan_come_back_as_restart_commands(rigs: RigFactory) -> None:
+    base = snapshot(group(gid="g", members=(proc(pid=8),)))
+    rig = rigs.build(base=base)
+    stop = rig.service.plan(
+        request=ActionRequest(kind=ActionKind.GROUP_STOP, group_id=GroupId("g"))
+    )
+    assert rig.service.restart_commands(plan_id=stop.plan_id) == ()
+
+    rig.service.execute(plan_id=stop.plan_id, typed_confirmation=None)
+    spin_until(predicate=lambda: bool(rig.finished))
+
+    commands = rig.service.restart_commands(plan_id=stop.plan_id)
+    assert commands == ("cd -- /work/app && node server.js",)

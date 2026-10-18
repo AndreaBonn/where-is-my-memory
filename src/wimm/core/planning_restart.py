@@ -1,6 +1,8 @@
 """C4: «Riaccendi» starts again the containers a recent stop plan stopped. Pure."""
 
-from collections.abc import Mapping
+import shlex
+import unicodedata
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from wimm.i18n import _
@@ -22,6 +24,38 @@ class StoppedContainer:
 
     id: str
     label: str
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class StoppedProcess:
+    """F14: a process a plan stopped, with the command it ran as the plan saw it."""
+
+    label: str
+    argv: tuple[str, ...]
+    cwd: str | None
+
+
+# Unicode categories a pasted command must not hold (S11): controls (Cc, C1 included), format
+# characters such as bidi overrides and zero-width spaces (Cf), line and paragraph separators
+# (Zl, Zp). They end the line, drive a terminal, or make the text look unlike what it runs.
+FORBIDDEN_CATEGORIES = frozenset({"Cc", "Cf", "Zl", "Zp"})
+
+
+def _has_forbidden_character(text: str) -> bool:
+    return any(unicodedata.category(char) in FORBIDDEN_CATEGORIES for char in text)
+
+
+def restart_command(*, argv: Sequence[str] | None, cwd: str | None) -> str | None:
+    """`cd -- <cwd> && <argv>` for a POSIX shell, or None when it cannot be built safely.
+
+    None when argv or cwd is missing or empty, or when either holds a control, format or
+    line-separator character: pasted or read, it would not be the one command shown.
+    """
+    if not argv or not cwd:
+        return None
+    if any(_has_forbidden_character(part) for part in (cwd, *argv)):
+        return None
+    return " ".join(("cd", "--", shlex.quote(cwd), "&&", shlex.join(argv)))
 
 
 def _start_assessment() -> RiskAssessment:

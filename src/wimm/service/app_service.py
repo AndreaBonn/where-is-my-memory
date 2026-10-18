@@ -25,7 +25,7 @@ from wimm.service.control_protocols import StepOutcome
 from wimm.service.errors import ControlFailed, InvalidRequest, WimmError
 from wimm.service.plan_registry import PlanRegistry
 from wimm.service.reclaim import ReclaimTracker
-from wimm.service.restart_memory import StoppedContainers
+from wimm.service.restart_memory import RestartMemory
 from wimm.service.sampler import wall_clock
 from wimm.service.state_store import PersistedState, StateSaver
 from wimm.service.user_state import UserStateKeeper
@@ -36,6 +36,7 @@ _ActionResult = tuple[tuple[StepOutcome, ...], Snapshot | None]
 
 class AppService(UserStateMixin, DiskMixin, GObject.Object):
     __gsignals__: ClassVar = APP_SERVICE_SIGNALS
+    _state_timer = 0
 
     def __init__(
         self,
@@ -47,10 +48,10 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
     ) -> None:
         super().__init__()
         self._state_saver: StateSaver | None = None
-        self._state_timer = 0
         self._actions = actions
         self._plans = PlanRegistry()
-        self._restart = StoppedContainers()
+        self._restart = RestartMemory()
+        self.restart_commands = self._restart.commands
         self._reclaim = ReclaimTracker()
         self._cycle_cohort: frozenset[PlanId] = frozenset()
         self._last_sampled: Snapshot | None = None
@@ -210,6 +211,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         )
         plan = plan_action(request=request, snapshot=self._snapshot, context=context)
         self._plans.add(plan=plan, now=self._clock())
+        self._restart.note(plan=plan, snapshot=self._snapshot)
         return plan
 
     def execute(self, *, plan_id: PlanId, typed_confirmation: str | None) -> None:
@@ -231,8 +233,7 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         )
         self._track_disk_plan(plan=plan)
         future = self._executor.submit(self._run_action, setup.executor, plan)
-        # After submit: a refused submit leaves nothing tracked. The outcome is published
-        # on this same main loop, so it cannot arrive before the plan is tracked.
+        # After submit, so a refused one tracks nothing; the outcome lands later on this loop.
         self._restart.track(plan=plan)
         future.add_done_callback(partial(self._action_completed, plan_id))
 

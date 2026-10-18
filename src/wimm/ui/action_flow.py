@@ -29,6 +29,7 @@ from wimm.ui.outcome import (
     step_reports,
     summary_text,
 )
+from wimm.ui.toasts import copy_to_clipboard
 
 LOGGER = logging.getLogger(__name__)
 NOTHING_TO_STOP_TEXT = N_("Non c'è niente da fermare senza rischi")
@@ -41,6 +42,11 @@ NOTHING_LEFT_TEXTS = {
 REPLAN_TEXT = N_("La situazione è cambiata, ricalcolo…")
 DETAILS_LABEL = N_("Dettagli")
 RESTART_LABEL = N_("Riaccendi")
+COPY_LABEL = N_("Copia comando di riavvio")
+# Shown with the toast, before the click: a command line can carry passwords or tokens.
+SECRETS_WARNING = N_("Il comando può contenere password o token; resta copiato per un minuto.")
+COPIED_TEXT = N_("Comando copiato")
+COPY_FAILED_TEXT = N_("Non riesco a copiare negli appunti")
 REPLANNED_ERRORS = (PlanExpired, TargetChanged)
 
 
@@ -48,6 +54,8 @@ class ActionSource(Protocol):
     """What the flow needs from the service; ``AppService`` satisfies it."""
 
     def snapshot(self) -> Snapshot | None: ...
+
+    def restart_commands(self, *, plan_id: PlanId) -> tuple[str, ...]: ...
 
     def plan(self, *, request: ActionRequest) -> Plan: ...
 
@@ -89,6 +97,8 @@ class _Report:
     steps: tuple[StepReport, ...]
     freed: str | None = None
     restartable: bool = False
+    # F14: commands for the processes the plan stopped, one per line when copied.
+    restart_commands: tuple[str, ...] = ()
 
 
 class ActionFlow:
@@ -180,12 +190,17 @@ class ActionFlow:
         pending = self._release(plan_id=plan_id)
         plan = None if pending is None else pending.plan
         steps = step_reports(plan=plan, outcomes=outcomes)
+        restartable = _stopped_containers(plan=plan, outcomes=outcomes)
         self._report = _Report(
             plan_id=PlanId(plan_id),
             summary=summary_text(outcomes=outcomes),
             steps=steps,
             freed=outcomes_freed_text(outcomes=outcomes),
-            restartable=_stopped_containers(plan=plan, outcomes=outcomes),
+            restartable=restartable,
+            # One toast button: containers come back with «Riaccendi», else the command.
+            restart_commands=()
+            if restartable
+            else self._source.restart_commands(plan_id=PlanId(plan_id)),
         )
         self._announce()
 
@@ -200,8 +215,15 @@ class ActionFlow:
         elif report.restartable:
             restart = partial(self._restart, plan_id=report.plan_id)
             self._notify(text, button=_(RESTART_LABEL), on_button=restart)
+        elif report.restart_commands:
+            copy = partial(self._copy_commands, commands=report.restart_commands)
+            self._notify(f"{text}. {_(SECRETS_WARNING)}", button=_(COPY_LABEL), on_button=copy)
         else:
             self._notify(text)
+
+    def _copy_commands(self, *, commands: tuple[str, ...]) -> None:
+        copied = copy_to_clipboard(text="\n".join(commands))
+        self._notify(_(COPIED_TEXT if copied else COPY_FAILED_TEXT))
 
     def _restart(self, *, plan_id: PlanId) -> None:
         """C4: plan the start of what ``plan_id`` stopped; the user confirms it as usual."""
