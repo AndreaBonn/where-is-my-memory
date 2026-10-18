@@ -92,7 +92,7 @@ class StatusNotifierItem:
         self._callbacks = {"Activate": on_activate, "SecondaryActivate": on_secondary_activate}
         self._title, self._tooltip = title, ""
         self._status, self._icon_name = STATUS_ACTIVE, ICON_NORMAL
-        self._label, self._guide = "", _(LABEL_GUIDE)
+        self._label = ""
         self._theme_path = icon_theme_path()
         info = Gio.DBusNodeInfo.new_for_xml(xml_data=INTROSPECTION)
         self._registration = connection.register_object(
@@ -183,7 +183,8 @@ class StatusNotifierItem:
             on_done(succeeded)
 
     def _emit_label(self) -> None:
-        parameters = GLib.Variant("(ss)", (self._label, self._guide))
+        # The guide is translated when sent, so it follows a language switched at runtime.
+        parameters = GLib.Variant("(ss)", (self._label, _(LABEL_GUIDE)))
         self._emit(signal="XAyatanaNewLabel", parameters=parameters)
 
     def _emit(self, *, signal: str, parameters: GLib.Variant | None = None) -> None:
@@ -224,6 +225,6 @@ class StatusNotifierItem:
             "ItemIsMenu": GLib.Variant("b", False),
             "Menu": GLib.Variant("o", MENU_OBJECT_PATH),
             "XAyatanaLabel": GLib.Variant("s", self._label),
-            "XAyatanaLabelGuide": GLib.Variant("s", self._guide),
+            "XAyatanaLabelGuide": GLib.Variant("s", _(LABEL_GUIDE)),
         }
         return values[args[4]]
