@@ -658,6 +658,7 @@ def test_whitespace_query_is_not_a_filter(snapshot: Snapshot) -> None:
     )
 
 
+@pytest.mark.perf
 def test_building_hundreds_of_groups_is_fast(snapshot: Snapshot, now: datetime) -> None:
     groups = tuple(
         make_group(
