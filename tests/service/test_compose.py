@@ -10,6 +10,7 @@ import pytest
 
 from tests.service.engine_fakes import FakeProvider, engine_at
 from wimm.collectors.docker_engines import FixedEngines
+from wimm.model.actions import EngineIdentity
 from wimm.service.compose import DockerComposeControl, resolve_docker_binary
 from wimm.service.errors import ControlFailed, DockerUnavailable, InvalidRequest
 
@@ -264,3 +265,20 @@ def test_without_any_engine_compose_is_docker_unavailable() -> None:
         control_.container_ids(project=PROJECT)
 
     assert runner.calls == []
+
+
+def test_engine_identities_lists_every_engine_in_order() -> None:
+    both = two_engines(runner=FakeRunner(), first=FakeClient(), second=FakeClient())
+
+    assert both.engine_identities() == (
+        EngineIdentity(path=SOCKET, st_ino=1, st_dev=1),
+        EngineIdentity(path=OTHER_SOCKET, st_ino=1, st_dev=1),
+    )
+
+
+def test_engine_identities_without_any_engine_is_empty() -> None:
+    nothing = DockerComposeControl(
+        engines=FakeProvider(engines=()), docker_bin=DOCKER, runner=FakeRunner()
+    )
+
+    assert nothing.engine_identities() == ()

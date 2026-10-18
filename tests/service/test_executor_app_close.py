@@ -122,3 +122,15 @@ def test_unexpected_exception_in_a_step_is_a_failed_step_not_a_rejected_plan() -
     assert [o.status for o in outcomes] == [StepStatus.FAILED, StepStatus.DONE]
     assert outcomes[0].message is not None
     assert (other, signal.SIGTERM) in processes.signals
+
+
+def test_app_close_whose_signal_fails_is_failed_with_the_reason_and_waits_for_nothing() -> None:
+    processes = app_processes()
+    processes.failing = frozenset({ROOT})
+
+    outcomes = executor(processes=processes).execute(plan=close_plan())
+
+    assert [o.status for o in outcomes] == [StepStatus.FAILED]
+    assert outcomes[0].message == f"cannot signal {ROOT}"
+    assert processes.waits == []
+    assert processes.signals == []

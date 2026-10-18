@@ -1,4 +1,5 @@
 import logging
+from dataclasses import replace
 
 import pytest
 
@@ -15,7 +16,7 @@ from tests.service.executor_fakes import (
 )
 from wimm.model.enums import ActionKind
 from wimm.service.control_protocols import LiveContainer, LiveImage, LiveVolume, StepStatus
-from wimm.service.errors import ControlFailed, DockerUnavailable, TargetChanged
+from wimm.service.errors import ControlFailed, DockerUnavailable, TargetChanged, TargetGone
 from wimm.service.executor import PlanExecutor
 
 IMAGE_ID = "sha256:" + "a" * 64
@@ -508,3 +509,47 @@ def test_a_free_safe_plan_is_logged_step_by_step(caplog: pytest.LogCaptureFixtur
 
     lines = [r.getMessage() for r in caplog.records if r.levelno == logging.INFO]
     assert lines == [f"disk action=builder_prune target=build cache outcome=done freed_bytes={GB}"]
+
+
+def test_tag_that_no_longer_resolves_is_skipped_silently_and_the_others_are_untagged() -> None:
+    class StaleListing(FakeDocker):
+        """The inspect still lists `app:1`, which the daemon no longer resolves."""
+
+        def inspect_image(self, *, image_id: str) -> LiveImage | None:
+            live = super().inspect_image(image_id=image_id)
+            if live is None or not live.tags:
+                return live
+            return replace(live, tags=("app:1", *live.tags))
+
+    docker = StaleListing(images={IMAGE_ID: LiveImage(id=IMAGE_ID, in_use=False, tags=("app:2",))})
+
+    outcomes = executor_for(docker=docker).execute(
+        plan=make_plan(steps=[image_step(order=1, image_id=IMAGE_ID)])
+    )
+
+    assert [(o.status, o.message) for o in outcomes] == [(StepStatus.DONE, None)]
+    assert docker.calls == [("remove_image", "app:2")]
+    assert IMAGE_ID not in docker.images
+
+
+def test_tag_deleted_by_someone_else_while_untagging_is_not_a_failure() -> None:
+    class TagRemovedMeanwhile(FakeDocker):
+        def remove_image(self, *, ref: str) -> None:
+            if ref != "app:1":
+                super().remove_image(ref=ref)
+                return
+            image = self.images[IMAGE_ID]
+            self.images[IMAGE_ID] = replace(image, tags=("app:2",))
+            raise TargetGone()
+
+    docker = TagRemovedMeanwhile(
+        images={IMAGE_ID: LiveImage(id=IMAGE_ID, in_use=False, tags=("app:1", "app:2"))}
+    )
+
+    outcomes = executor_for(docker=docker).execute(
+        plan=make_plan(steps=[image_step(order=1, image_id=IMAGE_ID)])
+    )
+
+    assert [(o.status, o.message) for o in outcomes] == [(StepStatus.DONE, None)]
+    assert docker.calls == [("remove_image", "app:2")]
+    assert IMAGE_ID not in docker.images
