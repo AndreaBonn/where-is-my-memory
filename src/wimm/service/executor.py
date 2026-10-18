@@ -66,7 +66,7 @@ class PlanExecutor:
         self.processes.set_extra_protected_names(names=config.extra_protected_names)
         if self.disk_fs is not None:
             self.disk_fs = replace(
-                self.disk_fs, roots=config.devdirs_roots, min_age_days=config.devdirs_min_age_days
+                self.disk_fs, roots=config.admitted_roots, min_age_days=config.devdirs_min_age_days
             )
 
     def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:

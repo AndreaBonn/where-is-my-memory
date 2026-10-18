@@ -17,7 +17,7 @@ def _disk_fs(*, config: Any, owner_uid: int, home: Path | None) -> Any:
     return DiskFsControl(
         home=base,
         caches=read_cache_table(environ=os.environ, home=base, roots=config.devdirs_roots),
-        roots=config.devdirs_roots,
+        roots=config.admitted_roots,
         min_age_days=config.devdirs_min_age_days,
         runner=SubprocessRunner(),
         cwds=PsutilCwds(owner_uid=owner_uid),

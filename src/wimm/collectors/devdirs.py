@@ -188,11 +188,10 @@ def _is_real_dir(path: Path) -> bool:
         return False
 
 
-def _is_usable_root(root: Path, home: Path) -> bool:
+def _is_usable_root(root: Path) -> bool:
+    """A real directory now. Whether it may be a root is ADR-007's verdict, given by the caller."""
     try:
-        if not stat.S_ISDIR(os.lstat(root).st_mode):
-            return False
-        return root.resolve().is_relative_to(home.resolve())
+        return stat.S_ISDIR(os.lstat(root).st_mode)
     except OSError:
         return False
 
@@ -225,7 +224,8 @@ def scan_devdirs(
     now: float,
     sleep: Callable[[float], None] = time.sleep,
 ) -> DevDirScan:
-    """Find rebuildable dependency folders under the configured roots (SPECIFICHE 7.6).
+    """Find rebuildable dependency folders under the admitted roots (SPECIFICHE 7.6).
+    ``settings.roots`` are the roots ADR-007 admits (``Config.admitted_roots``).
 
     A folder qualifies by ``classify_devdir`` (name, sibling marker, second signal; never
     a project directly in the home). Symlinks are never followed, hidden folders are
@@ -238,10 +238,10 @@ def scan_devdirs(
     """
     walker = _Walker(max_depth=settings.max_depth, sleep=sleep, home=settings.home)
     for root in settings.roots:
-        if _is_usable_root(root=root, home=settings.home):
+        if _is_usable_root(root=root):
             walker.walk(root=root)
         else:
-            LOGGER.info("Skipping devdirs root %s: missing, symlink or outside home", root)
+            LOGGER.info("Skipping devdirs root %s: missing or not a real directory", root)
     built = (
         _build_devdir(path=path, walker=walker, cache_dir=cache_dir, now=now)
         for path in walker.found

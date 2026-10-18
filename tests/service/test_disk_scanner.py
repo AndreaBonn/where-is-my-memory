@@ -89,3 +89,35 @@ def test_scan_never_walks_a_root_that_adr_007_refuses(tmp_path: Path) -> None:
 
     assert config.refused_roots
     assert scanner.scan(config=config).devdirs == ()
+
+
+def _old_project(*, root: Path, name: str) -> Path:
+    project = root / name
+    (project / "node_modules").mkdir(parents=True)
+    (project / "node_modules" / "dep.js").write_bytes(b"x" * 4000)
+    manifest = project / "package.json"
+    manifest.write_text("{}", encoding="utf-8")
+    for path in (manifest, project):
+        os.utime(path, (OLD_MTIME, OLD_MTIME))
+    return project
+
+
+def test_scan_walks_an_admitted_root_outside_the_home_and_only_that_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    scanner = _scanner(tmp_path=tmp_path, docker=CancellingDocker())
+    external = tmp_path / "data" / "code"
+    not_admitted = tmp_path / "other" / "code"
+    admitted_project = _old_project(root=external, name="app")
+    _old_project(root=not_admitted, name="app")
+    # The facts of the roots are ADR-007's business (tests/test_config_roots.py): here the
+    # scan receives the verdict, and must walk exactly the roots it was handed.
+    monkeypatch.setattr(
+        "wimm.config.admitted_roots",
+        lambda *, roots, home: tuple(r for r in roots if r == external),
+    )
+    config = Config(devdirs_roots=(external, not_admitted), devdirs_min_age_days=7)
+
+    result = scanner.scan(config=config)
+
+    assert [item.path for item in result.devdirs] == [str(admitted_project / "node_modules")]

@@ -18,9 +18,12 @@ from tests.service.fs_fakes import (
     make_cache,
     make_project,
     make_trash,
+    root_facts,
 )
 from wimm.config import Config
+from wimm.core import constants
 from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S
+from wimm.core.root_policy import RootFacts
 from wimm.model.actions import DirFingerprint
 from wimm.model.enums import ActionKind
 from wimm.service.control_protocols import StepStatus
@@ -153,6 +156,65 @@ def test_a_root_whose_real_path_leaves_the_home_is_not_a_root(rig: FsRig, tmp_pa
     rig.control = replace(rig.control, roots=(rig.root,))
     inside = make_project(root=rig.root)
     assert delete_devdir(rig=rig, folder=inside) is StepStatus.DONE
+
+
+def read_real_facts(*, path: Path) -> RootFacts:
+    """Facts of a root owned by the current user, at its real path."""
+    return root_facts(real=Path(os.path.realpath(path)))
+
+
+def test_devdir_under_a_root_no_longer_owned_is_refused(rig: FsRig) -> None:
+    folder = make_project(root=rig.root)
+    owner = {"uid": os.getuid()}
+
+    def read_facts(*, path: Path) -> RootFacts:
+        return root_facts(real=Path(os.path.realpath(path)), st_uid=owner["uid"])
+
+    rig.control = replace(rig.control, read_facts=read_facts)
+    plan = dir_plan(kind=DELETE, path=folder)
+    owner["uid"] = os.getuid() + 1  # the root changed hands between the plan and the run
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=plan)
+    assert (folder / "top.txt").exists()
+
+    owner["uid"] = os.getuid()
+    assert rig.executor().execute(plan=plan)[0].status is StepStatus.DONE
+
+
+def test_a_root_whose_facts_cannot_be_read_now_is_refused(rig: FsRig) -> None:
+    folder = make_project(root=rig.root)
+    rig.control = replace(rig.control, read_facts=lambda *, path: None)
+
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=dir_plan(kind=DELETE, path=folder))
+    assert (folder / "top.txt").exists()
+
+
+def test_a_system_root_is_refused_and_an_external_one_is_executed(
+    rig: FsRig, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    folder = make_project(root=rig.root)
+    outside = replace(rig.control, home=Path("/home/nobody"))
+    rig.control = replace(outside, read_facts=read_real_facts)
+
+    # The tmpdir sits under /tmp, a system path ADR-007 refuses outside the home.
+    with pytest.raises(ProtectedTarget):
+        rig.executor().execute(plan=dir_plan(kind=DELETE, path=folder))
+    assert (folder / "top.txt").exists()
+
+    monkeypatch.setattr(constants, "SYSTEM_PATH_PREFIXES", ("/usr",))
+    assert delete_devdir(rig=rig, folder=folder) is StepStatus.DONE
+
+
+def test_a_device_changed_under_the_planned_folder_is_refused(rig: FsRig) -> None:
+    folder = make_project(root=rig.root)
+    real = fingerprint_of(path=folder)
+    other_disk = DirFingerprint(realpath=real.realpath, st_ino=real.st_ino, st_dev=real.st_dev + 1)
+
+    with pytest.raises(TargetChanged):
+        rig.executor().execute(plan=dir_plan(kind=DELETE, fingerprint=other_disk))
+    assert (folder / "top.txt").exists()
 
 
 def test_a_symlink_in_place_of_the_folder_is_refused_and_its_target_survives(

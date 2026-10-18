@@ -11,7 +11,9 @@ from typing import Protocol
 
 import psutil
 
+from wimm.collectors.root_facts import read_root_facts
 from wimm.core.cache_catalog import CacheResolution
+from wimm.core.root_policy import RootFacts
 from wimm.redaction import redact_text
 
 from .errors import ControlFailed
@@ -121,7 +123,8 @@ class DiskFsControl:
 
     `caches` is the table of cache folders resolved once at start (the same function the
     collector uses): a folder is a cache of some type only by its place in that table, never by
-    what a plan says. `roots` and `min_age_days` follow the configuration. Everything else is
+    what a plan says. `roots` and `min_age_days` follow the configuration; `read_facts` is how a
+    root is observed again at execution time (ADR-007). Everything else is
     injectable so tests never run a real command.
     """
 
@@ -137,3 +140,4 @@ class DiskFsControl:
     uid: int = field(default_factory=os.getuid)
     owner_of: Callable[[str], int] = file_owner
     processes: Callable[[], Sequence[ProcessIdentity]] = list_process_identities
+    read_facts: Callable[..., RootFacts | None] = read_root_facts

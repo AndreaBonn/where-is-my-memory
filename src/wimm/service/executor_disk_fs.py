@@ -19,6 +19,7 @@ from wimm.core.cache_specs import CACHE_COMMANDS
 from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S, TRASH_CONTENT_DIRS
 from wimm.core.devdir_rules import MARKERS_BY_NAME, classify_devdir
 from wimm.core.ollama_serve import is_ollama_serve
+from wimm.core.root_policy import root_refusal
 from wimm.i18n import N_
 from wimm.model.actions import DirFingerprint, PlanStep
 from wimm.model.disk import CacheKind
@@ -75,11 +76,20 @@ def _verify_directory(*, fingerprint: DirFingerprint) -> bool:
 
 
 def _inside_a_root(*, path: Path, control: DiskFsControl) -> bool:
-    """Under a configured root whose real path is itself inside the real home."""
+    """Under a configured root that ADR-007 admits when observed now.
+
+    The root is read again at execution time (owner, ancestors, mount); facts that cannot be
+    read count as a refusal. A different disk mounted at the planned path is caught by the
+    folder fingerprint (`st_dev`), so the plan does not record the root's device.
+    """
     home = Path(os.path.realpath(control.home))
     for root in control.roots:
-        real = Path(os.path.realpath(root))
-        if real.is_relative_to(home) and path.is_relative_to(real):
+        if not path.is_relative_to(os.path.realpath(root)):
+            continue
+        facts = control.read_facts(path=root)
+        if facts is None or not path.is_relative_to(facts.realpath):
+            continue
+        if root_refusal(facts=facts, home=home) is None:
             return True
     return False
 

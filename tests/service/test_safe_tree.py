@@ -215,3 +215,21 @@ def test_the_real_runner_runs_in_the_root_not_in_the_service_directory(
     )
     assert shown.output == "/"
     assert Path.cwd() == tmp_path
+
+
+def test_removal_starts_at_the_folder_whatever_the_device_of_its_root(tmp_path: Path) -> None:
+    """The root of a plan may sit on another disk (ADR-007): the removal never looks at it.
+
+    It starts from the folder's own fingerprint and stops at the mount points inside it.
+    """
+    base = tree(base=tmp_path / "root" / "proj" / "node_modules")
+    (base / "mnt" / "disk").mkdir(parents=True)
+    (base / "mnt" / "disk" / "keep.txt").write_text("k", encoding="utf-8")
+    fingerprint = fingerprint_of(path=base)
+
+    removal = remove_directory(fingerprint=fingerprint, mountpoints=frozenset({f"{base}/mnt/disk"}))
+
+    assert removal.skipped_mounts == (f"{base}/mnt/disk",)
+    assert (base / "mnt" / "disk" / "keep.txt").exists()
+    assert not (base / "a").exists() and not (base / "top.txt").exists()
+    assert not removal.root_removed and removal.remaining > 0

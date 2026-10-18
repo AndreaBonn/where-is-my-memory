@@ -215,17 +215,20 @@ def test_scan_hard_links_counted_once(tmp_path: Path) -> None:
     assert item.size == blocks * 512
 
 
-def test_scan_missing_root_and_root_outside_home_are_skipped(tmp_path: Path) -> None:
+def test_scan_missing_root_is_skipped_and_a_root_outside_the_home_is_walked(
+    tmp_path: Path,
+) -> None:
+    # Which roots may be walked is ADR-007's verdict, given by the caller (Config.admitted_roots).
     home = tmp_path / "home2"
     inside = home / "work"
-    outside = tmp_path / "elsewhere"
+    external = tmp_path / "elsewhere"
     kept = _project(inside, "app")
-    _project(outside, "foreign")
-    settings = DevDirSettings(roots=(home / "missing", outside, inside), home=home, max_depth=6)
+    also = _project(external, "other")
+    settings = DevDirSettings(roots=(home / "missing", external, inside), home=home, max_depth=6)
     result = scan_devdirs(
         settings=settings, cache_dir=tmp_path / "sizes", now=NOW, sleep=lambda _s: None
     )
-    assert _paths(result) == {str(kept / "node_modules")}
+    assert _paths(result) == {str(kept / "node_modules"), str(also / "node_modules")}
 
 
 def test_scan_symlinked_root_is_skipped(tmp_path: Path) -> None:

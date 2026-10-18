@@ -1,12 +1,14 @@
 """Fakes and builders for the folder, cache and trash executor tests (tmpdir only)."""
 
 import os
+import stat
 from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
 from tests.service.executor_fakes import OWNER_UID, FakeProcesses, make_plan
 from wimm.collectors.cache_table import read_cache_table
+from wimm.core.root_policy import DirFacts, RootFacts
 from wimm.model.actions import DirFingerprint, Plan, PlanStep
 from wimm.model.enums import ActionKind, Risk
 from wimm.service.errors import ControlFailed
@@ -156,3 +158,20 @@ def make_trash(*, home: Path) -> Path:
     (trash / "info" / "y.txt.trashinfo").write_text("[Trash Info]", encoding="utf-8")
     (trash / "directorysizes").write_text("1 2 3", encoding="utf-8")
     return trash
+
+
+def root_facts(*, real: Path, st_uid: int | None = None) -> RootFacts:
+    """Facts of a root owned by the current user under plain root-owned 755 ancestors."""
+    plain = DirFacts(uid=0, gid=0, mode=stat.S_IFDIR | 0o755)
+    return RootFacts(
+        realpath=real,
+        is_symlink=False,
+        st_uid=os.getuid() if st_uid is None else st_uid,
+        st_gid=os.getgid(),
+        own_uid=os.getuid(),
+        own_gid=os.getgid(),
+        mode=stat.S_IFDIR | 0o755,
+        ancestors=(plain,) * (len(real.parts) - 1),
+        fstype="ext4",
+        read_only=False,
+    )
