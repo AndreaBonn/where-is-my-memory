@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from wimm.collectors.meminfo import collect_meminfo, parse_meminfo
+from wimm.collectors.meminfo import MEMINFO_FIELDS, collect_meminfo, parse_meminfo
 
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 KIB = 1024
@@ -84,3 +84,26 @@ def test_parse_meminfo_rejects_invalid_counter_in_complete_input(replacement: st
     text = "\n".join(replacement if line.startswith("MemTotal:") else line for line in lines)
     with pytest.raises(ValueError, match="nope" if "nope" in replacement else None):
         parse_meminfo(text=text)
+
+
+def test_parse_meminfo_host_fixture_reads_kernel_counters() -> None:
+    parsed = parse_meminfo(text=(FIXTURES / "meminfo_host.txt").read_text())
+    assert parsed.s_unreclaim == 803_632 * KIB
+    assert parsed.kernel_stack == 70_800 * KIB
+    assert parsed.page_tables == 196_548 * KIB
+    assert parsed.zswap == 0
+
+
+def test_parse_meminfo_reads_zswap_when_present_and_zero_when_absent() -> None:
+    lines = (FIXTURES / "meminfo_host.txt").read_text().splitlines()
+    with_zswap = "\n".join("Zswap: 512 kB" if line.startswith("Zswap:") else line for line in lines)
+    without_zswap = "\n".join(line for line in lines if not line.startswith("Zswap"))
+    assert parse_meminfo(text=with_zswap).zswap == 512 * KIB
+    assert parse_meminfo(text=without_zswap).zswap == 0
+
+
+def test_parse_meminfo_missing_kernel_counters_are_zero() -> None:
+    required = (*MEMINFO_FIELDS,)
+    text = "\n".join(f"{name}: 1 kB" for name in required)
+    parsed = parse_meminfo(text=text)
+    assert (parsed.s_unreclaim, parsed.kernel_stack, parsed.page_tables, parsed.zswap) == (0,) * 4

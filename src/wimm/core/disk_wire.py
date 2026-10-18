@@ -2,7 +2,7 @@
 
 Same contract as the snapshot in `wimm.serialize`: integer bytes, timezone-aware ISO
 dates, unknown and missing fields rejected. It lives here because `serialize.py` is at
-the 300-line limit; the decoding primitives are the ones it exports.
+the 300-line limit; the decoding primitives come from `wimm.wire_decoders`.
 """
 
 import json
@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any
 
 from wimm import model as m
-from wimm.serialize import (
+from wimm.wire_decoders import (
     BOOLEAN,
     INTEGER,
     TEXT,
@@ -26,7 +26,7 @@ from wimm.serialize import (
     sequence,
     timestamp,
 )
-from wimm.serialize import fields as decode_fields
+from wimm.wire_decoders import fields as decode_fields
 
 __all__ = ["disk_report_from_json", "disk_report_to_json"]
 

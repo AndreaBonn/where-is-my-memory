@@ -323,3 +323,12 @@ def test_process_risk_facts_reject_invalid_values(
 
     with pytest.raises(SnapshotFormatError, match=field):
         snapshot_from_json(text=json.dumps(document))
+
+
+def test_roundtrip_keeps_new_memory_breakdown_voices(snapshot: m.Snapshot) -> None:
+    breakdown = replace(
+        snapshot.memory.breakdown, shared_tmpfs=11, kernel_unreclaimable=22, zram=33, zswap=44
+    )
+    updated = replace(snapshot, memory=replace(snapshot.memory, breakdown=breakdown))
+    decoded = snapshot_from_json(text=snapshot_to_json(snapshot=updated))
+    assert decoded.memory.breakdown == breakdown

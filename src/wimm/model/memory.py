@@ -20,6 +20,10 @@ class MemoryBreakdown(ImmutableModel):
     categories: tuple[tuple[Category, int], ...]
     kernel_cache: int
     unattributed: int
+    shared_tmpfs: int = 0
+    kernel_unreclaimable: int = 0
+    zram: int = 0
+    zswap: int = 0
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
@@ -31,7 +35,8 @@ class MemoryBreakdown(ImmutableModel):
         for category, size in self.categories:
             require_bytes(value=size, field=f"categories.{category.name}")
         require_bytes(value=self.kernel_cache, field="kernel_cache")
-        require_bytes(value=self.unattributed, field="unattributed")
+        for name in ("unattributed", "shared_tmpfs", "kernel_unreclaimable", "zram", "zswap"):
+            require_bytes(value=getattr(self, name), field=name)
 
 
 @dataclass(frozen=True, slots=True)

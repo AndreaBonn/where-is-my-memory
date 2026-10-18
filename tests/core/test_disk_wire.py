@@ -6,7 +6,7 @@ import pytest
 from wimm.core.disk_rules import build_disk_report, parse_docker_df
 from wimm.core.disk_wire import disk_report_from_json, disk_report_to_json
 from wimm.model.disk import CacheKind, DiskReport
-from wimm.serialize import SnapshotFormatError
+from wimm.wire_decoders import SnapshotFormatError
 
 from .disk_helpers import FIXTURES, MB, SCANNED_AT, cache, load_df, report
 

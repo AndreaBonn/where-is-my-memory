@@ -2,12 +2,19 @@ from collections.abc import Sequence
 
 from wimm.model.enums import ActivityState, Category, Pressure, Risk
 from wimm.model.memory import DiskUsage, MemoryBreakdown, MemorySummary, MemoryUse, Reclaimable
-from wimm.model.raw import MemInfo, RawProcess
+from wimm.model.raw import KernelMemory, MemInfo, PsiSample, RawProcess
 from wimm.model.snapshot import ContainerMember, Group, Member
 
-from .constants import PRESSURE_CRITICAL_PCT, PRESSURE_WARNING_PCT
+from .constants import (
+    PRESSURE_CRITICAL_PCT,
+    PRESSURE_WARNING_PCT,
+    PSI_FULL_CRITICAL_AVG60,
+    PSI_SOME_WARNING_AVG60,
+)
 
 PERCENT_SCALE = 100
+NO_KERNEL_MEMORY = KernelMemory(zram=0, tmpfs_used=0)
+PRESSURE_SEVERITY = (Pressure.OK, Pressure.WARNING, Pressure.CRITICAL)
 
 
 def process_memory(proc: RawProcess) -> MemoryUse:
@@ -63,8 +70,34 @@ def _category_totals(groups: Sequence[Group]) -> tuple[tuple[Category, int], ...
     return tuple(sorted(totals.items(), key=lambda item: item[0].value))
 
 
-def memory_summary(mem: MemInfo, groups: Sequence[Group]) -> MemorySummary:
+def _breakdown(
+    mem: MemInfo, categories: tuple[tuple[Category, int], ...], kernel: KernelMemory
+) -> MemoryBreakdown:
+    cache = mem.cached + mem.buffers + mem.s_reclaimable - mem.shmem
+    shared = min(mem.shmem, kernel.tmpfs_used)
+    unreclaimable = mem.s_unreclaim + mem.kernel_stack + mem.page_tables
+    explained = (
+        cache + shared + unreclaimable + kernel.zram + mem.zswap + sum(v for _, v in categories)
+    )
+    return MemoryBreakdown(
+        categories=categories,
+        kernel_cache=cache,
+        unattributed=max(0, mem.mem_total - mem.mem_free - explained),
+        shared_tmpfs=shared,
+        kernel_unreclaimable=unreclaimable,
+        zram=kernel.zram,
+        zswap=mem.zswap,
+    )
+
+
+def memory_summary(
+    mem: MemInfo, groups: Sequence[Group], kernel: KernelMemory = NO_KERNEL_MEMORY
+) -> MemorySummary:
     """Build the category breakdown and system totals in bytes.
+
+    Every voice is a disjoint share of `MemTotal - MemFree`; shared memory is removed
+    from the kernel cache and reported once as its own voice. What no voice explains
+    is "unattributed", clamped at zero.
 
     Parameters
     ----------
@@ -72,20 +105,16 @@ def memory_summary(mem: MemInfo, groups: Sequence[Group]) -> MemorySummary:
         System memory counters.
     groups : Sequence[Group]
         Disjoint groups, including protected entities, counted once.
+    kernel : KernelMemory
+        zram and tmpfs usage; zero when the collector had nothing.
     """
-    categories = _category_totals(groups=groups)
-    cache = mem.cached + mem.buffers + mem.s_reclaimable - mem.shmem
-    unattributed = max(0, mem.mem_total - mem.mem_free - cache - sum(v for _, v in categories))
-    breakdown = MemoryBreakdown(
-        categories=categories, kernel_cache=cache, unattributed=unattributed
-    )
     return MemorySummary(
         total=mem.mem_total,
         available=mem.mem_available,
         used=mem.mem_total - mem.mem_available,
         swap_total=mem.swap_total,
         swap_used=mem.swap_total - mem.swap_free,
-        breakdown=breakdown,
+        breakdown=_breakdown(mem=mem, categories=_category_totals(groups=groups), kernel=kernel),
     )
 
 
@@ -116,6 +145,29 @@ def pressure(
     if available_pct < warning_pct:
         return Pressure.WARNING
     return Pressure.OK
+
+
+def _psi_level(psi: PsiSample) -> Pressure:
+    if psi.full_avg60 >= PSI_FULL_CRITICAL_AVG60:
+        return Pressure.CRITICAL
+    if psi.some_avg60 >= PSI_SOME_WARNING_AVG60:
+        return Pressure.WARNING
+    return Pressure.OK
+
+
+def pressure_with_psi(level: Pressure, psi: PsiSample | None) -> Pressure:
+    """Return the worse of a RAM/disk pressure level and the PSI level.
+
+    Parameters
+    ----------
+    level : Pressure
+        State from `pressure` (RAM and disk thresholds).
+    psi : PsiSample | None
+        Memory PSI averages; None keeps `level` unchanged.
+    """
+    if psi is None:
+        return level
+    return max(level, _psi_level(psi=psi), key=PRESSURE_SEVERITY.index)
 
 
 def reclaimable_now(groups: Sequence[Group], disk_bytes: int = 0) -> Reclaimable:

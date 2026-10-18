@@ -103,8 +103,36 @@ class MemInfo(ImmutableModel):
     shmem: int
     swap_total: int
     swap_free: int
+    s_unreclaim: int = 0
+    kernel_stack: int = 0
+    page_tables: int = 0
+    zswap: int = 0
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
         for name in self.__slots__:
             require_bytes(value=getattr(self, name), field=name)
+
+
+@dataclass(frozen=True, slots=True)
+class KernelMemory(ImmutableModel):
+    zram: int
+    tmpfs_used: int
+
+    def __post_init__(self) -> None:
+        ImmutableModel.__post_init__(self)
+        require_bytes(value=self.zram, field="zram")
+        require_bytes(value=self.tmpfs_used, field="tmpfs_used")
+
+
+@dataclass(frozen=True, slots=True)
+class PsiSample(ImmutableModel):
+    """Memory pressure-stall averages over 60 s, in percent of stalled time."""
+
+    some_avg60: float
+    full_avg60: float
+
+    def __post_init__(self) -> None:
+        ImmutableModel.__post_init__(self)
+        if self.some_avg60 < 0 or self.full_avg60 < 0:
+            raise ValueError("PSI averages must be nonnegative")
