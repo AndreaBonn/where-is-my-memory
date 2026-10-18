@@ -205,3 +205,11 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T006 | bd7c20c | click-through reale a 1280 px; corretti focus con selezione totale e I/O per snapshot
 - T026 T027 | 0cc31ac | prima apertura 236 ms, riapertura 10 ms; M-17..M-23
 - T019 T028 | a7d7901 014b04f | security-reviewer su L1 (nessun P0/P1, tre P2 corretti); REPORT_ATTIVITA
+- T029 T030 T031 | 6013849 | catalogo e risolutore delle cache (S5)
+- T034 | 4c0bd3c | rischio per tipo (S18)
+- T032 T033 T035 T038 | b6c3c76 | esposizione dei 17 tipi; review: symlink sul default reso pulibile, corretto
+- T041 | 05c56ef | SCHEMA_VERSION 2
+- T036 T037 T039 | 41c2750 | comandi nativi e ambiente minimo (S6); P2 della security review corretti
+- T040 | b6c3c76 | titoli dei tipi nuovi e testi delle conseguenze
+- T042 | d897c08 | prima scansione +20%
+- T043 | (questo commit) | code-reviewer e security-reviewer su L3 eseguiti; aperti: `go clean` reale non provato, test di integrazione Docker instabile (pre-esistente)
