@@ -1,4 +1,5 @@
 import time
+from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -6,13 +7,23 @@ import pytest
 
 from tests.tray.menu_helpers import base_snapshot, make_group, with_groups
 from wimm.model.enums import ActivityState, Category, Pressure
-from wimm.model.memory import Reclaimable
+from wimm.model.memory import MemoryUse, Reclaimable
 from wimm.model.snapshot import Snapshot
 from wimm.tray import menu_model as mm
 from wimm.tray.dbus_menu import MenuItem
 
 GB = 1_000_000_000
 MB = 1_000_000
+
+
+@pytest.fixture
+def rome_timezone(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Europe/Rome for the test, then the original timezone again for the next one."""
+    monkeypatch.setenv("TZ", "Europe/Rome")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()
 
 
 def labels(items: list[MenuItem]) -> list[str]:
@@ -142,9 +153,7 @@ def test_error_entry_also_without_snapshot() -> None:
     assert labels(items)[0].startswith("Monitoraggio in errore")
 
 
-def test_muted_menu_replaces_the_mute_entry_with_its_state(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TZ", "Europe/Rome")
-    time.tzset()
+def test_muted_menu_replaces_the_mute_entry_with_its_state(rome_timezone: None) -> None:
     until = datetime(2026, 10, 16, 12, 30, tzinfo=UTC)
     items = mm.build_menu(snapshot=None, consecutive_failures=0, muted_until=until)
     assert labels(items) == [
@@ -179,3 +188,20 @@ def test_fixed_entries_keep_their_id_when_the_menu_content_changes() -> None:
     assert mm.ERROR_ID not in bare.values()
     group_ids = {value for key, value in full.items() if key.startswith("group:")}
     assert len(group_ids) == 2 and not group_ids & set(bare.values())
+
+
+def test_idle_groups_with_equal_reclaimable_list_the_one_using_more_memory_first() -> None:
+    # Names run against the expected order, so neither the name nor a missing key can pass.
+    small = replace(
+        make_group("alpha", reclaimable=GB), memory=MemoryUse(used=2 * GB, reclaimable=GB)
+    )
+    big = replace(make_group("zeta", reclaimable=GB), memory=MemoryUse(used=5 * GB, reclaimable=GB))
+    other = replace(
+        make_group("mid", reclaimable=GB), memory=MemoryUse(used=3 * GB, reclaimable=GB)
+    )
+    items = mm.build_menu(snapshot=with_groups(small, big, other), consecutive_failures=0)
+    assert [name for name in labels(items) if name.endswith("(1,0 GB)")] == [
+        "zeta (1,0 GB)",
+        "mid (1,0 GB)",
+        "alpha (1,0 GB)",
+    ]

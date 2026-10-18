@@ -201,3 +201,21 @@ def test_close_stops_following_the_service(bus: Bus, caplog: pytest.LogCaptureFi
         harness.service.publish(base_snapshot())
         harness.service.fail()
     assert "Tray refresh failed" not in caplog.text
+
+
+@pytest.mark.dbus
+def test_open_entry_opens_the_panel_without_quitting(harness: Harness) -> None:
+    harness.click("Apri")
+    spin_until(predicate=lambda: bool(harness.opened))
+    assert harness.opened == [None]
+    assert harness.quits == 0
+
+
+@pytest.mark.dbus
+def test_monitoring_error_entry_opens_the_panel_without_quitting(harness: Harness) -> None:
+    for _ in range(3):
+        harness.service.fail()
+    harness.click("Monitoraggio in errore")
+    spin_until(predicate=lambda: bool(harness.opened))
+    assert harness.opened == [None]
+    assert harness.quits == 0

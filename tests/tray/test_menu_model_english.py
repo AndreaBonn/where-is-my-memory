@@ -1,4 +1,5 @@
 import time
+from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime
 
@@ -11,6 +12,16 @@ from wimm.tray.dbus_menu import MenuItem
 
 pytestmark = pytest.mark.usefixtures("english")
 GB = 1_000_000_000
+
+
+@pytest.fixture
+def rome_timezone(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Europe/Rome for the test, then the original timezone again for the next one."""
+    monkeypatch.setenv("TZ", "Europe/Rome")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()
 
 
 def labels(items: list[MenuItem]) -> list[str]:
@@ -36,9 +47,7 @@ def test_menu_entries_read_in_english() -> None:
     ]
 
 
-def test_error_and_muted_entries_read_in_english(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("TZ", "Europe/Rome")
-    time.tzset()
+def test_error_and_muted_entries_read_in_english(rome_timezone: None) -> None:
     until = datetime(2026, 10, 16, 12, 30, tzinfo=UTC)
     items = mm.build_menu(snapshot=None, consecutive_failures=3, muted_until=until)
     assert labels(items) == [

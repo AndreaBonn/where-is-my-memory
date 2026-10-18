@@ -91,3 +91,17 @@ def test_language_exported_by_a_test_never_reaches_the_next(
 
 def test_language_is_absent_again_in_the_next_test() -> None:
     assert "LANGUAGE" not in os.environ
+
+
+def test_log_field_errors_warns_with_the_field_name_and_its_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.WARNING):
+        app._log_field_errors(errors={"x": "boom"})
+    assert "Invalid configuration field x: boom" in caplog.text
+
+
+def test_log_field_errors_without_errors_logs_nothing(caplog: pytest.LogCaptureFixture) -> None:
+    with caplog.at_level(logging.DEBUG):
+        app._log_field_errors(errors={})
+    assert caplog.records == []
