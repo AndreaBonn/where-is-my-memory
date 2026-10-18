@@ -9,7 +9,6 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc='Tray monitor for forgotten containers, dev servers and apps'
 arch=('any')
-url='https://github.com/AndreaBonn/where-is-my-memory'
 license=('GPL-3.0-or-later')
 # PyGObject, psutil and docker come from the distribution, never from PyPI (ADR-002).
 # gtk4 and libadwaita ship the GI typelibs (Gtk-4.0, Adw-1) that gir1.2-* provide on Debian.

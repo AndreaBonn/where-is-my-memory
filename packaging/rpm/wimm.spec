@@ -6,7 +6,6 @@ Version:        0.1.0
 Release:        1%{?dist}
 Summary:        Tray monitor for forgotten containers, dev servers and apps
 License:        GPL-3.0-or-later
-URL:            https://github.com/AndreaBonn/where-is-my-memory
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
 
