@@ -104,6 +104,7 @@ class GroupRow:
     subtitle: str
     detail: str
     technical: str
+    # Listed under "Da liberare": idle and with an action to take (F5).
     is_idle: bool
     reclaimable: str
     memory: str

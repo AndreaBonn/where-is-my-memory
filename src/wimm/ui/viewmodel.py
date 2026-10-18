@@ -177,7 +177,7 @@ def _group_row(*, group: Group, now: datetime) -> GroupRow:
         subtitle=_group_subtitle(group=group, now=now),
         detail=plain_reason(activity=group.activity, now=now),
         technical=_detail(group=group),
-        is_idle=group.activity.state is ActivityState.IDLE,
+        is_idle=_to_free(group=group),
         reclaimable=format_size(size=group.memory.reclaimable),
         memory=format_size(size=group.memory.used),
         risk=risk,
@@ -206,8 +206,13 @@ def _searchable(*, group: Group) -> str:
     return fold_text(text="\n".join(parts))
 
 
+def _to_free(*, group: Group) -> bool:
+    """F5: "Da liberare" lists what is idle and has an action; the rest only in "Tutto"."""
+    return group.activity.state is ActivityState.IDLE and group.primary_action is not None
+
+
 def _matches(*, group: Group, filters: RowFilters) -> bool:
-    if filters.only_idle and group.activity.state is not ActivityState.IDLE:
+    if filters.only_idle and not _to_free(group=group):
         return False
     if filters.categories and group.category not in filters.categories:
         return False
@@ -228,7 +233,7 @@ def _select_groups(*, snapshot: Snapshot, filters: RowFilters) -> list[Group]:
     # so the order never flickers.
     chosen.sort(
         key=lambda g: (
-            g.activity.state is not ActivityState.IDLE,
+            not _to_free(group=g),
             -g.memory.reclaimable,
             -g.memory.used,
             g.name.casefold(),
@@ -262,7 +267,7 @@ def build_rows(*, snapshot: Snapshot, filters: RowFilters, now: datetime) -> tup
 def filter_counts(*, snapshot: Snapshot) -> tuple[int, int]:
     """How many programs "Da liberare" and "Tutto" list, before the other filters (P5)."""
     everything = _select_groups(snapshot=snapshot, filters=RowFilters())
-    idle = sum(group.activity.state is ActivityState.IDLE for group in everything)
+    idle = sum(_to_free(group=group) for group in everything)
     return idle, len(everything)
 
 

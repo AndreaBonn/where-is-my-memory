@@ -740,6 +740,24 @@ def test_safe_button_names_the_programs_it_stops(snapshot: Snapshot) -> None:
     assert summary.safe_text == "Ferma b, c, a e un altro: non li usi e non perdi nulla."
 
 
+def test_an_idle_group_with_nothing_to_do_on_it_is_not_listed_as_to_free(
+    snapshot: Snapshot, now: datetime
+) -> None:
+    # F5: an idle terminal with "Nessuna azione" topped "Da liberare" and freed nothing.
+    groups = (
+        make_group("zsh", category=Category.TERMINAL, risk=None, reclaimable=286),
+        make_group("gitstatusd", reclaimable=13),
+    )
+    shot = with_groups(snapshot, *groups)
+
+    assert titles(shot, now, only_idle=True) == ["gitstatusd"]
+    assert sorted(titles(shot, now)) == ["gitstatusd", "zsh"]
+    assert filter_counts(snapshot=shot) == (1, 2)
+    # In "Tutto" it sits with the rest, not under the "Da liberare" heading.
+    rows = build_rows(snapshot=shot, filters=RowFilters(), now=now)
+    assert [(r.title, r.is_idle) for r in rows] == [("gitstatusd", True), ("zsh", False)]
+
+
 def test_filter_counts_count_actionable_idle_and_all(snapshot: Snapshot) -> None:
     groups = (
         make_group("idle"),

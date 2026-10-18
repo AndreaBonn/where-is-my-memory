@@ -14,7 +14,7 @@ from tests.ui.conftest import (
     wait_until,
 )
 from wimm.model.enums import GroupId
-from wimm.model.snapshot import Snapshot
+from wimm.model.snapshot import Group, Snapshot
 from wimm.ui.widgets.group_controls import IGNORE_BUTTON_NAME, SNOOZE_BUTTON_PREFIX
 from wimm.ui.window import MainWindow
 
@@ -24,8 +24,13 @@ GROUP = GroupId("srv")
 
 
 def one_group(*, ignored: bool = False, snoozed_until: datetime | None = None) -> Snapshot:
-    server = group(gid="srv", name="whitebox", members=(proc(pid=1, reclaimable=GB),))
+    server = actionable(group(gid="srv", name="whitebox", members=(proc(pid=1, reclaimable=GB),)))
     return snapshot(replace(server, ignored=ignored, snoozed_until=snoozed_until))
+
+
+def actionable(found: Group) -> Group:
+    """As assembly does: a group whose members can be stopped offers a stop itself."""
+    return replace(found, primary_action=found.members[0].actions[0])
 
 
 def open_group(window: MainWindow) -> None:
@@ -196,7 +201,7 @@ def test_controls_survive_a_change_in_the_group_members(window_factory: WindowFa
     before = named(window, IGNORE_BUTTON_NAME)
 
     members = (proc(pid=1, reclaimable=GB), proc(pid=2, reclaimable=GB))
-    service.publish(snapshot(group(gid="srv", name="whitebox", members=members)))
+    service.publish(snapshot(actionable(group(gid="srv", name="whitebox", members=members))))
     present_and_settle(window)
 
     assert named(window, IGNORE_BUTTON_NAME) is before
