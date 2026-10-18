@@ -3,6 +3,7 @@ from enum import StrEnum
 from types import MappingProxyType
 
 from wimm.i18n import N_, _
+from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind, Risk
 
 
@@ -27,6 +28,13 @@ class ConsequenceKey(StrEnum):
     BUILD = "build"
     VOLUME = "volume"
     CACHE = "cache"
+    CACHE_GIT = "cache_git"
+    CACHE_BUILD = "cache_build"
+    CACHE_GRADLE = "cache_gradle"
+    CACHE_BROWSERS = "cache_browsers"
+    CACHE_MAVEN = "cache_maven"
+    CACHE_JETBRAINS = "cache_jetbrains"
+    CACHE_UNLISTED = "cache_unlisted"
     TRASH = "trash"
     DEVDIR = "devdir"
     DEVDIR_REBUILD = "devdir_rebuild"
@@ -77,6 +85,24 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.BUILD: N_("Le prossime build saranno più lente."),
     ConsequenceKey.VOLUME: N_("I dati del volume vengono cancellati in modo definitivo."),
     ConsequenceKey.CACHE: N_("I pacchetti si riscaricano quando servono."),
+    ConsequenceKey.CACHE_GIT: N_("I repository git si riscaricano quando servono."),
+    ConsequenceKey.CACHE_BUILD: N_("Le prossime compilazioni saranno più lente."),
+    ConsequenceKey.CACHE_GRADLE: N_(
+        "Le dipendenze si riscaricano e la prossima build sarà più lenta."
+    ),
+    ConsequenceKey.CACHE_BROWSERS: N_("I browser si riscaricano alla prossima esecuzione."),
+    ConsequenceKey.CACHE_MAVEN: N_(
+        "Gli artefatti installati in locale con mvn install non si riscaricano da nessuna parte: "
+        "per riaverli serve ricostruire i progetti."
+    ),
+    ConsequenceKey.CACHE_JETBRAINS: N_(
+        "Gli IDE JetBrains ricostruiscono gli indici al prossimo avvio: "
+        "l'apertura dei progetti sarà più lenta."
+    ),
+    ConsequenceKey.CACHE_UNLISTED: N_(
+        "Questo tipo di cache non è stato classificato: potrebbe contenere dati "
+        "che non si riscaricano."
+    ),
     ConsequenceKey.TRASH: N_("I file nel cestino vengono eliminati in modo definitivo."),
     ConsequenceKey.DEVDIR: N_(
         "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
@@ -129,6 +155,27 @@ def devdir_consequence(*, folder_name: str, marker: str) -> str:
         return _(CONSEQUENCES[ConsequenceKey.DEVDIR])
     return _(CONSEQUENCES[ConsequenceKey.DEVDIR_REBUILD]).format(command=command)
 
+
+# R13: cleaning a cache is rated by its type. A type missing here is CAUTION (S18), never SAFE.
+CACHE_ASSESSMENTS: dict[CacheKind, tuple[Risk, ConsequenceKey]] = {
+    CacheKind.UV: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.NPM: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.PIP: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.THUMBNAILS: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.CARGO_REGISTRY: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.CARGO_GIT: (Risk.SAFE, ConsequenceKey.CACHE_GIT),
+    CacheKind.GRADLE: (Risk.SAFE, ConsequenceKey.CACHE_GRADLE),
+    CacheKind.MAVEN: (Risk.CAUTION, ConsequenceKey.CACHE_MAVEN),
+    CacheKind.GO_MOD: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.GO_BUILD: (Risk.SAFE, ConsequenceKey.CACHE_BUILD),
+    CacheKind.YARN: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.PNPM: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.BUN: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.CONDA: (Risk.SAFE, ConsequenceKey.CACHE),
+    CacheKind.PLAYWRIGHT: (Risk.SAFE, ConsequenceKey.CACHE_BROWSERS),
+    CacheKind.JETBRAINS: (Risk.CAUTION, ConsequenceKey.CACHE_JETBRAINS),
+}
+UNLISTED_CACHE_ASSESSMENT = (Risk.CAUTION, ConsequenceKey.CACHE_UNLISTED)
 
 STATIC_ASSESSMENTS: dict[ActionKind, tuple[Risk, ConsequenceKey]] = {
     ActionKind.CONTAINER_STOP: (Risk.SAFE, ConsequenceKey.STOP),

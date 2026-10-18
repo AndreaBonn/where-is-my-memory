@@ -2,8 +2,15 @@ from dataclasses import dataclass
 from typing import Literal
 
 from wimm.core.constants import DB_PROCESS_NAMES
-from wimm.core.risk_table import CONSEQUENCES, STATIC_ASSESSMENTS, ConsequenceKey
+from wimm.core.risk_table import (
+    CACHE_ASSESSMENTS,
+    CONSEQUENCES,
+    STATIC_ASSESSMENTS,
+    UNLISTED_CACHE_ASSESSMENT,
+    ConsequenceKey,
+)
 from wimm.i18n import _
+from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind, ActivityState, Category, Protection, Risk, protection_of
 from wimm.model.snapshot import ActionOffer
 
@@ -59,6 +66,7 @@ class RiskTarget:
     dangling: bool | None = None
     is_running: bool | None = None
     volume_names: tuple[str, ...] = ()
+    cache_kind: CacheKind | None = None
 
     def __post_init__(self) -> None:
         if self.kind == "container" and self.is_running is None:
@@ -178,6 +186,9 @@ def _resource_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessme
                 _(CONSEQUENCES[ConsequenceKey.STOP_TIMEOUT]),
             ),
         )
+    if action is ActionKind.CACHE_CLEAN and target.cache_kind is not None:
+        level, key = CACHE_ASSESSMENTS.get(target.cache_kind, UNLISTED_CACHE_ASSESSMENT)
+        return _assessment(level=level, key=key)
     level, key = STATIC_ASSESSMENTS[action]
     return _assessment(level=level, key=key)
 
