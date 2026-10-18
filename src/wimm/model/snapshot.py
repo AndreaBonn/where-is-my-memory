@@ -64,6 +64,9 @@ class ProcessMember(ImmutableModel):
     actions: tuple[ActionOffer, ...]
     has_documents: bool
     is_foreground: bool
+    # Keys of the recognised developer tool (``ToolLabel``/``ToolReason`` values), or None.
+    tool_label: str | None = None
+    tool_reason: str | None = None
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)

@@ -192,3 +192,44 @@ def test_build_groups_unrelated_processes_without_cwd_stay_apart_by_root_name() 
 )
 def test_paths_related_compares_whole_components(left: str, right: str, expected: bool) -> None:
     assert paths_related(left=left, right=right) is expected
+
+
+def daemon(pid: int, *, main_class: str, cwd: str) -> Pair:
+    proc = replace(
+        process(name="java", cwd=cwd, cmdline=("/usr/bin/java", "-Xmx512m", main_class)), pid=pid
+    )
+    return proc, CategoryDecision(category=Category.OTHER, reason_code="other")
+
+
+def test_gradle_daemons_form_one_group() -> None:
+    gradle = "org.gradle.launcher.daemon.bootstrap.GradleDaemon"
+    kotlin = "org.jetbrains.kotlin.daemon.KotlinCompileDaemon"
+    other_java = dev(40, name="java", cwd="/work/c", category=Category.OTHER)
+
+    groups = build(
+        pairs=(
+            daemon(10, main_class=gradle, cwd="/work/a"),
+            daemon(11, main_class=gradle, cwd="/work/b"),
+            daemon(20, main_class=kotlin, cwd="/work/a"),
+            other_java,
+        )
+    )
+
+    by_name = {item.name: item for item in groups}
+    assert set(by_name) == {"Gradle daemon", "Kotlin daemon", "java"}
+    assert by_name["Gradle daemon"].process_pids == (10, 11)
+    assert by_name["Kotlin daemon"].process_pids == (20,)
+    assert by_name["java"].process_pids == (40,)
+    assert {item.category for item in groups} == {Category.OTHER}
+    assert by_name["Gradle daemon"].explanation == ("2 processi: demone di build in background")
+
+
+def test_libpod_scope_without_api_forms_the_protected_podman_group() -> None:
+    proc = replace(process(), pid=30)
+    pair = (proc, CategoryDecision(category=Category.SYSTEM, reason_code="podman_unseen"))
+
+    groups = build(pairs=(pair, dev(31, category=Category.SYSTEM)))
+
+    assert sorted(item.name for item in groups) == ["Container Podman", "Servizi di sistema"]
+    podman = next(item for item in groups if item.name == "Container Podman")
+    assert (podman.category, podman.process_pids) == (Category.SYSTEM, (30,))

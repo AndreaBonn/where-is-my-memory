@@ -28,7 +28,18 @@ def test_protected_label_translates_the_name_but_never_the_key(
 ) -> None:
     proc = process(**proc_changes)  # type: ignore[arg-type]
 
-    assert protected_label(proc=proc, category=category, own_uid=OWN_UID) == expected
+    assert (
+        protected_label(proc=proc, category=category, own_uid=OWN_UID, reason_code="system")
+        == expected
+    )
+
+
+def test_protected_label_of_unseen_podman_scope_is_translated_with_a_fixed_key() -> None:
+    label = protected_label(
+        proc=process(), category=Category.SYSTEM, own_uid=OWN_UID, reason_code="podman_unseen"
+    )
+
+    assert label == ("podman-containers", "Podman containers")
 
 
 def test_protected_summary_reason_is_in_english() -> None:

@@ -9,6 +9,9 @@ from wimm.model.enums import Category, GroupId
 from wimm.model.raw import RawContainer, RawProcess
 
 from .categorize import CategoryDecision
+from .constants import REASON_PODMAN_UNSEEN
+from .text_tools import tool_name, tool_reason
+from .tool_labels import ToolLabel, tool_label
 
 COMPOSE_PROJECT_LABEL = "com.docker.compose.project"
 COMPOSE_WORKDIR_LABEL = "com.docker.compose.project.working_dir"
@@ -20,6 +23,7 @@ KEY_CLASS_FOLDER = "folder"
 KEY_CLASS_APP = "app"
 KEY_CLASS_ROOT_PROCESS = "root_process"
 KEY_CLASS_PROTECTED = "protected"
+KEY_CLASS_TOOL = "tool"
 AUDIO_PROCESS_NAMES = frozenset({"pipewire", "pipewire-pulse", "wireplumber", "pulseaudio"})
 ROOT_UID = 0
 # RF-07 labels of the System view: (key, display name to translate with ``_`` where shown).
@@ -29,6 +33,7 @@ LABEL_SESSION = ("session-gnome", N_("Sessione GNOME"))
 LABEL_OTHER_USERS = ("other-users", N_("Altri utenti"))
 LABEL_SYSTEM = ("system-services", N_("Servizi di sistema"))
 LABEL_SELF = ("self", "where-is-my-memory")
+LABEL_PODMAN = ("podman-containers", N_("Container Podman"))
 # Apps that already contain their children: an integrated shell is not a terminal one.
 SHELL_EXEMPT_CATEGORIES = frozenset({Category.DESKTOP_APP, Category.BROWSER})
 ID_PREFIX = "g_"
@@ -135,6 +140,7 @@ class Part:
     ports: tuple[int, ...] = ()
     lead_process: str | None = None
     process_names: tuple[str, ...] = ()
+    tool_reason: str | None = None
 
 
 def compose_part(*, project: str, members: list[RawContainer]) -> Part:
@@ -228,8 +234,23 @@ def fuse(*, containers: list[Part], processes: list[Part], own_home: str) -> lis
     return result
 
 
-def protected_label(*, proc: RawProcess, category: Category, own_uid: int) -> tuple[str, str]:
+GROUPED_TOOLS = frozenset({ToolLabel.GRADLE_DAEMON, ToolLabel.KOTLIN_DAEMON})
+
+
+def tool_group(*, proc: RawProcess) -> tuple[str, str, str] | None:
+    """(key, name, reason) of the group of build daemons a process belongs to, or None."""
+    found = tool_label(proc=proc)
+    if found is None or found[0] not in GROUPED_TOOLS:
+        return None
+    return found[0].value, tool_name(label=found[0]), tool_reason(reason=found[1])
+
+
+def protected_label(
+    *, proc: RawProcess, category: Category, own_uid: int, reason_code: str
+) -> tuple[str, str]:
     """RF-07 (key, name) of the System-view group a protected process belongs to."""
+    if reason_code == REASON_PODMAN_UNSEEN:
+        return LABEL_PODMAN[0], _(LABEL_PODMAN[1])
     if category is Category.SELF:
         return LABEL_SELF
     if category is Category.SESSION:

@@ -113,6 +113,8 @@ CGROUP_RECORD_PREFIX = "0::"
 DOCKER_SCOPE_PATTERNS = ("docker-*.scope",)
 PODMAN_SCOPE_PATTERNS = ("libpod-*.scope", "libpod-conmon-*.scope")
 PODMAN_SCOPE_TEMPLATE = "libpod-{container_id}.scope"
+PODMAN_SCOPE_PREFIX = "libpod-"
+PODMAN_CONMON_PREFIX = "conmon-"
 VTE_SCOPE_PATTERNS = ("vte-spawn-*.scope",)
 APP_SLICE = "app.slice"
 SESSION_SLICE = "session.slice"
@@ -143,6 +145,7 @@ REASON_TERMINAL_PROCESS = "terminal_process"
 REASON_OTHER = "other"
 REASON_USER_SERVICE = "user_service"
 REASON_DOCUMENT_APP_FROM_TERMINAL = "document_app_from_terminal"
+REASON_PODMAN_UNSEEN = "podman_unseen"
 
 BROWSER_NAMES = (
     "chrome",

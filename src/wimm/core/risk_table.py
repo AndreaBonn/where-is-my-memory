@@ -6,6 +6,8 @@ from wimm.i18n import N_, _
 from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind, Risk
 
+from .tool_labels import ToolLabel
+
 
 class ConsequenceKey(StrEnum):
     IDLE = "idle"
@@ -39,6 +41,12 @@ class ConsequenceKey(StrEnum):
     DEVDIR = "devdir"
     DEVDIR_REBUILD = "devdir_rebuild"
     OTHER = "other"
+    TOOL_BUSY = "tool_busy"
+    BUILD_DAEMON = "build_daemon"
+    LANGUAGE_SERVER = "language_server"
+    ANDROID_EMULATOR = "android_emulator"
+    VIRTUAL_MACHINE = "virtual_machine"
+    LOCAL_CLUSTER = "local_cluster"
 
 
 CONSEQUENCES: dict[ConsequenceKey, str] = {
@@ -62,6 +70,25 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
         "Se è un servizio, potrebbe riavviarsi da solo."
     ),
     ConsequenceKey.APP: N_("L'applicazione si chiude."),
+    ConsequenceKey.TOOL_BUSY: N_("Sta lavorando adesso: l'operazione in corso si interrompe."),
+    ConsequenceKey.BUILD_DAEMON: N_(
+        "Il daemon si ferma e riparte da solo alla prossima build, che sarà un po' più lenta."
+    ),
+    ConsequenceKey.LANGUAGE_SERVER: N_(
+        "L'editor lo rilancia da solo; per qualche secondo completamento e controlli "
+        "non rispondono."
+    ),
+    ConsequenceKey.ANDROID_EMULATOR: N_(
+        "L'emulatore si chiude senza spegnere il dispositivo: ciò che l'app in prova non ha "
+        "salvato si perde."
+    ),
+    ConsequenceKey.VIRTUAL_MACHINE: N_(
+        "La macchina virtuale si ferma di colpo, come staccando la corrente: lo stato del "
+        "sistema ospite non salvato si perde e il disco virtuale può danneggiarsi."
+    ),
+    ConsequenceKey.LOCAL_CLUSTER: N_(
+        "Il cluster locale si ferma: i carichi in esecuzione al suo interno si interrompono."
+    ),
     ConsequenceKey.TERMINAL: N_(
         "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
     ),
@@ -176,6 +203,19 @@ CACHE_ASSESSMENTS: dict[CacheKind, tuple[Risk, ConsequenceKey]] = {
     CacheKind.JETBRAINS: (Risk.CAUTION, ConsequenceKey.CACHE_JETBRAINS),
 }
 UNLISTED_CACHE_ASSESSMENT = (Risk.CAUTION, ConsequenceKey.CACHE_UNLISTED)
+
+# R19: risk of terminating a recognised tool. SAFE means it comes back by itself (a build
+# daemon on the next build, a language server when the editor relaunches it) and loses no
+# user data; it becomes CAUTION while the tool is working. The guest state of a VM is lost.
+TOOL_ASSESSMENTS: dict[ToolLabel, tuple[Risk, ConsequenceKey]] = {
+    ToolLabel.GRADLE_DAEMON: (Risk.SAFE, ConsequenceKey.BUILD_DAEMON),
+    ToolLabel.KOTLIN_DAEMON: (Risk.SAFE, ConsequenceKey.BUILD_DAEMON),
+    ToolLabel.LANGUAGE_SERVER: (Risk.SAFE, ConsequenceKey.LANGUAGE_SERVER),
+    ToolLabel.ANDROID_EMULATOR: (Risk.CAUTION, ConsequenceKey.ANDROID_EMULATOR),
+    ToolLabel.VIRTUAL_MACHINE: (Risk.DANGER, ConsequenceKey.VIRTUAL_MACHINE),
+    ToolLabel.KIND_CLUSTER: (Risk.CAUTION, ConsequenceKey.LOCAL_CLUSTER),
+    ToolLabel.MINIKUBE_CLUSTER: (Risk.CAUTION, ConsequenceKey.LOCAL_CLUSTER),
+}
 
 STATIC_ASSESSMENTS: dict[ActionKind, tuple[Risk, ConsequenceKey]] = {
     ActionKind.CONTAINER_STOP: (Risk.SAFE, ConsequenceKey.STOP),

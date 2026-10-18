@@ -43,7 +43,14 @@ from .assemble_members import ProcessFacts, build_container_member, build_proces
 from .categorize import CategoryDecision
 from .constants import PRESSURE_CRITICAL_PCT, PRESSURE_WARNING_PCT
 from .grouping import GroupDraft
-from .grouping_keys import LABEL_AUDIO, LABEL_OTHER_USERS, LABEL_SELF, LABEL_SESSION, LABEL_SYSTEM
+from .grouping_keys import (
+    LABEL_AUDIO,
+    LABEL_OTHER_USERS,
+    LABEL_PODMAN,
+    LABEL_SELF,
+    LABEL_SESSION,
+    LABEL_SYSTEM,
+)
 from .memory import group_memory, memory_summary, pressure, reclaimable_now
 from .risk import RiskTarget, TargetKind, available_actions, group_primary_action
 
@@ -59,6 +66,7 @@ PROTECTED_REASONS: Mapping[str, str] = {
     LABEL_OTHER_USERS[0]: N_("processi di altri utenti, non modificabili da qui"),
     LABEL_SYSTEM[0]: N_("servizio di sistema"),
     LABEL_SELF[0]: N_("questa applicazione"),
+    LABEL_PODMAN[0]: N_("container Podman che il motore non mostra, non modificabili da qui"),
 }
 
 

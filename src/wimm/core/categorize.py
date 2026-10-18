@@ -8,6 +8,7 @@ from .categorize_tools import (
     CategoryDecision,
     ancestors,
     is_terminal,
+    libpod_container_id,
     process_names,
     rule_ai_cli,
     rule_listen,
@@ -26,6 +27,7 @@ from .constants import (
     REASON_ANCESTOR,
     REASON_EXCLUDED,
     REASON_OTHER,
+    REASON_PODMAN_UNSEEN,
     REASON_PROTECTED_NAME,
     REASON_SELF,
     REASON_SESSION,
@@ -58,6 +60,9 @@ def _early_decision(proc: RawProcess, context: CategorizationContext) -> Categor
         return CategoryDecision(category=Category.SELF, reason_code=REASON_SELF)
     if any(_matches(name=part, patterns=DOCKER_SCOPE_PATTERNS) for part in parts):
         return CategoryDecision(category=None, reason_code=REASON_EXCLUDED)
+    podman = _podman_decision(proc=proc, context=context)
+    if podman is not None:
+        return podman
     if proc.uid != context.own_uid or USER_UNIT_TEMPLATE.format(uid=context.own_uid) not in parts:
         return CategoryDecision(category=Category.SYSTEM, reason_code=REASON_SYSTEM)
     if _is_session(proc=proc):
@@ -70,6 +75,20 @@ def _early_decision(proc: RawProcess, context: CategorizationContext) -> Categor
     if is_direct_user_service(proc=proc) and not is_terminal(proc=proc):
         return CategoryDecision(category=Category.OTHER, reason_code=REASON_USER_SERVICE)
     return None
+
+
+def _podman_decision(proc: RawProcess, context: CategorizationContext) -> CategoryDecision | None:
+    """Podman scopes: the container's memory is counted by the engine, or else protected.
+
+    Without the engine's view nothing counts that memory, so the process stays visible
+    as protected SYSTEM: no action can reach a pid owned by a container.
+    """
+    container_id = libpod_container_id(proc=proc)
+    if container_id is None:
+        return None
+    if container_id in context.engine_container_ids:
+        return CategoryDecision(category=None, reason_code=REASON_EXCLUDED)
+    return CategoryDecision(category=Category.SYSTEM, reason_code=REASON_PODMAN_UNSEEN)
 
 
 def _is_session(proc: RawProcess) -> bool:

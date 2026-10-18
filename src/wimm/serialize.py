@@ -167,6 +167,8 @@ SCHEMAS: dict[type, Schema] = {
         "actions": ACTIONS,
         "has_documents": BOOLEAN,
         "is_foreground": BOOLEAN,
+        "tool_label": nullable(decoder=TEXT),
+        "tool_reason": nullable(decoder=TEXT),
     },
     m.ContainerMember: {
         "kind": literal(expected="container"),

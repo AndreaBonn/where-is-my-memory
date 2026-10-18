@@ -28,6 +28,7 @@ from .grouping_keys import (
     KEY_CLASS_FOLDER,
     KEY_CLASS_PROTECTED,
     KEY_CLASS_ROOT_PROCESS,
+    KEY_CLASS_TOOL,
     KEY_SEPARATOR,
     PROTECTED_CATEGORIES,
     SHELL_EXEMPT_CATEGORIES,
@@ -41,6 +42,7 @@ from .grouping_keys import (
     protected_label,
     root_process,
     stable_group_id,
+    tool_group,
 )
 from .text import GroupFacts, explain_group
 
@@ -89,6 +91,7 @@ class _Placement:
     key: str
     name: str
     root: str | None = None
+    tool_reason: str | None = None
 
 
 def _place_app(
@@ -147,13 +150,33 @@ def _place_dev(*, proc: RawProcess, member: Category, grouping: GroupingInput) -
     )
 
 
+def _place_other(*, proc: RawProcess, member: Category) -> _Placement:
+    """Build daemons gather by tool; anything else waits for its root process (rule 6)."""
+    tool = tool_group(proc=proc) if member is Category.OTHER else None
+    key, name, reason = tool or (UNROOTED, "", None)
+    return _Placement(
+        proc=proc,
+        member=member,
+        bucket=Category.OTHER,
+        key_class=KEY_CLASS_ROOT_PROCESS if tool is None else KEY_CLASS_TOOL,
+        key=key,
+        name=name,
+        tool_reason=reason,
+    )
+
+
 def _place(*, pair: Pair, by_pid: Mapping[int, Pair], grouping: GroupingInput) -> _Placement:
     proc, decision = pair
     category = decision.category
     if category is None:
         raise ValueError(f"excluded process {proc.pid} must be removed before grouping")
     if category in PROTECTED_CATEGORIES:
-        key, name = protected_label(proc=proc, category=category, own_uid=grouping.own_uid)
+        key, name = protected_label(
+            proc=proc,
+            category=category,
+            own_uid=grouping.own_uid,
+            reason_code=decision.reason_code,
+        )
         return _Placement(
             proc=proc,
             member=category,
@@ -168,14 +191,7 @@ def _place(*, pair: Pair, by_pid: Mapping[int, Pair], grouping: GroupingInput) -
         )
     if category in DEV_CATEGORIES:
         return _place_dev(proc=proc, member=category, grouping=grouping)
-    return _Placement(
-        proc=proc,
-        member=category,
-        bucket=Category.OTHER,
-        key_class=KEY_CLASS_ROOT_PROCESS,
-        key=UNROOTED,
-        name="",
-    )
+    return _place_other(proc=proc, member=category)
 
 
 def _resolve_unrooted(*, placements: list[_Placement]) -> list[_Placement]:
@@ -225,6 +241,7 @@ def _process_parts(*, grouping: GroupingInput) -> list[Part]:
                 ports=tuple(ports),
                 lead_process=items[0].proc.name,
                 process_names=tuple(item.proc.name for item in items),
+                tool_reason=items[0].tool_reason,
             )
         )
     return parts
@@ -241,6 +258,7 @@ def _to_draft(*, part: Part) -> GroupDraft:
         compose_project=part.compose_project,
         lead_process=part.lead_process,
         process_names=part.process_names,
+        tool_reason=part.tool_reason,
     )
     return GroupDraft(
         id=stable_group_id(key_class=part.key_class, key=part.key),

@@ -37,6 +37,7 @@ class GroupFacts:
     compose_project: str | None
     lead_process: str | None
     process_names: tuple[str, ...] = ()
+    tool_reason: str | None = None
 
 
 def _count_processes(*, count: int, lead: str | None) -> str:
@@ -114,6 +115,8 @@ def _names_phrase(*, names: tuple[str, ...]) -> str:
 
 
 def _explain_other(*, facts: GroupFacts) -> str:
+    if facts.tool_reason is not None:
+        return f"{_count_processes(count=facts.processes, lead=None)}: {facts.tool_reason}"
     processes = _count_processes(count=facts.processes, lead=facts.lead_process)
     return ngettext(
         "{processes} non riconducibile a un progetto o a un'app",

@@ -17,11 +17,15 @@ from .constants import (
     OLLAMA_NAME,
     OLLAMA_RUN_COMMAND,
     OPTION_PREFIX,
+    PODMAN_CONMON_PREFIX,
+    PODMAN_SCOPE_PATTERNS,
+    PODMAN_SCOPE_PREFIX,
     REASON_AI_CLI,
     REASON_DOCUMENT_APP_FROM_TERMINAL,
     REASON_LISTEN,
     REASON_SCOPE,
     REASON_TERMINAL_PROCESS,
+    SCOPE_SUFFIX,
     SHELL_NAMES,
     TERMINAL_APPIDS,
     TERMINAL_NAMES,
@@ -46,6 +50,18 @@ class CategorizationContext:
     listen_ports_by_pid: Mapping[int, frozenset[int]]
     extra_protected_names: tuple[str, ...]
     desktop_categories: Mapping[str, tuple[str, ...]]
+    # Ids of the containers the engine API lists; empty when it is not reachable. A
+    # `libpod-*.scope` process is dropped only if its container is in here.
+    engine_container_ids: frozenset[str] = frozenset()
+
+
+def libpod_container_id(proc: RawProcess) -> str | None:
+    """Container id named by a Podman scope (container or conmon) of the process, if any."""
+    for part in _components(proc=proc):
+        if _matches(name=part, patterns=PODMAN_SCOPE_PATTERNS):
+            name = part.removeprefix(PODMAN_SCOPE_PREFIX).removeprefix(PODMAN_CONMON_PREFIX)
+            return name.removesuffix(SCOPE_SUFFIX)
+    return None
 
 
 def ancestors(proc: RawProcess, context: CategorizationContext) -> Iterator[RawProcess]:

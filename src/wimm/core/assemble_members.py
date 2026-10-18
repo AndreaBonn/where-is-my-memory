@@ -11,6 +11,7 @@ from wimm.model.snapshot import ActionOffer, ActivityAssessment, ContainerMember
 from .categorize import CategoryDecision, has_documents, is_terminal_shell
 from .memory import process_memory
 from .risk import RiskTarget, available_actions
+from .tool_labels import ToolLabel, ToolLabelResult, tool_label
 
 # `docker stop` works on all of these; anything else is not alive.
 STOPPABLE_STATES = frozenset({"running", "paused", "restarting"})
@@ -45,7 +46,11 @@ def process_memory_use(*, proc: RawProcess) -> MemoryUse:
 
 
 def _process_target(
-    *, facts: ProcessFacts, category: Category, desktop_categories: Mapping[str, tuple[str, ...]]
+    *,
+    facts: ProcessFacts,
+    category: Category,
+    desktop_categories: Mapping[str, tuple[str, ...]],
+    tool: ToolLabel | None,
 ) -> RiskTarget:
     proc = facts.proc
     return RiskTarget(
@@ -59,11 +64,20 @@ def _process_target(
         is_terminal_shell=is_terminal_shell(proc=proc),
         process_name=proc.name,
         cwd=proc.cwd,
+        tool=tool,
     )
 
 
+def _offered_actions(*, facts: ProcessFacts, target: RiskTarget) -> tuple[ActionOffer, ...]:
+    # No start time, no fingerprint (spec 8.2): the action could hit a recycled pid.
+    return () if facts.proc.create_time is None else available_actions(target=target)
+
+
 def _process_member(
-    *, facts: ProcessFacts, target: RiskTarget, actions: tuple[ActionOffer, ...]
+    *,
+    facts: ProcessFacts,
+    target: RiskTarget,
+    found: ToolLabelResult | None,
 ) -> ProcessMember:
     proc = facts.proc
     return ProcessMember(
@@ -77,9 +91,11 @@ def _process_member(
         listen_ports=tuple(sorted(facts.listen_ports)),
         memory=process_memory_use(proc=proc),
         activity=facts.activity,
-        actions=actions,
+        actions=_offered_actions(facts=facts, target=target),
         has_documents=target.has_documents,
         is_foreground=target.is_foreground_on_tty,
+        tool_label=None if target.tool is None else target.tool.value,
+        tool_reason=None if found is None else found[1].value,
     )
 
 
@@ -103,10 +119,14 @@ def build_process_member(
     category = facts.decision.category
     if category is None:
         raise ValueError(f"excluded process {facts.proc.pid} cannot be a group member")
-    target = _process_target(facts=facts, category=category, desktop_categories=desktop_categories)
-    # No start time, no fingerprint (spec 8.2): the action could hit a recycled pid.
-    actions = () if facts.proc.create_time is None else available_actions(target=target)
-    return _process_member(facts=facts, target=target, actions=actions)
+    found = tool_label(proc=facts.proc)
+    target = _process_target(
+        facts=facts,
+        category=category,
+        desktop_categories=desktop_categories,
+        tool=None if found is None else found[0],
+    )
+    return _process_member(facts=facts, target=target, found=found)
 
 
 def build_container_member(

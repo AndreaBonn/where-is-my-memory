@@ -36,7 +36,7 @@
          "memory": {"used": 180000000, "reclaimable": 165000000},
          "activity": {"state": "idle", "since": "2026-10-16T05:12:00+02:00", "reason": "Nessuna nuova connessione"},
          "actions": [{"kind": "process_terminate", "risk": "safe"}],
-         "has_documents": false, "is_foreground": true}
+         "has_documents": false, "is_foreground": true, "tool_label": null, "tool_reason": null}
       ]
     }
   ],

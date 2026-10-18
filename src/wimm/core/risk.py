@@ -6,9 +6,11 @@ from wimm.core.risk_table import (
     CACHE_ASSESSMENTS,
     CONSEQUENCES,
     STATIC_ASSESSMENTS,
+    TOOL_ASSESSMENTS,
     UNLISTED_CACHE_ASSESSMENT,
     ConsequenceKey,
 )
+from wimm.core.tool_labels import ToolLabel
 from wimm.i18n import _
 from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind, ActivityState, Category, Protection, Risk, protection_of
@@ -67,6 +69,7 @@ class RiskTarget:
     is_running: bool | None = None
     volume_names: tuple[str, ...] = ()
     cache_kind: CacheKind | None = None
+    tool: ToolLabel | None = None
 
     def __post_init__(self) -> None:
         if self.kind == "container" and self.is_running is None:
@@ -104,7 +107,11 @@ def _app_assessment(target: RiskTarget) -> RiskAssessment:
 
 def _process_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessment:
     if action is ActionKind.PROCESS_KILL:
-        dangerous = target.has_documents or target.process_name in DB_PROCESS_NAMES
+        dangerous = (
+            target.has_documents
+            or target.process_name in DB_PROCESS_NAMES
+            or (target.tool is not None and TOOL_ASSESSMENTS[target.tool][0] is Risk.DANGER)
+        )
         return _assessment(
             level=Risk.DANGER if dangerous else Risk.CAUTION, key=ConsequenceKey.KILL
         )
@@ -117,9 +124,21 @@ def _process_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessmen
     return result
 
 
+def _tool_assessment(*, tool: ToolLabel, activity: ActivityState) -> RiskAssessment:
+    level, key = TOOL_ASSESSMENTS[tool]
+    if level is Risk.SAFE and activity is not ActivityState.IDLE:
+        return RiskAssessment(
+            level=Risk.CAUTION,
+            consequences=(_(CONSEQUENCES[ConsequenceKey.TOOL_BUSY]), _(CONSEQUENCES[key])),
+        )
+    return _assessment(level=level, key=key)
+
+
 def _process_category_assessment(target: RiskTarget) -> RiskAssessment:
     if target.has_documents or target.kind in ("desktop_app", "browser", "terminal"):
         return _app_assessment(target=target)
+    if target.tool is not None:
+        return _tool_assessment(tool=target.tool, activity=target.activity)
     if target.category is Category.AI_CLI:
         return _assessment(level=Risk.CAUTION, key=ConsequenceKey.AGENT)
     if target.category not in DEVELOPMENT_CATEGORIES:

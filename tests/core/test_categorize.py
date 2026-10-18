@@ -2,13 +2,15 @@ from dataclasses import replace
 
 import pytest
 
+from wimm.core.assemble_members import ProcessFacts, build_process_member
 from wimm.core.categorize import (
     CategorizationContext,
     categorize_process,
     has_documents,
     is_terminal_shell,
 )
-from wimm.model.enums import Category, Protection, protection_of
+from wimm.model.enums import ActivityState, Category, Protection, protection_of
+from wimm.model.snapshot import ActivityAssessment
 
 from .helpers import DOCKER, FIREFOX, OLLAMA, TERMINAL, USER_PATH, VTE, ProcessChanges, process
 
@@ -91,6 +93,34 @@ def test_docker_scope_inside_user_slice_is_excluded() -> None:
 def test_own_pid_wins_over_docker_exclusion() -> None:
     decision = categorize_process(proc=process(pid=999, cgroup=DOCKER), context=context())
     assert decision.category is Category.SELF
+
+
+PODMAN_ID = "c0ffee00" * 8
+LIBPOD_SCOPES = (
+    USER_PATH + f"user.slice/libpod-{PODMAN_ID}.scope",
+    USER_PATH + f"user.slice/libpod-conmon-{PODMAN_ID}.scope",
+)
+
+
+@pytest.mark.parametrize("cgroup", LIBPOD_SCOPES)
+def test_libpod_scope_seen_by_engine_is_excluded(cgroup: str) -> None:
+    seen = replace(context(), engine_container_ids=frozenset({PODMAN_ID}))
+    decision = categorize_process(proc=process(cgroup=cgroup), context=seen)
+    assert (decision.category, decision.reason_code) == (None, "excluded")
+
+
+@pytest.mark.parametrize("cgroup", LIBPOD_SCOPES)
+@pytest.mark.parametrize("listed", [frozenset[str](), frozenset({"someone-else"})])
+def test_libpod_scope_without_api_is_a_protected_group_without_actions(
+    cgroup: str, listed: frozenset[str]
+) -> None:
+    unseen = replace(context(), engine_container_ids=listed)
+    proc = process(cgroup=cgroup)
+    decision = categorize_process(proc=proc, context=unseen)
+    assert (decision.category, decision.reason_code) == (Category.SYSTEM, "podman_unseen")
+    activity = ActivityAssessment(state=ActivityState.UNKNOWN, since=None, reason="x")
+    facts = ProcessFacts(proc=proc, decision=decision, listen_ports=frozenset(), activity=activity)
+    assert build_process_member(facts=facts, desktop_categories={}).actions == ()
 
 
 @pytest.mark.parametrize(

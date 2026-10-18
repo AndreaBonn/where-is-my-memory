@@ -69,43 +69,51 @@ msgstr "Must be {number}, at least {lower}{unit}"
 msgid "Deve essere {number} fra {lower} e {upper}{unit}"
 msgstr "Must be {number} between {lower} and {upper}{unit}"
 
-#: src/wimm/core/assemble.py:57
+#: src/wimm/core/assemble.py:64
 msgid "audio e media del desktop"
 msgstr "desktop audio and media"
 
-#: src/wimm/core/assemble.py:58
+#: src/wimm/core/assemble.py:65
 msgid "componente del desktop"
 msgstr "desktop component"
 
-#: src/wimm/core/assemble.py:59
+#: src/wimm/core/assemble.py:66
 msgid "processi di altri utenti, non modificabili da qui"
 msgstr "processes of other users, which cannot be changed from here"
 
-#: src/wimm/core/assemble.py:60
+#: src/wimm/core/assemble.py:67
 msgid "servizio di sistema"
 msgstr "system service"
 
-#: src/wimm/core/assemble.py:61
+#: src/wimm/core/assemble.py:68
 msgid "questa applicazione"
 msgstr "this application"
 
-#: src/wimm/core/grouping_keys.py:27
+#: src/wimm/core/assemble.py:69
+msgid "container Podman che il motore non mostra, non modificabili da qui"
+msgstr "Podman containers the engine does not list, not modifiable from here"
+
+#: src/wimm/core/grouping_keys.py:31
 msgid "Audio"
 msgstr "Audio"
 
-#: src/wimm/core/grouping_keys.py:28
+#: src/wimm/core/grouping_keys.py:32
 msgid "Sessione GNOME"
 msgstr "GNOME session"
 
-#: src/wimm/core/grouping_keys.py:29
+#: src/wimm/core/grouping_keys.py:33
 msgid "Altri utenti"
 msgstr "Other users"
 
-#: src/wimm/core/grouping_keys.py:30
+#: src/wimm/core/grouping_keys.py:34
 msgid "Servizi di sistema"
 msgstr "System services"
 
-#: src/wimm/core/notify_rules.py:87 src/wimm/core/text_groups.py:52
+#: src/wimm/core/grouping_keys.py:36
+msgid "Container Podman"
+msgstr "Podman containers"
+
+#: src/wimm/core/notify_rules.py:87 src/wimm/core/text_groups.py:53
 #, python-brace-format
 msgid "{head} e {last}"
 msgstr "{head} and {last}"
@@ -211,132 +219,156 @@ msgstr "{name} (pid {pid})"
 msgid "Lo strumento che pulisce questa cache non è installato"
 msgstr "The tool that cleans this cache is not installed"
 
-#: src/wimm/core/risk.py:170
+#: src/wimm/core/risk.py:189
 msgid "associati al progetto"
 msgstr "linked to the project"
 
-#: src/wimm/core/risk_table.py:45
+#: src/wimm/core/risk_table.py:53
 msgid "Il server si ferma."
 msgstr "The server stops."
 
-#: src/wimm/core/risk_table.py:46
+#: src/wimm/core/risk_table.py:54
 msgid "È in uso adesso: chi lo sta usando perde la connessione."
 msgstr "It is in use right now: whoever is using it loses the connection."
 
-#: src/wimm/core/risk_table.py:48
+#: src/wimm/core/risk_table.py:56
 msgid "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
 msgstr "It is running in the foreground in a terminal: you might interrupt work in progress."
 
-#: src/wimm/core/risk_table.py:51
+#: src/wimm/core/risk_table.py:59
 msgid "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
 msgstr "The agent session closes: unsaved work in the conversation is lost."
 
-#: src/wimm/core/risk_table.py:56
+#: src/wimm/core/risk_table.py:64
 msgid "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede dal salvataggio automatico, che può essere indietro di qualche secondo."
 msgstr "The browser closes without a normal shutdown: when reopened it restores the tabs from its automatic save, which may be a few seconds behind."
 
-#: src/wimm/core/risk_table.py:59
+#: src/wimm/core/risk_table.py:67
 msgid "Eventuali file non salvati possono andare persi."
 msgstr "Any unsaved files may be lost."
 
-#: src/wimm/core/risk_table.py:61
+#: src/wimm/core/risk_table.py:69
 msgid "Il programma si ferma: ciò che ha in memoria e non ha salvato va perso. Se è un servizio, potrebbe riavviarsi da solo."
 msgstr "The program stops: whatever it holds in memory and has not saved is lost. If it is a service, it might restart on its own."
 
-#: src/wimm/core/risk_table.py:64
+#: src/wimm/core/risk_table.py:72
 msgid "L'applicazione si chiude."
 msgstr "The application closes."
 
-#: src/wimm/core/risk_table.py:66
+#: src/wimm/core/risk_table.py:73
+msgid "Sta lavorando adesso: l'operazione in corso si interrompe."
+msgstr "It is working right now: the operation in progress is interrupted."
+
+#: src/wimm/core/risk_table.py:75
+msgid "Il daemon si ferma e riparte da solo alla prossima build, che sarà un po' più lenta."
+msgstr "The daemon stops and starts again by itself on the next build, which will be a bit slower."
+
+#: src/wimm/core/risk_table.py:78
+msgid "L'editor lo rilancia da solo; per qualche secondo completamento e controlli non rispondono."
+msgstr "The editor relaunches it by itself; for a few seconds completion and checks do not respond."
+
+#: src/wimm/core/risk_table.py:82
+msgid "L'emulatore si chiude senza spegnere il dispositivo: ciò che l'app in prova non ha salvato si perde."
+msgstr "The emulator closes without shutting the device down: whatever the app under test has not saved is lost."
+
+#: src/wimm/core/risk_table.py:86
+msgid "La macchina virtuale si ferma di colpo, come staccando la corrente: lo stato del sistema ospite non salvato si perde e il disco virtuale può danneggiarsi."
+msgstr "The virtual machine stops abruptly, as if the power were cut: the unsaved state of the guest system is lost and the virtual disk may be damaged."
+
+#: src/wimm/core/risk_table.py:90
+msgid "Il cluster locale si ferma: i carichi in esecuzione al suo interno si interrompono."
+msgstr "The local cluster stops: the workloads running inside it are interrupted."
+
+#: src/wimm/core/risk_table.py:93
 msgid "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
 msgstr "All the terminal windows and tabs close, along with the programs inside them."
 
-#: src/wimm/core/risk_table.py:68
+#: src/wimm/core/risk_table.py:95
 msgid "Chiusura immediata senza salvataggio."
 msgstr "Immediate shutdown without saving."
 
-#: src/wimm/core/risk_table.py:69
+#: src/wimm/core/risk_table.py:96
 msgid "Il container si ferma; dati e configurazione restano."
 msgstr "The container stops; its data and configuration remain."
 
-#: src/wimm/core/risk_table.py:71
+#: src/wimm/core/risk_table.py:98
 msgid "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
 msgstr "If the container does not stop by itself, Docker ends it after 10 seconds."
 
-#: src/wimm/core/risk_table.py:73
+#: src/wimm/core/risk_table.py:100
 msgid "Il container riparte con la configurazione di prima."
 msgstr "The container starts again with its previous configuration."
 
-#: src/wimm/core/risk_table.py:75
+#: src/wimm/core/risk_table.py:102
 msgid "Le modifiche fatte dentro il container fuori dai volumi si perdono."
 msgstr "Changes made inside the container outside its volumes are lost."
 
-#: src/wimm/core/risk_table.py:77
+#: src/wimm/core/risk_table.py:104
 msgid "I container vengono rimossi; i volumi con i dati restano."
 msgstr "The containers are removed; the volumes with the data remain."
 
-#: src/wimm/core/risk_table.py:79
+#: src/wimm/core/risk_table.py:106
 #, python-brace-format
 msgid "I dati dei volumi {volumes} vengono cancellati in modo definitivo."
 msgstr "The data in the volumes {volumes} is permanently deleted."
 
-#: src/wimm/core/risk_table.py:81
+#: src/wimm/core/risk_table.py:108
 msgid "Si riscarica dal registry quando serve."
 msgstr "It is downloaded again from the registry when needed."
 
-#: src/wimm/core/risk_table.py:83
+#: src/wimm/core/risk_table.py:110
 msgid "Immagine costruita in locale, non è su un registry: per riaverla serve ricostruirla."
 msgstr "Image built locally, not on a registry: to get it back you have to build it again."
 
-#: src/wimm/core/risk_table.py:85
+#: src/wimm/core/risk_table.py:112
 msgid "Le prossime build saranno più lente."
 msgstr "The next builds will be slower."
 
-#: src/wimm/core/risk_table.py:86
+#: src/wimm/core/risk_table.py:113
 msgid "I dati del volume vengono cancellati in modo definitivo."
 msgstr "The volume data is permanently deleted."
 
-#: src/wimm/core/risk_table.py:87
+#: src/wimm/core/risk_table.py:114
 msgid "I pacchetti si riscaricano quando servono."
 msgstr "Packages are downloaded again when needed."
 
-#: src/wimm/core/risk_table.py:88
+#: src/wimm/core/risk_table.py:115
 msgid "I repository git si riscaricano quando servono."
 msgstr "Git repositories are downloaded again when needed."
 
-#: src/wimm/core/risk_table.py:89
+#: src/wimm/core/risk_table.py:116
 msgid "Le prossime compilazioni saranno più lente."
 msgstr "The next compilations will be slower."
 
-#: src/wimm/core/risk_table.py:91
+#: src/wimm/core/risk_table.py:118
 msgid "Le dipendenze si riscaricano e la prossima build sarà più lenta."
 msgstr "Dependencies are downloaded again and the next build will be slower."
 
-#: src/wimm/core/risk_table.py:93
+#: src/wimm/core/risk_table.py:120
 msgid "I browser si riscaricano alla prossima esecuzione."
 msgstr "Browsers are downloaded again the next time they run."
 
-#: src/wimm/core/risk_table.py:95
+#: src/wimm/core/risk_table.py:122
 msgid "Gli artefatti installati in locale con mvn install non si riscaricano da nessuna parte: per riaverli serve ricostruire i progetti."
 msgstr "Artifacts installed locally with mvn install cannot be downloaded from anywhere: to get them back you need to rebuild the projects."
 
-#: src/wimm/core/risk_table.py:99
+#: src/wimm/core/risk_table.py:126
 msgid "Gli IDE JetBrains ricostruiscono gli indici al prossimo avvio: l'apertura dei progetti sarà più lenta."
 msgstr "JetBrains IDEs rebuild their indexes at the next start: opening projects will be slower."
 
-#: src/wimm/core/risk_table.py:103
+#: src/wimm/core/risk_table.py:130
 msgid "Questo tipo di cache non è stato classificato: potrebbe contenere dati che non si riscaricano."
 msgstr "This cache type has not been classified: it may hold data that cannot be downloaded again."
 
-#: src/wimm/core/risk_table.py:106
+#: src/wimm/core/risk_table.py:133
 msgid "I file nel cestino vengono eliminati in modo definitivo."
 msgstr "The files in the trash are permanently deleted."
 
-#: src/wimm/core/risk_table.py:108
+#: src/wimm/core/risk_table.py:135
 msgid "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
 msgstr "You need to reinstall the dependencies (npm install or uv sync) before using the project."
 
-#: src/wimm/core/risk_table.py:111
+#: src/wimm/core/risk_table.py:138
 #, python-brace-format
 msgid "Per usare di nuovo il progetto serve ricostruire la cartella con {command}."
 msgstr "To use the project again, rebuild the folder with {command}."
@@ -553,70 +585,114 @@ msgstr "listening on port {port}"
 msgid "in ascolto sulle porte {ports}"
 msgstr "listening on ports {ports}"
 
-#: src/wimm/core/text_groups.py:44
+#: src/wimm/core/text_groups.py:45
 msgid "un processo"
 msgstr "one process"
 
-#: src/wimm/core/text_groups.py:44
+#: src/wimm/core/text_groups.py:45
 #, python-brace-format
 msgid "un processo {lead}"
 msgstr "one {lead} process"
 
-#: src/wimm/core/text_groups.py:45
+#: src/wimm/core/text_groups.py:46
 #, python-brace-format
 msgid "{count} processi"
 msgstr "{count} processes"
 
-#: src/wimm/core/text_groups.py:65
+#: src/wimm/core/text_groups.py:66
 #, python-brace-format
 msgid "in {folder}"
 msgstr "in {folder}"
 
-#: src/wimm/core/text_groups.py:70
+#: src/wimm/core/text_groups.py:71
 #, python-brace-format
 msgid "container '{name}' senza progetto compose"
 msgstr "container '{name}' with no compose project"
 
-#: src/wimm/core/text_groups.py:72
+#: src/wimm/core/text_groups.py:73
 #, python-brace-format
 msgid "progetto compose '{project}' con {count} container"
 msgid_plural "progetto compose '{project}' con {count} container"
 msgstr[0] "compose project '{project}' with {count} container"
 msgstr[1] "compose project '{project}' with {count} containers"
 
-#: src/wimm/core/text_groups.py:81
+#: src/wimm/core/text_groups.py:82
 #, python-brace-format
 msgid "{container}, più {processes} nella stessa cartella"
 msgstr "{container}, plus {processes} in the same folder"
 
-#: src/wimm/core/text_groups.py:90
+#: src/wimm/core/text_groups.py:91
 #, python-brace-format
 msgid "nella cartella {folder}"
 msgstr "in the folder {folder}"
 
-#: src/wimm/core/text_groups.py:100
+#: src/wimm/core/text_groups.py:101
 #, python-brace-format
 msgid "{sentence} lanciato dal terminale"
 msgid_plural "{sentence} lanciati dal terminale"
 msgstr[0] "{sentence} started from the terminal"
 msgstr[1] "{sentence} started from the terminal"
 
-#: src/wimm/core/text_groups.py:113
+#: src/wimm/core/text_groups.py:114
 #, python-brace-format
 msgid "{shown} e altri {hidden}"
 msgstr "{shown} and {hidden} more"
 
-#: src/wimm/core/text_groups.py:119
+#: src/wimm/core/text_groups.py:122
 #, python-brace-format
 msgid "{processes} non riconducibile a un progetto o a un'app"
 msgid_plural "{processes} non riconducibili a un progetto o a un'app"
 msgstr[0] "{processes} not tied to a project or an app"
 msgstr[1] "{processes} not tied to a project or an app"
 
-#: src/wimm/core/text_groups.py:145
+#: src/wimm/core/text_groups.py:148
 #, python-brace-format
 msgid "{name}: {names}, {note}"
 msgstr "{name}: {names}, {note}"
+
+#: src/wimm/core/text_tools.py:11
+msgid "Macchina virtuale"
+msgstr "Virtual machine"
+
+#: src/wimm/core/text_tools.py:12
+msgid "Emulatore Android"
+msgstr "Android emulator"
+
+#: src/wimm/core/text_tools.py:13
+msgid "Gradle daemon"
+msgstr "Gradle daemon"
+
+#: src/wimm/core/text_tools.py:14
+msgid "Kotlin daemon"
+msgstr "Kotlin daemon"
+
+#: src/wimm/core/text_tools.py:15
+msgid "Language server"
+msgstr "Language server"
+
+#: src/wimm/core/text_tools.py:16
+msgid "Cluster kind"
+msgstr "kind cluster"
+
+#: src/wimm/core/text_tools.py:17
+msgid "Cluster minikube"
+msgstr "minikube cluster"
+
+#: src/wimm/core/text_tools.py:22
+msgid "memoria riservata al sistema ospite"
+msgstr "memory reserved for the guest system"
+
+#: src/wimm/core/text_tools.py:23
+msgid "demone di build in background"
+msgstr "build daemon in the background"
+
+#: src/wimm/core/text_tools.py:24
+msgid "servizio in background dell'editor"
+msgstr "editor background service"
+
+#: src/wimm/core/text_tools.py:25
+msgid "cluster Kubernetes locale"
+msgstr "local Kubernetes cluster"
 
 #: src/wimm/model/errors.py:12 src/wimm/service/errors.py:40
 msgid "L'operazione non è riuscita"
