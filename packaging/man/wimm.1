@@ -1,0 +1,62 @@
+.TH WIMM 1 "" "where-is-my-memory" "User Commands"
+.SH NAME
+wimm \- see what uses memory, CPU and disk, and reclaim it
+.SH SYNOPSIS
+.B wimm
+.RB [ \-\-background ]
+.RB [ \-\-group = \fIID\fR ]
+.br
+.B wimm \-\-version
+.br
+.B wimm \-\-help
+.SH DESCRIPTION
+.B wimm
+is the command that starts where-is-my-memory, a GTK4 application that shows
+which processes, containers and projects use memory, CPU and disk, and lets the
+user close or clean them after an explicit confirmation.
+.PP
+The application is a single resident process with a tray icon.
+Running
+.B wimm
+again does not start a second copy: the running instance opens its window.
+.SH OPTIONS
+.TP
+.B \-\-background
+Start without opening the window.
+The window still opens on the first run, and when no tray host is available to
+show the icon.
+.TP
+.BI \-\-group= ID
+Show the group with the given identifier.
+.TP
+.B \-\-version
+Print the version and exit.
+.TP
+.B \-\-help
+Print the list of options and exit.
+.SH FILES
+.TP
+.I ~/.config/where-is-my-memory/
+Preferences (\fIconfig.json\fR).
+.TP
+.I ~/.local/state/where-is-my-memory/
+Saved state (\fIstate.json\fR, \fIwindow.json\fR), the first-run marker
+(\fIwelcomed\fR) and the rotating log (\fIwimm.log\fR).
+.TP
+.I ~/.cache/where-is-my-memory/
+Disk scan cache (\fIdisk\-cache.json\fR), safe to delete.
+.PP
+The three directories follow the XDG variables
+.BR XDG_CONFIG_HOME ,
+.B XDG_STATE_HOME
+and
+.BR XDG_CACHE_HOME ,
+and are created with mode 0700.
+.SH ENVIRONMENT
+.TP
+.B WIMM_LOG_LEVEL
+Log level: one of DEBUG, INFO, WARNING, ERROR or CRITICAL, case-insensitive.
+The default is INFO; an invalid value is reported in the log and INFO is used.
+.SH SEE ALSO
+.BR ps (1),
+.BR docker (1)

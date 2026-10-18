@@ -36,6 +36,9 @@ export DEBIAN_FRONTEND=noninteractive
 deb="$1"; version="$2"; app_id="$3"; pkg="$4"
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
+# The ubuntu image excludes /usr/share/man and doc via dpkg, so the man page would never be
+# unpacked and the file check below would test the image, not the package. Container only.
+rm -f /etc/dpkg/dpkg.cfg.d/excludes
 apt-get update -qq
 apt-get install -y -qq "$deb" >/dev/null
 echo "installed: $(dpkg-query -W -f="\${Package} \${Version}" "$pkg")"
@@ -53,6 +56,7 @@ files="
 /usr/share/icons/hicolor/scalable/status/wimm-critical.svg
 /usr/share/metainfo/${app_id}.metainfo.xml
 /usr/share/doc/${pkg}/copyright
+/usr/share/man/man1/wimm.1.gz
 "
 for f in $files; do
     [ -e "$f" ] || fail "missing installed file: $f"

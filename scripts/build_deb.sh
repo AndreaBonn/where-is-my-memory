@@ -72,6 +72,10 @@ stage_files() {
         "${STAGING}/usr/share/${PACKAGE}/dbus/io.github.wimm.Inspector1.xml"
     install -D -m 644 "${ROOT}/packaging/debian/copyright" \
         "${STAGING}/usr/share/doc/${PACKAGE}/copyright"
+    # Policy 12.1: man pages are gzipped with -9n (no name or timestamp, reproducible).
+    install -d -m 755 "${STAGING}/usr/share/man/man1"
+    gzip -9n -c "${ROOT}/packaging/man/wimm.1" > "${STAGING}/usr/share/man/man1/wimm.1.gz"
+    chmod 644 "${STAGING}/usr/share/man/man1/wimm.1.gz"
 }
 
 # Escape the characters sed treats specially in a replacement with "|" as delimiter.
