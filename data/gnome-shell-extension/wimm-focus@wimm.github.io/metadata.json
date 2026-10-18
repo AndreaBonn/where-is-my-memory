@@ -1,0 +1,6 @@
+{
+  "uuid": "wimm-focus@wimm.github.io",
+  "name": "wimm focus",
+  "description": "Publishes the pid of the focused window on the session bus (read-only) so that wimm can tell which program is in use on Wayland.",
+  "shell-version": ["46"]
+}

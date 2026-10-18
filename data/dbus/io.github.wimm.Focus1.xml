@@ -1,0 +1,13 @@
+<node>
+  <!--
+    Read-only foreground-window signal published by the wimm-focus GNOME Shell
+    extension on the session bus (name io.github.wimm.Focus, object
+    /io/github/wimm/Focus). FocusedPid is the pid of the focused window, or 0
+    when there is no focus or the pid is unknown. Version is 1 for this schema.
+    No methods and no data besides the pid. See docs/adr/ADR-006.
+  -->
+  <interface name="io.github.wimm.Focus1">
+    <property name="FocusedPid" type="u" access="read"/>
+    <property name="Version" type="u" access="read"/>
+  </interface>
+</node>

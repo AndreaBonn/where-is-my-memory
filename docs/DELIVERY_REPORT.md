@@ -79,7 +79,7 @@ Fonte: `docs/security/T-6.1-security-baseline.md` (2026-10-17). Esito: soddisfat
 - Conteggio: P0 0, P1 0, P2 6 (uno corretto dopo la revisione), Info 3.
 - Limiti della verifica: `bandit` e `pip-audit` non sono stati eseguiti (offline, non installati) e la suite di test non è stata eseguita dal revisore. La suite è stata poi eseguita in T-6.4.
 
-## 3. Controlli manuali M-1..M-28
+## 3. Controlli manuali M-1..M-29
 
 Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono il vostro computer: sessione grafica reale, logout, `sudo`, clic veri o azioni su risorse vostre. Nessuno è stato eseguito da chi ha sviluppato l'applicazione.
 
@@ -113,6 +113,7 @@ Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono i
 | [ ] | M-26 | zram | Su una macchina con zram attivo (`zramctl` mostra un dispositivo in uso): aprire la Panoramica | La legenda della RAM mostra "Swap compresso in RAM (zram)" con un valore vicino alla colonna `TOTAL` di `zramctl`; il "?" accanto apre l'aiuto |
 | [ ] | M-27 | GPU AMD | Su una macchina con una scheda AMD dedicata: aprire la Panoramica | Il blocco "Memoria video" mostra "AMD <usata> di <totale>", vicino a quanto riporta `amdgpu_top` o `radeontop`. Con una APU può comparire la memoria riservata alla grafica (vedi DEVIATIONS) |
 | [ ] | M-28 | Secondo disco | Con un secondo disco ext4 montato (per esempio in `/mnt/data`) e una cartella vostra `/mnt/data/code` con un progetto vecchio che ha `node_modules`: in Preferenze, Impostazioni avanzate, aggiungere `/mnt/data/code` a "Cartelle in cui cercare" e applicare; poi aggiungere `/mnt/data` e applicare | `/mnt/data/code` è accettata e la scheda Disco propone il suo `node_modules`, che si cancella con la conferma; `/mnt/data` compare con il motivo "troppo vicina alla radice" e non viene percorsa |
+| [ ] | M-29 | Primo piano su Wayland | Su GNOME 46 o successivo in sessione Wayland: `cp -r data/gnome-shell-extension/wimm-focus@wimm.github.io ~/.local/share/gnome-shell/extensions/`, uscire e rientrare dalla sessione, `gnome-extensions enable wimm-focus@wimm.github.io`; poi `gdbus call --session --dest io.github.wimm.Focus --object-path /io/github/wimm/Focus --method org.freedesktop.DBus.Properties.Get io.github.wimm.Focus1 FocusedPid` con una finestra in primo piano e `ps -p <pid>` sul risultato. Pulizia: `gnome-extensions disable wimm-focus@wimm.github.io` e `rm -r ~/.local/share/gnome-shell/extensions/wimm-focus@wimm.github.io` | Il comando restituisce `(<<uint32 N>>,)` con `N` uguale al pid del programma in primo piano (`ps` lo conferma); cambiando finestra il valore cambia, senza finestra a fuoco vale 0. Dopo `disable` il nome `io.github.wimm.Focus` sparisce dal bus e `journalctl --user -b` non mostra errori di wimm-focus. Non provato su 47 e 48 |
 
 ## 4. Premesse chiuse
 
