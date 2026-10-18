@@ -3,10 +3,19 @@ from gi.repository import Adw, Gtk
 
 from tests.ui.conftest import FakeSource, WindowFactory, descendants, present_and_settle
 from wimm.model.snapshot import Snapshot
+from wimm.ui.dialogs import tray_help
+from wimm.ui.distro_hints import translated, tray_hint
 from wimm.ui.window import TRAY_MISSING_TEXT, MainWindow
 
 pytestmark = pytest.mark.ui
 BANNER_TEXT = "L'icona nella barra richiede l'estensione AppIndicator di Ubuntu"
+UBUNTU_OS_RELEASE = "ID=ubuntu\nID_LIKE=debian\n"
+
+
+@pytest.fixture(autouse=True)
+def ubuntu_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The window tests must not depend on the distribution of the machine running them."""
+    monkeypatch.setattr(tray_help, "read_os_release", lambda: UBUNTU_OS_RELEASE)
 
 
 def test_the_banner_is_hidden_until_the_tray_is_reported_missing(
@@ -75,3 +84,45 @@ def test_the_banner_explains_step_by_step_how_to_bring_the_icon_back(
     assert "«Ubuntu AppIndicators»" in texts
     (command,) = [label for label in labels if label.get_selectable()]
     assert command.get_label() == "gnome-extensions enable ubuntu-appindicators@ubuntu.com"
+
+
+def dialog_texts(dialog: Adw.AlertDialog) -> tuple[str, list[Gtk.Label]]:
+    extra = dialog.get_extra_child()
+    assert extra is not None
+    labels = [w for w in descendants(extra) if isinstance(w, Gtk.Label)]
+    return "\n".join(label.get_label() for label in labels), labels
+
+
+def test_the_banner_follows_the_distribution_read_from_os_release(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tray_help, "read_os_release", lambda: "ID=fedora\n")
+    banner = tray_help.tray_banner(parent=Gtk.Box())
+
+    assert banner.get_title() == "L'icona nella barra richiede l'estensione AppIndicator"
+    assert banner.get_title() != BANNER_TEXT
+
+
+def test_the_dialog_for_fedora_shows_a_copyable_dnf_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tray_help, "read_os_release", lambda: "ID=fedora\n")
+    hint = tray_hint(family=tray_help.current_family())
+
+    texts, labels = dialog_texts(tray_help.tray_help_dialog(hint=translated(hint=hint)))
+
+    assert "Installa l'estensione" in texts
+    (command,) = [label for label in labels if label.get_selectable()]
+    assert command.get_label() == "sudo dnf install gnome-shell-extension-appindicator"
+
+
+def test_the_dialog_for_an_unknown_distribution_has_no_command(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(tray_help, "read_os_release", lambda: "")
+    hint = tray_hint(family=tray_help.current_family())
+
+    texts, labels = dialog_texts(tray_help.tray_help_dialog(hint=translated(hint=hint)))
+
+    assert "extensions.gnome.org" in texts
+    assert [label for label in labels if label.get_selectable()] == []

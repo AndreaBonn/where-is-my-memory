@@ -154,7 +154,12 @@ EXEMPT = {
     "core/disk_wire.py": {"disk report"},  # path label inside a decoding error
     "ui/window.py": {"max-width: 600px"},  # libadwaita breakpoint condition
     # A shell command the user copies verbatim: the same in every language.
-    "ui/dialogs/tray_help.py": {"gnome-extensions enable ubuntu-appindicators@ubuntu.com"},
+    "ui/distro_hints.py": {
+        "gnome-extensions enable ubuntu-appindicators@ubuntu.com",
+        "sudo dnf install gnome-shell-extension-appindicator",
+        "sudo pacman -S gnome-shell-extension-appindicator",
+        "sudo apt install gnome-shell-extension-appindicator",
+    },
 }
 IDENTIFIER = re.compile(r"[a-z0-9_.\-:/%*+@#=<>|\\,;]*")
 CONSTANT_NAME = re.compile(r"[A-Z0-9_]+")

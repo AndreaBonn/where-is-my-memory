@@ -1494,33 +1494,15 @@ msgstr "{prefix} {disk} of disk space."
 msgid "Nella lista conta {listed}: il resto è di parti che non si fermano da qui."
 msgstr "The list counts {listed}: the rest belongs to parts that cannot be stopped from here."
 
-#: src/wimm/ui/dialogs/tray_help.py:7
-msgid "L'icona nella barra richiede l'estensione AppIndicator di Ubuntu"
-msgstr "The icon in the bar needs the Ubuntu AppIndicator extension"
-
-#: src/wimm/ui/dialogs/tray_help.py:8
+#: src/wimm/ui/dialogs/tray_help.py:10
 msgid "Come si attiva"
 msgstr "How to turn it on"
 
-#: src/wimm/ui/dialogs/tray_help.py:9
+#: src/wimm/ui/dialogs/tray_help.py:11
 msgid "Come far comparire l'icona"
 msgstr "How to make the icon appear"
 
-#: src/wimm/ui/dialogs/tray_help.py:13
-msgid ""
-"1. Apri l'app «Estensioni» dal menu delle applicazioni.\n"
-"2. Attiva l'interruttore accanto a «Ubuntu AppIndicators».\n"
-"3. L'icona compare in alto a destra entro pochi secondi.\n"
-"\n"
-"Se l'app «Estensioni» non c'è, scrivi nel Terminale:"
-msgstr ""
-"1. Open the \"Extensions\" app from the applications menu.\n"
-"2. Turn on the switch next to \"Ubuntu AppIndicators\".\n"
-"3. The icon appears at the top right within a few seconds.\n"
-"\n"
-"If the \"Extensions\" app is not there, type this in the Terminal:"
-
-#: src/wimm/ui/dialogs/tray_help.py:21 src/wimm/ui/dialogs/welcome.py:19
+#: src/wimm/ui/dialogs/tray_help.py:14 src/wimm/ui/dialogs/welcome.py:19
 msgid "Ho capito"
 msgstr "Got it"
 
@@ -1806,6 +1788,54 @@ msgstr "Stopped containers"
 #: src/wimm/ui/disk_view_docker.py:142
 msgid "Volumi Docker"
 msgstr "Docker volumes"
+
+#: src/wimm/ui/distro_hints.py:9
+msgid ""
+"1. Installa l'estensione scrivendo nel Terminale il comando qui sotto.\n"
+"2. Esci dalla sessione e rientra.\n"
+"3. Apri l'app «Estensioni» e attiva «AppIndicator and KStatusNotifierItem Support».\n"
+"4. L'icona compare in alto a destra entro pochi secondi."
+msgstr ""
+"1. Install the extension by typing the command below in the Terminal.\n"
+"2. Log out and back in.\n"
+"3. Open the \"Extensions\" app and turn on \"AppIndicator and KStatusNotifierItem Support\".\n"
+"4. The icon appears at the top right within a few seconds."
+
+#: src/wimm/ui/distro_hints.py:14
+msgid "L'icona nella barra richiede l'estensione AppIndicator di Ubuntu"
+msgstr "The icon in the bar needs the Ubuntu AppIndicator extension"
+
+#: src/wimm/ui/distro_hints.py:18
+msgid ""
+"1. Apri l'app «Estensioni» dal menu delle applicazioni.\n"
+"2. Attiva l'interruttore accanto a «Ubuntu AppIndicators».\n"
+"3. L'icona compare in alto a destra entro pochi secondi.\n"
+"\n"
+"Se l'app «Estensioni» non c'è, scrivi nel Terminale:"
+msgstr ""
+"1. Open the \"Extensions\" app from the applications menu.\n"
+"2. Turn on the switch next to \"Ubuntu AppIndicators\".\n"
+"3. The icon appears at the top right within a few seconds.\n"
+"\n"
+"If the \"Extensions\" app is not there, type this in the Terminal:"
+
+#: src/wimm/ui/distro_hints.py:24
+msgid "L'icona nella barra richiede l'estensione AppIndicator"
+msgstr "The icon in the bar needs the AppIndicator extension"
+
+#: src/wimm/ui/distro_hints.py:25
+msgid "L'icona nella barra richiede un'estensione di GNOME Shell"
+msgstr "The icon in the bar needs a GNOME Shell extension"
+
+#: src/wimm/ui/distro_hints.py:27
+msgid ""
+"1. Apri extensions.gnome.org, oppure l'app «Estensioni» se la tua distribuzione la offre.\n"
+"2. Cerca l'estensione «AppIndicator and KStatusNotifierItem Support» e installala.\n"
+"3. Attivala: l'icona compare in alto a destra entro pochi secondi."
+msgstr ""
+"1. Open extensions.gnome.org, or the \"Extensions\" app if your distribution has it.\n"
+"2. Look for the \"AppIndicator and KStatusNotifierItem Support\" extension and install it.\n"
+"3. Turn it on: the icon appears at the top right within a few seconds."
 
 #: src/wimm/ui/format.py:20
 msgid "Sistema"
