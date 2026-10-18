@@ -18,7 +18,7 @@ from wimm.model.snapshot import Snapshot
 from wimm.paths import UserPaths
 from wimm.service.actions import ActionExecutor, ActionSetup, plan_engines
 from wimm.service.app_service_disk import DiskMixin
-from wimm.service.app_service_sampler import CycleSampler
+from wimm.service.app_service_sampler import ConfigTarget, CycleSampler, adopt_config
 from wimm.service.app_service_signals import APP_SERVICE_SIGNALS
 from wimm.service.app_service_user import UserStateMixin
 from wimm.service.control_protocols import StepOutcome
@@ -159,21 +159,11 @@ class AppService(UserStateMixin, DiskMixin, GObject.Object):
         return self._last_sampled
 
     def _apply_config(self, config: Config) -> None:
-        """Worker side: the sampler's history is not thread-safe, so it changes only here.
-
-        Each part adopts the configuration on its own: a failing sampler must not leave the
-        executor without the protected names and roots the user just saved.
-        """
-        try:
-            self._sampler.apply_config(config=config)
-        except Exception:
-            LOGGER.exception("Cannot apply the new configuration to the sampler")
-        if self._actions is None:
-            return
-        try:
-            self._actions.executor.apply_config(config=config)
-        except Exception:
-            LOGGER.exception("Cannot apply the new configuration to the executor")
+        """Worker side: the sampler's history is not thread-safe, so it changes only here."""
+        parts: dict[str, ConfigTarget] = {"sampler": self._sampler}
+        if self._actions is not None:
+            parts["executor"] = self._actions.executor
+        adopt_config(config=config, parts=parts)
 
     def _run_action(
         self, executor: ActionExecutor, plan: Plan
