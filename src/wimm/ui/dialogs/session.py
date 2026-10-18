@@ -113,8 +113,11 @@ class ConfirmSession:
         self._excluded = excluded
         try:
             plan = self._replan(replace(self._request, excluded_ids=excluded))
-        except InvalidRequest:
-            self.plan, self.notice = None, None
+        except InvalidRequest as error:
+            # Only "nothing left ticked" is the empty state; any other refusal says why.
+            nothing_left = {entry.step_id for entry in self.entries} <= excluded
+            self.plan = None
+            self.notice = None if nothing_left else _(error.user_message)
             return
         except WimmError as error:
             LOGGER.warning("Plan refused after changing the entries: %s", error.message)

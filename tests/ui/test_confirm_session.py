@@ -2,6 +2,7 @@ from tests.core.planning_helpers import context, group, proc, snapshot
 from wimm.core.planning import plan_action
 from wimm.model.actions import ActionRequest, Plan
 from wimm.model.enums import ActionKind, GroupId
+from wimm.model.errors import InvalidRequest
 from wimm.model.snapshot import Snapshot
 from wimm.ui.dialogs.session import CHANGED_NOTICE, ConfirmSession, entries_for
 
@@ -55,3 +56,22 @@ def test_a_replan_where_a_shown_target_is_gone_keeps_the_plan() -> None:
     session.set_included(step_id="1", included=False)
 
     assert session.plan is not None and len(session.plan.steps) == 1
+
+
+def test_excluding_every_entry_is_the_empty_state_without_a_notice() -> None:
+    session = session_on(shown=project(1, 2), replanned=project(1, 2))
+
+    session.set_included(step_id="1", included=False)
+    session.set_included(step_id="2", included=False)
+
+    assert session.plan is None
+    assert session.notice is None
+
+
+def test_a_group_that_vanished_shows_the_refusal_not_the_empty_state() -> None:
+    session = session_on(shown=project(1, 2, 3), replanned=snapshot())
+
+    session.set_included(step_id="1", included=False)
+
+    assert session.plan is None
+    assert session.notice == InvalidRequest.user_message
