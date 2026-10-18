@@ -23,6 +23,49 @@ msgstr "Show a group"
 msgid "Mostra la versione"
 msgstr "Show the version"
 
+#: src/wimm/cli_status.py:103
+msgid "Mostra lo stato"
+msgstr "Show the status"
+
+#: src/wimm/cli_status.py:104
+msgid "Stampa lo stato come JSON"
+msgstr "Print the status as JSON"
+
+#: src/wimm/cli_status.py:119
+msgid "Nessuno stato disponibile"
+msgstr "No status available"
+
+#: src/wimm/cli_status_text.py:14
+msgid "normale"
+msgstr "normal"
+
+#: src/wimm/cli_status_text.py:15
+msgid "attenzione"
+msgstr "warning"
+
+#: src/wimm/cli_status_text.py:16
+msgid "critica"
+msgstr "critical"
+
+#: src/wimm/cli_status_text.py:34
+#, python-brace-format
+msgid "Memoria: {used} usati su {total}"
+msgstr "Memory: {used} used of {total}"
+
+#: src/wimm/cli_status_text.py:37
+#, python-brace-format
+msgid "Pressione: {level}"
+msgstr "Pressure: {level}"
+
+#: src/wimm/cli_status_text.py:38
+msgid "Gruppi più grandi:"
+msgstr "Largest groups:"
+
+#: src/wimm/cli_status_text.py:45
+#, python-brace-format
+msgid "Disco: {free} liberi su {total} ({mount})"
+msgstr "Disk: {free} free of {total} ({mount})"
+
 #: src/wimm/config_messages.py:10
 msgid "Scegli solo categorie su cui sono consentite azioni"
 msgstr "Choose only categories that allow actions"

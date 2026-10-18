@@ -304,3 +304,39 @@ def test_shutdown_closes_everything_even_when_one_close_fails(
     )
     _shutdown(application=application)
     assert closed == ["service", "tray", "inspector", "gio"]
+
+
+def test_status_does_not_import_gtk() -> None:
+    result = subprocess.run(
+        args=[
+            sys.executable,
+            "-c",
+            "import sys; from wimm.app import main; "
+            'assert main(argv=["status", "--json"]) in (0, 3); '
+            'assert "gi.repository.Gtk" not in sys.modules; '
+            'assert "gi.repository.Adw" not in sys.modules',
+        ],
+        capture_output=True,
+        text=True,
+        env={**os.environ, "DBUS_SESSION_BUS_ADDRESS": "unix:path=/nonexistent"},
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+
+
+def test_normal_app_import_does_load_gtk() -> None:
+    result = subprocess.run(
+        args=[
+            sys.executable,
+            "-c",
+            "import sys; import wimm.ui.window; "
+            'assert "gi.repository.Gtk" in sys.modules; '
+            'assert "gi.repository.Adw" in sys.modules',
+        ],
+        capture_output=True,
+        text=True,
+        timeout=SUBPROCESS_TIMEOUT_SECONDS,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr

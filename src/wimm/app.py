@@ -279,6 +279,10 @@ def main(argv: list[str] | None = None) -> int:
     if arguments == ["--version"]:
         print(f"wimm {__version__}")
         return SUCCESS
+    if arguments[:1] == ["status"]:
+        from wimm.cli_status import run_status
+
+        return run_status(arguments=arguments[1:])
     from wimm.language_switch import apply_startup_language
 
     apply_startup_language()
