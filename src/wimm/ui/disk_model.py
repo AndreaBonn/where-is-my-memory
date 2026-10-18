@@ -34,6 +34,26 @@ class SectionActionView:
 
 
 @dataclass(frozen=True, slots=True)
+class RootsState:
+    """The saved project folders as the page needs them: the missing ones, and any usable."""
+
+    missing: tuple[str, ...] = ()
+    usable: bool = True
+
+
+ROOTS_FINE = RootsState()
+
+
+@dataclass(frozen=True, slots=True)
+class EmptyStateView:
+    """An empty state inside a section: headline, one plain sentence, the primary action."""
+
+    title: str
+    text: str
+    action_label: str
+
+
+@dataclass(frozen=True, slots=True)
 class DiskSectionView:
     key: str
     title: str
@@ -43,6 +63,8 @@ class DiskSectionView:
     actions: tuple[SectionActionView, ...] = ()
     description: str = ""
     tier: str = ""
+    warnings: tuple[str, ...] = ()
+    empty_state: EmptyStateView | None = None
 
 
 def more_text(*, count: int) -> str | None:

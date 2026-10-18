@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from typing import ClassVar
 
 import pytest
-from gi.repository import Adw, Gio, Gtk
+from gi.repository import Adw, Gio, GLib, Gtk
 
 from tests.ui.conftest import (
     FakeActionService,
@@ -373,3 +373,80 @@ def test_apply_without_changes_clears_a_previous_invalid_status(
 
     assert dialog.status_text == "Nessuna modifica."
     assert not any(status.has_css_class("error") for status in dialog._statuses)
+
+
+def test_missing_project_folder_is_flagged_in_the_folders_row(
+    display: None, snapshot: Snapshot, paths: UserPaths, home: Path
+) -> None:
+    gone = home / "gone"
+    config = replace(Config(), devdirs_roots=(home / "dev", gone))
+    dialog = PreferencesDialog(
+        source=FakeActionService(snapshot=snapshot, config=config), paths=paths, home=home
+    )
+    subtitle = dialog.fields["devdirs_roots"].row.get_subtitle()
+    assert f"La cartella {gone} non esiste" in subtitle
+    assert str(home / "dev") not in subtitle.split("\n", 1)[1]
+
+
+def test_existing_project_folders_add_no_warning(dialog: PreferencesDialog) -> None:
+    assert "non esiste" not in dialog.fields["devdirs_roots"].row.get_subtitle()
+
+
+def test_folders_action_opens_the_advanced_page_on_the_folders_entry(
+    window_factory: WindowFactory,
+    service: FakeActionService,
+    paths: UserPaths,
+    home: Path,
+) -> None:
+    saved = (home / "code", home / "work")
+    service.config_value = replace(service.config_value, devdirs_roots=saved)
+    window = window_factory(service)
+    install_preferences(window=window, source=service, env=PreferencesEnv(paths=paths, home=home))
+    present_and_settle(window)
+
+    window.activate_action("win.preferences-folders", None)
+
+    wait_until(lambda: window.get_visible_dialog() is not None, description="dialog opened")
+    opened = window.get_visible_dialog()
+    assert isinstance(opened, PreferencesDialog)
+    entry = opened.fields["devdirs_roots"].row.get_activatable_widget()
+    # The caret lives in the GtkText inside the GtkEntry.
+    wait_until(
+        lambda: (focus := opened.get_focus()) is not None and focus.is_ancestor(entry),
+        description="focus on the folders entry",
+    )
+    _spin(seconds=0.5)  # Adwaita may move the focus again once its transition ends.
+    saved_text = entry.get_text()
+    assert saved_text
+    assert not entry.get_selection_bounds()
+    assert entry.get_position() == len(saved_text)
+    # The roots already typed must survive the first key press, and the row must be in view.
+    entry.set_text("/x/code, /x/work")
+    opened.pop_subpage()
+    opened.show_folders()
+    wait_until(
+        lambda: (focus := opened.get_focus()) is not None and focus.is_ancestor(entry),
+        description="focus back on the folders entry",
+    )
+    assert not entry.get_selection_bounds()
+    assert entry.get_position() == len("/x/code, /x/work")
+    row = opened.fields["devdirs_roots"].row
+    viewport = row.get_ancestor(Gtk.Viewport)
+
+    def row_in_view() -> bool:
+        found, bounds = row.compute_bounds(viewport)
+        top, height = bounds.get_y(), viewport.get_height()
+        return bool(found) and height > 0 and top >= 0 and top + bounds.get_height() <= height
+
+    wait_until(row_in_view, description="folders row in view")
+    # Positive control: the page is taller than the view, so being in view needed a scroll.
+    assert viewport.get_vadjustment().get_upper() > viewport.get_height()
+    assert viewport.get_vadjustment().get_value() > 0
+    opened.force_close()
+
+
+def _spin(*, seconds: float) -> None:
+    deadline = GLib.get_monotonic_time() + int(seconds * 1_000_000)
+    context = GLib.MainContext.default()
+    while GLib.get_monotonic_time() < deadline:
+        context.iteration(False)

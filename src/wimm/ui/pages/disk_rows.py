@@ -4,7 +4,7 @@ from gi.repository import Adw, GLib, Gtk
 
 from wimm.i18n import _
 from wimm.model.enums import ActionKind
-from wimm.ui.disk_model import DiskRowView, DiskSectionView, SectionActionView
+from wimm.ui.disk_model import DiskRowView, DiskSectionView, EmptyStateView, SectionActionView
 from wimm.ui.format import button_label
 from wimm.ui.widgets import color_primary
 from wimm.ui.widgets.risk_badge import make_risk_badge
@@ -16,6 +16,34 @@ SectionAction = Callable[[ActionKind], None]
 ACTIONS_COLUMNS = 3
 ACTIONS_SPACING = 6
 SUFFIX_SPACING = 6
+WARNING_ICON = "dialog-warning-symbolic"
+WARNING_CLASS = "wimm-warning"
+
+
+def build_warning_row(*, text: str) -> Adw.ActionRow:
+    """A notice as text (the icon is decoration), so it does not rely on colour."""
+    row = Adw.ActionRow(title=text, use_markup=False, title_lines=3)
+    icon = Gtk.Image(icon_name=WARNING_ICON)
+    icon.set_accessible_role(Gtk.AccessibleRole.PRESENTATION)
+    row.add_prefix(icon)
+    row.add_css_class(WARNING_CLASS)
+    return row
+
+
+def build_empty_state_row(
+    *, state: EmptyStateView, on_choose: Callable[[], None] | None, buttons: list[Gtk.Button]
+) -> Adw.ActionRow:
+    """Headline, one sentence and the primary action; no button when nothing can answer it."""
+    row = Adw.ActionRow(
+        title=state.title, subtitle=state.text, use_markup=False, title_lines=2, subtitle_lines=4
+    )
+    if on_choose is not None:
+        button = Gtk.Button(label=state.action_label, valign=Gtk.Align.CENTER)
+        button.add_css_class("suggested-action")
+        button.connect("clicked", lambda *_a: on_choose())
+        row.add_suffix(button)
+        buttons.append(button)
+    return row
 
 
 def _build_suffix(*, row: DiskRowView) -> Gtk.Box:
@@ -67,9 +95,15 @@ class SectionGroup:
     """An Adw.PreferencesGroup for one section, with a spinner in its header."""
 
     def __init__(
-        self, *, key: str, on_action: RowAction | None, on_section: SectionAction | None = None
+        self,
+        *,
+        key: str,
+        on_action: RowAction | None,
+        on_section: SectionAction | None = None,
+        on_choose: Callable[[], None] | None = None,
     ) -> None:
         self.key = key
+        self._on_choose = on_choose
         self.group = Adw.PreferencesGroup()
         self.spinner = Gtk.Spinner(width_request=SPINNER_SIZE, height_request=SPINNER_SIZE)
         self.spinner.update_property([Gtk.AccessibleProperty.LABEL], [_("Controllo in corso")])
@@ -109,6 +143,13 @@ class SectionGroup:
             self.group.remove(child)
         self._buttons = []
         self._children = [self._actions_row(actions=section.actions)] if section.actions else []
+        self._children += [build_warning_row(text=text) for text in section.warnings]
+        if section.empty_state is not None:
+            self._children.append(
+                build_empty_state_row(
+                    state=section.empty_state, on_choose=self._on_choose, buttons=self._buttons
+                )
+            )
         self._children += [
             build_disk_row(row=r, on_action=self._on_action, buttons=self._buttons)
             for r in section.rows

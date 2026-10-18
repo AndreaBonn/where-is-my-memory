@@ -6,9 +6,10 @@ from gi.repository import Gio
 
 from wimm.paths import UserPaths
 from wimm.ui.dialogs.preferences import PreferencesDialog
-from wimm.ui.window_shortcuts import ACTION_PREFERENCES
+from wimm.ui.window_shortcuts import ACTION_FOLDERS, ACTION_PREFERENCES
 
 ACTION_NAME = ACTION_PREFERENCES.removeprefix("win.")
+FOLDERS_ACTION_NAME = ACTION_FOLDERS.removeprefix("win.")
 
 
 @dataclass(frozen=True)
@@ -36,14 +37,18 @@ def install_preferences(*, window: Any, source: object, env: PreferencesEnv) -> 
     if not can_edit_config(source=source):
         return False
 
-    def open_dialog(*_args: object) -> None:
-        if isinstance(window.get_visible_dialog(), PreferencesDialog):
-            return
-        PreferencesDialog(
-            source=source, paths=env.paths, home=env.home, session_type=env.session_type
-        ).present(window)
+    def open_dialog(*, folders: bool) -> None:
+        shown = window.get_visible_dialog()
+        if not isinstance(shown, PreferencesDialog):
+            shown = PreferencesDialog(
+                source=source, paths=env.paths, home=env.home, session_type=env.session_type
+            )
+            shown.present(window)
+        if folders:
+            shown.show_folders()
 
-    action = Gio.SimpleAction.new(ACTION_NAME, None)
-    action.connect("activate", open_dialog)
-    window.window_actions.add_action(action)
+    for name, folders in ((ACTION_NAME, False), (FOLDERS_ACTION_NAME, True)):
+        action = Gio.SimpleAction.new(name, None)
+        action.connect("activate", lambda *_a, folders=folders: open_dialog(folders=folders))
+        window.window_actions.add_action(action)
     return True

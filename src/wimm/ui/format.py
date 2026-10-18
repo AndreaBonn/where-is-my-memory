@@ -1,6 +1,7 @@
 import math
 import unicodedata
 from datetime import datetime
+from pathlib import Path
 from types import MappingProxyType
 
 from wimm.core.sizes import format_size as format_size
@@ -172,3 +173,10 @@ SHORT_DATE = N_("%d/%m")
 def short_date(*, moment: datetime) -> str:
     """A day without the year in the order of the active language (``16/10``, ``10/16``)."""
     return moment.strftime(_(SHORT_DATE))
+
+
+def home_relative(*, path: Path, home: Path) -> str:
+    """Write ``path`` as ``~/...`` when it is inside ``home``, as given otherwise."""
+    if path != home and path.is_relative_to(home):
+        return f"~/{path.relative_to(home)}"
+    return str(path)

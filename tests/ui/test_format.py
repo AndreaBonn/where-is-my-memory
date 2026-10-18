@@ -1,4 +1,5 @@
 from datetime import UTC, datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 
@@ -18,6 +19,7 @@ from wimm.ui.format import (
     format_elapsed,
     format_round_size,
     format_size,
+    home_relative,
 )
 
 from ..helpers import invalid_model_value
@@ -211,3 +213,10 @@ def test_short_date_puts_the_day_first_in_italian() -> None:
     from wimm.ui.format import short_date
 
     assert short_date(moment=datetime(2026, 10, 16, 9, 5)) == "16/10"
+
+
+def test_home_relative_shortens_paths_inside_the_home() -> None:
+    home = Path("/home/ada")
+    assert home_relative(path=Path("/home/ada/code/app"), home=home) == "~/code/app"
+    assert home_relative(path=Path("/srv/code"), home=home) == "/srv/code"
+    assert home_relative(path=Path("/home/adam/code"), home=home) == "/home/adam/code"

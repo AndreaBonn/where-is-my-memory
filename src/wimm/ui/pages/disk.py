@@ -6,7 +6,7 @@ from gi.repository import Adw, Gtk
 from wimm.i18n import N_, _
 from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind
-from wimm.ui.disk_model import DiskSectionView
+from wimm.ui.disk_model import ROOTS_FINE, DiskSectionView, RootsState
 from wimm.ui.disk_texts import TIER_TITLES, disk_headline, safe_label
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
 from wimm.ui.pages.disk_header import DiskHeader, tier_heading
@@ -32,9 +32,11 @@ class DiskPage(Gtk.Box):
         on_rescan: Callable[[], None],
         on_action: RowAction | None = None,
         on_section: SectionAction | None = None,
+        on_choose_folder: Callable[[], None] | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._on_rescan, self._on_action, self._on_section = on_rescan, on_action, on_section
+        self._on_choose_folder = on_choose_folder
         self._busy = False
         self._scanning = False
         self._has_report = False
@@ -119,11 +121,18 @@ class DiskPage(Gtk.Box):
             group.set_scanning(scanning=scanning)
         self._waiting.set_title(_(SCANNING_TITLE if scanning else WAITING_TITLE))
 
-    def show_report(self, *, report: DiskReport | None, now: datetime, min_age_days: int) -> None:
+    def show_report(
+        self,
+        *,
+        report: DiskReport | None,
+        now: datetime,
+        min_age_days: int,
+        roots: RootsState = ROOTS_FINE,
+    ) -> None:
         """Show a fresh report (or None before the first scan) and end the scan state."""
         self._has_report = report is not None
         self._notice.set_visible(False)
-        sections = build_disk_sections(report=report, min_age_days=min_age_days)
+        sections = build_disk_sections(report=report, min_age_days=min_age_days, roots=roots)
         self._header.fill(
             headline=disk_headline(sections=sections),
             scan_text=last_scan_text(report=report, now=now),
@@ -158,7 +167,12 @@ class DiskPage(Gtk.Box):
             self._sections_box.remove(widget)
         self._headings = []
         self._groups = {
-            s.key: SectionGroup(key=s.key, on_action=self._on_action, on_section=self._on_section)
+            s.key: SectionGroup(
+                key=s.key,
+                on_action=self._on_action,
+                on_section=self._on_section,
+                on_choose=self._on_choose_folder,
+            )
             for s in sections
         }
         tier = None

@@ -115,7 +115,7 @@ _NUMBERS = (
     NumberField(
         "devdirs_min_age_days",
         N_("Proponi le cartelle non usate da almeno (giorni)"),
-        N_("Le cartelle node_modules e .venv più recenti restano fuori"),
+        N_("Le cartelle di dipendenze più recenti restano fuori"),
     ),
     NumberField(
         "devdirs_max_depth",
@@ -168,7 +168,7 @@ ADVANCED_GROUPS = (
     ),
     FieldGroup(
         N_("Cartelle di sviluppo"),
-        N_("Dove cercare node_modules e .venv e ogni quanto."),
+        N_("Dove cercare le cartelle di dipendenze e ogni quanto."),
         ("devdirs_roots", "devdirs_min_age_days", "devdirs_max_depth", "disk_scan_interval_s"),
     ),
 )

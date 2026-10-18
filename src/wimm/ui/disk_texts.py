@@ -10,6 +10,10 @@ from wimm.model.enums import Risk
 if TYPE_CHECKING:
     from wimm.ui.disk_model import DiskSectionView
 
+MISSING_ROOT_TEXT = N_("La cartella {path} non esiste")
+NO_ROOTS_TITLE = N_("Nessuna cartella di progetti trovata")
+NO_ROOTS_TEXT = N_("Indica dove tieni i tuoi progetti e cerco le librerie che si possono liberare.")
+CHOOSE_FOLDER_LABEL = N_("Scegli una cartella")
 NOTHING_TO_FREE_TEXT = N_("Niente da liberare sul disco")
 ACTIONS_NOTE = N_("Ogni bottone ti mostra prima cosa succede e chiede conferma.")
 # D4: one sentence per section, for someone who has never heard of Docker or caches.

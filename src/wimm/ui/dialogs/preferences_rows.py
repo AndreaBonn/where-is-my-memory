@@ -56,6 +56,16 @@ class Field:
     read: Callable[[], object]
     load: Callable[[object], None]
     error: str | None = field(default=None, init=False)
+    base_subtitle: str = field(default="", init=False)
+
+    def __post_init__(self) -> None:
+        self.base_subtitle = self.subtitle
+
+    def set_note(self, *, lines: tuple[str, ...]) -> None:
+        """Append plain-text notes (e.g. a missing folder) under the description."""
+        self.subtitle = "\n".join((self.base_subtitle, *lines))
+        if self.error is None:
+            self.row.set_subtitle(self.subtitle)
 
     def show_error(self, *, message: str) -> None:
         """Mark the row invalid, with the reason as its text (not by colour alone)."""

@@ -9,7 +9,7 @@ import gi
 
 gi.require_version("Adw", "1")
 gi.require_version("Gtk", "4.0")
-from gi.repository import Adw, Gtk
+from gi.repository import Adw, GLib, Gtk
 
 from wimm.collectors.foreground import X11_SESSION
 from wimm.config import config_to_raw
@@ -22,6 +22,8 @@ from wimm.ui.dialogs.preferences_language import LanguageGroup, request_language
 from wimm.ui.dialogs.preferences_model import ADVANCED_GROUPS, ESSENTIAL_GROUPS, collect_changes
 from wimm.ui.dialogs.preferences_presets import recommended_values
 from wimm.ui.dialogs.preferences_rows import ERROR_CLASS, Field, build_field
+from wimm.ui.disk_texts import MISSING_ROOT_TEXT
+from wimm.ui.format import home_relative
 
 LOGGER = logging.getLogger(__name__)
 TITLE = N_("Preferenze")
@@ -41,6 +43,7 @@ INVALID_ADVANCED_TEXT = N_(
 ADVANCED_TITLE = N_("Impostazioni avanzate")
 ADVANCED_SUBTITLE = N_("Come si capisce se è in uso, soglie, chiusura e cartelle ({count} voci)")
 FOREGROUND_KEY = "foreground_tracking"
+ROOTS_KEY = "devdirs_roots"
 NO_X11_TEXT = N_("Non disponibile su questo desktop: funziona solo con X11")
 STATUS_SPACING = 12
 
@@ -154,6 +157,28 @@ class PreferencesDialog(Adw.PreferencesDialog):
         for key, item in self.fields.items():
             item.load(raw[key])
         self._presets.refresh()
+        missing = (
+            _(MISSING_ROOT_TEXT).format(path=home_relative(path=path, home=Path.home()))
+            for path in self._config.missing_roots
+        )
+        self.fields[ROOTS_KEY].set_note(lines=tuple(missing))
+
+    def show_folders(self) -> None:
+        """Open the advanced page with the cursor in the folders entry (the "Scegli" action)."""
+        row = self.fields[ROOTS_KEY].row
+        entry = row.get_activatable_widget()
+        if entry.get_mapped():
+            _focus_at_end(row=row, entry=entry)
+            return
+        # The entry takes focus only once the page is on screen.
+        handler = 0
+
+        def focus_entry(*_args: object) -> None:
+            self.advanced.disconnect(handler)
+            _focus_at_end(row=row, entry=entry)
+
+        handler = self.advanced.connect("shown", focus_entry)
+        self.push_subpage(self.advanced)
 
     def reset(self) -> None:
         """R4: put back the recommended values and apply them at once.
@@ -215,3 +240,19 @@ class PreferencesDialog(Adw.PreferencesDialog):
             self.fields[key].row.is_ancestor(self.advanced) for key in errors if key in self.fields
         )
         return _(INVALID_ADVANCED_TEXT) if hidden else _(INVALID_TEXT)
+
+
+def _focus_at_end(*, row: Gtk.Widget, entry: Gtk.Entry) -> None:
+    # Deferred: when the page shows, Adwaita still restores the focus with a plain
+    # grab_focus(), which selects the whole text, and the page has no size to scroll yet.
+    GLib.idle_add(_settle_focus, row, entry)
+
+
+def _settle_focus(row: Gtk.Widget, entry: Gtk.Entry) -> bool:
+    # A selected text would be erased by the first key press, with the roots already saved.
+    entry.grab_focus_without_selecting()
+    entry.set_position(-1)
+    viewport = row.get_ancestor(Gtk.Viewport)
+    if isinstance(viewport, Gtk.Viewport):
+        viewport.scroll_to(row, None)
+    return GLib.SOURCE_REMOVE

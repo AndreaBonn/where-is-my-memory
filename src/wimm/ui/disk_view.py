@@ -8,8 +8,24 @@ from wimm.core.risk import RiskTarget
 from wimm.i18n import N_, _, ngettext
 from wimm.model.disk import CacheEntry, CacheKind, DevDir, DiskReport
 from wimm.model.enums import ActionKind
-from wimm.ui.disk_model import ActionSpec, DiskRowView, DiskSectionView, make_row, more_text
-from wimm.ui.disk_texts import SECTION_DESCRIPTIONS, SECTION_TIERS
+from wimm.ui.disk_model import (
+    ROOTS_FINE,
+    ActionSpec,
+    DiskRowView,
+    DiskSectionView,
+    EmptyStateView,
+    RootsState,
+    make_row,
+    more_text,
+)
+from wimm.ui.disk_texts import (
+    CHOOSE_FOLDER_LABEL,
+    MISSING_ROOT_TEXT,
+    NO_ROOTS_TEXT,
+    NO_ROOTS_TITLE,
+    SECTION_DESCRIPTIONS,
+    SECTION_TIERS,
+)
 from wimm.ui.disk_view_docker import docker_sections
 from wimm.ui.format import short_date
 
@@ -69,7 +85,15 @@ def _listed(*, key: str, title: str, rows: tuple[DiskRowView, ...], empty: str) 
     return DiskSectionView(key=key, title=title, rows=rows, message=None if rows else empty)
 
 
-def _devdirs_section(*, report: DiskReport, min_age_days: int) -> DiskSectionView:
+def _roots_empty_state() -> EmptyStateView:
+    return EmptyStateView(
+        title=_(NO_ROOTS_TITLE), text=_(NO_ROOTS_TEXT), action_label=_(CHOOSE_FOLDER_LABEL)
+    )
+
+
+def _devdirs_section(
+    *, report: DiskReport, min_age_days: int, roots: RootsState
+) -> DiskSectionView:
     largest_first = sorted(report.devdirs, key=lambda d: -d.size)
     dirs = tuple(_devdir_row(item=d) for d in largest_first)
     shown, hidden = _capped(rows=dirs, hidden=report.devdirs_truncated)
@@ -83,28 +107,32 @@ def _devdirs_section(*, report: DiskReport, min_age_days: int) -> DiskSectionVie
         _("Cartelle di dipendenze"),
         shown,
         more_text(count=hidden),
-        None if shown else empty,
+        None if shown or not roots.usable else empty,
+        warnings=tuple(_(MISSING_ROOT_TEXT).format(path=path) for path in roots.missing),
+        empty_state=None if roots.usable else _roots_empty_state(),
     )
 
 
-def _local_sections(*, report: DiskReport, min_age_days: int) -> tuple[DiskSectionView, ...]:
+def _local_sections(
+    *, report: DiskReport, min_age_days: int, roots: RootsState
+) -> tuple[DiskSectionView, ...]:
     caches = tuple(_cache_row(entry=e) for e in report.caches if e.kind is not CacheKind.TRASH)
     trash = tuple(_cache_row(entry=e) for e in report.caches if e.kind is CacheKind.TRASH)
     return (
         _listed(key="caches", title=_("Cache"), rows=caches, empty=_("Nessuna cache trovata")),
-        _devdirs_section(report=report, min_age_days=min_age_days),
+        _devdirs_section(report=report, min_age_days=min_age_days, roots=roots),
         _listed(key="trash", title=_("Cestino"), rows=trash, empty=_("Cestino non rilevato")),
     )
 
 
 def build_disk_sections(
-    *, report: DiskReport | None, min_age_days: int
+    *, report: DiskReport | None, min_age_days: int, roots: RootsState = ROOTS_FINE
 ) -> tuple[DiskSectionView, ...]:
     """All sections of the page; empty before the first scan."""
     if report is None:
         return ()
     sections = docker_sections(report=report) + _local_sections(
-        report=report, min_age_days=min_age_days
+        report=report, min_age_days=min_age_days, roots=roots
     )
     # SECTION_TIERS lists the keys tier by tier: its order is the page order.
     order = list(SECTION_TIERS)

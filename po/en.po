@@ -188,8 +188,8 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:36 src/wimm/ui/disk_view.py:22
-#: src/wimm/ui/disk_view.py:96
+#: src/wimm/core/planning_disk.py:36 src/wimm/ui/disk_view.py:38
+#: src/wimm/ui/disk_view.py:124
 msgid "Cestino"
 msgstr "Trash"
 
@@ -368,7 +368,7 @@ msgstr "no connection"
 msgid "{prefix} da {duration}"
 msgstr "{prefix} for {duration}"
 
-#: src/wimm/core/text.py:90 src/wimm/ui/format.py:151
+#: src/wimm/core/text.py:90 src/wimm/ui/format.py:152
 msgid "attività non misurabile"
 msgstr "activity cannot be measured"
 
@@ -700,8 +700,8 @@ msgstr "Things have changed, recalculating…"
 msgid "Dettagli"
 msgstr "Details"
 
-#: src/wimm/ui/action_flow.py:43 src/wimm/ui/format.py:87
-#: src/wimm/ui/format.py:88
+#: src/wimm/ui/action_flow.py:43 src/wimm/ui/format.py:88
+#: src/wimm/ui/format.py:89
 msgid "Riaccendi"
 msgstr "Start again"
 
@@ -752,7 +752,7 @@ msgstr "Unnamed image ({short})"
 msgid "Cache {name}"
 msgstr "{name} cache"
 
-#: src/wimm/ui/dialogs/outcome.py:14 src/wimm/ui/format.py:70
+#: src/wimm/ui/dialogs/outcome.py:14 src/wimm/ui/format.py:71
 msgid "Chiudi"
 msgstr "Close"
 
@@ -760,57 +760,57 @@ msgstr "Close"
 msgid "Esito"
 msgstr "Result"
 
-#: src/wimm/ui/dialogs/outcome.py:16 src/wimm/ui/format.py:69
+#: src/wimm/ui/dialogs/outcome.py:16 src/wimm/ui/format.py:70
 msgid "Forza chiusura"
 msgstr "Force close"
 
-#: src/wimm/ui/dialogs/preferences.py:27 src/wimm/ui/window_notify.py:65
+#: src/wimm/ui/dialogs/preferences.py:29 src/wimm/ui/window_notify.py:65
 msgid "Preferenze"
 msgstr "Preferences"
 
-#: src/wimm/ui/dialogs/preferences.py:28
+#: src/wimm/ui/dialogs/preferences.py:30
 msgid "Applica"
 msgstr "Apply"
 
-#: src/wimm/ui/dialogs/preferences.py:29
+#: src/wimm/ui/dialogs/preferences.py:31
 msgid "Preferenze applicate."
 msgstr "Preferences applied."
 
-#: src/wimm/ui/dialogs/preferences.py:30
+#: src/wimm/ui/dialogs/preferences.py:32
 msgid "Nessuna modifica."
 msgstr "No changes."
 
-#: src/wimm/ui/dialogs/preferences.py:31
+#: src/wimm/ui/dialogs/preferences.py:33
 msgid "Alcuni valori non sono validi: restano quelli in uso."
 msgstr "Some values are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:32
+#: src/wimm/ui/dialogs/preferences.py:34
 #, python-brace-format
 msgid "Impossibile salvare le preferenze: {reason}. Riprova."
 msgstr "Cannot save the preferences: {reason}. Try again."
 
-#: src/wimm/ui/dialogs/preferences.py:33
+#: src/wimm/ui/dialogs/preferences.py:35
 msgid "Ripristina i valori consigliati"
 msgstr "Restore the recommended values"
 
-#: src/wimm/ui/dialogs/preferences.py:35
+#: src/wimm/ui/dialogs/preferences.py:37
 msgid "Tornano come all'inizio anche i tipi di programma per cui ricevi avvisi; i programmi da non toccare e le cartelle in cui cercare restano come sono."
 msgstr "The kinds of program you get alerts for also go back to how they were at the start; the programs never to touch and the folders to search stay as they are."
 
-#: src/wimm/ui/dialogs/preferences.py:39
+#: src/wimm/ui/dialogs/preferences.py:41
 msgid "Alcuni valori in Impostazioni avanzate non sono validi: restano quelli in uso."
 msgstr "Some values in Advanced settings are not valid: the ones in use stay."
 
-#: src/wimm/ui/dialogs/preferences.py:41
+#: src/wimm/ui/dialogs/preferences.py:43
 msgid "Impostazioni avanzate"
 msgstr "Advanced settings"
 
-#: src/wimm/ui/dialogs/preferences.py:42
+#: src/wimm/ui/dialogs/preferences.py:44
 #, python-brace-format
 msgid "Come si capisce se è in uso, soglie, chiusura e cartelle ({count} voci)"
 msgstr "How to tell if it is in use, thresholds, closing and folders ({count} items)"
 
-#: src/wimm/ui/dialogs/preferences.py:44
+#: src/wimm/ui/dialogs/preferences.py:47
 msgid "Non disponibile su questo desktop: funziona solo con X11"
 msgstr "Not available on this desktop: it only works with X11"
 
@@ -928,8 +928,8 @@ msgid "Proponi le cartelle non usate da almeno (giorni)"
 msgstr "Offer the folders not used for at least (days)"
 
 #: src/wimm/ui/dialogs/preferences_model.py:118
-msgid "Le cartelle node_modules e .venv più recenti restano fuori"
-msgstr "The most recent node_modules and .venv folders are left out"
+msgid "Le cartelle di dipendenze più recenti restano fuori"
+msgstr "More recent dependency folders are left out"
 
 #: src/wimm/ui/dialogs/preferences_model.py:122
 msgid "Cerca fino a questi livelli di sottocartelle"
@@ -992,8 +992,8 @@ msgid "Cartelle di sviluppo"
 msgstr "Development folders"
 
 #: src/wimm/ui/dialogs/preferences_model.py:171
-msgid "Dove cercare node_modules e .venv e ogni quanto."
-msgstr "Where to look for node_modules and .venv, and how often."
+msgid "Dove cercare le cartelle di dipendenze e ogni quanto."
+msgstr "Where to look for dependency folders, and how often."
 
 #: src/wimm/ui/dialogs/preferences_presets.py:17
 msgid "Personalizzati: valgono i valori scelti qui sotto e nelle impostazioni avanzate."
@@ -1253,134 +1253,151 @@ msgstr ""
 msgid "dimensione sconosciuta"
 msgstr "unknown size"
 
-#: src/wimm/ui/disk_model.py:54
+#: src/wimm/ui/disk_model.py:76
 #, python-brace-format
 msgid "e altre {count}"
 msgstr "and {count} more"
 
 #: src/wimm/ui/disk_texts.py:13
+#, python-brace-format
+msgid "La cartella {path} non esiste"
+msgstr "The folder {path} does not exist"
+
+#: src/wimm/ui/disk_texts.py:14
+msgid "Nessuna cartella di progetti trovata"
+msgstr "No project folder found"
+
+#: src/wimm/ui/disk_texts.py:15
+msgid "Indica dove tieni i tuoi progetti e cerco le librerie che si possono liberare."
+msgstr "Tell me where you keep your projects and I will look for libraries you can free."
+
+#: src/wimm/ui/disk_texts.py:16
+msgid "Scegli una cartella"
+msgstr "Choose a folder"
+
+#: src/wimm/ui/disk_texts.py:17
 msgid "Niente da liberare sul disco"
 msgstr "Nothing to free on the disk"
 
-#: src/wimm/ui/disk_texts.py:14
+#: src/wimm/ui/disk_texts.py:18
 msgid "Ogni bottone ti mostra prima cosa succede e chiede conferma."
 msgstr "Every button first shows you what will happen and asks for confirmation."
 
-#: src/wimm/ui/disk_texts.py:17
+#: src/wimm/ui/disk_texts.py:21
 msgid "Docker serve a far girare programmi in contenitori separati."
 msgstr "Docker runs programs in separate containers."
 
-#: src/wimm/ui/disk_texts.py:18
+#: src/wimm/ui/disk_texts.py:22
 msgid "Copie scaricate per avviare i contenitori. Se servono di nuovo, si riscaricano."
 msgstr "Copies downloaded to start containers. If they are needed again, they are downloaded again."
 
-#: src/wimm/ui/disk_texts.py:19
+#: src/wimm/ui/disk_texts.py:23
 msgid "Contenitori spenti che occupano ancora un po' di spazio."
 msgstr "Stopped containers that still take up some space."
 
-#: src/wimm/ui/disk_texts.py:20
+#: src/wimm/ui/disk_texts.py:24
 msgid "Dati salvati dai contenitori, per esempio un database."
 msgstr "Data saved by containers, for example a database."
 
-#: src/wimm/ui/disk_texts.py:21
+#: src/wimm/ui/disk_texts.py:25
 msgid "Pezzi salvati per costruire i contenitori più in fretta: si ricreano."
 msgstr "Data saved to build containers faster: it is recreated."
 
-#: src/wimm/ui/disk_texts.py:22
+#: src/wimm/ui/disk_texts.py:26
 msgid "File temporanei dei programmi di sviluppo: si ricreano da soli."
 msgstr "Temporary files of development tools: they recreate themselves."
 
-#: src/wimm/ui/disk_texts.py:23
+#: src/wimm/ui/disk_texts.py:27
 msgid "Librerie scaricate per progetti vecchi: si reinstallano se riapri il progetto."
 msgstr "Libraries downloaded for old projects: they are reinstalled if you reopen the project."
 
-#: src/wimm/ui/disk_texts.py:24
+#: src/wimm/ui/disk_texts.py:28
 msgid "File che hai già cancellato: svuotandolo spariscono per sempre."
 msgstr "Files you have already deleted: emptying it removes them for good."
 
-#: src/wimm/ui/disk_texts.py:30
+#: src/wimm/ui/disk_texts.py:34
 msgid "Si libera senza pensarci"
 msgstr "Free it without a second thought"
 
-#: src/wimm/ui/disk_texts.py:31
+#: src/wimm/ui/disk_texts.py:35
 msgid "Da guardare prima"
 msgstr "Take a look first"
 
-#: src/wimm/ui/disk_texts.py:32
+#: src/wimm/ui/disk_texts.py:36
 msgid "Attenzione: cancella dati"
 msgstr "Caution: deletes data"
 
-#: src/wimm/ui/disk_texts.py:35
+#: src/wimm/ui/disk_texts.py:39
 msgid "Si ricrea da solo quando serve."
 msgstr "It recreates itself when needed."
 
-#: src/wimm/ui/disk_texts.py:36
+#: src/wimm/ui/disk_texts.py:40
 msgid "Si può riscaricare o ricreare, ma con un po' di lavoro."
 msgstr "It can be downloaded or recreated again, but it takes some work."
 
-#: src/wimm/ui/disk_texts.py:37
+#: src/wimm/ui/disk_texts.py:41
 msgid "Dentro possono esserci database o file che non si recuperano."
 msgstr "It may hold databases or files that cannot be recovered."
 
-#: src/wimm/ui/disk_texts.py:49
+#: src/wimm/ui/disk_texts.py:53
 msgid "Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano."
 msgstr "Only cleans what recreates itself: the trash and your data stay."
 
-#: src/wimm/ui/disk_texts.py:60 src/wimm/ui/summary_status.py:106
+#: src/wimm/ui/disk_texts.py:64 src/wimm/ui/summary_status.py:106
 #, python-brace-format
 msgid "Libera {size} senza rischi"
 msgstr "Free {size} with no risk"
 
-#: src/wimm/ui/disk_texts.py:80
+#: src/wimm/ui/disk_texts.py:84
 #, python-brace-format
 msgid "Puoi liberare fino a {size}"
 msgstr "You can free up to {size}"
 
-#: src/wimm/ui/disk_view.py:16 src/wimm/ui/pages/disk.py:17
+#: src/wimm/ui/disk_view.py:32 src/wimm/ui/pages/disk.py:17
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
-#: src/wimm/ui/disk_view.py:21
+#: src/wimm/ui/disk_view.py:37
 msgid "Miniature"
 msgstr "Thumbnails"
 
-#: src/wimm/ui/disk_view.py:32
+#: src/wimm/ui/disk_view.py:48
 #, python-brace-format
 msgid "Ultimo controllo alle {time}"
 msgstr "Last check at {time}"
 
-#: src/wimm/ui/disk_view.py:33
+#: src/wimm/ui/disk_view.py:49
 #, python-brace-format
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:56
+#: src/wimm/ui/disk_view.py:72
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:77
+#: src/wimm/ui/disk_view.py:101
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:83
+#: src/wimm/ui/disk_view.py:107
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:94
+#: src/wimm/ui/disk_view.py:122
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:94
+#: src/wimm/ui/disk_view.py:122
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:96
+#: src/wimm/ui/disk_view.py:124
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 
@@ -1450,203 +1467,203 @@ msgstr "Stopped containers"
 msgid "Volumi Docker"
 msgstr "Docker volumes"
 
-#: src/wimm/ui/format.py:19
+#: src/wimm/ui/format.py:20
 msgid "Sistema"
 msgstr "System"
 
-#: src/wimm/ui/format.py:20
+#: src/wimm/ui/format.py:21
 msgid "Contenitore Docker"
 msgstr "Docker container"
 
-#: src/wimm/ui/format.py:21
+#: src/wimm/ui/format.py:22
 msgid "Server di sviluppo"
 msgstr "Development server"
 
-#: src/wimm/ui/format.py:22
+#: src/wimm/ui/format.py:23
 msgid "Strumento di sviluppo"
 msgstr "Development tool"
 
-#: src/wimm/ui/format.py:23
+#: src/wimm/ui/format.py:24
 msgid "Assistente AI"
 msgstr "AI assistant"
 
-#: src/wimm/ui/format.py:24
+#: src/wimm/ui/format.py:25
 msgid "Browser"
 msgstr "Browser"
 
-#: src/wimm/ui/format.py:25
+#: src/wimm/ui/format.py:26
 msgid "App"
 msgstr "App"
 
-#: src/wimm/ui/format.py:26
+#: src/wimm/ui/format.py:27
 msgid "Terminale"
 msgstr "Terminal"
 
-#: src/wimm/ui/format.py:27
+#: src/wimm/ui/format.py:28
 msgid "Sessione"
 msgstr "Session"
 
-#: src/wimm/ui/format.py:28
+#: src/wimm/ui/format.py:29
 msgid "Monitor"
 msgstr "Monitor"
 
-#: src/wimm/ui/format.py:29 src/wimm/ui/summary.py:18
+#: src/wimm/ui/format.py:30 src/wimm/ui/summary.py:18
 msgid "Altro"
 msgstr "Other"
 
-#: src/wimm/ui/format.py:30
+#: src/wimm/ui/format.py:31
 msgid "Progetto"
 msgstr "Project"
 
-#: src/wimm/ui/format.py:34
+#: src/wimm/ui/format.py:35
 msgid "Attenzione"
 msgstr "Caution"
 
-#: src/wimm/ui/format.py:34
+#: src/wimm/ui/format.py:35
 msgid "Pericolo"
 msgstr "Danger"
 
-#: src/wimm/ui/format.py:34
+#: src/wimm/ui/format.py:35
 msgid "Sicuro"
 msgstr "Safe"
 
-#: src/wimm/ui/format.py:39
+#: src/wimm/ui/format.py:40
 msgid "Sicuro: non perdi nulla"
 msgstr "Safe: you lose nothing"
 
-#: src/wimm/ui/format.py:40
+#: src/wimm/ui/format.py:41
 msgid "Attenzione: puoi perdere lavoro"
 msgstr "Caution: you may lose work"
 
-#: src/wimm/ui/format.py:41 src/wimm/ui/format.py:50
+#: src/wimm/ui/format.py:42 src/wimm/ui/format.py:51
 msgid "Pericolo: cancella dati"
 msgstr "Danger: deletes data"
 
-#: src/wimm/ui/format.py:48
+#: src/wimm/ui/format.py:49
 msgid "Sicuro: si ricrea quando serve"
 msgstr "Safe: it recreates itself when needed"
 
-#: src/wimm/ui/format.py:49
+#: src/wimm/ui/format.py:50
 msgid "Attenzione: leggi prima cosa si perde"
 msgstr "Caution: read first what you lose"
 
-#: src/wimm/ui/format.py:59
+#: src/wimm/ui/format.py:60
 msgid "memoria quasi piena"
 msgstr "memory almost full"
 
-#: src/wimm/ui/format.py:60
+#: src/wimm/ui/format.py:61
 msgid "memoria quasi finita"
 msgstr "memory almost out"
 
-#: src/wimm/ui/format.py:64
+#: src/wimm/ui/format.py:65
 msgid "Alta"
 msgstr "High"
 
-#: src/wimm/ui/format.py:64
+#: src/wimm/ui/format.py:65
 msgid "Critica"
 msgstr "Critical"
 
-#: src/wimm/ui/format.py:64
+#: src/wimm/ui/format.py:65
 msgid "Normale"
 msgstr "Normal"
 
-#: src/wimm/ui/format.py:68
+#: src/wimm/ui/format.py:69
 msgid "Termina"
 msgstr "End"
 
-#: src/wimm/ui/format.py:71 src/wimm/ui/format.py:73
+#: src/wimm/ui/format.py:72 src/wimm/ui/format.py:74
 msgid "Ferma"
 msgstr "Stop"
 
-#: src/wimm/ui/format.py:72
+#: src/wimm/ui/format.py:73
 msgid "Rimuovi"
 msgstr "Remove"
 
-#: src/wimm/ui/format.py:74
+#: src/wimm/ui/format.py:75
 msgid "Spegni il progetto"
 msgstr "Shut down the project"
 
-#: src/wimm/ui/format.py:75
+#: src/wimm/ui/format.py:76
 msgid "Spegni e rimuovi i volumi"
 msgstr "Shut down and remove the volumes"
 
-#: src/wimm/ui/format.py:76
+#: src/wimm/ui/format.py:77
 msgid "Libera la memoria"
 msgstr "Free the memory"
 
-#: src/wimm/ui/format.py:77
+#: src/wimm/ui/format.py:78
 msgid "Rimuovi immagine"
 msgstr "Remove image"
 
-#: src/wimm/ui/format.py:78
+#: src/wimm/ui/format.py:79
 msgid "Elimina immagini senza nome"
 msgstr "Delete unnamed images"
 
-#: src/wimm/ui/format.py:79
+#: src/wimm/ui/format.py:80
 msgid "Elimina immagini inutilizzate"
 msgstr "Delete unused images"
 
-#: src/wimm/ui/format.py:80
+#: src/wimm/ui/format.py:81
 msgid "Svuota cache di build"
 msgstr "Empty the build cache"
 
-#: src/wimm/ui/format.py:81
+#: src/wimm/ui/format.py:82
 msgid "Elimina container fermi"
 msgstr "Delete stopped containers"
 
-#: src/wimm/ui/format.py:82
+#: src/wimm/ui/format.py:83
 msgid "Rimuovi volume"
 msgstr "Remove volume"
 
-#: src/wimm/ui/format.py:83
+#: src/wimm/ui/format.py:84
 msgid "Pulisci cache"
 msgstr "Clean the cache"
 
-#: src/wimm/ui/format.py:84
+#: src/wimm/ui/format.py:85
 msgid "Svuota cestino"
 msgstr "Empty the trash"
 
-#: src/wimm/ui/format.py:85
+#: src/wimm/ui/format.py:86
 msgid "Elimina cartella"
 msgstr "Delete folder"
 
-#: src/wimm/ui/format.py:86
+#: src/wimm/ui/format.py:87
 msgid "Libera spazio"
 msgstr "Free up space"
 
-#: src/wimm/ui/format.py:99
+#: src/wimm/ui/format.py:100
 #, python-brace-format
 msgid "da {count} s"
 msgstr "for {count} s"
 
-#: src/wimm/ui/format.py:101
+#: src/wimm/ui/format.py:102
 #, python-brace-format
 msgid "da {count} min"
 msgstr "for {count} min"
 
-#: src/wimm/ui/format.py:103
+#: src/wimm/ui/format.py:104
 #, python-brace-format
 msgid "da {count} h"
 msgstr "for {count} h"
 
-#: src/wimm/ui/format.py:105
+#: src/wimm/ui/format.py:106
 #, python-brace-format
 msgid "da {count} giorno"
 msgid_plural "da {count} giorni"
 msgstr[0] "for {count} day"
 msgstr[1] "for {count} days"
 
-#: src/wimm/ui/format.py:145
+#: src/wimm/ui/format.py:146
 msgid "in uso"
 msgstr "in use"
 
-#: src/wimm/ui/format.py:147
+#: src/wimm/ui/format.py:148
 #, python-brace-format
 msgid "non in uso {elapsed}"
 msgstr "not in use {elapsed}"
 
 #. TRANSLATORS: strftime pattern of a day without the year; English puts the month first.
-#: src/wimm/ui/format.py:169
+#: src/wimm/ui/format.py:170
 #, no-python-format
 msgid "%d/%m"
 msgstr "%m/%d"
@@ -1727,7 +1744,7 @@ msgstr "The check failed. Try again with Check now."
 msgid "Controlla ora"
 msgstr "Check now"
 
-#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:75
+#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:109
 msgid "Controllo in corso"
 msgstr "Checking"
 
