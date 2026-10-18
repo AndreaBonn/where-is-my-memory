@@ -1,4 +1,4 @@
-.PHONY: setup test test-all perf lint run deb test-deb pot po mo
+.PHONY: setup test test-all perf lint audit run deb test-deb pot po mo
 
 # Enforce core coverage only once executable core code exists.
 CORE_HAS_CODE := $(shell test ! -d src/wimm/core || \
@@ -34,6 +34,16 @@ lint:
 	uv run mypy src tests
 	# Every user-visible string goes through gettext and po/en.po covers them all.
 	uv run python scripts/check_i18n.py
+
+# Security scan. The runtime has no PyPI dependencies (psutil, docker and PyGObject come
+# from apt), so pip-audit covers the development group exported by uv. The export is fully
+# pinned, so pip-audit skips its own resolution (--no-deps --disable-pip): resolving would
+# build PyGObject, which only exists as a stub dependency here.
+audit:
+	uv run bandit -c pyproject.toml -r src -q
+	@req="$$(mktemp)" && trap 'rm -f "$$req"' EXIT && \
+		uv export --no-hashes --no-emit-project > "$$req" && \
+		uv run pip-audit --no-deps --disable-pip -r "$$req"
 
 # Extract every marked string into the (unversioned) template.
 pot:

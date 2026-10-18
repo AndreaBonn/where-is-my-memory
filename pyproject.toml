@@ -24,6 +24,8 @@ dev = [
     "pygobject-stubs",
     # Stubs matching the apt runtime (psutil 5.9.8); no stubs exist for docker 5.x.
     "types-psutil==5.9.5.20240516",
+    "bandit>=1.9.4",
+    "pip-audit>=2.10.1",
 ]
 
 [tool.uv]
@@ -76,3 +78,8 @@ markers = [
 ]
 # Wall-clock budgets fail under unrelated load; they run on purpose with make perf.
 addopts = ["-m", "not perf"]
+
+[tool.bandit]
+# B404 only flags `import subprocess`. Every call runs an argument list without a shell,
+# with a timeout, from a fixed command (docs/security/T-021-bandit-triage.md).
+skips = ["B404"]
