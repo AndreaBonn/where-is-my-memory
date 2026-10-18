@@ -198,3 +198,10 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T011 T012 T013 T014 | 35f9f5c | walker ed executor con `classify_devdir`; marker registrato dal collector e usato nel testo di conferma; 88 cartelle sulla home reale
 - T004 T005 | e4b6244 | non separabili per file; radici rilevate mai scritte su disco (review: salvataggio di un'altra preferenza)
 - T017 | (questo commit) | +3% di durata a parità di cache, `docs/PERF.md`
+- T008 T018 | c3181fc | voci in `docs/DEVIATIONS.md`
+- T020 T021 T022 | 0581767, 928d839 | `make audit` verde; strumenti in uvx dopo la regressione di requests nel venv
+- T023 T024 | 63afd9c | `make test-deb` senza avvisi lintian
+- T025 | sospeso | manca l'URL (Q8)
+- T006 | bd7c20c | click-through reale a 1280 px; corretti focus con selezione totale e I/O per snapshot
+- T026 T027 | 0cc31ac | prima apertura 236 ms, riapertura 10 ms; M-17..M-23
+- T019 T028 | a7d7901 014b04f | security-reviewer su L1 (nessun P0/P1, tre P2 corretti); REPORT_ATTIVITA
