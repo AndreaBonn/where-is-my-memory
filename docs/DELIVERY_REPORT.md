@@ -79,7 +79,7 @@ Fonte: `docs/security/T-6.1-security-baseline.md` (2026-10-17). Esito: soddisfat
 - Conteggio: P0 0, P1 0, P2 6 (uno corretto dopo la revisione), Info 3.
 - Limiti della verifica: `bandit` e `pip-audit` non sono stati eseguiti (offline, non installati) e la suite di test non è stata eseguita dal revisore. La suite è stata poi eseguita in T-6.4.
 
-## 3. Controlli manuali M-1..M-27
+## 3. Controlli manuali M-1..M-28
 
 Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono il vostro computer: sessione grafica reale, logout, `sudo`, clic veri o azioni su risorse vostre. Nessuno è stato eseguito da chi ha sviluppato l'applicazione.
 
@@ -112,6 +112,7 @@ Spuntate la casella quando il controllo è fatto. Tutti i controlli richiedono i
 | [ ] | M-25 | Notifica OOM | Con l'app in esecuzione: `systemd-run --user --scope -p MemoryMax=50M -p MemorySwapMax=0 python3 -c "b = bytearray(300 * 1024 * 1024)"` | Il comando esce con codice 137; entro un ciclo di campionamento arriva la notifica "Il sistema ha chiuso 1 programma per mancanza di memoria" con i gruppi più grandi. Il contatore è già provato dal vivo (da 6 a 7), la notifica sul desktop no |
 | [ ] | M-26 | zram | Su una macchina con zram attivo (`zramctl` mostra un dispositivo in uso): aprire la Panoramica | La legenda della RAM mostra "Swap compresso in RAM (zram)" con un valore vicino alla colonna `TOTAL` di `zramctl`; il "?" accanto apre l'aiuto |
 | [ ] | M-27 | GPU AMD | Su una macchina con una scheda AMD dedicata: aprire la Panoramica | Il blocco "Memoria video" mostra "AMD <usata> di <totale>", vicino a quanto riporta `amdgpu_top` o `radeontop`. Con una APU può comparire la memoria riservata alla grafica (vedi DEVIATIONS) |
+| [ ] | M-28 | Secondo disco | Con un secondo disco ext4 montato (per esempio in `/mnt/data`) e una cartella vostra `/mnt/data/code` con un progetto vecchio che ha `node_modules`: in Preferenze, Impostazioni avanzate, aggiungere `/mnt/data/code` a "Cartelle in cui cercare" e applicare; poi aggiungere `/mnt/data` e applicare | `/mnt/data/code` è accettata e la scheda Disco propone il suo `node_modules`, che si cancella con la conferma; `/mnt/data` compare con il motivo "troppo vicina alla radice" e non viene percorsa |
 
 ## 4. Premesse chiuse
 

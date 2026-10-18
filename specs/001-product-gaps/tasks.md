@@ -233,3 +233,10 @@ Una riga per task chiuso: `T<id> | commit <sha> | verify`.
 - T069 T070 T072 | 3711b4d | cache HuggingFace, ollama, emulatori e SDK Android; security review: marcatori dell'SDK troppo generici (progetti Cordova pulibili), corretti
 - T071 | cdd104d | `ollama serve` vivo blocca la pulizia; review: argomenti illeggibili ora bloccano
 - T073 | 84b88a5 (questo commit) | security-reviewer su L6 e su T071. Aperti: ollama rinominato non riconosciuto; `ANDROID_AVD_HOME` non onorato; "Puoi liberare fino a" conta le voci Attenzione
+- T074 | 63e3387 49e100f | ADR-007 accettato dall'utente con la home ammessa
+- T075 | bbcdf6c 896bcc6 | regola pura; review: fuseblk e prefissi /bin, /lib* aggiunti
+- T076 | 04870ac | config accetta radici esterne, rifiutate visibili; review: fatti illeggibili mai ammessi, ro dal superblocco
+- T077 T078 | b676d18 | esecutore e scansione con la regola, solo radici ammesse
+- T079 | 7970faa | `/` mai progetto
+- T080 | (commit UI) | Preferenze con motivo del rifiuto, click-through a 1280 px
+- T081 | (questo commit) | security-reviewer su L7 eseguito (nessun P0/P1), DEVIATIONS, M-28. Aperti: F-SEL (`test_folders_action_opens_the_advanced_page_on_the_folders_entry` passa su Xvfb ma fallisce sul display reale con tutto il testo selezionato, preesistente da L1, da indagare); T1 lettura dei fatti sul thread UI non misurata; T2 cartella esistente con fatti illeggibili mostrata ok nella pagina Disco ma non scansionata

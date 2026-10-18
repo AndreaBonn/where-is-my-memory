@@ -566,3 +566,24 @@ Limiti: kind si riconosce solo dalla CLI; minikube con driver Docker non si rico
 **ollama in esecuzione.** L'esecutore rifiuta la pulizia dei modelli se c'è un processo `ollama serve`, anche di un altro utente come il servizio di sistema. Un processo che si chiama `ollama` e di cui non si leggono gli argomenti conta come server: nel dubbio non si cancella. Un ollama rinominato (binario con un altro nome) non viene riconosciuto. Fra il controllo e la cancellazione resta una finestra di millisecondi: un server avviato lì costerebbe un nuovo download, non un dato perso per sempre.
 
 **Titolo "Puoi liberare fino a".** Conta anche le voci Attenzione, come già faceva per Maven e JetBrains dal lotto L3; con HuggingFace e SDK la cifra può crescere di diversi GB.
+
+## Cartelle di progetto fuori dalla home (001-product-gaps, lotto L7, ADR-007)
+
+**Regola.** Una cartella di progetto può stare fuori dalla home, per esempio su un secondo disco in `/mnt/data/code`. È ammessa se è dell'utente, se non sta sotto un percorso di sistema (`/usr`, `/etc`, `/var`, `/opt`, `/srv`, `/tmp`, `/bin`, `/lib*` e gli altri dell'elenco in `core/constants.py`), se non è un antenato della home né la home di un altro utente, se nessuna cartella sopra di lei può essere rinominata da altri (scrivibile da altri senza sticky bit) e se sta su un disco locale scrivibile. Dischi di rete, FUSE (compresi NTFS ed exFAT via `fuseblk`) e mount in sola lettura sono rifiutati. La home e ciò che sta sotto restano ammessi come prima, per decisione dell'utente all'accettazione dell'ADR.
+
+**Cartelle rifiutate.** Restano nell'elenco delle Preferenze con il motivo ("La cartella /usr/share/doc non viene usata. La cartella appartiene al sistema"), come le cartelle mancanti. La scansione percorre solo le cartelle ammesse; una cartella di cui non si leggono i dati non è mai ammessa.
+
+**Esecuzione.** Prima di cancellare, l'esecutore rilegge proprietario, cartelle superiori e mount della cartella che contiene il bersaglio, e rifiuta se non li legge o se la regola rifiuta. Un disco montato al posto della cartella pianificata viene fermato dall'impronta `st_ino`/`st_dev`.
+
+**Differenze dall'ADR.**
+
+- Una cartella configurata come collegamento simbolico viene risolta prima del controllo, quindi il motivo "è un collegamento" non compare mai: la regola si applica alla cartella reale, con lo stesso esito di sicurezza.
+- I fatti della radice sono un oggetto (`RootFacts`) invece dei cinque parametri previsti da T075, per il limite di quattro parametri.
+
+**Limiti noti (rilievi della review di sicurezza, accettati).**
+
+- Un mount di rete annidato fra la cartella configurata e il bersaglio non viene rifiutato: si valuta solo il disco della cartella configurata.
+- Le cartelle fra la radice e il bersaglio non sono valutate per proprietà e permessi; la cancellazione resta limitata a ciò che il kernel permette all'utente.
+- Una cartella scrivibile dal gruppo primario dell'utente è considerata sicura, come serve con i gruppi privati di Ubuntu; con un gruppo primario condiviso (per esempio `users`) altri utenti potrebbero rinominarvi voci. Le ACL non sono lette.
+- Che la scansione riceva solo cartelle ammesse è un contratto del chiamante, non del tipo.
+- I prefissi di sistema sono una lista chiusa; su Fedora i dischi rimovibili in `/run/media` risultano rifiutati.
