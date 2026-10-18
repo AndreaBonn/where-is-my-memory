@@ -3,7 +3,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from tests.helpers import invalid_model_value
+from tests.helpers import SLOTTED_FROZEN_ERROR, invalid_model_value
 from wimm import model as m
 from wimm.model import (
     ACTION_TARGET_SHAPES,
@@ -118,8 +118,11 @@ def test_plan_invalid_fields(field: str, value: object) -> None:
 
 
 def test_risk_order() -> None:
+    assert Risk.SAFE < Risk.CAUTION < Risk.DANGER
+    assert not Risk.DANGER < Risk.CAUTION
+    assert max([Risk.SAFE, Risk.DANGER, Risk.CAUTION]) is Risk.DANGER
     assert max([Risk.SAFE, Risk.CAUTION]) is Risk.CAUTION
-    assert max([Risk.DANGER, Risk.SAFE]) is Risk.DANGER
+    assert min([Risk.DANGER, Risk.CAUTION]) is Risk.CAUTION
 
 
 @pytest.mark.parametrize("category", list(Category))
@@ -179,7 +182,7 @@ def test_docker_status_and_datetime_contract() -> None:
 )
 def test_fingerprints_are_frozen_slotted_and_step_targets(fingerprint: m.Fingerprint) -> None:
     assert not hasattr(fingerprint, "__dict__")
-    with pytest.raises(TypeError, match="super"):
+    with pytest.raises((TypeError, FrozenInstanceError), match=SLOTTED_FROZEN_ERROR):
         invalid_model_value(fingerprint).extra = "mutation"
 
 

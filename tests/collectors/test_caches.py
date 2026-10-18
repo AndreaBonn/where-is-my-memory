@@ -1,5 +1,8 @@
+import logging
 import os
 from pathlib import Path
+
+import pytest
 
 from wimm.collectors.cache_table import read_cache_table
 from wimm.collectors.caches import collect_caches
@@ -132,3 +135,43 @@ def test_collect_caches_follows_a_tool_variable_only_when_the_folder_is_the_tool
 
     assert set(found) == {CacheKind.BUN}
     assert found[CacheKind.BUN].path == str(tagged)
+
+
+def test_collect_caches_unstatable_folder_is_skipped_with_a_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    home = tmp_path / "fakehome"
+    denied = _make_cache(home, CacheKind.UV)
+    _make_cache(home, CacheKind.THUMBNAILS)
+    table = read_cache_table(environ={}, home=home, roots=())
+    real_lstat = os.lstat
+
+    def lstat(path: object, *args: object, **kwargs: object) -> os.stat_result:
+        if str(path) == str(denied):
+            raise PermissionError("denied")
+        return real_lstat(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(target=os, name="lstat", value=lstat)
+    with caplog.at_level(logging.WARNING):
+        entries = collect_caches(table=table, cache_dir=tmp_path / "sizes", sleep=lambda _s: None)
+
+    assert {entry.kind for entry in entries} == {CacheKind.THUMBNAILS}
+    assert any(
+        record.levelno == logging.WARNING and "Cannot stat cache" in record.getMessage()
+        for record in caplog.records
+    )
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
+def test_collect_caches_still_reports_a_folder_with_an_unreadable_part(tmp_path: Path) -> None:
+    home = tmp_path / "fakehome"
+    folder = _make_cache(home, CacheKind.PIP)
+    locked = folder / "locked"
+    locked.mkdir()
+    locked.chmod(0o000)
+    try:
+        found = _collect(home, tmp_path)
+    finally:
+        locked.chmod(0o700)
+
+    assert found[CacheKind.PIP].size == _blocks(folder, folder / "data.bin", locked)

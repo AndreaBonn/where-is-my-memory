@@ -150,3 +150,20 @@ def test_read_tmpfs_falls_back_to_a_bind_mount_when_the_first_is_unreachable(
         return good(path)
 
     assert read_tmpfs_used_bytes(mountinfo=mountinfo, statvfs=statvfs) == 10 * FRSIZE
+
+
+def test_read_zram_scan_failure_is_zero_and_logged_at_debug(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    make_zram(tmp_path, "zram0", "4096000 1000000 2000000 0 2500000 0 0 0\n")
+    assert read_zram_bytes(sys_block=tmp_path) == 2_000_000
+
+    def denied(self: Path, pattern: str) -> list[Path]:
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(target=Path, name="glob", value=denied)
+    with caplog.at_level(level=logging.DEBUG):
+        assert read_zram_bytes(sys_block=tmp_path) == 0
+
+    assert [record.levelno for record in caplog.records] == [logging.DEBUG]
+    assert "zram scan failed" in caplog.text

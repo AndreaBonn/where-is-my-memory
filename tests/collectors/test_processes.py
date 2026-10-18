@@ -214,6 +214,34 @@ def test_unexpected_per_process_error_is_logged_at_debug(
     with caplog.at_level(level=logging.DEBUG):
         result = collect_processes(source=source, own_uid=10, proc_root=tmp_path)
     assert [process.pid for process in result.data] == [43]
+    # Positive pair of the negative below: the command line was read, it just is not logged.
+    assert result.data[0].cmdline == ("worker", "arg")
     records = [r for r in caplog.records if "pid 42" in r.getMessage() and r.exc_info]
     assert records and records[0].levelno == logging.DEBUG
     assert "worker arg" not in caplog.text
+
+
+def test_other_uid_process_without_a_readable_cgroup_is_skipped_alone(tmp_path: Path) -> None:
+    proc_files(root=tmp_path, pid=8)  # pid 7 has no /proc entry at all
+    source = FakeSource(processes=[FakeProcess(pid=7, uid=0), FakeProcess(pid=8, uid=0)])
+
+    result = collect_processes(source=source, own_uid=10, proc_root=tmp_path)
+
+    assert [process.pid for process in result.data] == [8]
+    assert result.error is None
+
+
+@pytest.mark.parametrize("missing", ["uids", "name"])
+def test_process_whose_uid_or_name_cannot_be_read_is_skipped_alone(
+    tmp_path: Path, missing: str
+) -> None:
+    proc_files(root=tmp_path, pid=7)
+    proc_files(root=tmp_path, pid=8)
+    unreadable = FakeProcess(pid=7, uid=10)
+    unreadable.info[missing] = None
+    source = FakeSource(processes=[unreadable, FakeProcess(pid=8, uid=10)])
+
+    result = collect_processes(source=source, own_uid=10, proc_root=tmp_path)
+
+    assert [process.pid for process in result.data] == [8]
+    assert result.error is None

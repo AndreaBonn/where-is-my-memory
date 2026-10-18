@@ -112,6 +112,8 @@ def test_a_cache_below_a_symlinked_folder_is_never_cleanable(tmp_path: Path) -> 
     found = _by_kind(home=home, environ={})
 
     assert found[CacheKind.PIP].access is not CacheAccess.CLEANABLE
+    # Positive pair: a cache that does not sit below the symlink stays cleanable.
+    assert found[CacheKind.MAVEN].access is CacheAccess.CLEANABLE
 
 
 def test_xdg_cache_home_on_a_plain_folder_still_needs_the_sentinel(tmp_path: Path) -> None:

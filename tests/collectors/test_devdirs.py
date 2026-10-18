@@ -252,11 +252,12 @@ def locked_dir(tmp_path: Path) -> Iterator[Path]:
         locked.chmod(stat.S_IRWXU)
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
 def test_scan_unreadable_directory_counted_not_raised(tmp_path: Path, locked_dir: Path) -> None:
     root = tmp_path / "work"
     ok = _project(root, "ok")
     result = _scan(root, tmp_path)
-    assert result.error_count >= 1
+    assert result.error_count == 1
     assert _paths(result) == {str(ok / "node_modules")}
 
 
@@ -273,7 +274,7 @@ def test_scan_yields_gil_on_large_directories(tmp_path: Path) -> None:
         (root / f"f{index}").write_bytes(b"")
     sleeps: list[float] = []
     _scan(root, tmp_path, sleeps=sleeps)
-    assert 0 in sleeps
+    assert sleeps == [0]
 
 
 def test_scan_small_tree_does_not_sleep(tmp_path: Path) -> None:
@@ -345,6 +346,7 @@ def test_folder_replaced_by_a_symlink_before_measuring_is_dropped(tmp_path: Path
     assert swapped is None
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
 def test_project_age_days_is_none_when_the_project_cannot_be_read(tmp_path: Path) -> None:
     project = _project(tmp_path, "app", age=100)
     assert project_age_days(project=project, now=NOW) == 100

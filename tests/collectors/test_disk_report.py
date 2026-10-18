@@ -67,12 +67,16 @@ def test_collect_failure_returns_unavailable_with_message(
 def test_collect_unexpected_answer_returns_unavailable() -> None:
     result = _source(api=FakeApi(answer=["not", "a", "mapping"])).collect()
     assert result.data.status.available is False
-    assert result.error
+    assert result.error and result.error == result.data.status.error
+    assert result.data.images == () and result.data.volumes == ()
+    assert result.data.build_cache_size == 0
 
 
 def test_collect_malformed_entry_returns_unavailable() -> None:
     result = _source(api=FakeApi(answer={"Images": [{"no_id": 1}]})).collect()
     assert result.data.status.available is False
+    assert result.error and result.error == result.data.status.error
+    assert result.data.images == ()
 
 
 def test_collect_empty_exception_message_names_the_type() -> None:
@@ -127,3 +131,33 @@ def test_no_reachable_engine_is_unavailable_with_a_reason() -> None:
 
     assert result.data.status.available is False
     assert result.error == NO_ENGINE
+
+
+class RecordingProvider(FakeProvider):
+    def __init__(self, *, engines: tuple[Any, ...]) -> None:
+        super().__init__(engines=engines)
+        self.discarded: list[Any] = []
+
+    def discard(self, *, engine: Any) -> None:
+        self.discarded.append(engine)
+
+
+def test_a_failed_read_discards_the_engine_and_a_good_read_keeps_it() -> None:
+    api = FakeApi(failure=docker.errors.DockerException("down"))
+    engine = engine_at(path="/a.sock", client=FakeClient(api=api))
+    provider = RecordingProvider(engines=(engine,))
+    source = DockerDiskSource(engines=provider)
+
+    assert source.collect().data.status.available is False
+    assert provider.discarded == [engine]
+
+    api.failure, api.answer = None, {}
+    assert source.collect().data.status.available is True
+    assert provider.discarded == [engine]
+
+
+def test_no_reachable_engine_discards_nothing() -> None:
+    provider = RecordingProvider(engines=())
+
+    assert DockerDiskSource(engines=provider).collect().error == NO_ENGINE
+    assert provider.discarded == []

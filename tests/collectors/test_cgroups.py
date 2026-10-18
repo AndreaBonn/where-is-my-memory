@@ -56,12 +56,28 @@ def test_process_readers(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> No
         collect_process_cgroup(pid=123, proc_root=tmp_path).data == "/system.slice/docker-abc.scope"
     )
     assert collect_process_stat(pid=123, proc_root=tmp_path).data == (20, 20)
-    assert collect_process_cgroup(pid=456, proc_root=tmp_path).error
-    assert collect_process_stat(pid=456, proc_root=tmp_path).error
+    missing_cgroup = collect_process_cgroup(pid=456, proc_root=tmp_path)
+    missing_stat = collect_process_stat(pid=456, proc_root=tmp_path)
+    assert missing_cgroup.data is None
+    assert missing_stat.data is None
+    assert missing_cgroup.error is not None and missing_cgroup.error.endswith("456/cgroup'")
+    assert missing_stat.error is not None and missing_stat.error.endswith("456/stat'")
     with caplog.at_level(level=logging.DEBUG):
-        assert collect_process_cgroup(pid=456, proc_root=tmp_path).error
-        assert collect_process_stat(pid=456, proc_root=tmp_path).error
+        collect_process_cgroup(pid=456, proc_root=tmp_path)
+        collect_process_stat(pid=456, proc_root=tmp_path)
     assert {record.levelno for record in caplog.records} == {logging.DEBUG}
+
+
+def test_process_readers_report_unparsable_content_as_an_error(tmp_path: Path) -> None:
+    (tmp_path / "7").mkdir()
+    (tmp_path / "7" / "cgroup").write_text("1:cpu:/legacy\n")
+    (tmp_path / "7" / "stat").write_text("7 (short) S")
+
+    cgroup = collect_process_cgroup(pid=7, proc_root=tmp_path)
+    stat = collect_process_stat(pid=7, proc_root=tmp_path)
+
+    assert (cgroup.data, cgroup.error) == (None, "Missing unified cgroup path")
+    assert (stat.data, stat.error) == (None, "Incomplete process stat")
 
 
 def test_negative_process_groups_become_none() -> None:
@@ -223,3 +239,19 @@ def test_podman_scope_patterns_match_container_and_conmon() -> None:
     assert matches(f"libpod-conmon-{LIBPOD_ID}.scope")
     assert not matches(f"docker-{LIBPOD_ID}.scope")
     assert not matches(f"libpod-{LIBPOD_ID}.service")
+
+
+def test_locate_libpod_scope_search_failure_gives_none(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from wimm.collectors.cgroups import locate_libpod_scope
+
+    scope = _rootless_libpod_dir(tmp_path, 1000, f"libpod-{LIBPOD_ID}.scope")
+    assert locate_libpod_scope(container_id=LIBPOD_ID, uid=1000, cgroup_root=tmp_path) == scope
+
+    def fail(self: Path, pattern: str) -> list[Path]:
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(target=Path, name="rglob", value=fail)
+
+    assert locate_libpod_scope(container_id=LIBPOD_ID, uid=1000, cgroup_root=tmp_path) is None

@@ -28,10 +28,12 @@ def test_collect_meminfo_success_and_failure(
     tmp_path: Path, caplog: pytest.LogCaptureFixture
 ) -> None:
     result = collect_meminfo(path=FIXTURES / "meminfo_real.txt")
-    assert result.data is not None and result.data.mem_total > 0
+    assert result.data == parse_meminfo(text=(FIXTURES / "meminfo_real.txt").read_text())
+    assert result.data.mem_total == 41_744_506_880
     assert result.error is None
     failed = collect_meminfo(path=tmp_path / "missing")
-    assert failed.data is None and failed.error
+    assert failed.data is None
+    assert failed.error is not None and str(tmp_path / "missing") in failed.error
     assert "WARNING" in caplog.text
 
 

@@ -1,6 +1,6 @@
 import stat
 import threading
-import time
+from collections.abc import Callable
 from pathlib import Path
 
 import pytest
@@ -18,7 +18,6 @@ FIXTURE = Path(__file__).parents[1] / "fixtures" / "nvidia_smi_memory.txt"
 MIB = 1024 * 1024
 SMI = "/usr/bin/nvidia-smi"
 HANG_LIMIT_S = 5.0
-NON_BLOCKING_S = 1.0
 
 
 class FakeRunner:
@@ -194,32 +193,66 @@ def test_run_nvidia_smi_raises_on_nonzero_exit(tmp_path: Path) -> None:
         run_nvidia_smi([smi])
 
 
-def test_run_nvidia_smi_kills_a_hung_command_at_the_timeout(tmp_path: Path) -> None:
-    smi = _script(tmp_path / "smi", "exec sleep 10")
-    started = time.monotonic()
-
-    with pytest.raises(TimeoutError):
-        run_nvidia_smi([smi], timeout_s=0.2)
-
-    assert time.monotonic() - started < 3
-
-
-def test_a_hung_nvidia_smi_never_blocks_collect(tmp_path: Path) -> None:
-    release = threading.Event()
+def _hung_collector(
+    *, drm_root: Path, entered: threading.Event, release: threading.Event
+) -> tuple[GpuCollector, list[list[str]], list[threading.Thread]]:
+    """A collector whose nvidia-smi blocks until ``release`` is set."""
     calls: list[list[str]] = []
+    samplers: list[threading.Thread] = []
 
     def hung(argv: list[str]) -> str:
         calls.append(argv)
+        entered.set()
         release.wait(timeout=HANG_LIMIT_S)
         return "23, 8188\n"
 
-    collector = GpuCollector(runner=hung, which=lambda _name: SMI, drm_root=tmp_path)
-    started = time.monotonic()
-    first = [collector.collect() for _ in range(CACHE_CYCLES + 1)]
-    elapsed = time.monotonic() - started
-    release.set()
+    def starter(task: Callable[[], None]) -> None:
+        samplers.append(threading.Thread(target=task, daemon=True))
+        samplers[-1].start()
 
-    assert elapsed < NON_BLOCKING_S
-    assert first[0] == ()
+    collector = GpuCollector(
+        runner=hung, which=lambda _name: SMI, drm_root=drm_root, starter=starter
+    )
+    return collector, calls, samplers
+
+
+def test_a_hung_nvidia_smi_never_blocks_collect(tmp_path: Path) -> None:
+    entered, release = threading.Event(), threading.Event()
+    collector, calls, samplers = _hung_collector(
+        drm_root=tmp_path, entered=entered, release=release
+    )
+    readings: list[tuple[GpuMemory, ...]] = []
+
+    def cycles() -> None:
+        readings.extend(collector.collect() for _ in range(CACHE_CYCLES + 1))
+
+    worker = threading.Thread(target=cycles, daemon=True)
+    worker.start()
+    assert entered.wait(timeout=HANG_LIMIT_S)  # the sample is running and stuck
+    worker.join(timeout=HANG_LIMIT_S)  # a safety bound: the cycles must end by themselves
+    returned = not worker.is_alive()
+    release.set()
+    samplers[0].join(timeout=HANG_LIMIT_S)
+
+    assert returned
+    assert readings == [()] * (CACHE_CYCLES + 1)
     # The refresh due at the sixth call is skipped while the first is still running.
     assert len(calls) == 1
+    # Once the sample finishes its reading is served: the stale value was not a lost one.
+    assert collector.collect() == (GpuMemory(GpuVendor.NVIDIA, 23 * MIB, 8188 * MIB),)
+
+
+def test_amd_read_failure_keeps_the_nvidia_reading(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from wimm.collectors import gpu
+
+    collector = _collector(FakeRunner(output="23, 8188\n"), drm=tmp_path)
+    assert collector.collect() == (GpuMemory(GpuVendor.NVIDIA, 23 * MIB, 8188 * MIB),)
+
+    def unreadable(*, drm_root: Path) -> tuple[GpuMemory, ...]:
+        raise PermissionError("denied")
+
+    monkeypatch.setattr(target=gpu, name="read_amd", value=unreadable)
+
+    assert collector.collect() == (GpuMemory(GpuVendor.NVIDIA, 23 * MIB, 8188 * MIB),)

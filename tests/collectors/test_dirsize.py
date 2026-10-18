@@ -180,6 +180,7 @@ def test_symlinked_root_sees_changes_in_its_target(tmp_path: Path) -> None:
     assert grown.size_bytes == _blocks(target, target / "big.bin")
 
 
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignores directory permissions")
 def test_result_with_errors_is_not_cached(tmp_path: Path) -> None:
     root = tmp_path / "tree"
     locked = root / "locked"
@@ -190,6 +191,7 @@ def test_result_with_errors_is_not_cached(tmp_path: Path) -> None:
         failed = _measure(root, cache_dir)
     finally:
         locked.chmod(0o700)
+    assert not (cache_dir / DISK_CACHE_FILENAME).exists()
     retried = _measure(root, cache_dir)
     assert failed.error_count == 1
     assert retried.from_cache is False

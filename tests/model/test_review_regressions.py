@@ -140,3 +140,15 @@ def test_decoder_normalizes_invalid_input_and_excessive_nesting(value: object) -
     assert snapshot_from_json(text=FIXTURE.read_text()).groups[0].name == "whitebox"
     with pytest.raises(SnapshotFormatError):
         snapshot_from_json(text=invalid_model_value(value))
+
+
+def test_gpu_memory_vendor_must_be_a_gpu_vendor() -> None:
+    from tests.helpers import invalid_model_value
+    from wimm.model.enums import GpuVendor
+    from wimm.model.memory import GpuMemory
+
+    assert (
+        GpuMemory(vendor=GpuVendor.NVIDIA, used_bytes=1, total_bytes=2).vendor is GpuVendor.NVIDIA
+    )
+    with pytest.raises(ValueError, match="vendor"):
+        GpuMemory(vendor=invalid_model_value("nvidia"), used_bytes=1, total_bytes=2)

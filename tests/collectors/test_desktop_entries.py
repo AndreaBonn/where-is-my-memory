@@ -74,12 +74,36 @@ def test_unreadable_directory_is_skipped_and_the_others_are_kept(
     assert "WARNING" in caplog.text
 
 
-@pytest.mark.integration
-def test_real_gnome_terminal() -> None:
-    result = DesktopEntryIndex().collect()
+GNOME_TERMINAL_ENTRY = """[Desktop Entry]
+Name=Terminal
+Name[it]=Terminale
+Exec=gnome-terminal
+Categories=GNOME;GTK;System;TerminalEmulator;
+StartupWMClass=gnome-terminal-server
+"""
+
+
+def test_a_gnome_terminal_entry_is_indexed_by_stem_and_by_window_class(tmp_path: Path) -> None:
+    (tmp_path / "org.gnome.Terminal.desktop").write_text(GNOME_TERMINAL_ENTRY, encoding="utf-8")
+
+    result = DesktopEntryIndex(directories=(tmp_path,)).collect()
+
+    expected = DesktopEntry(
+        name="Terminale", categories=("GNOME", "GTK", "System", "TerminalEmulator")
+    )
     assert result.error is None
-    assert result.data["org.gnome.Terminal"].name
-    assert "TerminalEmulator" in result.data["org.gnome.Terminal"].categories
+    assert result.data["org.gnome.Terminal"] == expected
+    assert result.data["gnome-terminal-server"] == expected
+
+
+def test_an_entry_without_a_name_is_skipped_and_the_others_are_kept(tmp_path: Path) -> None:
+    (tmp_path / "nameless.desktop").write_text("[Desktop Entry]\nCategories=Utility;\n")
+    (tmp_path / "named.desktop").write_text("[Desktop Entry]\nName=Named\n")
+
+    result = DesktopEntryIndex(directories=(tmp_path,)).collect()
+
+    assert result.error is None
+    assert dict(result.data) == {"named": DesktopEntry(name="Named", categories=())}
 
 
 def test_bad_encoding_preserves_valid_entries(

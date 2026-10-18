@@ -1,8 +1,8 @@
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
 
 import pytest
 
-from tests.helpers import invalid_model_value
+from tests.helpers import SLOTTED_FROZEN_ERROR, invalid_model_value
 from wimm.model import MemInfo, MetricsSource, Mount, RawContainer, RawProcess, RawSocket
 
 
@@ -70,7 +70,7 @@ def test_raw_collector_contracts_are_frozen_and_slotted(
     assert socket.laddr == ("127.0.0.1", 8000)
     for instance in (process, container.mounts[0], container, meminfo, socket):
         assert not hasattr(instance, "__dict__")
-        with pytest.raises(TypeError, match="super"):
+        with pytest.raises((TypeError, FrozenInstanceError), match=SLOTTED_FROZEN_ERROR):
             invalid_model_value(instance).extra = "mutation"
 
 

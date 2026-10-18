@@ -1,9 +1,10 @@
 from dataclasses import replace
 from datetime import datetime
+from typing import Any
 
 import pytest
 
-from tests.core.disk_helpers import cache, devdir, docker_disk, image, report, volume
+from tests.core.disk_helpers import cache, devdir, docker_disk, image, report, stopped, volume
 from tests.helpers import invalid_model_value
 from wimm.model.disk import CacheKind, DiskReport, DockerDisk, DockerImage, DockerVolume
 from wimm.model.snapshot import DockerStatus
@@ -76,25 +77,37 @@ def test_docker_images_must_have_unique_ids() -> None:
         docker_disk(images=(image(char="a"), image(char="a")))
 
 
+def _unavailable(**data: Any) -> DockerDisk:
+    fields: dict[str, Any] = {
+        "images": (),
+        "volumes": (),
+        "stopped_containers": (),
+        "build_cache_size": 0,
+        "build_cache_reclaimable": 0,
+    }
+    fields.update(data)
+    return DockerDisk(status=DockerStatus(available=False, error="down"), **fields)
+
+
 def test_unavailable_docker_must_be_empty() -> None:
-    status = DockerStatus(available=False, error="down")
-    assert DockerDisk(
-        status=status,
-        images=(),
-        volumes=(),
-        stopped_containers=(),
-        build_cache_size=0,
-        build_cache_reclaimable=0,
-    )
-    with pytest.raises(ValueError, match="unavailable"):
-        DockerDisk(
-            status=status,
-            images=(image(char="a"),),
-            volumes=(),
-            stopped_containers=(),
-            build_cache_size=0,
-            build_cache_reclaimable=0,
-        )
+    assert _unavailable().images == ()
+    for data in (
+        {"images": (image(char="a"),)},
+        {"volumes": (volume(name="v"),)},
+        {"stopped_containers": (stopped(cid="a"),)},
+        {"build_cache_size": 1},
+    ):
+        with pytest.raises(ValueError, match="unavailable"):
+            _unavailable(**data)
+
+
+def test_docker_volumes_and_stopped_containers_must_have_unique_ids() -> None:
+    assert docker_disk(volumes=(volume(name="a"), volume(name="b"))).volumes
+    assert docker_disk(containers=(stopped(cid="a"), stopped(cid="b"))).stopped_containers
+    with pytest.raises(ValueError, match="volumes must have unique"):
+        docker_disk(volumes=(volume(name="a"), volume(name="a")))
+    with pytest.raises(ValueError, match="stopped_containers must have unique"):
+        docker_disk(containers=(stopped(cid="a"), stopped(cid="a")))
 
 
 def test_truncation_counters_must_be_nonnegative() -> None:

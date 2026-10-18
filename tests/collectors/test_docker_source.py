@@ -180,10 +180,12 @@ def _running_containers() -> tuple[DockerSource, list[RawContainer]]:
 @pytest.mark.integration
 def test_real_docker_availability(caplog: pytest.LogCaptureFixture) -> None:
     result = DockerSource().collect()
-    assert result.data.status.available == (result.data.status.error is None)
-    if not result.data.status.available:
+    if result.data.status.available:
+        assert result.data.status.error is None
+        assert result.error is None
+    else:
         assert result.data.containers == ()
-        assert result.error
+        assert result.error and result.error == result.data.status.error
     logging.getLogger(__name__).warning(
         "VERIFY Docker available=%s, error=%s", result.data.status.available, result.error
     )
@@ -290,10 +292,9 @@ def test_default_engines_are_created_lazily(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_docker_cli_memory_parser() -> None:
-    assert _docker_memory_rows(output="abc 1.5MiB / 4GiB\ndef 32B / 4GiB") == {
-        "abc": 1572864.0,
-        "def": 32.0,
-    }
+    # 1.5 MiB = 1.5 * 1024 * 1024 bytes, 2 kB = 2000 bytes, "B" rows stay as they are.
+    output = "abc 1.5MiB / 4GiB\ndef 32B / 4GiB\nghi 2kB / 4GiB"
+    assert _docker_memory_rows(output=output) == {"abc": 1572864.0, "def": 32.0, "ghi": 2000.0}
 
 
 def _write_cgroup(root: Path, current: int, inactive: int) -> None:
@@ -420,3 +421,21 @@ def test_stats_memory_below_the_inactive_page_cache_is_clamped_to_zero() -> None
 
     assert memory == 0
     assert stats_metrics(stats={"memory_stats": {"usage": 50}}, host_network=True)[0] == 50
+
+
+def test_container_whose_metadata_cannot_be_read_after_the_stats_phase_is_skipped(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    broken = FakeContainer()
+    broken.attrs["Config"] = {"Image": "image:tag", "Labels": 5}  # no cgroup: goes to the stats API
+    good = FakeContainer()
+    good.id = "good"
+    source = DockerSource(reader=FakeReader(containers=[broken, good]), roots=(tmp_path,) * 2)
+
+    with caplog.at_level(level=logging.WARNING):
+        result = source.collect()
+
+    assert result.data.status.available
+    assert [item.id for item in result.data.containers] == ["good"]
+    assert [item.metrics_source for item in result.data.containers] == [MetricsSource.STATS_API]
+    assert "Skipping container abc" in caplog.text

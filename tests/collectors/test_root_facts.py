@@ -165,3 +165,20 @@ def test_read_root_facts_lets_the_last_mount_on_the_same_point_win(tmp_path: Pat
     facts = read_root_facts(path=root, read_mounts=mounts(text))
     assert facts is not None
     assert (facts.fstype, facts.read_only) == ("ext4", False)
+
+
+def test_read_root_facts_ignores_malformed_mountinfo_lines(tmp_path: Path) -> None:
+    root = (tmp_path / "code").resolve()
+    root.mkdir()
+    malformed = (
+        "garbage line\n"
+        f"90 25 0:50 / {root} rw nfs4\n"  # no " - " separator
+        f"90 25 0:50 / {root} rw - \n"  # nothing after the separator: no filesystem type
+        f"90 25 0:50 / {root} - nfs4 srv rw\n"  # too few fields before the separator
+    )
+
+    facts = read_root_facts(path=root, read_mounts=mounts(malformed + ROOT_MOUNT))
+    assert facts is not None
+    assert (facts.fstype, facts.read_only) == ("ext4", False)
+
+    assert read_root_facts(path=root, read_mounts=mounts(malformed)) is None

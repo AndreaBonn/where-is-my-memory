@@ -2,6 +2,8 @@ import os
 import socket
 from pathlib import Path
 
+import pytest
+
 from wimm.collectors.docker_endpoint_facts import (
     MAX_DOCKER_FILE_BYTES,
     read_bounded_text,
@@ -131,3 +133,24 @@ def test_resolve_local_docker_endpoints_wires_config_meta_and_facts(tmp_path: Pa
         server.close()
     first = resolution.endpoints[0]
     assert (first.path, first.source) == (str(path), EndpointSource.CONFIG_CONTEXT)
+
+
+def test_stat_path_for_a_path_that_cannot_be_stat_ed_is_present_but_trusted_for_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    target = tmp_path / "docker.sock"
+    target.write_text("x")
+    original_stat = os.stat
+
+    def deny(path: str, *args: object, **kwargs: object) -> os.stat_result:
+        if path == str(target):
+            raise PermissionError("denied")
+        return original_stat(path, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(target=os, name="stat", value=deny)
+
+    facts = stat_path(path=str(target))
+
+    assert facts.exists is True
+    assert (facts.is_socket, facts.owned_by_user, facts.mode) == (False, False, 0)
+    assert facts.realpath == os.path.realpath(target)
