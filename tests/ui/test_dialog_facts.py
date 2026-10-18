@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from tests.core.disk_helpers import MB, cache, docker_disk, image, report, stopped
 from tests.core.planning_helpers import NOW, OWNER_UID, container, group, proc, snapshot
 from wimm.core.planning import PlanningContext, plan_action
@@ -130,3 +132,45 @@ def test_removing_stopped_containers_does_not_claim_that_data_stays() -> None:
     assert {s.kind for s in removal.steps} == {ActionKind.CONTAINER_REMOVE}
     assert KEEP_TITLE not in removal_titles
     assert KEEP_TITLE in stop_titles
+
+
+def terminal_plan(*pids: int, cwds: tuple[str, ...]) -> tuple[Plan, Snapshot]:
+    members = tuple(
+        replace(proc(pid=pid, name="node"), cwd=cwd) for pid, cwd in zip(pids, cwds, strict=True)
+    )
+    snap = snapshot(group(gid="p", name="whitebox", members=members))
+    request = ActionRequest(kind=ActionKind.GROUP_STOP, group_id=GroupId("p"))
+    return plan_for(snap=snap, request=request), snap
+
+
+def test_the_restart_line_names_the_folder_when_every_process_shares_it() -> None:
+    plan, snap = terminal_plan(1, 2, cwds=("/work/app", "/work/app"))
+
+    restart = dict(facts_for(plan=plan, snapshot=snap))[RESTART_TITLE]
+
+    assert "con lo stesso comando, nella cartella /work/app." in restart
+
+
+def test_the_restart_line_drops_the_folder_when_the_processes_differ() -> None:
+    plan, snap = terminal_plan(1, 2, cwds=("/work/app", "/work/other"))
+
+    restart = dict(facts_for(plan=plan, snapshot=snap))[RESTART_TITLE]
+
+    assert "con lo stesso comando di prima." in restart
+    assert "/work" not in restart
+
+
+def test_the_restart_line_drops_the_folder_when_one_process_has_none() -> None:
+    plan, snap = terminal_plan(1, 2, cwds=("/work/app", "/work/app"))
+    snap = snapshot(
+        group(
+            gid="p",
+            name="whitebox",
+            members=(proc(pid=1, name="node"), replace(proc(pid=2, name="node"), cwd=None)),
+        )
+    )
+
+    restart = dict(facts_for(plan=plan, snapshot=snap))[RESTART_TITLE]
+
+    assert "con lo stesso comando di prima." in restart
+    assert "/work" not in restart

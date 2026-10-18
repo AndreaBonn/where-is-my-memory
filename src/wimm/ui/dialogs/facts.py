@@ -81,6 +81,12 @@ def entry_label(*, step: PlanStep, members: dict[str, Member]) -> str:
     return step.target_label
 
 
+def _shared_cwd(*, members: list[Member | None]) -> str | None:
+    """The folder every process runs in; None when one differs, is unknown or is unreadable."""
+    cwds = {member.cwd if isinstance(member, ProcessMember) else None for member in members}
+    return cwds.pop() if len(cwds) == 1 else None
+
+
 def _restart_lines(*, plan: Plan, members: dict[str, Member]) -> list[str]:
     kinds = {step.kind for step in plan.steps}
     lines = []
@@ -93,10 +99,8 @@ def _restart_lines(*, plan: Plan, members: dict[str, Member]) -> list[str]:
         and isinstance(step.fingerprint, ProcessFingerprint)
     ]
     if processes:
-        first = processes[0]
-        cwd = first.cwd if isinstance(first, ProcessMember) else None
-        text = _(PROCESS_RESTART).format(cwd=cwd) if cwd else _(PROCESS_RESTART_NO_CWD)
-        lines.append(text)
+        cwd = _shared_cwd(members=processes)
+        lines.append(_(PROCESS_RESTART).format(cwd=cwd) if cwd else _(PROCESS_RESTART_NO_CWD))
     if ActionKind.APP_CLOSE in kinds:
         lines.append(_(APP_RESTART))
     return lines
