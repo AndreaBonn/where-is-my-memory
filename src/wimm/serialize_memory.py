@@ -5,7 +5,6 @@ from typing import Any
 from wimm import model as m
 from wimm.wire_decoders import (
     Schema,
-    SnapshotFormatError,
     byte_count,
     enumeration,
     fields,
@@ -50,10 +49,7 @@ def encode_breakdown(value: m.MemoryBreakdown) -> dict[str, int]:
 
 def gpu_memory(value: Any, path: str) -> m.GpuMemory:
     values = fields(value=value, schema=GPU_MEMORY_SCHEMA, path=path)
-    try:
-        return m.GpuMemory(**values)
-    except ValueError as error:
-        raise SnapshotFormatError(f"{path}: {error}") from error
+    return m.GpuMemory(**values)
 
 
 MEMORY_SUMMARY_SCHEMA: Schema = {

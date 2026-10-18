@@ -1,3 +1,5 @@
+from typing import cast
+
 from gi.repository import Gtk
 
 from wimm.i18n import N_, _
@@ -18,15 +20,12 @@ def build_list() -> Gtk.ListBox:
 
 def _by_rank(first: Gtk.ListBoxRow, second: Gtk.ListBoxRow) -> int:
     """Order rows by the position the view model gave them (idle first, then reclaimable)."""
-    if not (isinstance(first, GroupRowWidget) and isinstance(second, GroupRowWidget)):
-        return 0
-    return first.sort_rank - second.sort_rank
+    return cast("GroupRowWidget", first).sort_rank - cast("GroupRowWidget", second).sort_rank
 
 
-def _section_header(row: Gtk.ListBoxRow, before: Gtk.ListBoxRow | None) -> None:
+def _section_header(listed: Gtk.ListBoxRow, before: Gtk.ListBoxRow | None) -> None:
     """P9: a title where the idle part starts and where the rest starts."""
-    if not isinstance(row, GroupRowWidget):
-        return
+    row = cast("GroupRowWidget", listed)
     starts = not isinstance(before, GroupRowWidget) or before.is_idle != row.is_idle
     if not starts:
         row.set_header(None)

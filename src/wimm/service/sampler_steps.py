@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-from collections import deque
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -45,17 +44,6 @@ def children_by_pid(*, processes: Mapping[int, RawProcess]) -> dict[int, tuple[i
         if proc.ppid != proc.pid:
             children.setdefault(proc.ppid, []).append(proc.pid)
     return {pid: tuple(values) for pid, values in children.items()}
-
-
-def family_pids(*, pid: int, children: Mapping[int, tuple[int, ...]]) -> frozenset[int]:
-    pending = deque([pid])
-    family: set[int] = set()
-    while pending:
-        current = pending.popleft()
-        if current not in family:
-            family.add(current)
-            pending.extend(children.get(current, ()))
-    return frozenset(family)
 
 
 def post_order(
@@ -167,10 +155,6 @@ def foreground_group_pids(
         owner = processes.get(pid)
         pid = None if owner is None else owner.ppid
     return frozenset()
-
-
-def family_ports(*, pids: frozenset[int], ports: Mapping[int, frozenset[int]]) -> frozenset[int]:
-    return frozenset(port for pid in pids for port in ports.get(pid, ()))
 
 
 class ProcessSamples:

@@ -190,7 +190,7 @@ def _places(environ: Mapping[str, str]) -> _Places:
 
 
 def _desktop_problem(
-    path: str, home: str | None, socket_facts: Callable[[str], PathFacts]
+    path: str, home: str, socket_facts: Callable[[str], PathFacts]
 ) -> RejectionReason | None:
     """Docker Desktop: the exact socket in the user's home, never through another symlink.
 
@@ -198,9 +198,7 @@ def _desktop_problem(
     under the real home, and nowhere else.
     """
     facts = socket_facts(path)
-    allowed = {path}
-    if home is not None:
-        allowed.add(posixpath.join(socket_facts(home).realpath, DESKTOP_SOCKET_RELATIVE))
+    allowed = {path, posixpath.join(socket_facts(home).realpath, DESKTOP_SOCKET_RELATIVE)}
     if facts.exists and (facts.realpath not in allowed or not facts.owned_by_user):
         return RejectionReason.LOCATION_NOT_ALLOWED
     return None
@@ -215,7 +213,7 @@ def _location_problem(
 ) -> RejectionReason | None:
     """Check the allowed locations (S8) on the lexical path and on the resolved one."""
     runtime = places.runtime
-    if path == places.desktop_socket:
+    if places.home is not None and path == places.desktop_socket:
         return _desktop_problem(path=path, home=places.home, socket_facts=socket_facts)
     runtime_facts = socket_facts(runtime) if runtime is not None else None
     runtime_real = runtime_facts.realpath if runtime_facts is not None else None

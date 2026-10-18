@@ -9,22 +9,18 @@ from wimm.service.sampler_steps import (
     ProcessSamples,
     children_by_pid,
     cpu_deltas,
-    family_pids,
     post_order,
     subtree_cpu,
 )
 
 
-def test_children_and_bfs_keep_only_the_requested_family() -> None:
+def test_children_by_pid_groups_processes_under_their_parent() -> None:
     processes = {
         pid: process(pid=pid, ppid=parent)
         for pid, parent in ((1, 0), (2, 1), (3, 1), (4, 2), (5, 0))
     }
     children = children_by_pid(processes=processes)
     assert children == {0: (1, 5), 1: (2, 3), 2: (4,)}
-    assert family_pids(pid=1, children=children) == frozenset({1, 2, 3, 4})
-    assert family_pids(pid=99, children=children) == frozenset({99})
-    assert family_pids(pid=1, children={1: (2,), 2: (1,)}) == frozenset({1, 2})
 
 
 def test_post_order_and_subtree_cpu_include_each_descendant_once() -> None:

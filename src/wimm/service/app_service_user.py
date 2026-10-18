@@ -2,7 +2,7 @@
 
 from collections.abc import Callable
 from datetime import datetime
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from wimm.core.assemble import UserState
 from wimm.model.enums import GroupId
@@ -22,12 +22,11 @@ class UserStateMixin:
     _clock: Callable[[], datetime]
     _state_saver: Any
 
-    def request_cycle(self) -> bool:
-        raise NotImplementedError
+    if TYPE_CHECKING:
 
-    def _submit_user_state(self, *, user: UserState) -> None:
-        """Queue ``user`` for the sampler on the worker; provided by ``AppService``."""
-        raise NotImplementedError
+        def request_cycle(self) -> bool: ...
+
+        def _submit_user_state(self, *, user: UserState) -> None: ...
 
     @property
     def notifications_muted_until(self) -> datetime | None:

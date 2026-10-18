@@ -287,6 +287,5 @@ def empty_state(*, snapshot: Snapshot, filters: RowFilters) -> EmptyStateView | 
             message=_(ALL_CLEAR_MESSAGE),
             description=_(ALL_CLEAR_DESCRIPTION),
         )
-    if filters.only_idle:
-        return EmptyStateView(kind=EmptyKind.NOTHING_IDLE, message=_(NOTHING_IDLE_MESSAGE))
-    return None
+    # Only `only_idle` is left set, and the unfiltered view has groups: nothing is idle.
+    return EmptyStateView(kind=EmptyKind.NOTHING_IDLE, message=_(NOTHING_IDLE_MESSAGE))

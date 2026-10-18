@@ -166,14 +166,8 @@ class DBusMenu:
             "Event": self._event,
             "AboutToShow": lambda _item_id: GLib.Variant("(b)", (False,)),
         }
-        handler = handlers.get(method)
-        if handler is None:
-            invocation.return_error_literal(
-                Gio.dbus_error_quark(), Gio.DBusError.UNKNOWN_METHOD, method
-            )
-            return
         try:
-            reply = handler(*params.unpack())
+            reply = handlers[method](*params.unpack())
         except UnknownMenuItemError as error:
             invocation.return_dbus_error(INVALID_ID_ERROR, str(error))
             return

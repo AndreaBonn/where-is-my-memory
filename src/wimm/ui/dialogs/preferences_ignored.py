@@ -52,9 +52,7 @@ class IgnoredGroups:
         self._sync_empty()
 
     def _sync_empty(self) -> None:
-        if self._rows and self._empty.get_parent() is not None:
-            self.group.remove(self._empty)
-        elif not self._rows and self._empty.get_parent() is None:
+        if not self._rows:
             self.group.add(self._empty)
 
 

@@ -124,16 +124,6 @@ class StatusNotifierItem:
             self._emit(signal="NewStatus", parameters=GLib.Variant("(s)", (value,)))
 
     @property
-    def title(self) -> str:
-        return self._title
-
-    @title.setter
-    def title(self, value: str) -> None:
-        if value != self._title:
-            self._title = value
-            self._emit(signal="NewTitle")
-
-    @property
     def tooltip(self) -> str:
         return self._tooltip
 
@@ -151,16 +141,6 @@ class StatusNotifierItem:
     def label(self, value: str) -> None:
         if value != self._label:
             self._label = value
-            self._emit_label()
-
-    @property
-    def guide(self) -> str:
-        return self._guide
-
-    @guide.setter
-    def guide(self, value: str) -> None:
-        if value != self._guide:
-            self._guide = value
             self._emit_label()
 
     def register_with_watcher(self, *, on_done: Callable[[bool], None] | None = None) -> None:

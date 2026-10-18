@@ -160,4 +160,3 @@ class DiskSdkOps(ABC):
             except requests.exceptions.ReadTimeout as error:
                 raise ControlFailed(PRUNE_TIMEOUT_MESSAGE) from error
             return int(reply.get(SPACE_RECLAIMED_KEY) or 0)
-        return 0
