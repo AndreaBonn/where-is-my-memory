@@ -5,7 +5,7 @@ from gi.repository import Gtk
 from wimm.i18n import N_, _
 from wimm.ui.views import SummaryView
 
-from . import ACTIONS_UNAVAILABLE_TOOLTIP, SECONDARY_CLASS
+from . import ACTIONS_UNAVAILABLE_TOOLTIP, SECONDARY_CLASS, clear_children
 from .help_button import titled_with_help
 from .memory_bar import MemoryBar
 
@@ -15,6 +15,7 @@ STATUS_COLUMNS = 2
 STATUS_COLUMN_SPACING = 12
 LINE_SPACING = 2
 STATUS_ICON_SIZE = 32
+VIDEO_ROW_NAME = "video-memory"
 RAM_TITLE = N_("Memoria (RAM)")
 DISK_TITLE = N_("Spazio sul disco")
 RAM_QUESTION = N_("Cos'è la memoria (RAM)?")
@@ -52,6 +53,12 @@ def _detail_label() -> Gtk.Label:
     return Gtk.Label(xalign=0, wrap=True, selectable=False)
 
 
+def _detail_label_with(*, text: str) -> Gtk.Label:
+    label = _detail_label()
+    label.set_label(text)
+    return label
+
+
 def _headline_label() -> Gtk.Label:
     label = _detail_label()
     label.add_css_class("title-3")
@@ -87,11 +94,10 @@ class SummaryPanel(Gtk.Box):
         self._ram_details = _dim_caption()
         self._bar = MemoryBar()
         self._note = _dim_caption()
+        self._video = self._build_video()
         self._disk_title = _help_title(text=DISK_TITLE, question=DISK_QUESTION, answer=DISK_ANSWER)
         self._disk_text = _headline_label()
         self._disk_bar = Gtk.ProgressBar()
-        self._reclaim = _detail_label()
-        self._reclaim.add_css_class("wimm-reclaim")
         self._stop_all = _build_stop_all(on_stop_all=on_stop_all)
         self._safe_text = _dim_caption()
         self._can_stop_all = on_stop_all is not None
@@ -104,6 +110,7 @@ class SummaryPanel(Gtk.Box):
             self._ram_details,
             self._bar,
             self._note,
+            self._video,
             self._disk_title,
             self._disk_text,
             self._disk_bar,
@@ -143,7 +150,26 @@ class SummaryPanel(Gtk.Box):
             self._status.remove_css_class(level)
         self._status.add_css_class(view.status_level)
 
+    def _build_video(self) -> Gtk.Box:
+        """Video memory: its own block, apart from the RAM bar and never summed into it."""
+        self._video_title = _section_title(text="")
+        self._video_lines = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LINE_SPACING, visible=False)
+        box.set_name(VIDEO_ROW_NAME)
+        box.append(self._video_title)
+        box.append(self._video_lines)
+        return box
+
+    def _update_video(self, *, view: SummaryView) -> None:
+        self._video_title.set_label(view.video_title)
+        clear_children(container=self._video_lines)
+        for line in view.video_lines:
+            self._video_lines.append(_detail_label_with(text=line))
+        self._video.set_visible(bool(view.video_lines))
+
     def _build_reclaim_row(self) -> Gtk.FlowBox:
+        self._reclaim = _detail_label()
+        self._reclaim.add_css_class("wimm-reclaim")
         row = Gtk.FlowBox(
             selection_mode=Gtk.SelectionMode.NONE,
             max_children_per_line=STATUS_COLUMNS,
@@ -169,6 +195,7 @@ class SummaryPanel(Gtk.Box):
         self._ram_details.set_label(view.ram_details)
         self._bar.update(segments=view.segments)
         self._note.set_label(view.kernel_cache_note)
+        self._update_video(view=view)
         self._disk_text.set_label(view.disk_headline)
         self._disk_bar.set_fraction(view.disk_fraction)
         self._disk_bar.update_property(

@@ -69,27 +69,27 @@ msgstr "Must be {number}, at least {lower}{unit}"
 msgid "Deve essere {number} fra {lower} e {upper}{unit}"
 msgstr "Must be {number} between {lower} and {upper}{unit}"
 
-#: src/wimm/core/assemble.py:64
+#: src/wimm/core/assemble_protected.py:20
 msgid "audio e media del desktop"
 msgstr "desktop audio and media"
 
-#: src/wimm/core/assemble.py:65
+#: src/wimm/core/assemble_protected.py:21
 msgid "componente del desktop"
 msgstr "desktop component"
 
-#: src/wimm/core/assemble.py:66
+#: src/wimm/core/assemble_protected.py:22
 msgid "processi di altri utenti, non modificabili da qui"
 msgstr "processes of other users, which cannot be changed from here"
 
-#: src/wimm/core/assemble.py:67
+#: src/wimm/core/assemble_protected.py:23
 msgid "servizio di sistema"
 msgstr "system service"
 
-#: src/wimm/core/assemble.py:68
+#: src/wimm/core/assemble_protected.py:24
 msgid "questa applicazione"
 msgstr "this application"
 
-#: src/wimm/core/assemble.py:69
+#: src/wimm/core/assemble_protected.py:25
 msgid "container Podman che il motore non mostra, non modificabili da qui"
 msgstr "Podman containers the engine does not list, not modifiable from here"
 
@@ -162,92 +162,92 @@ msgstr "System services"
 msgid "Container Podman"
 msgstr "Podman containers"
 
-#: src/wimm/core/notify_rules.py:89 src/wimm/core/text_groups.py:53
+#: src/wimm/core/notify_rules.py:54 src/wimm/core/text_groups.py:53
 #, python-brace-format
 msgid "{head} e {last}"
 msgstr "{head} and {last}"
 
-#: src/wimm/core/notify_rules.py:98
+#: src/wimm/core/notify_rules.py:63
 #, python-brace-format
 msgid "{count} container"
 msgid_plural "{count} container"
 msgstr[0] "{count} container"
 msgstr[1] "{count} containers"
 
-#: src/wimm/core/notify_rules.py:101
+#: src/wimm/core/notify_rules.py:66
 #, python-brace-format
 msgid "{count} server"
 msgid_plural "{count} server"
 msgstr[0] "{count} server"
 msgstr[1] "{count} servers"
 
-#: src/wimm/core/notify_rules.py:104
+#: src/wimm/core/notify_rules.py:69
 #, python-brace-format
 msgid "{count} processo"
 msgid_plural "{count} processi"
 msgstr[0] "{count} process"
 msgstr[1] "{count} processes"
 
-#: src/wimm/core/notify_rules.py:114
+#: src/wimm/core/notify_rules.py:79
 #, python-brace-format
 msgid "Chiudendolo liberi {size} di memoria. Decidi tu: non si chiude da solo."
 msgstr "Closing it frees {size} of memory. You decide: it won't close on its own."
 
-#: src/wimm/core/notify_rules.py:118
+#: src/wimm/core/notify_rules.py:83
 #, python-brace-format
 msgid "Dentro: {members}."
 msgstr "Inside: {members}."
 
-#: src/wimm/core/notify_rules.py:121
+#: src/wimm/core/notify_rules.py:86
 #, python-brace-format
 msgid "{name} è acceso ma non lo usi da {elapsed}"
 msgstr "{name} is running but you haven't used it for {elapsed}"
 
-#: src/wimm/core/notify_rules.py:133
+#: src/wimm/core/notify_rules.py:98
 #, python-brace-format
 msgid "{count} programma acceso che non usi"
 msgid_plural "{count} programmi accesi che non usi"
 msgstr[0] "{count} running program you don't use"
 msgstr[1] "{count} running programs you don't use"
 
-#: src/wimm/core/notify_rules.py:136
+#: src/wimm/core/notify_rules.py:101
 #, python-brace-format
 msgid "Chiudendolo liberi {size} di memoria. Apri il pannello per vederlo."
 msgid_plural "Chiudendoli liberi {size} di memoria. Apri il pannello per vederli."
 msgstr[0] "Closing it frees {size} of memory. Open the panel to see it."
 msgstr[1] "Closing them frees {size} of memory. Open the panel to see them."
 
-#: src/wimm/core/notify_rules.py:156
+#: src/wimm/core/notify_rules.py:121
 msgid "Apri il pannello per vedere cosa chiudere."
 msgstr "Open the panel to see what to close."
 
-#: src/wimm/core/notify_rules.py:157
+#: src/wimm/core/notify_rules.py:122
 #, python-brace-format
 msgid "Puoi liberare subito: {listed}."
 msgstr "You can free up right away: {listed}."
 
-#: src/wimm/core/notify_rules.py:164
+#: src/wimm/core/notify_rules.py:129
 #, no-python-format, python-brace-format
 msgid "Memoria quasi piena ({pct}% libera)"
 msgstr "Memory almost full ({pct}% free)"
 
-#: src/wimm/core/notify_rules.py:172
+#: src/wimm/core/notify_rules.py:137
 #, python-brace-format
 msgid "Il sistema ha chiuso {count} programma per mancanza di memoria"
 msgid_plural "Il sistema ha chiuso {count} programmi per mancanza di memoria"
 msgstr[0] "The system closed {count} program because it ran out of memory"
 msgstr[1] "The system closed {count} programs because it ran out of memory"
 
-#: src/wimm/core/notify_rules.py:194
+#: src/wimm/core/notify_rules.py:159
 #, python-brace-format
 msgid "Puoi liberare subito {size} sul disco."
 msgstr "You can free up {size} on the disk right away."
 
-#: src/wimm/core/notify_rules.py:196
+#: src/wimm/core/notify_rules.py:161
 msgid "Apri il pannello per vedere cosa occupa spazio."
 msgstr "Open the panel to see what takes up space."
 
-#: src/wimm/core/notify_rules.py:201
+#: src/wimm/core/notify_rules.py:166
 #, no-python-format, python-brace-format
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
@@ -1703,7 +1703,7 @@ msgstr "Session"
 msgid "Monitor"
 msgstr "Monitor"
 
-#: src/wimm/ui/format.py:30 src/wimm/ui/summary.py:18
+#: src/wimm/ui/format.py:30 src/wimm/ui/summary.py:19
 msgid "Altro"
 msgstr "Other"
 
@@ -2032,33 +2032,33 @@ msgstr "You haven't used it for at least {span}{tail}"
 msgid "Non lo usi da {span}{tail}"
 msgstr "You haven't used it for {span}{tail}"
 
-#: src/wimm/ui/summary.py:16
+#: src/wimm/ui/summary.py:17
 msgid "La memoria di appoggio del sistema si libera da sola quando serve."
 msgstr "The system's cache memory frees itself when needed."
 
-#: src/wimm/ui/summary.py:17
+#: src/wimm/ui/summary.py:18
 msgid "Memoria di appoggio del sistema"
 msgstr "System cache memory"
 
-#: src/wimm/ui/summary.py:22
+#: src/wimm/ui/summary.py:23
 msgid "Non attribuita"
 msgstr "Unattributed"
 
-#: src/wimm/ui/summary.py:23
+#: src/wimm/ui/summary.py:24
 msgid "Libera"
 msgstr "Free"
 
-#: src/wimm/ui/summary.py:91
+#: src/wimm/ui/summary.py:96
 #, python-brace-format
 msgid "{used} usati su {total}"
 msgstr "{used} used of {total}"
 
-#: src/wimm/ui/summary.py:96
+#: src/wimm/ui/summary.py:101
 #, python-brace-format
 msgid "disponibili {available} · swap {used} su {total}"
 msgstr "{available} available · swap {used} of {total}"
 
-#: src/wimm/ui/summary.py:104
+#: src/wimm/ui/summary.py:109
 #, python-brace-format
 msgid "{free} liberi su {total}"
 msgstr "{free} free of {total}"
@@ -2121,6 +2121,63 @@ msgid "Ferma {names}: non lo usi e non perdi nulla."
 msgid_plural "Ferma {names}: non li usi e non perdi nulla."
 msgstr[0] "Stop {names}: you're not using it and you lose nothing."
 msgstr[1] "Stop {names}: you're not using them and you lose nothing."
+
+#: src/wimm/ui/summary_voices.py:12
+msgid "Memoria video"
+msgstr "Video memory"
+
+#: src/wimm/ui/summary_voices.py:13
+#, python-brace-format
+msgid "{vendor} {used} di {total}"
+msgstr "{vendor} {used} of {total}"
+
+#: src/wimm/ui/summary_voices.py:31
+msgid "Memoria condivisa e file temporanei (tmpfs)"
+msgstr "Shared memory and temporary files (tmpfs)"
+
+#: src/wimm/ui/summary_voices.py:32
+msgid "Cos'è la memoria condivisa (tmpfs)?"
+msgstr "What is shared memory (tmpfs)?"
+
+#: src/wimm/ui/summary_voices.py:34
+msgid "Sono file tenuti nella memoria invece che sul disco, per esempio quelli temporanei o condivisi tra programmi. Non si possono liberare chiudendo un programma: restano finché non vengono cancellati o il computer si spegne."
+msgstr "These are files kept in memory instead of on the disk, such as temporary files or files shared between programs. Closing a program cannot free them: they stay until they are deleted or the computer is turned off."
+
+#: src/wimm/ui/summary_voices.py:41
+msgid "Memoria del kernel non recuperabile"
+msgstr "Kernel memory that cannot be reclaimed"
+
+#: src/wimm/ui/summary_voices.py:42
+msgid "Cos'è la memoria del kernel non recuperabile?"
+msgstr "What is kernel memory that cannot be reclaimed?"
+
+#: src/wimm/ui/summary_voices.py:44
+msgid "Il kernel è il cuore del sistema e tiene da parte memoria per i propri compiti. Questa parte non si può liberare chiudendo un programma: il sistema la restituisce da solo quando non gli serve più."
+msgstr "The kernel is the core of the system and keeps some memory for its own work. Closing a program cannot free this part: the system gives it back by itself when it no longer needs it."
+
+#: src/wimm/ui/summary_voices.py:51
+msgid "Swap compresso in RAM (zram)"
+msgstr "Compressed swap in RAM (zram)"
+
+#: src/wimm/ui/summary_voices.py:52
+msgid "Cos'è lo swap compresso (zram)?"
+msgstr "What is compressed swap (zram)?"
+
+#: src/wimm/ui/summary_voices.py:54
+msgid "È una parte della memoria che il sistema usa per comprimere i dati che non stanno più nella RAM, invece di scriverli sul disco. Non si può liberare chiudendo un programma: si svuota da sola quando quei dati tornano utili."
+msgstr "This is a part of memory the system uses to compress data that no longer fits in RAM, instead of writing it to the disk. Closing a program cannot free it: it empties by itself when that data is needed again."
+
+#: src/wimm/ui/summary_voices.py:61
+msgid "Swap compresso (zswap)"
+msgstr "Compressed swap (zswap)"
+
+#: src/wimm/ui/summary_voices.py:62
+msgid "Cos'è lo swap compresso (zswap)?"
+msgstr "What is compressed swap (zswap)?"
+
+#: src/wimm/ui/summary_voices.py:64
+msgid "È una piccola riserva di memoria in cui il sistema comprime i dati prima di spostarli sul disco. Non si può liberare chiudendo un programma: la gestisce il sistema da solo."
+msgstr "This is a small reserve of memory where the system compresses data before moving it to the disk. Closing a program cannot free it: the system manages it by itself."
 
 #: src/wimm/ui/viewmodel.py:39
 msgid "Nessuna azione"
@@ -2314,7 +2371,7 @@ msgstr "mount {path}"
 msgid "avviato {when}"
 msgstr "running since {when}"
 
-#: src/wimm/ui/widgets/memory_bar.py:15
+#: src/wimm/ui/widgets/memory_bar.py:16
 msgid "Memoria per categoria"
 msgstr "Memory by category"
 
@@ -2341,36 +2398,36 @@ msgid_plural "Ho provato {failures} volte di fila senza riuscirci. Di solito bas
 msgstr[0] "I tried {failures} time in a row without success. Usually trying again is enough; if it does not work, the details are in the application log."
 msgstr[1] "I tried {failures} times in a row without success. Usually trying again is enough; if it does not work, the details are in the application log."
 
-#: src/wimm/ui/widgets/summary.py:18
+#: src/wimm/ui/widgets/summary.py:19
 msgid "Memoria (RAM)"
 msgstr "Memory (RAM)"
 
-#: src/wimm/ui/widgets/summary.py:19
+#: src/wimm/ui/widgets/summary.py:20
 msgid "Spazio sul disco"
 msgstr "Disk space"
 
-#: src/wimm/ui/widgets/summary.py:20
+#: src/wimm/ui/widgets/summary.py:21
 msgid "Cos'è la memoria (RAM)?"
 msgstr "What is memory (RAM)?"
 
-#: src/wimm/ui/widgets/summary.py:22
+#: src/wimm/ui/widgets/summary.py:23
 msgid "La memoria (RAM) è lo spazio dove lavorano i programmi aperti. Quando è piena il computer rallenta. Chiudere un programma la libera subito: i file salvati restano, il lavoro non salvato in quel programma si perde."
 msgstr "Memory (RAM) is the space where open programs work. When it is full the computer slows down. Closing a program frees it at once: saved files stay, unsaved work in that program is lost."
 
-#: src/wimm/ui/widgets/summary.py:26
+#: src/wimm/ui/widgets/summary.py:27
 msgid "Cos'è lo spazio sul disco?"
 msgstr "What is disk space?"
 
-#: src/wimm/ui/widgets/summary.py:28
+#: src/wimm/ui/widgets/summary.py:29
 msgid "Il disco è dove restano i file anche a computer spento. Quando è quasi pieno non si riesce più a salvare né ad aggiornare. Dalla scheda Disco puoi liberare spazio: prima di ogni cancellazione ti diciamo cosa si perde."
 msgstr "The disk is where files stay even when the computer is off. When it is almost full you can no longer save or update. From the Disk tab you can free up space: before each deletion we tell you what is lost."
 
-#: src/wimm/ui/widgets/summary.py:177
+#: src/wimm/ui/widgets/summary.py:204
 #, python-brace-format
 msgid "Uso del disco {mount}: {used} su {total}"
 msgstr "Disk usage {mount}: {used} of {total}"
 
-#: src/wimm/ui/widgets/summary.py:183
+#: src/wimm/ui/widgets/summary.py:210
 #, python-brace-format
 msgid "Liberabile ora: {ram} di RAM · {disk} di disco"
 msgstr "Can be freed now: {ram} of RAM · {disk} of disk"

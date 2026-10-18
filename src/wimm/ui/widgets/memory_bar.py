@@ -4,6 +4,7 @@ from wimm.i18n import N_, _
 from wimm.ui.views import BarSegment
 
 from . import clear_children
+from .help_button import help_button
 
 PALETTE_SIZE = 8
 SPECIAL_CLASSES = {
@@ -41,6 +42,7 @@ class MemoryBar(Gtk.Box):
     def __init__(self) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=BAR_SPACING)
         self._segments: tuple[BarSegment, ...] = ()
+        self._legend_labels: list[Gtk.Label] = []
         # 100 homogeneous columns: a segment spans as many columns as its percentage.
         self._grid = Gtk.Grid(column_homogeneous=True, hexpand=True, overflow=Gtk.Overflow.HIDDEN)
         self._grid.add_css_class("wimm-bar")
@@ -58,9 +60,11 @@ class MemoryBar(Gtk.Box):
         """Redraw the bar and the legend when the segments changed."""
         if segments == self._segments:
             return
+        same_entries = _legend_identity(segments=segments) == _legend_identity(
+            segments=self._segments
+        )
         self._segments = segments
         clear_children(container=self._grid)
-        self._legend.remove_all()
         column = 0
         classes = segment_classes(segments=segments)
         for segment, style in zip(segments, classes, strict=True):
@@ -71,20 +75,43 @@ class MemoryBar(Gtk.Box):
             block.update_property([Gtk.AccessibleProperty.LABEL], [segment.legend])
             self._grid.attach(block, column, 0, span, 1)
             column += span
-            self._legend.append(_legend_entry(text=segment.legend, style=style))
+        if same_entries:
+            for label, segment in zip(self._legend_labels, segments, strict=True):
+                label.set_label(segment.legend)
+        else:
+            self._rebuild_legend(segments=segments, classes=classes)
         text = "; ".join(segment.legend for segment in segments)
         self._grid.update_property(
             [Gtk.AccessibleProperty.LABEL, Gtk.AccessibleProperty.DESCRIPTION], [_(BAR_LABEL), text]
         )
 
+    def _rebuild_legend(self, *, segments: tuple[BarSegment, ...], classes: list[str]) -> None:
+        self._legend.remove_all()
+        self._legend_labels = []
+        for segment, style in zip(segments, classes, strict=True):
+            entry, label = _legend_entry(segment=segment, style=style)
+            self._legend.append(entry)
+            self._legend_labels.append(label)
 
-def _legend_entry(*, text: str, style: str) -> Gtk.Box:
+
+def _legend_identity(*, segments: tuple[BarSegment, ...]) -> tuple[tuple[str, str], ...]:
+    """What the legend widgets depend on beyond the sizes: same identity, same widgets.
+
+    Sizes change every sample; rebuilding the entries then would destroy the help buttons
+    and close an open help popover while the user reads it.
+    """
+    return tuple((segment.key, segment.help_question) for segment in segments)
+
+
+def _legend_entry(*, segment: BarSegment, style: str) -> tuple[Gtk.Box, Gtk.Label]:
     swatch = Gtk.Box(valign=Gtk.Align.CENTER)
     swatch.add_css_class("wimm-swatch")
     swatch.add_css_class(style)
-    label = Gtk.Label(label=text, xalign=0, wrap=True)
+    label = Gtk.Label(label=segment.legend, xalign=0, wrap=True)
     label.add_css_class("caption")
     entry = Gtk.Box(spacing=SWATCH_SPACING)
     entry.append(swatch)
     entry.append(label)
-    return entry
+    if segment.help_question:
+        entry.append(help_button(question=segment.help_question, answer=segment.help_answer))
+    return entry, label

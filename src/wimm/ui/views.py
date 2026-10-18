@@ -35,6 +35,8 @@ class BarSegment:
     percent: int
     fraction: float
     legend: str
+    help_question: str = ""
+    help_answer: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +66,8 @@ class SummaryView:
     status_level: str
     safe_label: str
     safe_text: str
+    video_title: str = ""
+    video_lines: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

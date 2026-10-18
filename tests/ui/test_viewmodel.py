@@ -506,14 +506,19 @@ def test_summary_segments_are_ranked_and_carry_a_text_legend(snapshot: Snapshot)
         "DEV_SERVER",
         "other_programs",
         "kernel_cache",
+        "shared_tmpfs",
+        "kernel_unreclaimable",
+        "zram",
         "unattributed",
         "free",
     ]
     assert segments[0].legend == "Browser: 9,8 GB"
     assert segments[4].legend == "Altro: 950 MB"
     assert segments[-2].legend == "Non attribuita: 1,9 GB"
-    assert segments[-3].label == "Memoria di appoggio del sistema"
-    assert segments[-1].legend == "Libera: 14,9 GB"
+    assert segments[5].label == "Memoria di appoggio del sistema"
+    # zswap is 0 in the fixture, so it has no segment at all.
+    assert "zswap" not in {s.key for s in segments}
+    assert segments[-1].legend == "Libera: 13,7 GB"
     assert segments[0].fraction == pytest.approx(9.8 / 41.742)
 
 

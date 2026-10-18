@@ -11,6 +11,7 @@ from .format import (
     format_size,
 )
 from .summary_status import ram_drives_pressure, safe_fields, status_fields
+from .summary_voices import VIDEO_TITLE, video_lines, voice_help, voice_items
 from .views import BarSegment, SummaryView
 
 KERNEL_CACHE_NOTE = N_("La memoria di appoggio del sistema si libera da sola quando serve.")
@@ -46,6 +47,7 @@ def _segment_items(*, snapshot: Snapshot) -> list[tuple[str, str, int]]:
         items.append((OTHER_PROGRAMS_KEY, _(OTHER_PROGRAMS_LABEL), rest))
     if breakdown.kernel_cache > 0:
         items.append(("kernel_cache", _(KERNEL_CACHE_LABEL), breakdown.kernel_cache))
+    items.extend(voice_items(breakdown=breakdown))
     # Unattributed memory is always listed, even at zero (RF-02).
     items.append(("unattributed", _(UNATTRIBUTED_LABEL), breakdown.unattributed))
     # The snapshot has no MemFree: the remainder closes the bar on total memory.
@@ -62,6 +64,7 @@ def _segments(*, snapshot: Snapshot) -> tuple[BarSegment, ...]:
     segments = []
     for (key, label, size), percent in zip(items, percents, strict=True):
         size_text = format_size(size=size)
+        question, answer = voice_help(key=key)
         segments.append(
             BarSegment(
                 key=key,
@@ -71,6 +74,8 @@ def _segments(*, snapshot: Snapshot) -> tuple[BarSegment, ...]:
                 percent=percent,
                 fraction=_fraction(part=size, whole=whole),
                 legend=f"{label}: {size_text}",
+                help_question=question,
+                help_answer=answer,
             )
         )
     return tuple(segments)
@@ -130,6 +135,8 @@ def build_summary(*, snapshot: Snapshot) -> SummaryView:
         pressure_text=_(PRESSURE_TEXT[snapshot.pressure]),
         segments=_segments(snapshot=snapshot),
         kernel_cache_note=_(KERNEL_CACHE_NOTE),
+        video_title=_(VIDEO_TITLE),
+        video_lines=video_lines(snapshot=snapshot),
         **status_fields(snapshot=snapshot),
         **safe_fields(snapshot=snapshot),
     )

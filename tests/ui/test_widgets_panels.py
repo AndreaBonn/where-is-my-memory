@@ -65,7 +65,10 @@ def test_memory_bar_has_one_block_and_one_visible_legend_line_per_segment(
     bar.update(segments=view.segments)
 
     legend_texts = {label.get_label() for label in labels_under(bar)}
-    assert legend_texts == {segment.legend for segment in view.segments}
+    # The new kernel voices carry a "?" help whose popover labels sit under the bar too.
+    helps = {t for s in view.segments for t in (s.help_question, s.help_answer) if t}
+    assert helps
+    assert legend_texts - helps - {"?"} == {segment.legend for segment in view.segments}
     assert len(view.segments) >= 2
     blocks = [w for w in descendants(bar) if w.has_css_class("wimm-bar-segment")]
     assert len(blocks) == len(view.segments)
@@ -275,3 +278,21 @@ def test_every_bar_segment_class_has_a_colour_and_the_stylesheet_parses(
     # GTK drops a rule that names a colour libadwaita does not define (there is no teal).
     families = set(re.findall(r"@([a-z]+)_[1-5]\b", _STYLE))
     assert families <= ADWAITA_PALETTE_FAMILIES
+
+
+def _help_segment(*, size_text: str) -> BarSegment:
+    legend = f"Kernel: {size_text}"
+    return BarSegment("kernel_unreclaimable", "Kernel", 1, size_text, 10, 0.1, legend, "Q?", "A.")
+
+
+def test_memory_bar_keeps_the_help_button_when_only_the_sizes_change(display: None) -> None:
+    bar = MemoryBar()
+    bar.update(segments=(_help_segment(size_text="1,1 GB"),))
+    (button,) = [w for w in descendants(bar) if isinstance(w, Gtk.MenuButton)]
+
+    bar.update(segments=(_help_segment(size_text="1,2 GB"),))
+
+    # A rebuilt legend would destroy the button and close an open help popover every sample.
+    assert [w for w in descendants(bar) if isinstance(w, Gtk.MenuButton)] == [button]
+    assert "Kernel: 1,2 GB" in {label.get_label() for label in labels_under(bar)}
+    assert "Kernel: 1,1 GB" not in {label.get_label() for label in labels_under(bar)}
