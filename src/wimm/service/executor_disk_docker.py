@@ -5,7 +5,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 
-from wimm.model.actions import ImageFingerprint, Plan, PlanStep, VolumeFingerprint
+from wimm.model.actions import (
+    DirFingerprint,
+    ImageFingerprint,
+    Plan,
+    PlanStep,
+    VolumeFingerprint,
+)
 from wimm.model.enums import ActionKind
 
 from .control_protocols import (
@@ -196,10 +202,15 @@ def log_disk_outcomes(*, plan: Plan, outcomes: Sequence[StepOutcome]) -> None:
         if step is None or not _is_disk_step(plan=plan, step=step):
             continue
         freed = UNKNOWN_BYTES if outcome.freed_bytes is None else outcome.freed_bytes
+        # A folder step logs its path: its label is a translated title (F8).
+        fingerprint = step.fingerprint
+        target = (
+            fingerprint.realpath if isinstance(fingerprint, DirFingerprint) else step.target_label
+        )
         LOGGER.info(
             "disk action=%s target=%s outcome=%s freed_bytes=%s",
             step.kind.value,
-            step.target_label,
+            target,
             outcome.status.value,
             freed,
         )

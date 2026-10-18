@@ -140,6 +140,59 @@ msgstr "this application"
 msgid "container Podman che il motore non mostra, non modificabili da qui"
 msgstr "Podman containers the engine does not list, not modifiable from here"
 
+#: src/wimm/core/cache_titles.py:14
+msgid "Miniature"
+msgstr "Thumbnails"
+
+#: src/wimm/core/cache_titles.py:15 src/wimm/core/planning_disk.py:40
+#: src/wimm/ui/disk_view.py:129
+msgid "Cestino"
+msgstr "Trash"
+
+#: src/wimm/core/cache_titles.py:16
+msgid "Cargo (pacchetti)"
+msgstr "Cargo (packages)"
+
+#: src/wimm/core/cache_titles.py:17
+msgid "Cargo (repository git)"
+msgstr "Cargo (git repositories)"
+
+#: src/wimm/core/cache_titles.py:18
+msgid "Gradle"
+msgstr "Gradle"
+
+#: src/wimm/core/cache_titles.py:19
+msgid "Maven"
+msgstr "Maven"
+
+#: src/wimm/core/cache_titles.py:20
+msgid "Go (moduli)"
+msgstr "Go (modules)"
+
+#: src/wimm/core/cache_titles.py:21
+msgid "Go (compilazione)"
+msgstr "Go (build)"
+
+#: src/wimm/core/cache_titles.py:26
+msgid "Playwright"
+msgstr "Playwright"
+
+#: src/wimm/core/cache_titles.py:29
+msgid "Modelli HuggingFace"
+msgstr "HuggingFace models"
+
+#: src/wimm/core/cache_titles.py:30
+msgid "Modelli ollama"
+msgstr "ollama models"
+
+#: src/wimm/core/cache_titles.py:31
+msgid "Emulatori Android (AVD)"
+msgstr "Android emulators (AVD)"
+
+#: src/wimm/core/cache_titles.py:32
+msgid "SDK Android"
+msgstr "Android SDK"
+
 #: src/wimm/core/docker_notices.py:46
 #, python-brace-format
 msgid "Endpoint Docker {endpoint} ignorato: sono accettati solo socket locali (unix://)"
@@ -299,17 +352,12 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:39 src/wimm/ui/disk_view.py:40
-#: src/wimm/ui/disk_view.py:149
-msgid "Cestino"
-msgstr "Trash"
-
-#: src/wimm/core/planning_disk.py:42
+#: src/wimm/core/planning_disk.py:43
 #, python-brace-format
 msgid "Il report mostra le {shown} voci più grandi: altre {hidden} restano e serve una nuova scansione dopo la pulizia."
 msgstr "The report shows the {shown} largest items: {hidden} more remain, and a new scan is needed after the cleanup."
 
-#: src/wimm/core/planning_disk.py:150 src/wimm/core/planning_disk.py:151
+#: src/wimm/core/planning_disk.py:151 src/wimm/core/planning_disk.py:152
 msgid "Build cache"
 msgstr "Build cache"
 
@@ -997,52 +1045,47 @@ msgstr "Command copied"
 msgid "Non riesco a copiare negli appunti"
 msgstr "Cannot copy to the clipboard"
 
-#: src/wimm/ui/dialogs/facts.py:19
+#: src/wimm/ui/dialogs/facts.py:16
 msgid "Cosa succede"
 msgstr "What happens"
 
-#: src/wimm/ui/dialogs/facts.py:20
+#: src/wimm/ui/dialogs/facts.py:17
 msgid "Cosa resta"
 msgstr "What stays"
 
-#: src/wimm/ui/dialogs/facts.py:21
+#: src/wimm/ui/dialogs/facts.py:18
 msgid "Per riaccenderlo"
 msgstr "To start it again"
 
-#: src/wimm/ui/dialogs/facts.py:22
+#: src/wimm/ui/dialogs/facts.py:19
 msgid "I file salvati, i dati e le impostazioni."
 msgstr "Saved files, data and settings."
 
-#: src/wimm/ui/dialogs/facts.py:24
+#: src/wimm/ui/dialogs/facts.py:21
 msgid "I contenitori: con «Riaccendi» nel messaggio che compare dopo, se tutto va a buon fine."
 msgstr "Containers: with \"Start again\" in the message that appears afterwards, if all goes well."
 
-#: src/wimm/ui/dialogs/facts.py:26
+#: src/wimm/ui/dialogs/facts.py:23
 #, python-brace-format
 msgid "I programmi del terminale: con lo stesso comando, nella cartella {cwd}."
 msgstr "Terminal programs: with the same command, in the folder {cwd}."
 
-#: src/wimm/ui/dialogs/facts.py:27
+#: src/wimm/ui/dialogs/facts.py:24
 msgid "I programmi del terminale: con lo stesso comando di prima."
 msgstr "Terminal programs: with the same command as before."
 
-#: src/wimm/ui/dialogs/facts.py:28
+#: src/wimm/ui/dialogs/facts.py:25
 msgid "Le applicazioni: dal menu delle applicazioni, come al solito."
 msgstr "Applications: from the applications menu, as usual."
 
-#: src/wimm/ui/dialogs/facts.py:29 src/wimm/ui/disk_view_docker.py:145
+#: src/wimm/ui/dialogs/facts.py:26 src/wimm/ui/disk_view_docker.py:145
 msgid "Cache di build Docker"
 msgstr "Docker build cache"
 
-#: src/wimm/ui/dialogs/facts.py:30
+#: src/wimm/ui/dialogs/facts.py:27
 #, python-brace-format
 msgid "Immagine senza nome ({short})"
 msgstr "Unnamed image ({short})"
-
-#: src/wimm/ui/dialogs/facts.py:78
-#, python-brace-format
-msgid "Cache {name}"
-msgstr "{name} cache"
 
 #: src/wimm/ui/dialogs/outcome.py:14 src/wimm/ui/format.py:71
 msgid "Chiudi"
@@ -1622,50 +1665,34 @@ msgid "File che hai già cancellato: svuotandolo spariscono per sempre."
 msgstr "Files you have already deleted: emptying it removes them for good."
 
 #: src/wimm/ui/disk_texts.py:40
-msgid "Modelli HuggingFace"
-msgstr "HuggingFace models"
-
-#: src/wimm/ui/disk_texts.py:41
-msgid "Modelli ollama"
-msgstr "ollama models"
-
-#: src/wimm/ui/disk_texts.py:42
-msgid "Emulatori Android (AVD)"
-msgstr "Android emulators (AVD)"
-
-#: src/wimm/ui/disk_texts.py:43
-msgid "SDK Android"
-msgstr "Android SDK"
-
-#: src/wimm/ui/disk_texts.py:49
 msgid "Si libera senza pensarci"
 msgstr "Free it without a second thought"
 
-#: src/wimm/ui/disk_texts.py:50
+#: src/wimm/ui/disk_texts.py:41
 msgid "Da guardare prima"
 msgstr "Take a look first"
 
-#: src/wimm/ui/disk_texts.py:51
+#: src/wimm/ui/disk_texts.py:42
 msgid "Attenzione: cancella dati"
 msgstr "Caution: deletes data"
 
-#: src/wimm/ui/disk_texts.py:54
+#: src/wimm/ui/disk_texts.py:45
 msgid "Si ricrea da solo quando serve."
 msgstr "It recreates itself when needed."
 
-#: src/wimm/ui/disk_texts.py:55
+#: src/wimm/ui/disk_texts.py:46
 msgid "Si può riscaricare o ricreare, ma con un po' di lavoro."
 msgstr "It can be downloaded or recreated again, but it takes some work."
 
-#: src/wimm/ui/disk_texts.py:56
+#: src/wimm/ui/disk_texts.py:47
 msgid "Dentro possono esserci database o file che non si recuperano."
 msgstr "It may hold databases or files that cannot be recovered."
 
-#: src/wimm/ui/disk_texts.py:68
+#: src/wimm/ui/disk_texts.py:59
 msgid "Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano."
 msgstr "Only cleans what recreates itself: the trash and your data stay."
 
-#: src/wimm/ui/disk_texts.py:98
+#: src/wimm/ui/disk_texts.py:89
 #, python-brace-format
 msgid "Libera {size} senza rischi"
 msgstr "Free {size} with no risk"
@@ -1674,75 +1701,43 @@ msgstr "Free {size} with no risk"
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
-#: src/wimm/ui/disk_view.py:39
-msgid "Miniature"
-msgstr "Thumbnails"
-
-#: src/wimm/ui/disk_view.py:41
-msgid "Cargo (pacchetti)"
-msgstr "Cargo (packages)"
-
-#: src/wimm/ui/disk_view.py:42
-msgid "Cargo (repository git)"
-msgstr "Cargo (git repositories)"
-
 #: src/wimm/ui/disk_view.py:43
-msgid "Gradle"
-msgstr "Gradle"
-
-#: src/wimm/ui/disk_view.py:44
-msgid "Maven"
-msgstr "Maven"
-
-#: src/wimm/ui/disk_view.py:45
-msgid "Go (moduli)"
-msgstr "Go (modules)"
-
-#: src/wimm/ui/disk_view.py:46
-msgid "Go (compilazione)"
-msgstr "Go (build)"
-
-#: src/wimm/ui/disk_view.py:51
-msgid "Playwright"
-msgstr "Playwright"
-
-#: src/wimm/ui/disk_view.py:63
 #, python-brace-format
 msgid "Ultimo controllo alle {time}"
 msgstr "Last check at {time}"
 
-#: src/wimm/ui/disk_view.py:64
+#: src/wimm/ui/disk_view.py:44
 #, python-brace-format
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:91
+#: src/wimm/ui/disk_view.py:71
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:120
+#: src/wimm/ui/disk_view.py:100
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:126
+#: src/wimm/ui/disk_view.py:106
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:147
+#: src/wimm/ui/disk_view.py:127
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:147
+#: src/wimm/ui/disk_view.py:127
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:149
+#: src/wimm/ui/disk_view.py:129
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 

@@ -5,7 +5,7 @@ import pytest
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.planning_disk import plan_cache_clean
 from wimm.core.planning_tools import CacheToolMissing
-from wimm.model.actions import ActionRequest, DirFingerprint
+from wimm.model.actions import ActionRequest, DirFingerprint, PlanStep
 from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind, PlanId, Risk, TargetId
 from wimm.model.errors import InvalidRequest
@@ -21,6 +21,12 @@ DISK = report(
         cache(kind=CacheKind.GO_BUILD, size=3 * MB, ino=52),
     )
 )
+
+
+def _path(step: PlanStep) -> str:
+    """The folder a cache step deletes: its identity, unlike the label shown on screen."""
+    assert isinstance(step.fingerprint, DirFingerprint)
+    return step.fingerprint.realpath
 
 
 def _found(name: str) -> str:
@@ -68,7 +74,7 @@ def _context(*, which: Callable[[str], str | None]) -> PlanningContext:
 def test_plan_action_offers_the_go_module_cache_by_the_path_of_the_context() -> None:
     plan = plan_action(request=GO_MOD_REQUEST, snapshot=snapshot(), context=_context(which=_found))
 
-    assert [step.target_label for step in plan.steps] == ["/home/u/.cache/go_mod"]
+    assert [_path(step) for step in plan.steps] == ["/home/u/.cache/go_mod"]
     assert plan.risk is Risk.SAFE
 
 

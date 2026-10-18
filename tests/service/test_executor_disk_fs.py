@@ -791,3 +791,33 @@ def test_the_same_cache_as_a_real_folder_is_cleaned(tmp_path: Path) -> None:
     outcomes = rig.executor().execute(plan=dir_plan(kind=CLEAN, path=folder))
 
     assert outcomes[0].status is StepStatus.DONE
+
+
+def test_a_cache_left_half_cleaned_names_its_folder_not_its_title(rig: FsRig) -> None:
+    # F8 gave cache steps a title ("Miniature") as label: the failure must still say where.
+    folder = make_cache(home=rig.home, relative=".cache/thumbnails")
+    plan = dir_plan(kind=CLEAN, path=folder)
+    titled = replace(plan, steps=(replace(plan.steps[0], target_label="Miniature"),))
+    locked = folder / "sub"
+    locked.chmod(0o500)
+    try:
+        outcomes = rig.executor().execute(plan=titled)
+    finally:
+        locked.chmod(0o700)
+
+    assert outcomes[0].status is StepStatus.FAILED
+    assert f"1 entries left in {folder}" in (outcomes[0].message or "")
+
+
+def test_a_titled_cache_step_is_logged_with_its_folder(
+    rig: FsRig, caplog: pytest.LogCaptureFixture
+) -> None:
+    folder = make_cache(home=rig.home, relative=".cache/thumbnails")
+    plan = dir_plan(kind=CLEAN, path=folder)
+    titled = replace(plan, steps=(replace(plan.steps[0], target_label="Miniature"),))
+    with caplog.at_level(logging.INFO, logger="wimm.service.executor_disk_docker"):
+        rig.executor().execute(plan=titled)
+
+    lines = [r.getMessage() for r in caplog.records if r.getMessage().startswith("disk action=")]
+    assert len(lines) == 1
+    assert lines[0].startswith(f"disk action=cache_clean target={folder} outcome=done ")

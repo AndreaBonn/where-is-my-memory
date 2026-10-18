@@ -7,13 +7,19 @@ import pytest
 from wimm.core.cache_catalog import withheld_kinds
 from wimm.core.disk_rules import safe_reclaimable_bytes, unavailable_docker
 from wimm.core.planning import PlanningContext, plan_action
-from wimm.model.actions import ActionRequest, Plan
+from wimm.model.actions import ActionRequest, DirFingerprint, Plan, PlanStep
 from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import ActionKind, PlanId, Risk, TargetId
 from wimm.model.errors import InvalidRequest
 
 from .disk_helpers import MB, cache, devdir, docker_disk, image, report, stopped, volume
 from .planning_helpers import NOW, OWNER_UID, snapshot
+
+
+def _path(step: PlanStep) -> str:
+    """The folder a cache step deletes: its identity, unlike the label shown on screen."""
+    assert isinstance(step.fingerprint, DirFingerprint)
+    return step.fingerprint.realpath
 
 
 def _plan(
@@ -91,7 +97,7 @@ def test_an_empty_cache_is_not_a_step() -> None:
 
     plan = _plan(disk=disk)
 
-    assert [step.target_label for step in plan.steps] == ["/home/u/.cache/npm"]
+    assert [_path(step) for step in plan.steps] == ["/home/u/.cache/npm"]
 
 
 def test_disk_free_safe_skips_caution_caches() -> None:
@@ -106,7 +112,7 @@ def test_disk_free_safe_skips_caution_caches() -> None:
 
     plan = _plan(disk=disk)
 
-    assert [step.target_label for step in plan.steps] == ["/home/u/.cache/uv"]
+    assert [_path(step) for step in plan.steps] == ["/home/u/.cache/uv"]
     assert plan.risk is Risk.SAFE
     assert plan.estimated_reclaim_disk == 300 * MB
     assert safe_reclaimable_bytes(report=disk) == 300 * MB
@@ -136,7 +142,7 @@ def test_disk_free_safe_leaves_the_go_module_cache_to_its_own_command() -> None:
 
     plan = _plan(disk=disk)
 
-    assert [step.target_label for step in plan.steps] == ["/home/u/.cache/npm"]
+    assert [_path(step) for step in plan.steps] == ["/home/u/.cache/npm"]
     assert safe_reclaimable_bytes(report=disk) == 20 * MB
 
 
@@ -152,7 +158,7 @@ def test_disk_free_safe_includes_the_go_module_cache_when_go_is_on_the_path() ->
 
     plan = _plan(disk=disk, which=_found)
 
-    assert sorted(step.target_label for step in plan.steps) == [
+    assert sorted(_path(step) for step in plan.steps) == [
         "/home/u/.cache/go_mod",
         "/home/u/.cache/npm",
     ]
@@ -196,7 +202,7 @@ def test_disk_free_safe_never_includes_models() -> None:
     plan = _plan(disk=disk)
 
     # Paired: the SAFE cache beside them is included, so the filter can fail.
-    assert [step.target_label for step in plan.steps] == ["/home/u/.cache/uv"]
+    assert [_path(step) for step in plan.steps] == ["/home/u/.cache/uv"]
     assert plan.risk is Risk.SAFE
     assert plan.confirm_phrase is None
     assert safe_reclaimable_bytes(report=disk) == 300 * MB

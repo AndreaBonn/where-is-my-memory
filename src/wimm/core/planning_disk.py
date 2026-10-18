@@ -11,6 +11,7 @@ from pathlib import PurePath
 from typing import Protocol
 
 from wimm.core.cache_catalog import withheld_kinds
+from wimm.core.cache_titles import CACHE_TITLES
 from wimm.i18n import N_, _
 from wimm.model.actions import (
     ActionRequest,
@@ -215,6 +216,8 @@ def _cache_draft(*, entry: CacheEntry | None, kind: ActionKind) -> list[Draft]:
     fingerprint = DirFingerprint(realpath=entry.path, st_ino=entry.st_ino, st_dev=entry.st_dev)
     name = _(TRASH_PHRASE) if entry.kind is CacheKind.TRASH else entry.path
     draft = _dir_draft(fingerprint=fingerprint, size=entry.size, kind=kind, name=name)
+    # F8: the confirmation and the outcome name the cache as the Disco page does.
+    draft = replace(draft, label=_(CACHE_TITLES[entry.kind]))
     # The risk depends on what the cache is: maven and the IDE caches are not free to refill.
     target = RiskTarget(kind=DIR_RISK_KINDS[kind], cache_kind=entry.kind)
     return [replace(draft, assessed=assess_draft(target=target, kind=kind))]

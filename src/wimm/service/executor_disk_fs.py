@@ -167,7 +167,9 @@ def _tree_outcome(*, step: PlanStep, removal: TreeRemoval, done: bool) -> StepOu
     """DONE when the target is as planned, FAILED with a count when entries remain."""
     if removal.remaining:
         first = removal.error_samples[0] if removal.error_samples else "mount point skipped"
-        message = f"{removal.remaining} entries left in {step.target_label} (first: {first})"
+        # The folder, not the label: a cache step is labelled with its title (F8).
+        where = _fingerprint(step=step).realpath
+        message = f"{removal.remaining} entries left in {where} (first: {first})"
         return StepOutcome(order=step.order, status=StepStatus.FAILED, message=message)
     status = StepStatus.DONE if done or removal.removed else StepStatus.ALREADY_GONE
     return StepOutcome(order=step.order, status=status, freed_bytes=removal.freed_bytes)

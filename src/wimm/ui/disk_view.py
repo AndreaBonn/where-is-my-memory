@@ -4,6 +4,7 @@ from dataclasses import replace
 from datetime import datetime
 
 from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
+from wimm.core.cache_titles import CACHE_TITLES
 from wimm.core.constants import DISK_SECTION_CAP
 from wimm.core.risk import RiskTarget
 from wimm.i18n import N_, _, ngettext
@@ -22,7 +23,6 @@ from wimm.ui.disk_model import (
 from wimm.ui.disk_texts import (
     CHOOSE_FOLDER_LABEL,
     MISSING_ROOT_TEXT,
-    MODEL_CACHE_TITLES,
     NO_ROOTS_TEXT,
     NO_ROOTS_TITLE,
     SECTION_DESCRIPTIONS,
@@ -32,26 +32,6 @@ from wimm.ui.disk_view_docker import docker_sections
 from wimm.ui.format import short_date
 
 NO_SCAN_TEXT = N_("Nessun controllo ancora")
-CACHE_TITLES = {
-    CacheKind.UV: "uv",
-    CacheKind.NPM: "npm",
-    CacheKind.PIP: "pip",
-    CacheKind.THUMBNAILS: N_("Miniature"),
-    CacheKind.TRASH: N_("Cestino"),
-    CacheKind.CARGO_REGISTRY: N_("Cargo (pacchetti)"),
-    CacheKind.CARGO_GIT: N_("Cargo (repository git)"),
-    CacheKind.GRADLE: N_("Gradle"),
-    CacheKind.MAVEN: N_("Maven"),
-    CacheKind.GO_MOD: N_("Go (moduli)"),
-    CacheKind.GO_BUILD: N_("Go (compilazione)"),
-    CacheKind.YARN: "yarn",
-    CacheKind.PNPM: "pnpm",
-    CacheKind.BUN: "bun",
-    CacheKind.CONDA: "conda",
-    CacheKind.PLAYWRIGHT: N_("Playwright"),
-    CacheKind.JETBRAINS: "JetBrains",
-    **{CacheKind(value): title for value, title in MODEL_CACHE_TITLES.items()},
-}
 
 
 def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:

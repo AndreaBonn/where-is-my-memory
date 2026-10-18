@@ -5,7 +5,7 @@ from tests.core.planning_helpers import NOW, OWNER_UID, container, group, proc, 
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.planning_restart import StoppedContainer
 from wimm.model.actions import ActionRequest, Plan
-from wimm.model.disk import CacheKind, DiskReport
+from wimm.model.disk import CacheEntry, CacheKind, DiskReport
 from wimm.model.enums import ActionKind, Category, GroupId, PlanId, TargetId
 from wimm.model.snapshot import Snapshot
 from wimm.ui.dialogs.facts import KEEP_TITLE, RESTART_TITLE, WHAT_TITLE, facts_for
@@ -81,8 +81,8 @@ def test_disk_entries_read_as_plain_things() -> None:
 
     assert labels == [
         "Cache di build Docker",
-        "Cache uv",
         "Immagine senza nome (" + "a" * 12 + ")",
+        "uv",
     ]
 
 
@@ -174,3 +174,26 @@ def test_the_restart_line_drops_the_folder_when_one_process_has_none() -> None:
 
     assert "con lo stesso comando di prima." in restart
     assert "/work" not in restart
+
+
+def _cache_at(*, kind: CacheKind, path: str, ino: int) -> CacheEntry:
+    return CacheEntry(kind=kind, path=path, size=MB, st_ino=ino, st_dev=2049)
+
+
+def test_cache_entries_carry_the_name_of_the_disco_page_not_the_folder() -> None:
+    # F8: ".gradle/caches" and "npm/_cacache" said "Cache caches" and "Cache _cacache".
+    caches = (
+        _cache_at(kind=CacheKind.GRADLE, path="/home/u/.gradle/caches", ino=1),
+        _cache_at(kind=CacheKind.CARGO_REGISTRY, path="/home/u/.cargo/registry", ino=2),
+        _cache_at(kind=CacheKind.NPM, path="/home/u/.npm/_cacache", ino=3),
+    )
+    plan = plan_for(
+        snap=snapshot(),
+        request=ActionRequest(kind=ActionKind.DISK_FREE_SAFE),
+        disk=report(caches=caches),
+    )
+
+    labels = sorted(entry.label for entry in entries_for(plan=plan, snapshot=snapshot()))
+
+    assert labels == ["Cargo (pacchetti)", "Gradle", "npm"]
+    assert {step.fingerprint.realpath for step in plan.steps} == {c.path for c in caches}  # type: ignore[union-attr]

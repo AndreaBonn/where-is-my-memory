@@ -298,7 +298,7 @@ def test_free_safe_dialog_lets_each_item_be_left_out(display: None) -> None:
 
     rows = switches(dialog)
     assert len(rows) == 3
-    rows["Cache uv"].set_active(False)
+    rows["uv"].set_active(False)
 
     assert service.planned[-1].excluded_ids == frozenset({"/home/u/.cache/uv"})
     assert f"liberi circa {format_size(size=6 * MB)} di spazio sul disco" in dialog.get_body()

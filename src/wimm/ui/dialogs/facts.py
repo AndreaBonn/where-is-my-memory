@@ -1,11 +1,8 @@
 """C2/C3: what a confirmation says in plain words: the targets, and what happens to them."""
 
-import os
-
 from wimm.i18n import N_, _
 from wimm.model.actions import (
     ContainerFingerprint,
-    DirFingerprint,
     ImageFingerprint,
     Plan,
     PlanStep,
@@ -74,8 +71,6 @@ def entry_label(*, step: PlanStep, members: dict[str, Member]) -> str:
     if isinstance(fingerprint, ImageFingerprint) and step.target_label.startswith("sha256:"):
         short = fingerprint.id.removeprefix("sha256:")[:SHORT_ID_CHARS]
         return _(UNNAMED_IMAGE).format(short=short)
-    if isinstance(fingerprint, DirFingerprint) and step.kind is ActionKind.CACHE_CLEAN:
-        return _("Cache {name}").format(name=os.path.basename(fingerprint.realpath))
     if step.kind is ActionKind.BUILDER_PRUNE:
         return _(BUILD_CACHE_LABEL)
     return step.target_label
