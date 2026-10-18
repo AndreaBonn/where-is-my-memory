@@ -239,13 +239,13 @@ def test_unused_programs_come_before_the_ones_in_use(snapshot: Snapshot, now: da
 
 def test_ties_break_on_used_then_name_then_id(snapshot: Snapshot, now: datetime) -> None:
     groups = (
-        make_group("beta", reclaimable=5, used=10),
-        make_group("Alpha", reclaimable=5, used=10),
+        make_group("Banana", reclaimable=5, used=10),
+        make_group("apple", reclaimable=5, used=10),
         make_group("heavy", reclaimable=5, used=99),
-        make_group("beta", reclaimable=5, used=10, id=GroupId("id-aaa")),
+        make_group("Banana", reclaimable=5, used=10, id=GroupId("id-Aaa")),
     )
     rows = build_rows(snapshot=with_groups(snapshot, *groups), filters=RowFilters(), now=now)
-    assert [r.id for r in rows] == ["id-heavy", "id-Alpha", "id-aaa", "id-beta"]
+    assert [r.id for r in rows] == ["id-heavy", "id-apple", "id-Aaa", "id-Banana"]
 
 
 def test_filter_only_idle_keeps_idle_groups(snapshot: Snapshot, now: datetime) -> None:
@@ -376,7 +376,9 @@ def test_protected_groups_never_appear_in_the_overview(snapshot: Snapshot, now: 
 
     assert titles(shot, now) == ["srv"]
     assert titles(shot, now, query="gnome") == []
-    assert empty_state(snapshot=shot, filters=RowFilters(query="gnome")) is not None
+    state = empty_state(snapshot=shot, filters=RowFilters(query="gnome"))
+    assert state is not None
+    assert state.kind is EmptyKind.NO_RESULTS
 
 
 @pytest.mark.parametrize(
@@ -404,7 +406,12 @@ def test_actionable_group_without_primary_uses_riskiest_member_action(
 ) -> None:
     process = snapshot.groups[0].members[1]
     assert isinstance(process, ProcessMember)
-    risky = replace(process, actions=(ActionOffer(kind=ActionKind.PROCESS_KILL, risk=Risk.DANGER),))
+    offers = (
+        ActionOffer(kind=ActionKind.PROCESS_KILL, risk=Risk.SAFE),
+        ActionOffer(kind=ActionKind.PROCESS_KILL, risk=Risk.DANGER),
+        ActionOffer(kind=ActionKind.PROCESS_KILL, risk=Risk.CAUTION),
+    )
+    risky = replace(process, actions=offers)
     with_actions = replace(snapshot.groups[0], primary_action=None, members=(risky,))
     no_actions = make_group("idle-none", risk=None)
 

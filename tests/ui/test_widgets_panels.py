@@ -21,7 +21,10 @@ from wimm.ui.widgets.state_views import EmptyView, ErrorView, LoadingView, failu
 from wimm.ui.widgets.summary import SummaryPanel
 
 pytestmark = pytest.mark.ui
-SEARCH_SETTLE_US = 400_000
+
+# Gtk.SearchEntry default search-delay is 150 ms; twice that is how long a duplicate
+# notification would need to show up.
+SEARCH_DEBOUNCE_X2_US = 300_000
 
 
 def labels_under(widget: Gtk.Widget) -> list[Gtk.Label]:
@@ -190,8 +193,10 @@ def test_filter_bar_reset_shows_everything_and_notifies_once(display: None) -> N
     seen.clear()
 
     bar.reset()
-    # The cleared search reports later (debounce): wait for it, then count the notifications.
-    deadline = GLib.get_monotonic_time() + SEARCH_SETTLE_US
+    # The cleared search reports later (debounce): first wait for the notification itself,
+    wait_until(lambda: bool(seen), description="notification after reset")
+    # then a real-time window longer than the known debounce, to catch a second one.
+    deadline = GLib.get_monotonic_time() + SEARCH_DEBOUNCE_X2_US
     while GLib.get_monotonic_time() < deadline:
         main_context_iterate()
 

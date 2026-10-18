@@ -211,10 +211,6 @@ def test_icon_only_buttons_register_their_accessible_label(group_row: GroupRow) 
         assert button.get_tooltip_text() == icon_only_label(button=button)
 
 
-def test_adw_is_the_libadwaita_expander(group_row: GroupRow) -> None:
-    assert isinstance(GroupRowWidget(row=group_row), Adw.ExpanderRow)
-
-
 def open_in_window(widget: GroupRowWidget) -> Gtk.Window:
     window = Gtk.Window(default_width=900, default_height=700)
     box = Gtk.ListBox()

@@ -75,9 +75,21 @@ def test_refresh_action_asks_the_source_for_a_sample(
 def test_refresh_does_nothing_for_a_source_without_request_refresh(
     window_factory: WindowFactory, snapshot: Snapshot
 ) -> None:
-    window = window_factory(FakeSource(snapshot=snapshot))
+    plain = FakeSource(snapshot=snapshot)
+    refreshable = RefreshableSource(snapshot=snapshot)
+    plain_window = window_factory(plain)
+    refreshable_window = window_factory(refreshable)
+    assert not hasattr(plain, "request_refresh")
 
-    window.refresh()
+    plain_window.refresh()
+    refreshable_window.refresh()
+
+    # No error for the plain source, and the capable one is asked exactly once.
+    assert refreshable.refreshes == 1
+    assert (
+        plain_window.overview.group_widgets.keys()
+        == refreshable_window.overview.group_widgets.keys()
+    )
 
 
 def test_ctrl_f_target_is_the_search_entry(

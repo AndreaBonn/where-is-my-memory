@@ -51,6 +51,11 @@ def test_voices_at_zero_are_not_listed(snapshot: Snapshot) -> None:
     shown = labels(with_voices(snapshot, shared_tmpfs=0, zram=0, zswap=0, kernel_unreclaimable=0))
 
     assert not {TMPFS, KERNEL, ZRAM, ZSWAP} & set(shown)
+    # Paired positive: the same voices do appear once they are above zero.
+    nonzero = labels(
+        with_voices(snapshot, shared_tmpfs=GB, kernel_unreclaimable=GB, zram=GB, zswap=GB)
+    )
+    assert {TMPFS, KERNEL, ZRAM, ZSWAP} <= set(nonzero)
 
 
 def test_voices_above_zero_are_listed_between_the_cache_and_unattributed(

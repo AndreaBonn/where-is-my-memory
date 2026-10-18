@@ -1,10 +1,12 @@
 """F14: the copy helper puts the text on the clipboard, flagged secret, and clears it later."""
 
 from collections.abc import Callable
+from types import SimpleNamespace
 
 import pytest
 
 from tests.ui.conftest import main_context_iterate
+from wimm.ui import toasts
 from wimm.ui.toasts import clear_if_local, copy_to_clipboard
 
 gi = pytest.importorskip("gi")
@@ -114,3 +116,20 @@ def test_copy_of_text_that_cannot_be_encoded_fails_without_raising_or_scheduling
     assert copy_to_clipboard(text="node \udcff.js", schedule=timers) is False
 
     assert timers.calls == []
+
+
+def test_copy_without_a_default_display_fails_without_raising_or_scheduling(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    timers = ScheduledTimers()
+    with monkeypatch.context() as patch:
+        patch.setattr(
+            toasts, "Gdk", SimpleNamespace(Display=SimpleNamespace(get_default=lambda: None))
+        )
+
+        assert copy_to_clipboard(text="cd -- /a && x", schedule=timers) is False
+
+    assert timers.calls == []
+    # Paired positive: with the display back, the same call succeeds and schedules the wipe.
+    assert copy_to_clipboard(text="cd -- /a && x", schedule=timers) is True
+    assert len(timers.calls) == 1

@@ -5,13 +5,17 @@ from tests.ui.conftest import (
     FakeSource,
     RefreshableSource,
     WindowFactory,
+    all_filter,
     descendants,
     focus_is_in,
     idle_filter,
+    make_group,
     present_and_settle,
     settle,
     wait_until,
+    with_groups,
 )
+from wimm.model.enums import ActivityState
 from wimm.model.snapshot import Snapshot
 from wimm.ui.widgets.group_row import GroupRowWidget
 
@@ -74,22 +78,38 @@ def test_f5_asks_for_a_sample_only_when_the_source_can(
     assert capable.refreshes == 1
 
 
-def test_expanding_a_row_shows_its_members_and_filtering_idle_reduces_rows(
+def test_expanding_a_row_shows_its_members(
     window_factory: WindowFactory, snapshot: Snapshot
 ) -> None:
     window = window_factory(FakeSource(snapshot=snapshot))
     present_and_settle(window)
     row = window.overview.group_widgets[GROUP_ID]
-    before = len(window.overview.group_widgets)
 
     row.set_expanded(True)
     members = [w for w in descendants(row) if isinstance(w, Adw.ActionRow)]
     wait_until(lambda: all(w.get_mapped() for w in members), description="members mapped")
-    idle_filter(window.overview).set_active(True)
-    wait_until(lambda: not window.overview.is_syncing, description="filtered rows built")
 
     assert len(members) >= 3
-    assert 0 < len(window.overview.group_widgets) <= before
+    assert row.get_expanded()
+
+
+def test_idle_filter_toggles_between_idle_only_and_all_rows(
+    window_factory: WindowFactory, snapshot: Snapshot
+) -> None:
+    busy = make_group("busy", state=ActivityState.ACTIVE)
+    shot = with_groups(snapshot, snapshot.groups[0], busy)
+    window = window_factory(FakeSource(snapshot=shot))
+    present_and_settle(window)
+
+    def row_ids() -> set[str]:
+        wait_until(lambda: not window.overview.is_syncing, description="rows built")
+        return set(window.overview.group_widgets)
+
+    assert row_ids() == {GROUP_ID}  # the idle filter is on when the page opens
+    all_filter(window.overview).set_active(True)
+    assert row_ids() == {GROUP_ID, "id-busy"}
+    idle_filter(window.overview).set_active(True)
+    assert row_ids() == {GROUP_ID}
 
 
 def test_copy_pid_from_the_member_menu_fills_the_clipboard(
@@ -122,3 +142,7 @@ def test_closing_hides_the_window_without_destroying_it(
     wait_until(lambda: not window.get_visible(), description="window hidden")
 
     assert not window.get_visible()
+    # Hidden, not destroyed: presenting it again works and the pages are still there.
+    window.present()
+    wait_until(window.get_visible, description="window shown again")
+    assert window.overview.group_widgets[GROUP_ID] is not None
