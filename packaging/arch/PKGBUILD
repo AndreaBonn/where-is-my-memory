@@ -1,0 +1,67 @@
+# Maintainer: where-is-my-memory contributors
+# Reference build for Arch Linux. Installs the same files as the .deb (scripts/build_deb.sh)
+# with the same paths, except the Python package: Arch has no dist-packages, so it goes to
+# the interpreter's purelib directory.
+# Local build: scripts/test_arch.sh makes the source tarball with `git archive`.
+# Before publishing anywhere, replace SKIP with the real checksum of the release tarball.
+pkgname=where-is-my-memory
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Tray monitor for forgotten containers, dev servers and apps'
+arch=('any')
+url='https://github.com/AndreaBonn/where-is-my-memory'
+license=('GPL-3.0-or-later')
+# PyGObject, psutil and docker come from the distribution, never from PyPI (ADR-002).
+# gtk4 and libadwaita ship the GI typelibs (Gtk-4.0, Adw-1) that gir1.2-* provide on Debian.
+depends=('python' 'python-gobject' 'python-psutil' 'python-docker' 'gtk4' 'libadwaita')
+makedepends=('gettext')
+# Mirrors the .deb Recommends.
+optdepends=('gnome-shell-extension-appindicator: tray icon on GNOME'
+            'docker: manage containers'
+            'xorg-xprop: window inspection on X11')
+options=('!debug')
+backup=('etc/xdg/autostart/io.github.wimm.WhereIsMyMemory.desktop')
+install=where-is-my-memory.install
+source=("${pkgname}-${pkgver}.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    local app_id=io.github.wimm.WhereIsMyMemory
+    local site size state
+    site="$(python -c 'import sysconfig; print(sysconfig.get_path("purelib"))')"
+    cd "${srcdir}/${pkgname}-${pkgver}"
+
+    install -d -m 755 "${pkgdir}${site}"
+    cp -r src/wimm "${pkgdir}${site}/wimm"
+    find "${pkgdir}${site}/wimm" -name '__pycache__' -type d -prune -exec rm -rf {} +
+    # Compiled from po/, never copied: a catalog in the tree may be stale or missing.
+    rm -rf "${pkgdir}${site}/wimm/locale"
+    install -d "${pkgdir}${site}/wimm/locale/en/LC_MESSAGES"
+    msgfmt --check-format --check-domain \
+        -o "${pkgdir}${site}/wimm/locale/en/LC_MESSAGES/wimm.mo" po/en.po
+    find "${pkgdir}${site}/wimm" -type d -exec chmod 755 {} +
+    find "${pkgdir}${site}/wimm" -type f -exec chmod 644 {} +
+
+    install -D -m 755 packaging/bin/wimm "${pkgdir}/usr/bin/wimm"
+    install -D -m 644 "data/desktop/${app_id}.autostart.desktop" \
+        "${pkgdir}/etc/xdg/autostart/${app_id}.desktop"
+    install -D -m 644 "data/desktop/${app_id}.desktop" \
+        "${pkgdir}/usr/share/applications/${app_id}.desktop"
+    for size in 16 24 32 48 64 128 256 512; do
+        install -D -m 644 "data/icons/hicolor/${size}x${size}/apps/${app_id}.png" \
+            "${pkgdir}/usr/share/icons/hicolor/${size}x${size}/apps/${app_id}.png"
+    done
+    for state in normal warning critical; do
+        install -D -m 644 "data/icons/hicolor/scalable/status/wimm-${state}.svg" \
+            "${pkgdir}/usr/share/icons/hicolor/scalable/status/wimm-${state}.svg"
+    done
+    install -D -m 644 "data/metainfo/${app_id}.metainfo.xml" \
+        "${pkgdir}/usr/share/metainfo/${app_id}.metainfo.xml"
+    # inspector_dbus.introspection_path() falls back to this directory.
+    install -D -m 644 data/dbus/io.github.wimm.Inspector1.xml \
+        "${pkgdir}/usr/share/${pkgname}/dbus/io.github.wimm.Inspector1.xml"
+    install -d -m 755 "${pkgdir}/usr/share/man/man1"
+    gzip -9n -c packaging/man/wimm.1 > "${pkgdir}/usr/share/man/man1/wimm.1.gz"
+    chmod 644 "${pkgdir}/usr/share/man/man1/wimm.1.gz"
+    install -D -m 644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
+}

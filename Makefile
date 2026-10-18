@@ -1,4 +1,4 @@
-.PHONY: setup test test-all perf lint audit run deb test-deb pot po mo
+.PHONY: setup test test-all perf lint audit run deb test-deb test-arch test-rpm pot po mo
 
 # Enforce core coverage only once executable core code exists.
 CORE_HAS_CODE := $(shell test ! -d src/wimm/core || \
@@ -78,3 +78,11 @@ deb:
 test-deb:
 	@test -f scripts/test_deb.sh || { echo 'Missing script: scripts/test_deb.sh' >&2; exit 2; }
 	scripts/test_deb.sh
+
+test-arch:
+	@test -f scripts/test_arch.sh || { echo 'Missing script: scripts/test_arch.sh' >&2; exit 2; }
+	scripts/test_arch.sh
+
+test-rpm:
+	@test -f scripts/test_rpm.sh || { echo 'Missing script: scripts/test_rpm.sh' >&2; exit 2; }
+	scripts/test_rpm.sh

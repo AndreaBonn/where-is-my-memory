@@ -1,0 +1,15 @@
+# Same job as packaging/debian/prerm: a run as root writes __pycache__ next to the modules.
+# Icon and desktop caches are refreshed by the pacman hooks of gtk-update-icon-cache and
+# desktop-file-utils, so nothing else is needed here.
+_clean_bytecode() {
+    find /usr/lib/python3*/site-packages/wimm -type d -name __pycache__ -prune \
+        -exec rm -rf {} + 2>/dev/null || true
+}
+
+pre_upgrade() {
+    _clean_bytecode
+}
+
+pre_remove() {
+    _clean_bytecode
+}
