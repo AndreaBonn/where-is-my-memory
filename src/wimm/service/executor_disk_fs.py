@@ -18,6 +18,8 @@ from wimm.core.cache_catalog import (
 from wimm.core.cache_specs import CACHE_COMMANDS
 from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S, TRASH_CONTENT_DIRS
 from wimm.core.devdir_rules import MARKERS_BY_NAME, classify_devdir
+from wimm.core.ollama_serve import is_ollama_serve
+from wimm.i18n import N_
 from wimm.model.actions import DirFingerprint, PlanStep
 from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind
@@ -31,6 +33,19 @@ LOGGER = logging.getLogger(__name__)
 DISK_FS_KINDS = frozenset(
     {ActionKind.CACHE_CLEAN, ActionKind.TRASH_EMPTY, ActionKind.DEVDIR_DELETE}
 )
+
+
+class OllamaServing(ProtectedTarget):
+    """The ollama server is alive: it holds the models open (R24)."""
+
+    message = "ollama serve is running, the models are not cleaned"
+    user_message = N_("Chiudi ollama (ollama serve) prima di cancellare i modelli")
+
+
+def _refuse_while_ollama_serves(*, control: DiskFsControl) -> None:
+    for name, argv in control.processes():
+        if is_ollama_serve(name=name, argv=argv):
+            raise OllamaServing()
 
 
 def _fingerprint(*, step: PlanStep) -> DirFingerprint:
@@ -118,6 +133,8 @@ def _cache_kind(*, fingerprint: DirFingerprint, control: DiskFsControl) -> Cache
 def _check_cache(*, step: PlanStep, control: DiskFsControl) -> bool:
     fingerprint = _fingerprint(step=step)
     kind = _cache_kind(fingerprint=fingerprint, control=control)
+    if kind is CacheKind.OLLAMA:
+        _refuse_while_ollama_serves(control=control)
     if (kind is CacheKind.TRASH) != (step.kind is ActionKind.TRASH_EMPTY):
         raise ProtectedTarget(f"{fingerprint.realpath} does not match {step.kind.value}")
     if os.path.islink(fingerprint.realpath):

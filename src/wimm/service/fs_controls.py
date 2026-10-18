@@ -95,6 +95,21 @@ class PsutilCwds:
         return found
 
 
+# Name and argument list of one process.
+ProcessIdentity = tuple[str, Sequence[str]]
+
+
+def list_process_identities() -> Sequence[ProcessIdentity]:
+    """Name and arguments of every process; psutil shows them for other users too.
+
+    A process whose arguments cannot be read (kernel thread, vanished) has an empty list.
+    """
+    found: list[ProcessIdentity] = []
+    for process in psutil.process_iter(["name", "cmdline"]):
+        found.append((process.info.get("name") or "", process.info.get("cmdline") or []))
+    return found
+
+
 def file_owner(path: str) -> int:
     """The uid that owns ``path`` itself (a link is not followed)."""
     return os.lstat(path).st_uid
@@ -121,3 +136,4 @@ class DiskFsControl:
     clock: Callable[[], float] = time.time
     uid: int = field(default_factory=os.getuid)
     owner_of: Callable[[str], int] = file_owner
+    processes: Callable[[], Sequence[ProcessIdentity]] = list_process_identities

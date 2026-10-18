@@ -72,6 +72,7 @@ def build_rig(
     home: Path,
     missing: Collection[str] = (),
     environ: Mapping[str, str] | None = None,
+    processes: Sequence[tuple[str, list[str]]] = (),
 ) -> FsRig:
     """The control with the cache table of ``home`` under ``environ`` (no variables by default).
 
@@ -91,6 +92,7 @@ def build_rig(
         which=lambda name: None if name in missing else f"/usr/bin/{name}",
         mounts=lambda: frozenset(),
         clock=lambda: NOW,
+        processes=lambda: list(processes),
     )
     return FsRig(home=home, runner=runner, cwds=cwds, control=control)
 
