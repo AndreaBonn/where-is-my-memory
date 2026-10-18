@@ -17,6 +17,7 @@ from wimm.ui.format import (
     fold_text,
     format_clock,
     format_elapsed,
+    format_growth,
     format_round_size,
     format_size,
     home_relative,
@@ -220,3 +221,22 @@ def test_home_relative_shortens_paths_inside_the_home() -> None:
     assert home_relative(path=Path("/home/ada/code/app"), home=home) == "~/code/app"
     assert home_relative(path=Path("/srv/code"), home=home) == "/srv/code"
     assert home_relative(path=Path("/home/adam/code"), home=home) == "/home/adam/code"
+
+
+@pytest.mark.parametrize(
+    ("delta_bytes", "span_s", "expected"),
+    [
+        (620_000_000, 7200, "+620 MB in 2 h"),
+        (620_000_000, 6000, "+620 MB in 2 h"),
+        (620_000_000, 4000, "+620 MB in 1 h"),
+        (620_000_000, 3600, "+620 MB in 1 h"),
+        (1_500_000_000, 10_800, "+1,5 GB in 3 h"),
+        (300_000_000, 2400, "+300 MB in 40 minuti"),
+        (300_000_000, 3599, "+300 MB in 59 minuti"),
+        (300_000_000, 60, "+300 MB in 1 minuto"),
+    ],
+)
+def test_format_growth_rounds_hours_and_keeps_minutes_below_an_hour(
+    delta_bytes: int, span_s: int, expected: str
+) -> None:
+    assert format_growth(delta_bytes=delta_bytes, span_s=span_s) == expected

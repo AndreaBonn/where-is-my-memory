@@ -1,12 +1,13 @@
 from array import array
 from collections.abc import Callable, Iterable
+from dataclasses import replace
 from datetime import UTC, datetime
 from time import monotonic
 
 from wimm.core import constants as c
 from wimm.core.growth import GrowthTrend, growth_trend
 from wimm.model.enums import GroupId
-from wimm.model.snapshot import Group
+from wimm.model.snapshot import Group, GroupGrowth, Snapshot
 
 MAX_POINTS = c.GROWTH_WINDOW_S // c.GROWTH_SAMPLE_INTERVAL_S + 1
 
@@ -68,3 +69,17 @@ class GroupHistory:
             for at, value in zip(series.times, series.values, strict=True)
         )
         return growth_trend(points=points, now=self._clock())
+
+
+def with_growth(*, snapshot: Snapshot, history: GroupHistory) -> Snapshot:
+    """The snapshot with each group's sustained growth, read from ``history``."""
+    groups = []
+    for group in snapshot.groups:
+        trend = history.growth_for(group_id=group.id)
+        if trend is None:
+            # growth is already None: rebuilding the group would only rerun its checks.
+            groups.append(group)
+            continue
+        growth = GroupGrowth(delta_bytes=trend.delta_bytes, span_s=trend.span_s)
+        groups.append(replace(group, growth=growth))
+    return replace(snapshot, groups=tuple(groups))

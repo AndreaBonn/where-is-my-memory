@@ -99,6 +99,22 @@ def titles(
     return [row.title for row in build_rows(snapshot=snapshot, filters=filters, now=now)]
 
 
+def test_group_row_says_the_growth_when_the_group_has_one(
+    snapshot: Snapshot, now: datetime
+) -> None:
+    (row,) = build_rows(snapshot=snapshot, filters=RowFilters(), now=now)
+
+    assert row.growth_text == "+620 MB in 2 h"
+
+
+def test_group_row_without_growth_has_no_growth_text(snapshot: Snapshot, now: datetime) -> None:
+    flat = with_groups(snapshot, replace(snapshot.groups[0], growth=None))
+
+    (row,) = build_rows(snapshot=flat, filters=RowFilters(), now=now)
+
+    assert row.growth_text is None
+
+
 def test_fixture_group_row_reads_like_the_spec_mockup(snapshot: Snapshot, now: datetime) -> None:
     (row,) = build_rows(snapshot=snapshot, filters=RowFilters(), now=now)
 

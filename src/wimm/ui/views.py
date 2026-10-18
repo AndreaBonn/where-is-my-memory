@@ -114,6 +114,7 @@ class GroupRow:
     ignored: bool
     snoozed_until: datetime | None
     snoozed_text: str | None
+    growth_text: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

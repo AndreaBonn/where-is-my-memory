@@ -70,7 +70,8 @@ def test_group_row_text_and_tooltip_come_from_the_view_model(group_row: GroupRow
     widget = GroupRowWidget(row=group_row)
 
     assert widget.get_title() == "whitebox"
-    assert widget.get_subtitle() == f"{group_row.subtitle}\n{group_row.detail}"
+    assert group_row.growth_text == "+620 MB in 2 h"
+    assert widget.get_subtitle() == (f"{group_row.subtitle} · +620 MB in 2 h\n{group_row.detail}")
     assert widget.get_tooltip_text() == group_row.explanation
     assert not widget.get_use_markup()
 
@@ -335,3 +336,12 @@ def test_a_new_member_does_not_steal_the_focus_from_one_that_stays(group_row: Gr
     assert member_row_named(widget, "extra") is not None
     assert focus_is_inside(window=window, button=button)
     window.destroy()
+
+
+def test_group_row_subtitle_drops_the_growth_when_it_goes_away(group_row: GroupRow) -> None:
+    from dataclasses import replace
+
+    widget = GroupRowWidget(row=group_row)
+    widget.update(row=replace(group_row, growth_text=None))
+
+    assert widget.get_subtitle() == f"{group_row.subtitle}\n{group_row.detail}"

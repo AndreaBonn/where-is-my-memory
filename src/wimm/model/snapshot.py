@@ -102,6 +102,22 @@ Member = ProcessMember | ContainerMember
 
 
 @dataclass(frozen=True, slots=True)
+class GroupGrowth(ImmutableModel):
+    """A sustained rise of a group's memory: ``delta_bytes`` gained over ``span_s`` seconds."""
+
+    delta_bytes: int
+    span_s: int
+
+    def __post_init__(self) -> None:
+        ImmutableModel.__post_init__(self)
+        require_bytes(value=self.delta_bytes, field="delta_bytes")
+        if self.delta_bytes == 0:
+            raise ValueError("delta_bytes must be positive")
+        if type(self.span_s) is not int or self.span_s <= 0:
+            raise ValueError("span_s must be a positive integer number of seconds")
+
+
+@dataclass(frozen=True, slots=True)
 class Group(ImmutableModel):
     id: GroupId
     name: str
@@ -115,6 +131,7 @@ class Group(ImmutableModel):
     explanation: str
     compose_project: str | None
     members: tuple[Member, ...]
+    growth: GroupGrowth | None = None
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)

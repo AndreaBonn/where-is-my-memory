@@ -200,6 +200,8 @@ def _subtitle(*, row: GroupRow) -> str:
     first = [row.subtitle]
     if row.ignored:
         first.append(_(IGNORED_TEXT))
+    if row.growth_text:
+        first.insert(1, row.growth_text)
     if row.snoozed_text:
         first.append(row.snoozed_text)
     return LINE_SEPARATOR.join([FIELD_SEPARATOR.join(first), row.detail])

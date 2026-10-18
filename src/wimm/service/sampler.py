@@ -26,7 +26,7 @@ from wimm.model.raw import MemInfo, RawProcess
 from wimm.model.snapshot import ActivityAssessment, DockerStatus, Snapshot
 from wimm.paths import UserPaths
 
-from .group_history import GroupHistory
+from .group_history import GroupHistory, with_growth
 from .history import EntityKey, LastActiveTracker, SampleHistory
 from .sampler_collectors import Collectors as Collectors
 from .sampler_collectors import ForegroundSource
@@ -286,4 +286,4 @@ class Sampler:
             )
         )
         self.group_history.record(groups=snapshot.groups)
-        return snapshot
+        return with_growth(snapshot=snapshot, history=self.group_history)

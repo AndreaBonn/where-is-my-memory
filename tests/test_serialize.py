@@ -38,7 +38,7 @@ def test_fixture_roundtrip_exact_json_values_and_model(
     encoded = snapshot_to_json(snapshot=snapshot)
     assert json.loads(encoded) == document
     assert snapshot_from_json(text=encoded) == snapshot
-    assert SCHEMA_VERSION == 3
+    assert SCHEMA_VERSION == 4
     group = snapshot.groups[0]
     assert group.category is Category.PROJECT
     assert group.protection is Protection.ACTIONABLE
@@ -122,7 +122,8 @@ def set_path(document: dict[str, Any], path: tuple[str | int, ...], value: objec
     [
         (("schema",), 1),
         (("schema",), 2),
-        (("schema",), 4),
+        (("schema",), 3),
+        (("schema",), 5),
         (("schema",), True),
         (("schema",), 1.0),
         (("pressure",), "bad"),
@@ -365,6 +366,13 @@ def test_breakdown_missing_voice_is_rejected(document: dict[str, Any], voice: st
         snapshot_from_json(text=json.dumps(document))
 
 
+def test_schema_three_snapshot_is_rejected(document: dict[str, Any]) -> None:
+    document["schema"] = 3
+
+    with pytest.raises(SnapshotFormatError, match="schema"):
+        snapshot_from_json(text=json.dumps(document))
+
+
 def test_schema_two_snapshot_is_rejected(document: dict[str, Any]) -> None:
     document["schema"] = 2
 
@@ -425,3 +433,53 @@ def test_video_model_rejects_negative_bytes() -> None:
         m.GpuMemory(vendor=m.GpuVendor.AMD, used_bytes=-1, total_bytes=10)
     with pytest.raises(ValueError, match="total_bytes"):
         m.GpuMemory(vendor=m.GpuVendor.AMD, used_bytes=0, total_bytes=-1)
+
+
+def test_growth_roundtrips_as_an_object_and_as_null(
+    snapshot: m.Snapshot, document: dict[str, Any]
+) -> None:
+    assert snapshot.groups[0].growth == m.GroupGrowth(delta_bytes=620_000_000, span_s=7200)
+    encoded = json.loads(snapshot_to_json(snapshot=snapshot))
+    assert encoded["groups"][0]["growth"] == {"delta_bytes": 620_000_000, "span_s": 7200}
+
+    flat = replace(snapshot, groups=(replace(snapshot.groups[0], growth=None),))
+    flat_json = json.loads(snapshot_to_json(snapshot=flat))
+    assert flat_json["groups"][0]["growth"] is None
+    assert snapshot_from_json(text=json.dumps(flat_json)) == flat
+
+
+def test_growth_field_is_required_even_when_null(document: dict[str, Any]) -> None:
+    del document["groups"][0]["growth"]
+
+    with pytest.raises(SnapshotFormatError, match="growth"):
+        snapshot_from_json(text=json.dumps(document))
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("delta_bytes", 0),
+        ("delta_bytes", -5),
+        ("delta_bytes", 1.5),
+        ("delta_bytes", True),
+        ("span_s", 0),
+        ("span_s", -1),
+        ("span_s", "7200"),
+        ("span_s", True),
+        ("extra", 1),
+    ],
+)
+def test_growth_entry_rejects_invalid_values(
+    document: dict[str, Any], field: str, value: object
+) -> None:
+    document["groups"][0]["growth"][field] = value
+
+    with pytest.raises(SnapshotFormatError, match=field):
+        snapshot_from_json(text=json.dumps(document))
+
+
+def test_growth_model_rejects_non_positive_values() -> None:
+    with pytest.raises(ValueError, match="delta_bytes"):
+        m.GroupGrowth(delta_bytes=0, span_s=60)
+    with pytest.raises(ValueError, match="span_s"):
+        m.GroupGrowth(delta_bytes=1, span_s=0)

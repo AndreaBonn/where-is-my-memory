@@ -547,7 +547,7 @@ msgstr[1] "{count} minutes"
 msgid "meno di 1 minuto"
 msgstr "less than 1 minute"
 
-#: src/wimm/core/text.py:55
+#: src/wimm/core/text.py:55 src/wimm/ui/format.py:182
 #, python-brace-format
 msgid "{count} h"
 msgstr "{count} h"
@@ -2008,6 +2008,11 @@ msgstr "not in use {elapsed}"
 msgid "%d/%m"
 msgstr "%m/%d"
 
+#: src/wimm/ui/format.py:185
+#, python-brace-format
+msgid "+{size} in {duration}"
+msgstr "+{size} in {duration}"
+
 #: src/wimm/ui/outcome.py:14
 msgid "Fatto"
 msgstr "Done"
@@ -2323,39 +2328,39 @@ msgstr "What is compressed swap (zswap)?"
 msgid "È una piccola riserva di memoria in cui il sistema comprime i dati prima di spostarli sul disco. Non si può liberare chiudendo un programma: la gestisce il sistema da solo."
 msgstr "This is a small reserve of memory where the system compresses data before moving it to the disk. Closing a program cannot free it: the system manages it by itself."
 
-#: src/wimm/ui/viewmodel.py:39
+#: src/wimm/ui/viewmodel.py:40
 msgid "Nessuna azione"
 msgstr "No action"
 
-#: src/wimm/ui/viewmodel.py:40
+#: src/wimm/ui/viewmodel.py:41
 msgid "Niente da liberare: il resto è in uso o ancora in osservazione."
 msgstr "Nothing to free: the rest is in use or still being watched."
 
-#: src/wimm/ui/viewmodel.py:41
+#: src/wimm/ui/viewmodel.py:42
 msgid "Nessun programma corrisponde ai filtri."
 msgstr "No program matches the filters."
 
-#: src/wimm/ui/viewmodel.py:42
+#: src/wimm/ui/viewmodel.py:43
 msgid "Tutto in ordine"
 msgstr "All clear"
 
-#: src/wimm/ui/viewmodel.py:44
+#: src/wimm/ui/viewmodel.py:45
 msgid "Non c'è niente acceso che si possa chiudere. Ti avvisiamo noi se qualcosa resta acceso senza motivo."
 msgstr "Nothing is running that can be closed. We'll tell you if something stays on for no reason."
 
-#: src/wimm/ui/viewmodel.py:138
+#: src/wimm/ui/viewmodel.py:139
 #, python-brace-format
 msgid "porta {ports}"
 msgid_plural "porte {ports}"
 msgstr[0] "port {ports}"
 msgstr[1] "ports {ports}"
 
-#: src/wimm/ui/viewmodel.py:149
+#: src/wimm/ui/viewmodel.py:150
 #, python-brace-format
 msgid "avvisi in pausa fino alle {time}"
 msgstr "alerts paused until {time}"
 
-#: src/wimm/ui/viewmodel.py:151
+#: src/wimm/ui/viewmodel.py:152
 #, python-brace-format
 msgid "avvisi in pausa fino al {date} alle {time}"
 msgstr "alerts paused until {date} at {time}"

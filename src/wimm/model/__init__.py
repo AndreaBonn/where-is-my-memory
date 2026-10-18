@@ -150,6 +150,9 @@ from .snapshot import (
     Group as Group,
 )
 from .snapshot import (
+    GroupGrowth as GroupGrowth,
+)
+from .snapshot import (
     Member as Member,
 )
 from .snapshot import (

@@ -5,7 +5,9 @@
     widens the cache "kind" values from 5 to 17. Version 3 makes the memory
     breakdown always carry shared_tmpfs, kernel_unreclaimable, zram and zswap,
     and adds memory.video, a list of {vendor, used_bytes, total_bytes} kept
-    outside the breakdown. Readers accept only the version they know: a
+    outside the breakdown. Version 4 adds group.growth to every group, either
+    null or {delta_bytes, span_s}: the sustained rise of the group's memory.
+    The disk report keeps its shape and only carries the new number. Readers accept only the version they know: a
     document with another "schema" is rejected, never guessed.
   -->
   <interface name="io.github.wimm.Inspector1">

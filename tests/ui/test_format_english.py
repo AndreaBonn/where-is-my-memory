@@ -13,6 +13,7 @@ from wimm.ui.format import (
     activity_text,
     button_label,
     format_elapsed,
+    format_growth,
 )
 
 pytestmark = pytest.mark.usefixtures("english")
@@ -84,3 +85,11 @@ def test_format_clock_on_another_day_puts_the_month_first() -> None:
     rome = ZoneInfo("Europe/Rome")
     now = datetime(2026, 10, 16, 9, 0, tzinfo=rome)
     assert format_clock(value=datetime(2026, 10, 15, 23, 5, tzinfo=rome), now=now) == "10/15 23:05"
+
+
+@pytest.mark.parametrize(
+    ("span_s", "expected"),
+    [(7200, "+620 MB in 2 h"), (2400, "+620 MB in 40 minutes"), (60, "+620 MB in 1 minute")],
+)
+def test_format_growth_in_english(span_s: int, expected: str) -> None:
+    assert format_growth(delta_bytes=620_000_000, span_s=span_s) == expected

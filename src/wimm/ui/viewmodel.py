@@ -20,6 +20,7 @@ from .format import (
     button_label,
     fold_text,
     format_clock,
+    format_growth,
     format_size,
     short_date,
 )
@@ -159,6 +160,12 @@ def _group_subtitle(*, group: Group, now: datetime) -> str:
     return f"{category} · {_activity(member_or_group=group, now=now)}"
 
 
+def _growth_text(*, group: Group) -> str | None:
+    if group.growth is None:
+        return None
+    return format_growth(delta_bytes=group.growth.delta_bytes, span_s=group.growth.span_s)
+
+
 def _group_row(*, group: Group, now: datetime) -> GroupRow:
     risk = _row_risk(group=group)
     badge_text, badge_style = _badge(risk=risk)
@@ -182,6 +189,7 @@ def _group_row(*, group: Group, now: datetime) -> GroupRow:
         ignored=group.ignored,
         snoozed_until=until,
         snoozed_text=until_text,
+        growth_text=_growth_text(group=group),
     )
 
 

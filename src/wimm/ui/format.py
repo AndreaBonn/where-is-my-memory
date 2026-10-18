@@ -5,7 +5,7 @@ from pathlib import Path
 from types import MappingProxyType
 
 from wimm.core.sizes import format_size as format_size
-from wimm.core.text import OBSERVING_PREFIX
+from wimm.core.text import OBSERVING_PREFIX, format_duration
 from wimm.i18n import N_, _, ngettext
 from wimm.model.enums import ActionKind, ActivityState, Category, Pressure, Risk
 
@@ -173,6 +173,16 @@ SHORT_DATE = N_("%d/%m")
 def short_date(*, moment: datetime) -> str:
     """A day without the year in the order of the active language (``16/10``, ``10/16``)."""
     return moment.strftime(_(SHORT_DATE))
+
+
+def format_growth(*, delta_bytes: int, span_s: int) -> str:
+    """``+620 MB in 2 h``: the gain, over a span rounded to whole hours from one hour on."""
+    if span_s >= SECONDS_PER_HOUR:
+        hours = (span_s + SECONDS_PER_HOUR // 2) // SECONDS_PER_HOUR
+        duration = _("{count} h").format(count=hours)
+    else:
+        duration = format_duration(seconds=span_s)
+    return _("+{size} in {duration}").format(size=format_size(size=delta_bytes), duration=duration)
 
 
 def home_relative(*, path: Path, home: Path) -> str:

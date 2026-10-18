@@ -109,7 +109,9 @@ SCHEMAS: dict[type, Schema] = {
         "explanation": TEXT,
         "compose_project": nullable(decoder=TEXT),
         "members": sequence(decoder=member),
+        "growth": nullable(decoder=record(cls=m.GroupGrowth)),
     },
+    m.GroupGrowth: {"delta_bytes": byte_count, "span_s": INTEGER},
     m.MemorySummary: MEMORY_SUMMARY_SCHEMA,
     m.GpuMemory: GPU_MEMORY_SCHEMA,
     m.DiskUsage: {"mount": TEXT, "total": byte_count, "used": byte_count, "free": byte_count},
@@ -155,7 +157,7 @@ def encode(value: Any) -> Any:
 
 
 def snapshot_to_json(snapshot: m.Snapshot) -> str:
-    """Encode a snapshot using the explicit version-three wire contract.
+    """Encode a snapshot using the explicit version-four wire contract.
 
     Parameters
     ----------
@@ -179,7 +181,7 @@ def snapshot_from_json(text: str) -> m.Snapshot:
     Parameters
     ----------
     text : str
-        Version-three snapshot JSON.
+        Version-four snapshot JSON.
 
     Returns
     -------

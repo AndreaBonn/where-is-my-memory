@@ -1,5 +1,5 @@
 {
-  "schema": 3,
+  "schema": 4,
   "taken_at": "2026-10-16T10:30:00+02:00",
   "monitor_started_at": "2026-10-16T08:00:00+02:00",
   "memory": {
@@ -28,6 +28,7 @@
       "primary_action": {"kind": "group_stop", "risk": "safe"},
       "ignored": false, "snoozed_until": null,
       "compose_project": "whitebox",
+      "growth": {"delta_bytes": 620000000, "span_s": 7200},
       "explanation": "progetto compose 'whitebox' in /home/bonn/projects/ai-whitebox-core più un processo uvicorn lanciato dal terminale nella stessa cartella",
       "members": [
         {"kind": "container", "id": "2c9184903a37", "name": "whitebox-keycloak",
