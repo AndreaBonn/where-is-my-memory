@@ -193,7 +193,8 @@ Tabella completa, implementata come funzione pura `assess_risk(entity, action) -
 
 | Entità | Azione | Rischio | Conseguenza mostrata |
 |---|---|---|---|
-| DEV_SERVER / DEV_PROCESS `idle` | termina | `safe` | "Il server si ferma. Si riavvia con lo stesso comando dalla cartella X." |
+| DEV_SERVER `idle` | termina | `safe` | "Il server si ferma." (come riavviarlo sta nella riga "Per riaccenderlo" del dialogo) |
+| DEV_PROCESS `idle` | termina | `safe` | "Il programma si ferma." (non è un server: un watcher, `gitstatusd`) |
 | DEV_SERVER / DEV_PROCESS `active` o `unknown` | termina | `caution` | "È in uso adesso: chi lo sta usando perde la connessione." |
 | processo in primo piano su un terminale (ha un TTY ed è il foreground process group, `tpgid`) | termina | `caution` | "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso." |
 | AI_CLI | termina | `caution` | "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde." |
@@ -604,7 +605,7 @@ Struttura:
 ```
 
 - **Panoramica**: `Gtk.ListView` (o `Adw.PreferencesGroup` con `Adw.ExpanderRow` se i gruppi sono meno di 200) con un gruppo per riga. Titolo = nome; sottotitolo = categoria, stato e durata; seconda riga = motivo e porte; suffissi = RAM recuperabile, badge del rischio, pulsante dell'azione principale. Espandendo la riga si vedono i membri (RF-05), ciascuno con le sue azioni, e i pulsanti "Silenzia" e "Ignora". Menu contestuale con "Copia comando", "Apri cartella" (`Gio.AppInfo.launch_default_for_uri`), "Copia PID".
-- **Disco**: sezioni `Adw.PreferencesGroup`: Docker (immagini, container fermi, volumi, build cache), Cache, Cartelle di dipendenze, Cestino. Ogni riga ha dimensione, stato, rischio e azione. In testa, "Ultimo controllo alle 10:12" e il pulsante "Controlla ora", che durante la scansione diventa "Controllo in corso" con lo spinner.
+- **Disco**: sezioni `Adw.PreferencesGroup`: Docker (immagini, container fermi, volumi, build cache), Cache, Cartelle di dipendenze, Cestino. Ogni riga ha dimensione, stato, rischio e azione. Le sezioni stanno in tre fasce per costo ("Si libera senza pensarci", "Da guardare prima", "Attenzione: cancella dati") e ogni riga sta nella fascia del proprio rischio: le cache e le immagini con rischi diversi si dividono in più sezioni. In testa, "Ultimo controllo alle 10:12" e il pulsante "Controlla ora", che durante la scansione diventa "Controllo in corso" con lo spinner.
 - **Sistema**: elenco in sola lettura (RF-07) con il motivo della protezione.
 - **Preferenze**: `Adw.PreferencesDialog` con i campi della RF-50; i valori passano da `AppService.update_config` e si validano lì.
 

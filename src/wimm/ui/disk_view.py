@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 from datetime import datetime
+from pathlib import Path, PurePath
 
 from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
 from wimm.core.cache_titles import CACHE_TITLES
@@ -28,10 +29,15 @@ from wimm.ui.disk_texts import (
     SECTION_DESCRIPTIONS,
     SECTION_TIERS,
 )
+from wimm.ui.disk_tiers import split_by_risk
 from wimm.ui.disk_view_docker import docker_sections
-from wimm.ui.format import short_date
+from wimm.ui.format import home_relative, short_date
 
 NO_SCAN_TEXT = N_("Nessun controllo ancora")
+# Subfolders of a project whose name says nothing about which project it is.
+GENERIC_PROJECT_FOLDERS = frozenset(
+    {"frontend", "backend", "client", "server", "web", "app", "api", "functions", "ui", "src"}
+)
 
 
 def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:
@@ -63,13 +69,24 @@ def _cache_action(*, entry: CacheEntry) -> ActionSpec:
     )
 
 
+def _devdir_title(*, path: PurePath) -> str:
+    """F7: "progetto · cartella"; a generic project folder takes its parent along."""
+    project = path.parent
+    name = project.name
+    if name.lower() in GENERIC_PROJECT_FOLDERS and project.parent.name:
+        name = f"{project.parent.name}/{name}"
+    return f"{name} · {path.name}"
+
+
 def _devdir_row(*, item: DevDir) -> DiskRowView:
     action = ActionSpec(ActionKind.DEVDIR_DELETE, RiskTarget(kind="devdir"), item.path)
+    age = ngettext(
+        "progetto fermo da {days} giorno", "progetto fermo da {days} giorni", item.age_days
+    ).format(days=item.age_days)
+    where = home_relative(path=Path(item.path), home=Path.home())
     return make_row(
-        title=item.path,
-        subtitle=ngettext(
-            "progetto fermo da {days} giorno", "progetto fermo da {days} giorni", item.age_days
-        ).format(days=item.age_days),
+        title=_devdir_title(path=PurePath(item.path)),
+        subtitle=f"{where} · {age}",
         size=item.size,
         action=action,
     )
@@ -143,8 +160,9 @@ def build_disk_sections(
     (`withheld_kinds`, computed by the caller)."""
     if report is None:
         return ()
-    sections = docker_sections(report=report) + _local_sections(
-        report=report, min_age_days=min_age_days, roots=roots, withheld=withheld
+    sections = split_by_risk(
+        sections=docker_sections(report=report)
+        + _local_sections(report=report, min_age_days=min_age_days, roots=roots, withheld=withheld)
     )
     # SECTION_TIERS lists the keys tier by tier: its order is the page order.
     order = list(SECTION_TIERS)

@@ -68,9 +68,11 @@ def test_report_fills_sections_and_header(display: None, now: datetime, sample: 
     assert page.totals is not None
     assert format_size(size=page.totals.safe) == "3,2 GB"
     assert format_size(size=page.totals.review) == "1,2 GB"
+    # F4: the dangling image is safe and sits in the safe tier; the local one stays.
     assert list(page.sections) == [
         "caches",
         "build_cache",
+        "images_safe",
         "images",
         "containers",
         "devdirs",

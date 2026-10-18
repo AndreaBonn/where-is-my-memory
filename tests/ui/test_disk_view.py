@@ -1,6 +1,7 @@
 from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from tests.core.disk_helpers import (
     MB,
@@ -14,7 +15,7 @@ from tests.core.disk_helpers import (
 )
 from wimm.core.cache_catalog import withheld_kinds
 from wimm.model.disk import CacheKind, DockerDisk
-from wimm.model.enums import ActionKind
+from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import DockerStatus
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, more_text
 from wimm.ui.disk_texts import (
@@ -139,7 +140,7 @@ def test_untagged_image_reads_as_image_without_name() -> None:
     docker = docker_disk(images=(image(char="b", tags=(), dangling=True),))
     (row,) = sections_by_key(
         sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
-    )["images"].rows
+    )["images_safe"].rows
 
     assert row.title == "Immagine senza nome"
     assert "sha256:" not in row.title
@@ -155,9 +156,10 @@ def test_image_rows_state_risk_and_in_use_has_no_badge() -> None:
             image(char="d", tags=("reg:1",), size=5 * MB),
         )
     )
-    rows = sections_by_key(
+    by_key = sections_by_key(
         sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
-    )["images"].rows
+    )
+    rows = by_key["images"].rows + by_key["images_safe"].rows
     by_title = {row.title: row for row in rows}
     assert by_title["app:1"].risk_text is None
     assert "in uso" in by_title["app:1"].subtitle
@@ -265,7 +267,8 @@ def test_every_cache_type_has_a_title_and_the_badge_of_its_own_risk() -> None:
     by_key = sections_by_key(
         sections=build_disk_sections(report=report(caches=caches), min_age_days=MIN_AGE)
     )
-    rows = {row.title: row for row in by_key["caches"].rows}
+    keys = ("caches", "caches_review", "caches_data")
+    rows = {row.title: row for key in keys for row in by_key[key].rows}
 
     assert len(rows) == len(caches)
     assert (rows["Maven"].risk_text or "").startswith("Attenzione")
@@ -315,7 +318,7 @@ def test_ten_thousand_devdirs_show_200_rows_and_counter() -> None:
     section = by_key["devdirs"]
     assert len(section.rows) == 200
     assert section.more_text == "e altre 9.800"
-    assert section.rows[0].title == "/p/9999/node_modules"
+    assert section.rows[0].title == "9999 · node_modules"
     assert section.message is None
 
 
@@ -350,7 +353,7 @@ def test_rows_carry_action_kind_and_target_id() -> None:
     )
     assert by_key["volumes"].rows[0].target_id == "v1"
     assert by_key["volumes"].rows[0].action_kind is ActionKind.VOLUME_REMOVE
-    assert by_key["images"].rows[0].target_id == "sha256:" + "a" * 64
+    assert by_key["images_safe"].rows[0].target_id == "sha256:" + "a" * 64
 
 
 def test_sections_are_grouped_by_what_freeing_them_costs() -> None:
@@ -369,7 +372,7 @@ def test_sections_are_grouped_by_what_freeing_them_costs() -> None:
     assert [(s.tier, s.key) for s in sections] == [
         ("safe", "caches"),
         ("safe", "build_cache"),
-        ("review", "images"),
+        ("safe", "images_safe"),
         ("review", "containers"),
         ("review", "devdirs"),
         ("data", "volumes"),
@@ -391,7 +394,8 @@ def test_mass_actions_say_how_much_they_free() -> None:
         sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
     )
 
-    assert [a.label for a in by_key["images"].actions] == [
+    # All unused images are pulled ones: both buttons sit with them in the safe tier.
+    assert [a.label for a in by_key["images_safe"].actions] == [
         "Elimina immagini senza nome (2 MB)",
         "Elimina immagini inutilizzate (7 MB)",
     ]
@@ -451,3 +455,95 @@ def test_safe_label_header_and_plan_promise_the_same_amount() -> None:
     total = safe_reclaimable_bytes(report=disk)
     assert plan.estimated_reclaim_disk == total
     assert safe_label(sections=sections) == f"Libera {format_size(size=total)} senza rischi"
+
+
+def test_an_image_pinned_by_digest_reads_as_its_repository() -> None:
+    # F7: "ghcr.io/berriai/litellm@sha256:b6d3e2…" filled the whole row.
+    digest = "sha256:" + "b6d3e2b93af9" + "0" * 52
+    docker = docker_disk(images=(image(char="a", tags=(f"ghcr.io/berriai/litellm@{digest}",)),))
+    (row,) = sections_by_key(
+        sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
+    )["images_safe"].rows
+
+    assert row.title == "ghcr.io/berriai/litellm"
+    assert "versione fissata b6d3e2b93af9" in row.subtitle
+
+
+def test_a_dependency_folder_reads_as_project_and_folder() -> None:
+    # F7: the absolute path was the title; a generic folder name takes its parent along.
+    home = str(Path.home())
+    folders = (
+        devdir(path=f"{home}/P/my-hub/node_modules"),
+        devdir(path=f"{home}/P/generali/demo-generali/frontend/node_modules"),
+    )
+    rows = sections_by_key(
+        sections=build_disk_sections(report=report(devdirs=folders), min_age_days=MIN_AGE)
+    )["devdirs"].rows
+
+    assert [row.title for row in rows] == [
+        "my-hub · node_modules",
+        "demo-generali/frontend · node_modules",
+    ]
+    assert rows[0].subtitle.startswith("~/P/my-hub/node_modules · progetto fermo da")
+
+
+def test_every_row_sits_in_the_tier_of_its_own_risk() -> None:
+    # F4: "Si libera senza pensarci" held Maven ("Attenzione") and "Da guardare prima" held
+    # pulled images ("Sicuro").
+    docker = docker_disk(
+        images=(
+            image(char="a", tags=("alpine:3",)),
+            image(char="b", tags=("myapp:dev",), local_build=True),
+        )
+    )
+    caches = (
+        cache(kind=CacheKind.UV, size=3 * MB, ino=1),
+        cache(kind=CacheKind.MAVEN, size=2 * MB, ino=2),
+        cache(kind=CacheKind.OLLAMA, size=MB, ino=3),
+    )
+    sections = build_disk_sections(
+        report=report(docker=docker, caches=caches), min_age_days=MIN_AGE
+    )
+
+    expected = {"safe": {Risk.SAFE}, "review": {Risk.CAUTION}, "data": {Risk.DANGER}}
+    for section in sections:
+        for row in section.rows:
+            if row.action_kind is not None and section.tier in expected:
+                assert row.risk in expected[section.tier], (section.key, row.title)
+    by_key = sections_by_key(sections=sections)
+    assert [r.title for r in by_key["caches"].rows] == ["uv"]
+    assert [r.title for r in by_key["caches_review"].rows] == ["Maven"]
+    assert [r.title for r in by_key["caches_data"].rows] == ["Modelli ollama"]
+    assert [r.title for r in by_key["images_safe"].rows] == ["alpine:3"]
+    assert [r.title for r in by_key["images"].rows] == ["myapp:dev"]
+
+
+def test_mass_actions_follow_the_rows_they_act_on() -> None:
+    only_safe = docker_disk(images=(image(char="a", tags=(), dangling=True),))
+    mixed = docker_disk(
+        images=(
+            image(char="a", tags=(), dangling=True),
+            image(char="b", tags=("loc:1",), local_build=True),
+        )
+    )
+
+    def placed(docker: DockerDisk) -> dict[str, list[ActionKind]]:
+        sections = build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
+        return {s.key: [a.kind for a in s.actions] for s in sections if "images" in s.key}
+
+    # Only safe rows: no empty "Da guardare prima" section left holding the button.
+    assert placed(only_safe) == {"images_safe": [ActionKind.IMAGES_PRUNE_DANGLING]}
+    assert placed(mixed) == {
+        "images_safe": [ActionKind.IMAGES_PRUNE_DANGLING],
+        "images": [ActionKind.IMAGES_PRUNE_UNUSED],
+    }
+
+
+def test_hidden_images_stay_counted_when_every_shown_image_is_safe() -> None:
+    docker = replace(docker_disk(images=(image(char="a", tags=("alpine:3",)),)), images_truncated=7)
+    by_key = sections_by_key(
+        sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
+    )
+
+    assert "images" not in by_key
+    assert by_key["images_safe"].more_text == "e altre 7"

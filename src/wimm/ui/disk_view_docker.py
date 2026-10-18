@@ -18,11 +18,21 @@ from wimm.ui.format import button_label, format_size
 
 UNNAMED_IMAGE_TEXT = N_("Immagine senza nome")
 SHORT_ID_CHARS = 12
+DIGEST_MARK = "@sha256:"
 DOCKER_KEY = "docker"
 
 
+def _image_name(*, tag: str) -> tuple[str, str | None]:
+    """F7: a tag pinned by digest reads as its repository, the digest shortened apart."""
+    repository, pinned, digest = tag.partition(DIGEST_MARK)
+    return (repository, digest[:SHORT_ID_CHARS]) if pinned else (tag, None)
+
+
 def _image_row(*, image: DockerImage) -> DiskRowView:
+    title, pinned = _image_name(tag=image.tags[0]) if image.tags else (_(UNNAMED_IMAGE_TEXT), None)
     states = [_("in uso da un container") if image.in_use else _("non in uso")]
+    if pinned is not None:
+        states.append(_("versione fissata {digest}").format(digest=pinned))
     if image.dangling:
         states.append(_("senza nome"))
     if image.local_build:
@@ -35,7 +45,7 @@ def _image_row(*, image: DockerImage) -> DiskRowView:
     )
     action = None if image.in_use else ActionSpec(ActionKind.IMAGE_REMOVE, target, image.id)
     return make_row(
-        title=image.tags[0] if image.tags else _(UNNAMED_IMAGE_TEXT),
+        title=title,
         subtitle=" · ".join(states),
         size=image.unique_size,
         action=action,

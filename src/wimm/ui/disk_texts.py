@@ -25,7 +25,15 @@ ACTIONS_NOTE = N_("Ogni bottone ti mostra prima cosa succede e chiede conferma."
 # D4: one sentence per section, for someone who has never heard of Docker or caches.
 SECTION_DESCRIPTIONS = {
     "docker": N_("Docker serve a far girare programmi in contenitori separati."),
-    "images": N_("Copie scaricate per avviare i contenitori. Se servono di nuovo, si riscaricano."),
+    "images": N_(
+        "Copie per avviare i contenitori: quelle costruite qui si ricostruiscono, "
+        "non si riscaricano."
+    ),
+    "images_safe": N_("Copie scaricate che nessun contenitore usa: si riscaricano quando servono."),
+    "caches_review": N_("Si ricreano, ma riscaricarle costa tempo o molti dati."),
+    "caches_data": N_(
+        "Modelli AI ed emulatori Android: dentro ci sono dati che non tornano uguali."
+    ),
     "containers": N_("Contenitori spenti che occupano ancora un po' di spazio."),
     "volumes": N_("Dati salvati dai contenitori, per esempio un database."),
     "build_cache": N_("Pezzi salvati per costruire i contenitori più in fretta: si ricreano."),
@@ -49,10 +57,13 @@ TIER_DESCRIPTIONS = {
 SECTION_TIERS = {
     "caches": "safe",
     "build_cache": "safe",
+    "images_safe": "safe",
+    "caches_review": "review",
     "images": "review",
     "containers": "review",
     "docker": "notice",
     "devdirs": "review",
+    "caches_data": "data",
     "volumes": "data",
     "trash": "data",
 }

@@ -106,7 +106,8 @@ def test_devdir_rows_pick_the_plural_in_english(age_days: int, expected: str) ->
     dirs = (devdir(path="/p/a/node_modules", age_days=age_days),)
     sections = by_key(sections=build_disk_sections(report=report(devdirs=dirs), min_age_days=1))
     assert sections["devdirs"].title == "Dependency folders"
-    assert sections["devdirs"].rows[0].subtitle == expected
+    # The folder comes first (F7), the age in the plural the number asks for.
+    assert sections["devdirs"].rows[0].subtitle == f"/p/a/node_modules · {expected}"
 
 
 def test_image_rows_describe_their_state_in_english() -> None:
@@ -116,11 +117,13 @@ def test_image_rows_describe_their_state_in_english() -> None:
             image(char="b", tags=("app:1",), in_use=True),
         )
     )
-    section = by_key(
+    sections = by_key(
         sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
-    )["images"]
-    unnamed, used = section.rows
+    )
+    section, safe = sections["images"], sections["images_safe"]
+    (used,), (unnamed,) = section.rows, safe.rows
     assert section.title == "Docker images"
+    assert safe.title == "Downloaded Docker images"
     assert unnamed.title == "Unnamed image"
     assert unnamed.subtitle == "not in use · unnamed · built locally · id " + "a" * 12
     assert used.subtitle == "used by a container"

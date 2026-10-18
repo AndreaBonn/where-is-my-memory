@@ -30,6 +30,8 @@ from wimm.ui.window import MainWindow
 pytestmark = pytest.mark.ui
 STOPPED_ID = "e" * 64
 DEVDIR = "/home/u/proj/node_modules"
+# F7: the row reads as project and folder; the path stays the action target.
+DEVDIR_TITLE = "proj · node_modules"
 UNUSED = image(char="a", tags=("myapp:dev",), local_build=True)
 DANGLING = image(char="b", tags=(), dangling=True, size=5 * MB)
 IN_USE = image(char="c", tags=("busy:1",), in_use=True)
@@ -141,9 +143,9 @@ ROW_CASES = [
         "Svuotare la cache di build?",
     ),
     RowCase(
-        DEVDIR,
+        DEVDIR_TITLE,
         ActionRequest(kind=ActionKind.DEVDIR_DELETE, target_id=TargetId(DEVDIR)),
-        f"Eliminare la cartella {DEVDIR}?",
+        f"Eliminare la cartella {DEVDIR_TITLE}?",
     ),
     RowCase(
         "ctr-e",
