@@ -6,6 +6,9 @@ wimm \- see what uses memory, CPU and disk, and reclaim it
 .RB [ \-\-background ]
 .RB [ \-\-group = \fIID\fR ]
 .br
+.B wimm status
+.RB [ \-\-json ]
+.br
 .B wimm \-\-version
 .br
 .B wimm \-\-help
@@ -34,6 +37,30 @@ Print the version and exit.
 .TP
 .B \-\-help
 Print the list of options and exit.
+.SH COMMANDS
+.TP
+.B status
+Print the current state on the terminal, without a window and without GTK, so
+it also works over SSH.
+The data comes from the running instance when there is one; otherwise
+.B wimm
+takes a single sampling cycle in the calling process.
+.TP
+.B status \-\-json
+Print the same state as JSON.
+Names, paths and password aliases are redacted, as in the snapshot the running
+instance exposes on D-Bus.
+.PP
+Exit status of
+.BR "wimm status" :
+.TP
+.B 0
+The state was printed.
+.TP
+.B 3
+No state is available: there is no running instance and the system could not be
+read.
+The reason goes to standard error.
 .SH FILES
 .TP
 .I ~/.config/where-is-my-memory/
@@ -57,6 +84,11 @@ and are created with mode 0700.
 .B WIMM_LOG_LEVEL
 Log level: one of DEBUG, INFO, WARNING, ERROR or CRITICAL, case-insensitive.
 The default is INFO; an invalid value is reported in the log and INFO is used.
+.PP
+.B WIMM_APP_ID
+also selects the instance that
+.B wimm status
+talks to.
 .SH SEE ALSO
 .BR ps (1),
 .BR docker (1)
