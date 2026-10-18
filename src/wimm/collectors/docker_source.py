@@ -1,27 +1,22 @@
 import logging
 from collections.abc import Callable, Sequence
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
 from typing import Any, Protocol
 
-import docker
-
+from wimm.core.docker_notices import EngineNotice, NoticeCode, notices_text
 from wimm.model.enums import MetricsSource
 from wimm.model.raw import Mount, RawContainer
 from wimm.model.snapshot import DockerStatus
 
 from . import CollectorResult
 from .cgroups import CONTAINER_ROOTS, read_container_metrics
+from .docker_engines import Engine, EngineProvider, FixedEngines, local_pool
+from .docker_stats import Metrics, StatsSampler, is_host_network
 
 LOGGER = logging.getLogger(__name__)
-STATS_INTERVAL_S = 300.0
-STATS_WORKERS = 4
-NANOSECONDS_PER_MICROSECOND = 1000
 DOCKER_TIMEOUT_S = 5
-HOST_NETWORK_MODE = "host"
-type Metrics = tuple[int, int, int | None]
 UNAVAILABLE_METRICS: Metrics = (0, 0, None)
 
 
@@ -48,25 +43,16 @@ class DockerReader(Protocol):
 class DockerSample:
     status: DockerStatus
     containers: tuple[RawContainer, ...]
+    notices: tuple[EngineNotice, ...] = ()
+
+    def container_ids(self, *, answered: bool) -> frozenset[str]:
+        """Full ids the engine listed; empty if it did not answer (Podman stays protected)."""
+        return frozenset(item.id for item in self.containers) if answered else frozenset()
 
 
-def _stats_metrics(stats: dict[str, Any], host_network: bool) -> Metrics:
-    memory = stats.get("memory_stats", {})
-    inactive = memory.get("stats", {}).get("inactive_file", 0)
-    cpu = stats.get("cpu_stats", {}).get("cpu_usage", {}).get("total_usage", 0)
-    network = sum(
-        int(counters.get("rx_bytes", 0)) + int(counters.get("tx_bytes", 0))
-        for name, counters in stats.get("networks", {}).items()
-        if name != "lo"
-    )
-    return (
-        max(0, int(memory.get("usage", 0)) - int(inactive)),
-        int(cpu) // NANOSECONDS_PER_MICROSECOND,
-        None if host_network else network,
-    )
-
-
-def _metadata(container: ContainerReader, metrics: Metrics, source: MetricsSource) -> RawContainer:
+def _metadata(
+    *, container: ContainerReader, metrics: Metrics, source: MetricsSource
+) -> RawContainer:
     attrs = container.attrs
     config, state = attrs.get("Config", {}), attrs.get("State", {})
     return RawContainer(
@@ -85,7 +71,7 @@ def _metadata(container: ContainerReader, metrics: Metrics, source: MetricsSourc
     )
 
 
-def _mounts(container_id: str, attrs: dict[str, Any]) -> tuple[Mount, ...]:
+def _mounts(*, container_id: str, attrs: dict[str, Any]) -> tuple[Mount, ...]:
     mounts = []
     for item in attrs.get("Mounts") or []:
         try:
@@ -97,7 +83,7 @@ def _mounts(container_id: str, attrs: dict[str, Any]) -> tuple[Mount, ...]:
     return tuple(mounts)
 
 
-def _ports(container_id: str, attrs: dict[str, Any]) -> tuple[int, ...]:
+def _ports(*, container_id: str, attrs: dict[str, Any]) -> tuple[int, ...]:
     ports: set[int] = set()
     published = (attrs.get("NetworkSettings") or {}).get("Ports") or {}
     for bindings in published.values():
@@ -109,22 +95,42 @@ def _ports(container_id: str, attrs: dict[str, Any]) -> tuple[int, ...]:
     return tuple(sorted(ports))
 
 
-def _is_host_network(attrs: dict[str, Any]) -> bool:
-    return (attrs.get("HostConfig") or {}).get("NetworkMode") == HOST_NETWORK_MODE
+def _list_containers(
+    *, provider: EngineProvider, engines: Sequence[Engine], notices: list[EngineNotice]
+) -> list[ContainerReader] | None:
+    """Every engine's containers, or None when no engine answered."""
+    listed: list[ContainerReader] = []
+    answered = False
+    for engine in engines:
+        try:
+            listed.extend(engine.client.containers.list(all=True))
+        except Exception as error:
+            provider.discard(engine=engine)
+            detail = str(error) or type(error).__name__
+            notices.append(
+                EngineNotice(
+                    code=NoticeCode.UNREACHABLE, endpoint=engine.identity.path, detail=detail
+                )
+            )
+            continue
+        answered = True
+    return listed if answered else None
 
 
 class DockerSource:
+    """Containers of every reachable engine; one engine failing never hides the others."""
+
     def __init__(
         self,
         reader: DockerReader | None = None,
         roots: tuple[Path, Path] = CONTAINER_ROOTS,
         clock: Callable[[], float] = monotonic,
+        engines: EngineProvider | None = None,
     ) -> None:
-        self._reader = reader
+        self._engines = engines or (FixedEngines(client=reader) if reader is not None else None)
         self._roots = roots
-        self._clock = clock
-        self._available: bool | None = None
-        self._cache: dict[str, tuple[float, Metrics | None]] = {}
+        self._stats = StatsSampler(clock=clock)
+        self._problem: str | None = None
 
     def collect(self) -> CollectorResult[DockerSample]:
         """Sample Docker metadata and counters without modifying daemon resources.
@@ -132,50 +138,90 @@ class DockerSource:
         Returns
         -------
         CollectorResult[DockerSample]
-            Availability with a readable error, and immutable container samples.
+            Availability with a readable error, immutable container samples, and the notices
+            about engines that were refused or did not answer.
         """
         try:
-            sample = self._sample()
-            self._available = True
-            return CollectorResult(data=sample)
+            return self._collect()
         except Exception as error:
-            reason = str(error) or type(error).__name__
-            if self._available is not False:
-                LOGGER.warning("Docker unavailable: %s", reason)
-            self._available = False
-            return CollectorResult(
-                data=DockerSample(
-                    status=DockerStatus(available=False, error=reason),
-                    containers=(),
-                ),
-                error=reason,
+            return self._unavailable(notices=(), reason=str(error) or type(error).__name__)
+
+    def _collect(self) -> CollectorResult[DockerSample]:
+        started = monotonic()
+        if self._engines is None:
+            self._engines = local_pool(timeout=DOCKER_TIMEOUT_S)
+        provider = self._engines
+        view = provider.refresh()
+        notices = list(view.notices)
+        listed = _list_containers(provider=provider, engines=view.engines, notices=notices)
+        if listed is None:
+            return self._unavailable(notices=tuple(notices), reason=notices_text(notices=notices))
+        containers = self._read_containers(listed=listed)
+        self._stats.retain(ids=frozenset(item.id for item in listed))
+        self._warn_on_change(problem=notices_text(notices=notices))
+        elapsed = monotonic() - started
+        LOGGER.debug("Docker sample: %d containers in %.3f s", len(containers), elapsed)
+        return CollectorResult(
+            data=DockerSample(
+                status=DockerStatus(available=True, error=None),
+                containers=containers,
+                notices=tuple(notices),
             )
+        )
 
-    def _sample(self) -> DockerSample:
-        if self._reader is None:
-            self._reader = docker.from_env(timeout=DOCKER_TIMEOUT_S)
-        containers = self._reader.containers.list(all=True)
-        identifiers = {container.id for container in containers}
-        self._cache = {key: value for key, value in self._cache.items() if key in identifiers}
-        with ThreadPoolExecutor(max_workers=STATS_WORKERS) as executor:
-            samples = tuple(executor.map(self._collect_safely, containers))
-        kept = tuple(item for item in samples if item is not None)
-        return DockerSample(status=DockerStatus(available=True, error=None), containers=kept)
+    def _unavailable(
+        self, *, notices: tuple[EngineNotice, ...], reason: str
+    ) -> CollectorResult[DockerSample]:
+        reason = reason or notices_text(notices=[EngineNotice(NoticeCode.NO_ENGINE, endpoint="")])
+        self._warn_on_change(problem=reason)
+        return CollectorResult(
+            data=DockerSample(
+                status=DockerStatus(available=False, error=reason), containers=(), notices=notices
+            ),
+            error=reason,
+        )
 
-    def _collect_safely(self, container: ContainerReader) -> RawContainer | None:
-        try:
-            return self._collect_container(container=container)
-        except Exception as error:
-            LOGGER.warning("Skipping container %s: %r", container.id, error)
-            return None
+    def _warn_on_change(self, *, problem: str) -> None:
+        if problem and problem != self._problem:
+            LOGGER.warning("Docker: %s", problem)
+        self._problem = problem or None
 
-    def _collect_container(self, container: ContainerReader) -> RawContainer:
+    def _read_containers(self, *, listed: Sequence[ContainerReader]) -> tuple[RawContainer, ...]:
+        """Cgroup reads first, one by one; then the stats API for those without a cgroup."""
+        ready: dict[str, RawContainer] = {}
+        waiting: list[ContainerReader] = []
+        for container in listed:
+            try:
+                self._read_cgroup_phase(container=container, ready=ready, waiting=waiting)
+            except Exception as error:
+                LOGGER.warning("Skipping container %s: %r", container.id, error)
+        readings = self._stats.sample(containers=waiting)
+        for container in waiting:
+            try:
+                metrics = readings.get(container.id)
+                source = MetricsSource.STATS_API if metrics else MetricsSource.UNAVAILABLE
+                ready[container.id] = _metadata(
+                    container=container, metrics=metrics or UNAVAILABLE_METRICS, source=source
+                )
+            except Exception as error:
+                LOGGER.warning("Skipping container %s: %r", container.id, error)
+        return tuple(ready[item.id] for item in listed if item.id in ready)
+
+    def _read_cgroup_phase(
+        self,
+        *,
+        container: ContainerReader,
+        ready: dict[str, RawContainer],
+        waiting: list[ContainerReader],
+    ) -> None:
         state = container.attrs.get("State", {})
         if state.get("Status") != "running":
-            self._cache.pop(container.id, None)
-            return _metadata(
-                container=container, metrics=UNAVAILABLE_METRICS, source=MetricsSource.UNAVAILABLE
+            self._stats.forget(container_id=container.id)
+            unavailable = UNAVAILABLE_METRICS
+            ready[container.id] = _metadata(
+                container=container, metrics=unavailable, source=MetricsSource.UNAVAILABLE
             )
+            return
         pid = int(state.get("Pid") or 0)
         metrics = None
         if pid > 0:
@@ -183,26 +229,11 @@ class DockerSource:
                 container_id=container.id,
                 pid=pid,
                 roots=self._roots,
-                read_net=not _is_host_network(attrs=container.attrs),
+                read_net=not is_host_network(attrs=container.attrs),
             )
-        if metrics is not None:
-            return _metadata(container=container, metrics=metrics, source=MetricsSource.CGROUP)
-        metrics = self._fallback(container=container)
-        source = MetricsSource.STATS_API if metrics is not None else MetricsSource.UNAVAILABLE
-        return _metadata(container=container, metrics=metrics or UNAVAILABLE_METRICS, source=source)
-
-    def _fallback(self, container: ContainerReader) -> Metrics | None:
-        now = self._clock()
-        cached = self._cache.get(container.id)
-        if cached is not None and now - cached[0] < STATS_INTERVAL_S:
-            return cached[1]
-        metrics = None
-        try:
-            metrics = _stats_metrics(
-                stats=container.stats(stream=False),
-                host_network=_is_host_network(attrs=container.attrs),
+        if metrics is None:
+            waiting.append(container)
+        else:
+            ready[container.id] = _metadata(
+                container=container, metrics=metrics, source=MetricsSource.CGROUP
             )
-        except Exception as error:
-            LOGGER.debug("Docker stats unavailable for %s: %s", container.id, error)
-        self._cache[container.id] = (now, metrics)
-        return metrics

@@ -174,6 +174,7 @@ class Sampler:
             listen_ports_by_pid=ports,
             extra_protected_names=self.settings.extra_protected_names,
             desktop_categories=categories,
+            engine_container_ids=docker.data.container_ids(answered=not docker.error),
         )
         pairs = [(proc, categorize_process(proc=proc, context=context)) for proc in processes]
         return Entities(

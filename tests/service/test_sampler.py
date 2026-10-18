@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.core.helpers import meminfo, process
+from tests.core.helpers import USER_PATH, meminfo, process
 from wimm.collectors import CollectorResult
 from wimm.collectors.docker_source import DockerSample
 from wimm.config import Config
@@ -266,3 +266,42 @@ def test_socket_failure_keeps_ports_only_for_same_identity(tmp_path: Path, reuse
         assert second.groups[0].category != first.groups[0].category
     else:
         assert second.groups[0].category == first.groups[0].category
+
+
+PODMAN_ID = "c0ffee00" * 8
+PROCESS_PSS = 500_000_000
+PODMAN_SCOPE = USER_PATH + f"user.slice/libpod-{PODMAN_ID}.scope"
+
+
+def _protected_memory(*, tmp_path: Path, engine_answers: bool) -> int:
+    """Memory the snapshot lists as protected, with a Podman container's process running."""
+    from tests.core.assemble_helpers import container
+
+    sampler = make_sampler(tmp_path=tmp_path)
+    proc = process(
+        pid=20, name="app", cmdline=("app",), create_time=1, cgroup=PODMAN_SCOPE, pss=PROCESS_PSS
+    )
+    listed = replace(container("db"), id=PODMAN_ID)
+    result = CollectorResult(
+        data=DockerSample(status=DockerStatus(available=True, error=None), containers=(listed,))
+    )
+    failed = CollectorResult(
+        data=DockerSample(status=DockerStatus(available=False, error="down"), containers=()),
+        error="down",
+    )
+    sampler.collectors = replace(
+        sampler.collectors,
+        processes=lambda: CollectorResult(data=(proc,)),
+        docker=lambda: result if engine_answers else failed,
+    )
+    return sum(item.memory for item in sampler.run_cycle().protected_summary)
+
+
+def test_sampler_excludes_the_processes_of_a_container_the_engine_listed(tmp_path: Path) -> None:
+    assert _protected_memory(tmp_path=tmp_path, engine_answers=True) == 0
+
+
+def test_sampler_keeps_podman_processes_protected_when_the_engine_did_not_answer(
+    tmp_path: Path,
+) -> None:
+    assert _protected_memory(tmp_path=tmp_path, engine_answers=False) == PROCESS_PSS

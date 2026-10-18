@@ -101,6 +101,15 @@ class VolumeFingerprint(ImmutableModel):
 
 
 @dataclass(frozen=True, slots=True)
+class EngineIdentity(ImmutableModel):
+    """A container engine's socket: its path and the inode and device it had at planning time."""
+
+    path: str
+    st_ino: int
+    st_dev: int
+
+
+@dataclass(frozen=True, slots=True)
 class DirFingerprint(ImmutableModel):
     realpath: str
     st_ino: int
@@ -172,6 +181,9 @@ class Plan(ImmutableModel):
     estimated_reclaim_ram: int
     estimated_reclaim_disk: int
     confirm_phrase: str | None = None
+    # The engine sockets in use when the plan was built (S9): a container or compose step
+    # runs only if the executor finds the same ones.
+    engines: tuple[EngineIdentity, ...] = ()
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)

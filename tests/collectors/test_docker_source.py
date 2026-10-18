@@ -9,11 +9,14 @@ from typing import cast
 import docker.errors
 import pytest
 
+from wimm.collectors import docker_source
+from wimm.collectors.docker_engines import Engine, EngineView, FixedEngines
 from wimm.collectors.docker_source import (
     DOCKER_TIMEOUT_S,
     ContainerReader,
     DockerSource,
 )
+from wimm.collectors.docker_stats import STATS_MAX_PER_CYCLE
 from wimm.model.enums import MetricsSource
 from wimm.model.raw import RawContainer
 
@@ -222,16 +225,14 @@ def _docker_memory_rows(output: str) -> dict[str, float]:
     return expected
 
 
-def test_stats_fallback_runs_in_bounded_parallel_workers(
+def test_stats_fallback_starts_a_bounded_batch_per_cycle_in_parallel(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     import threading
 
-    from wimm.collectors.docker_source import STATS_WORKERS
-
-    barrier = threading.Barrier(parties=STATS_WORKERS, timeout=3)
+    barrier = threading.Barrier(parties=STATS_MAX_PER_CYCLE, timeout=3)
     threads: set[int] = set()
-    containers = [FakeContainer() for _ in range(STATS_WORKERS * 2)]
+    containers = [FakeContainer() for _ in range(STATS_MAX_PER_CYCLE * 2)]
     for index, container in enumerate(containers):
         container.id = str(index)
     original = FakeContainer.stats
@@ -245,26 +246,26 @@ def test_stats_fallback_runs_in_bounded_parallel_workers(
     result = DockerSource(
         reader=FakeReader(containers=containers), roots=(tmp_path, tmp_path)
     ).collect()
-    assert len(result.data.containers) == len(containers)
-    assert all(item.metrics_source is MetricsSource.STATS_API for item in result.data.containers)
-    assert len(threads) == STATS_WORKERS
+    sources = [item.metrics_source for item in result.data.containers]
+    assert len(sources) == len(containers)
+    assert sources.count(MetricsSource.STATS_API) == STATS_MAX_PER_CYCLE
+    assert sources.count(MetricsSource.UNAVAILABLE) == len(containers) - STATS_MAX_PER_CYCLE
+    assert len(threads) == STATS_MAX_PER_CYCLE
 
 
-def test_default_client_is_created_lazily(monkeypatch: pytest.MonkeyPatch) -> None:
-    reader = FakeReader()
-    calls: list[bool] = []
+def test_default_engines_are_created_lazily(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[int] = []
 
-    def create(timeout: int) -> FakeReader:
-        calls.append(True)
-        assert timeout == DOCKER_TIMEOUT_S
-        return reader
+    def create(timeout: int) -> FixedEngines:
+        calls.append(timeout)
+        return FixedEngines(client=FakeReader())
 
-    monkeypatch.setattr(target=docker, name="from_env", value=create)
+    monkeypatch.setattr(target=docker_source, name="local_pool", value=create)
     source = DockerSource()
     assert calls == []
     assert source.collect().data.status.available
     assert source.collect().data.status.available
-    assert calls == [True]
+    assert calls == [DOCKER_TIMEOUT_S]
 
 
 def test_docker_cli_memory_parser() -> None:
@@ -365,18 +366,27 @@ def test_running_with_zero_pid_skips_cgroup_reads(tmp_path: Path) -> None:
     assert container.calls == 1
 
 
-def test_from_env_failure_is_unavailable_then_retried(monkeypatch: pytest.MonkeyPatch) -> None:
-    attempts: list[int] = []
+class FlakyEngines:
+    """A provider whose first refresh fails, like a pool that cannot resolve its endpoints."""
 
-    def create(timeout: int) -> FakeReader:
-        attempts.append(timeout)
-        if len(attempts) == 1:
+    def __init__(self) -> None:
+        self.attempts = 0
+        self._fixed = FixedEngines(client=FakeReader())
+
+    def refresh(self) -> EngineView:
+        self.attempts += 1
+        if self.attempts == 1:
             raise docker.errors.DockerException("socket missing")
-        return FakeReader()
+        return self._fixed.refresh()
 
-    monkeypatch.setattr(target=docker, name="from_env", value=create)
-    source = DockerSource()
+    def discard(self, *, engine: Engine) -> None:
+        self._fixed.discard(engine=engine)
+
+
+def test_a_failing_refresh_is_unavailable_then_retried() -> None:
+    engines = FlakyEngines()
+    source = DockerSource(engines=engines)
     first = source.collect()
     assert (first.data.status.available, first.data.status.error) == (False, "socket missing")
     assert source.collect().data.status.available
-    assert len(attempts) == 2
+    assert engines.attempts == 2
