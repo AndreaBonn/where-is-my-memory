@@ -12,7 +12,8 @@ from wimm.core.notify_types import NotificationState
 from wimm.model.enums import GroupId
 from wimm.paths import UserPaths
 from wimm.service import state_store
-from wimm.service.state_store import PersistedState, load_state, save_state
+from wimm.service.history import EntityKey
+from wimm.service.state_store import PersistedState, StateSaver, load_state, save_state
 
 NOW = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
 GROUP = GroupId("project:/home/u/app")
@@ -134,7 +135,11 @@ def test_invalid_entries_are_dropped_one_by_one(
     assert len(loaded.notifications.episodes) == 1
     assert set(loaded.notifications.pressure_sent) == {"ram"}
     assert len(loaded.notifications.sent_at) == 1
-    assert len(caplog.records) >= 10
+    # 5 last_active + 2 ignored + 1 snooze + 1 episode + 2 pressure + 2 sent_at
+    assert [r.getMessage() for r in caplog.records].count(
+        "state.json: invalid entry dropped from 'last_active'"
+    ) == 5
+    assert len(caplog.records) == 13
 
 
 def test_saved_file_is_private(paths: UserPaths) -> None:
@@ -160,3 +165,78 @@ def test_failed_write_leaves_previous_file_intact_and_no_temp(
     assert target.read_bytes() == before
     assert [p.name for p in paths.state_dir.iterdir()] == [state_store.STATE_FILE]
     assert load_state(paths=paths, now=NOW) == full_state()
+
+
+def test_a_section_that_is_not_a_list_is_ignored_with_a_warning(
+    paths: UserPaths, caplog: pytest.LogCaptureFixture
+) -> None:
+    good_at = (NOW - timedelta(hours=1)).isoformat()
+    raw = {
+        "version": 1,
+        "ignored": {"keep": True},
+        "snoozes": "nope",
+        "last_active": [{"container": "ok", "at": good_at}],
+    }
+    write_raw(paths=paths, content=json.dumps(raw))
+    with caplog.at_level(logging.WARNING):
+        loaded = load_state(paths=paths, now=NOW)
+    assert loaded.ignored == frozenset()
+    assert dict(loaded.snoozes) == {}
+    assert set(loaded.last_active) == {"ok"}  # the healthy section survives
+    messages = [r.getMessage() for r in caplog.records]
+    assert "state.json: section 'ignored' is not a list, ignored" in messages
+    assert "state.json: section 'snoozes' is not a list, ignored" in messages
+    assert len(messages) == 2
+
+
+def test_pressure_sent_that_is_not_an_object_is_ignored_with_a_warning(
+    paths: UserPaths, caplog: pytest.LogCaptureFixture
+) -> None:
+    good_at = (NOW - timedelta(hours=1)).isoformat()
+    write_raw(
+        paths=paths,
+        content=json.dumps(
+            {"version": 1, "pressure_sent": [["ram", good_at]], "sent_at": [good_at]}
+        ),
+    )
+    with caplog.at_level(logging.WARNING):
+        loaded = load_state(paths=paths, now=NOW)
+    assert dict(loaded.notifications.pressure_sent) == {}
+    assert len(loaded.notifications.sent_at) == 1
+    assert [r.getMessage() for r in caplog.records] == [
+        "state.json: section 'pressure_sent' is not an object, ignored"
+    ]
+
+
+@pytest.mark.parametrize("literal", ["NaN", "Infinity", "-Infinity"])
+def test_a_non_finite_create_time_drops_only_that_entry(
+    paths: UserPaths, caplog: pytest.LogCaptureFixture, literal: str
+) -> None:
+    # json.loads accepts these literals even though they are not valid JSON.
+    good_at = (NOW - timedelta(hours=1)).isoformat()
+    content = (
+        '{"version": 1, "last_active": ['
+        f'{{"process": [5, {literal}], "at": "{good_at}"}},'
+        f'{{"process": [6, 2.5], "at": "{good_at}"}}]}}'
+    )
+    write_raw(paths=paths, content=content)
+    with caplog.at_level(logging.WARNING):
+        loaded = load_state(paths=paths, now=NOW)
+    assert set(loaded.last_active) == {(6, 2.5)}
+    assert [r.getMessage() for r in caplog.records] == [
+        "state.json: invalid entry dropped from 'last_active'"
+    ]
+
+
+def test_closing_the_saver_twice_writes_the_final_state_only_once(paths: UserPaths) -> None:
+    reads: list[int] = []
+
+    def live() -> dict[EntityKey, datetime]:
+        reads.append(1)
+        return {"c1": NOW}
+
+    saver = StateSaver(paths=paths, state=PersistedState(), last_active=live)
+    saver.close()
+    saver.close()
+    assert len(reads) == 1
+    assert set(load_state(paths=paths, now=NOW).last_active) == {"c1"}

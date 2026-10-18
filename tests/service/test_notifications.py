@@ -9,7 +9,7 @@ from wimm.config import Config
 from wimm.core.notify_types import NotificationState
 from wimm.model.enums import GroupId
 from wimm.model.snapshot import Snapshot
-from wimm.service.notifications import NotificationCoordinator
+from wimm.service.notifications import NotificationCoordinator, attach_notifications
 from wimm.service.notifier import Notifier
 from wimm.service.state_store import PersistedState
 
@@ -129,14 +129,18 @@ def test_no_snapshot_yet_sends_nothing() -> None:
     assert rig.sink.sent == []
 
 
-def test_a_failing_sink_is_contained_and_not_retried_every_cycle() -> None:
+def test_a_failing_sink_is_contained_and_not_retried_every_cycle(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     # Retrying each cycle would show the same notification every 30 s past the hourly
     # limit: a failed send is logged and counted as sent.
     rig = Rig()
     rig.sink.fail = True
     rig.source.emit()
     assert rig.sink.sent == []
-    assert rig.saver.changes  # the episode is recorded
+    assert "Cannot send notification idle-g_1" in caplog.text
+    # the episode is recorded as notified even though the send failed
+    assert {group for group, _ in rig.saved("notifications").episodes} == {GROUP}
     rig.sink.fail = False
     rig.source.emit()
     assert rig.sink.sent == []
@@ -158,11 +162,6 @@ def test_snoozed_until_in_the_past_does_not_silence(hours: int) -> None:
     assert rig.sink.sent == ["idle-g_1"]
 
 
-def test_the_coordinator_keeps_no_snooze_of_its_own() -> None:
-    rig = Rig()
-    assert not hasattr(rig.coordinator, "snooze_group")
-
-
 def test_oom_counter_reader_feeds_the_request_and_its_failure_is_neutral() -> None:
     rig = Rig(oom_reader=lambda: 3)
     rig.source.emit()
@@ -174,3 +173,38 @@ def test_oom_counter_reader_feeds_the_request_and_its_failure_is_neutral() -> No
     broken = Rig(oom_reader=failing)
     broken.source.emit()
     assert broken.sink.sent == ["idle-g_1"]
+
+
+class BrokenConfigSource(FakeSource):
+    def config(self) -> Config:
+        raise RuntimeError("config unreadable")
+
+
+def test_a_rule_evaluation_failure_is_logged_and_does_not_reach_the_sampling_loop(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    rig = Rig()
+    broken = BrokenConfigSource(make_snapshot((make_group(),)))
+    rig.coordinator.attach(source=broken)
+
+    broken.emit()
+
+    assert "Cannot evaluate or send notifications" in caplog.text
+    assert rig.sink.sent == []
+    # a healthy source still notifies through the same coordinator
+    rig.source.emit()
+    assert rig.sink.sent == ["idle-g_1"]
+
+
+def test_attach_notifications_subscribes_to_the_service_and_saves_the_state() -> None:
+    source, sink, saver = FakeSource(make_snapshot((make_group(),))), FakeSink(), FakeSaver()
+    coordinator = attach_notifications(
+        service=source, sink=sink, saver=saver, state=PersistedState()
+    )
+    coordinator.use_oom_reader(reader=lambda: None)
+    assert len(source.handlers) == 1
+
+    source.emit()
+
+    assert sink.sent == ["idle-g_1"]
+    assert {group for group, _ in saver.changes[-1]["notifications"].episodes} == {GROUP}

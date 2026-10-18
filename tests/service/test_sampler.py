@@ -149,7 +149,13 @@ def test_sampler_new_project_markers_are_seen_next_cycle(tmp_path: Path) -> None
     first = sampler.run_cycle()
     (root / "pyproject.toml").touch()
     second = sampler.run_cycle()
+    third = sampler.run_cycle()
+    assert len(first.groups) == len(second.groups) == 1
+    assert first.groups[0].name != "project"
+    assert second.groups[0].name == "project"
+    # SPECIFICHE 5.5: the new root gives a new group, whose id then stays stable.
     assert first.groups[0].id != second.groups[0].id
+    assert third.groups[0].id == second.groups[0].id
     assert second.monitor_started_at == first.monitor_started_at
 
 

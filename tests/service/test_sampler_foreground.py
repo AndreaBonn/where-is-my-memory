@@ -17,6 +17,7 @@ from wimm.collectors.foreground import (
     ForegroundState,
     ForegroundStatus,
 )
+from wimm.collectors.foreground_wayland import WaylandForegroundReader
 from wimm.config import Config
 from wimm.model.enums import ActivityState, Category
 from wimm.model.snapshot import Group
@@ -143,11 +144,21 @@ def test_unavailable_foreground_never_makes_the_group_idle(
     assert {m.activity.reason for m in group.members} == {UNMEASURABLE_BROWSER}
 
 
-def test_wayland_session_leaves_the_state_unknown(tmp_path: Path) -> None:
-    wayland = partial(ForegroundReader, session_type="wayland")
-    sampler = build_sampler(tmp_path=tmp_path, foreground=wayland)
+def test_wayland_session_leaves_the_state_unknown(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # The production path: from_environment picks the Wayland reader from the environment.
+    # The session bus points at a socket nobody listens on, so the focus name has no owner.
+    monkeypatch.setenv("XDG_SESSION_TYPE", "wayland")
+    monkeypatch.setenv("DBUS_SESSION_BUS_ADDRESS", f"unix:path={tmp_path / 'no-bus'}")
+    reader = ForegroundReader.from_environment(enabled=True)
+    assert isinstance(reader, WaylandForegroundReader)
+    assert reader.read() is UNAVAILABLE_STATE
+
+    sampler = build_sampler(tmp_path=tmp_path, foreground=ForegroundReader.from_environment)
     group = run_until(sampler, start=0, end=2 * WINDOW_S)
     assert group.activity.state is ActivityState.UNKNOWN
+    assert {m.activity.reason for m in group.members} == {UNMEASURABLE_BROWSER}
 
 
 def test_foreground_flag_is_recorded_per_process_each_cycle(tmp_path: Path) -> None:

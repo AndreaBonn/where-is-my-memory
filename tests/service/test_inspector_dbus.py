@@ -215,7 +215,23 @@ def test_get_disk_report_returns_json_the_wire_decoder_parses(
 
 
 @pytest.mark.dbus
-def test_application_exports_only_its_three_actions_and_handles_remote_group(
+def test_closed_inspector_no_longer_answers_and_closing_twice_is_harmless(
+    private_connections: Any,
+) -> None:
+    source = SnapshotSource()
+    source.current = sensitive_snapshot()
+    inspector = Inspector(connection=private_connections[0], service=source)
+    assert json.loads(call(connections=private_connections, method="GetSnapshot").unpack()[0])
+
+    inspector.close()
+    inspector.close()
+
+    with pytest.raises(GLib.Error, match=r"UnknownMethod|UnknownObject|UnknownInterface"):
+        call(connections=private_connections, method="GetSnapshot")
+
+
+@pytest.mark.dbus
+def test_application_exports_only_its_four_actions_and_handles_remote_group(
     private_bus_address: str,
     private_connections: tuple[Gio.DBusConnection, Gio.DBusConnection],
     tmp_path: Path,

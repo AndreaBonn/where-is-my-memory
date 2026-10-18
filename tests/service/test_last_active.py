@@ -30,7 +30,9 @@ def test_idle_keeps_the_last_active_instant_instead_of_advancing_it() -> None:
     tracker = LastActiveTracker(persisted={})
     tracker.observe(key=KEY, assessment=verdict(ActivityState.ACTIVE, NOW), active_at=NOW)
     later = NOW + timedelta(hours=3)
-    tracker.observe(key=KEY, assessment=verdict(ActivityState.IDLE, NOW), active_at=None)
+    # an assessed since that differs from the recorded instant: only NOW may survive
+    idle_since = NOW + timedelta(hours=1)
+    tracker.observe(key=KEY, assessment=verdict(ActivityState.IDLE, idle_since), active_at=None)
     assert tracker.export(now=later, retention_s=DAY_S)[KEY] == NOW
 
 

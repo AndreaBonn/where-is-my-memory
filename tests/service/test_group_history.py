@@ -86,6 +86,21 @@ def test_growth_for_flat_unknown_and_young_groups_is_none() -> None:
     assert history.growth_for(group_id=GroupId("unknown")) is None
 
 
+def test_growth_for_a_young_group_is_none_even_when_it_rises_fast() -> None:
+    clock = FixedClock(START)
+    history = history_on(clock=clock)
+    # 6 samples over 50 minutes: below 7 points and below one hour, +1 GiB per sample
+    for index in range(6):
+        feed(history=history, clock=clock, seconds=600 * index, used=(1000 + 1024 * index) * MIB)
+    assert history.growth_for(group_id=GroupId("g1")) is None
+
+    # the same rise, kept up for one hour (7 samples), is reported
+    feed(history=history, clock=clock, seconds=3600, used=(1000 + 1024 * 6) * MIB)
+    trend = history.growth_for(group_id=GroupId("g1"))
+    assert trend is not None
+    assert trend.span_s == 3600
+
+
 def test_thousand_groups_for_three_hours_stay_under_two_megabytes() -> None:
     clock = FixedClock(START)
     history = history_on(clock=clock)

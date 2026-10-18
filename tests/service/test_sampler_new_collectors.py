@@ -34,7 +34,7 @@ def test_cycle_fills_video_kernel_voices_and_psi_from_the_new_collectors(tmp_pat
 
     assert snapshot.memory.video == VIDEO
     assert snapshot.memory.breakdown.zram == 50
-    assert snapshot.memory.breakdown.shared_tmpfs >= 0
+    assert snapshot.memory.breakdown.shared_tmpfs == 10  # min(shmem 10, tmpfs_used 20)
     assert snapshot.pressure is Pressure.CRITICAL
 
 

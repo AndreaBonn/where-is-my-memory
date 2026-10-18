@@ -78,9 +78,10 @@ def test_snooze_with_an_empty_target_is_logged_and_snoozes_nothing(
     assert "Snooze of '' ignored" in caplog.text
 
 
-def test_actions_require_a_string_parameter() -> None:
+@pytest.mark.parametrize("name", ["open-group", "snooze-group"])
+def test_group_actions_require_a_string_parameter(name: str) -> None:
     application = make_application()
-    parameter_type = application.lookup_action("open-group").get_parameter_type()
+    parameter_type = application.lookup_action(name).get_parameter_type()
     assert parameter_type.dup_string() == "s"
 
 

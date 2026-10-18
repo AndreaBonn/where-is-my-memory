@@ -12,7 +12,12 @@ from wimm.model.actions import Plan
 from wimm.model.enums import ActionKind, PlanId
 from wimm.model.snapshot import Snapshot
 from wimm.service.control_protocols import StepOutcome, StepStatus
-from wimm.service.restart_memory import RECENT_PLANS, StoppedContainers, StoppedProcesses
+from wimm.service.restart_memory import (
+    NOTED_PLANS,
+    RECENT_PLANS,
+    StoppedContainers,
+    StoppedProcesses,
+)
 
 STOP = ActionKind.CONTAINER_STOP
 
@@ -144,6 +149,20 @@ def test_only_the_last_plans_keep_process_commands() -> None:
         memory.record(plan_id=plan.plan_id, outcomes=all_done(plan=plan))
 
     assert list(memory.stopped) == ids[2:]
+
+
+def test_only_the_last_noted_plans_can_still_be_recorded() -> None:
+    memory = StoppedProcesses()
+    plans = [process_plan(plan_id=f"p{n}") for n in range(NOTED_PLANS + 1)]
+    for plan in plans:
+        memory.note(plan=plan, snapshot=process_snapshot())
+
+    # p0 was noted first and fell out of the cap: its outcome has nothing to attach to
+    memory.record(plan_id=plans[0].plan_id, outcomes=all_done(plan=plans[0]))
+    assert memory.stopped == {}
+    # p1 is the oldest one still kept
+    memory.record(plan_id=plans[1].plan_id, outcomes=all_done(plan=plans[1]))
+    assert list(memory.stopped) == ["p1"]
 
 
 def test_process_memory_never_logs_the_command(caplog: pytest.LogCaptureFixture) -> None:

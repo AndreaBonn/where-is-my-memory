@@ -102,11 +102,76 @@ def test_withdraw_forwards_id() -> None:
     assert sink.withdrawn == ["idle-whitebox"]
 
 
-def test_gio_notification_is_built_from_spec() -> None:
+class RecordedNotification:
+    """Stands in for Gio.Notification, which has no getters to read back."""
+
+    def __init__(self, title: str) -> None:
+        self.title = title
+        self.body: str | None = None
+        self.priority: Any = None
+        self.default: tuple[str, str] | None = None
+        self.buttons: list[tuple[str, str, str]] = []
+
+    @classmethod
+    def new(cls, title: str) -> "RecordedNotification":
+        return cls(title)
+
+    def set_body(self, body: str) -> None:
+        self.body = body
+
+    def set_priority(self, priority: Any) -> None:
+        self.priority = priority
+
+    def set_default_action_and_target(self, action: str, target: Any) -> None:
+        self.default = (action, target.get_string())
+
+    def add_button_with_target(self, label: str, action: str, target: Any) -> None:
+        self.buttons.append((label, action, target.get_string()))
+
+
+def build_recorded(
+    monkeypatch: pytest.MonkeyPatch, *, intent: NotificationIntent
+) -> RecordedNotification:
     from gi.repository import Gio
 
-    notification = to_gio_notification(spec=build_spec(intent=PRESSURE))
-    assert isinstance(notification, Gio.Notification)
+    monkeypatch.setattr(Gio, "Notification", RecordedNotification)
+    return to_gio_notification(spec=build_spec(intent=intent))  # type: ignore[return-value]
+
+
+def test_pressure_gio_notification_is_high_priority_and_opens_the_window_without_group(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from gi.repository import Gio
+
+    notification = build_recorded(monkeypatch, intent=PRESSURE)
+
+    assert notification.title == "RAM quasi esaurita (7% libera)"
+    assert notification.body == "Liberabile"
+    assert notification.priority == Gio.NotificationPriority.HIGH
+    assert notification.default == ("app.open-group", "")
+    assert notification.buttons == []
+
+
+def test_idle_gio_notification_is_normal_priority_with_the_two_group_buttons(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from gi.repository import Gio
+
+    notification = build_recorded(monkeypatch, intent=IDLE)
+
+    assert notification.body == "1,1 GB <b>x</b> & co"  # plain text, never escaped
+    assert notification.priority == Gio.NotificationPriority.NORMAL
+    assert notification.default == ("app.open-group", "whitebox")
+    assert notification.buttons == [
+        ("Vedi e decidi", "app.open-group", "whitebox"),
+        ("Non ora (24 h)", "app.snooze-group", "whitebox"),
+    ]
+
+
+def test_gio_notification_is_a_real_gio_notification_by_default() -> None:
+    from gi.repository import Gio
+
+    assert isinstance(to_gio_notification(spec=build_spec(intent=PRESSURE)), Gio.Notification)
 
 
 class FirstFailsSink(FakeSink):
