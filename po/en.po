@@ -1550,6 +1550,13 @@ msgstr "{prefix} {disk} of disk space."
 msgid "Nella lista conta {listed}: il resto è di parti che non si fermano da qui."
 msgstr "The list counts {listed}: the rest belongs to parts that cannot be stopped from here."
 
+#: src/wimm/ui/dialogs/text.py:96
+#, python-brace-format
+msgid "{count} voce nell'elenco"
+msgid_plural "{count} voci nell'elenco"
+msgstr[0] "{count} item in the list"
+msgstr[1] "{count} items in the list"
+
 #: src/wimm/ui/dialogs/tray_help.py:10
 msgid "Come si attiva"
 msgstr "How to turn it on"

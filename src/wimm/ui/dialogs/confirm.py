@@ -18,6 +18,7 @@ from wimm.ui.dialogs.text import (
     PHRASE_HINT,
     RESTART_TEXT,
     confirm_label,
+    count_text,
     dialog_title,
     entry_title,
     listed_note,
@@ -87,6 +88,11 @@ class ConfirmDialog(Adw.AlertDialog):
             max_content_height=LIST_MAX_HEIGHT,
         )
         scroller.set_child(self._build_targets())
+        count = count_text(count=len(self._session.entries))
+        if count is not None:
+            counter = Gtk.Label(label=count, xalign=0)
+            counter.add_css_class("dim-label")
+            content.append(counter)
         for child in (scroller, self._warning, self._phrase_hint, self._phrase_box):
             content.append(child)
         return content

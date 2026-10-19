@@ -2,7 +2,7 @@
 
 from types import MappingProxyType
 
-from wimm.i18n import N_, _
+from wimm.i18n import N_, _, ngettext
 from wimm.model.enums import ActionKind
 from wimm.ui.format import ACTION_LABELS, format_size
 
@@ -82,4 +82,17 @@ def listed_note(*, listed: int | None, planned: int) -> str | None:
         return None
     return _("Nella lista conta {listed}: il resto è di parti che non si fermano da qui.").format(
         listed=format_size(size=listed)
+    )
+
+
+def count_text(*, count: int) -> str | None:
+    """F9: how many entries the list holds, since the scroller may show only the first ones.
+
+    Shown from two entries on, even when they all fit: the overflow is known only after
+    layout, and one count line costs less than a list that silently hides rows.
+    """
+    if count < 2:
+        return None
+    return ngettext("{count} voce nell'elenco", "{count} voci nell'elenco", count).format(
+        count=count
     )
