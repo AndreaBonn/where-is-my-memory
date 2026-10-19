@@ -618,3 +618,15 @@ Limiti: kind si riconosce solo dalla CLI; minikube con driver Docker non si rico
 - Durante un aggiornamento di gnome-shell il suo eseguibile risulta `(deleted)` e wimm resta "non misurabile" fino al login successivo.
 - Se gnome-shell termina e il suo pid viene riusato da un programma che occupa il nome, la verifica in cache lo accetterebbe; su Wayland la fine di gnome-shell chiude la sessione, quindi il caso è teorico.
 - KWin e wlroots, e le euristiche su PipeWire e CPU previste dall'ADR, non sono implementati.
+
+## HuggingFace: rimozione per elemento senza il comando del tool (002-disk-granular, T-6.2)
+
+R14 chiede di pulire una cache con il comando del suo strumento. Per il singolo modello
+HuggingFace wimm rimuove da sé la cartella `models--*` (o `datasets--*`, `spaces--*`) e i blob
+del magazzino `blobs/` raggiunti solo dai symlink di quel modello, con `safe_tree`. Motivo:
+sulla macchina di riferimento i blob dei modelli stanno in un magazzino alla radice di `hub`,
+raggiunto via symlink da `models--*/blobs/`, layout di uno strumento non identificato. L'API
+della cache di `huggingface_hub` (UNVERIFIED, da verificare in T-6.20) conosce solo i blob
+dentro la cartella del modello: cancellerebbe i symlink e lascerebbe i GB. Inoltre `hf` e
+`huggingface_hub` non sono installati. Il blob si rimuove solo se, ricontrollato al momento
+dell'esecuzione, nessun altro symlink della cache lo raggiunge (decisione Q1=A, 2026-10-19).

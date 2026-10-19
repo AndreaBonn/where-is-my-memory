@@ -170,3 +170,15 @@ più resi visibili. BASIS: measured.
 | L5-L8, RSS dell'app dopo 5 minuti | 113 MB -> 115 MB | dentro il rumore | +2 MB; un ciclo da solo occupa 42 MB in entrambe |
 
 Il superamento di RNF-01 viene dal numero di processi da censire, cresciuto di circa il 50% rispetto al 17 ottobre, non dai lotti L5-L8: con 930 processi anche la versione di L4 costa 0,6-0,8 s di CPU per ciclo, cioè 1,0-1,3% di un core a 60 s. Il costo per processo resta la voce da ridurre (vedi la misura del 2026-10-17, dominata da `smaps_rollup` e `memory_full_info`).
+
+## Baseline del disco granulare (002-disk-granular, T-6.2, 2026-10-19)
+
+Misura: `collect_caches` sulla home reale, cartella delle dimensioni vuota a ogni run, senza
+pausa, 3 run di seguito (cache del filesystem calda), stesso metodo della misura T042 sopra.
+Script `measure_caches.py` nella cartella temporanea di sessione. Codice `077b733`.
+
+| Data | Codice | Voci | Dimensione misurata | Durata (mediana) | Verdetto |
+|---|---|---|---|---|---|
+| 2026-10-19 | baseline `077b733` | 14 | 39,8 GB | 2,36 s (2,41 / 2,05 / 2,36) | riferimento per T-6.14 (budget +15%) |
+
+Test: `make test` 3509 passati (447 deselezionati), copertura del core 99,96%. BASIS: measured.
