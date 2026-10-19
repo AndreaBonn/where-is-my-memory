@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from wimm.service.errors import TargetChanged
-from wimm.service.safe_tree import remove_file
+from wimm.service.safe_file import remove_file
 
 
 def make_file(*, root: Path, relative: str) -> os.stat_result:

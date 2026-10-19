@@ -27,6 +27,7 @@ REPO_ID_SEPARATOR = "--"
 OWNER_SEPARATOR = "/"
 PARENT = ".."
 HERE = "."
+STORE_PREFIX = "blobs/"  # the hub-wide store, at the root and outside every repo folder
 MAX_LINK_HOPS = 40  # the kernel gives up after 40 links too: a cycle never resolves
 
 
@@ -148,13 +149,16 @@ def _store_blobs(
 ) -> tuple[ItemBlob, ...]:
     """The files of `identities` that lie outside the owner folder, one per identity.
 
-    A file with a path inside the folder goes with the folder, so it is not listed.
+    A file with a path inside the folder goes with the folder, so it is not listed. Only store
+    files qualify: a lock or a stray file at the root that a link reaches is never a blob.
     """
     outside: dict[Identity, TreeEntry] = {}
     inside: set[Identity] = set()
     for entry in sorted(listing.entries, key=lambda e: e.path):
         identity = _identity(entry)
         if entry.type is not EntryType.FILE or identity not in identities:
+            continue
+        if not entry.path.startswith((STORE_PREFIX, owner + OWNER_SEPARATOR)):
             continue
         if entry.path.startswith(owner + OWNER_SEPARATOR):
             inside.add(identity)
@@ -167,15 +171,24 @@ def _store_blobs(
     )
 
 
-def hf_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
-    """The repo items of a hub cache (unsorted) and the bytes shared between repos."""
-    folders = {
+def _repo_folders(*, listing: TreeListing) -> dict[str, TreeEntry]:
+    return {
         entry.path: entry
         for entry in listing.entries
         if entry.type is EntryType.DIR
         and OWNER_SEPARATOR not in entry.path
         and _repo_kind(entry.path) is not None
     }
+
+
+def reached_identities(*, listing: TreeListing) -> frozenset[Identity]:
+    """Identities (device, inode) of every regular file some repo of the listing owns or reaches."""
+    return frozenset(_claims(listing=listing, repos=set(_repo_folders(listing=listing))))
+
+
+def hf_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
+    """The repo items of a hub cache (unsorted) and the bytes shared between repos."""
+    folders = _repo_folders(listing=listing)
     sizes = {_identity(e): e.size for e in listing.entries if e.type is EntryType.FILE}
     per_repo = dict.fromkeys(folders, 0)
     exclusive: dict[str, set[Identity]] = {name: set() for name in folders}

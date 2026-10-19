@@ -1,7 +1,8 @@
 """Removal of one cache item, a HuggingFace model folder and its exclusive blobs (S10-S13).
 
 Everything is decided at execution time from the table resolved at start and from a fresh
-listing of the cache; the plan only says which folder and which blobs the user saw.
+listing of the cache; the plan only says which folder and which blobs the user saw (paths and
+identities, nothing else is trusted).
 """
 
 import os
@@ -11,15 +12,17 @@ from pathlib import Path
 from wimm.collectors.cache_items import list_tree
 from wimm.core.cache_catalog import CacheAccess
 from wimm.core.cache_items import TreeListing, items_for
+from wimm.core.cache_items_hf import STORE_PREFIX, reached_identities
 from wimm.i18n import N_
 from wimm.model.actions import DirFingerprint, ItemFingerprint, PlanStep
-from wimm.model.cache_items import CacheItem
+from wimm.model.cache_items import ItemBlob
 from wimm.model.disk import CacheKind
 
 from .control_protocols import StepOutcome, StepStatus
 from .errors import ControlFailed, InvalidRequest, ProtectedTarget, TargetChanged
 from .fs_controls import DiskFsControl
-from .safe_tree import TreeRemoval, remove_directory, remove_file
+from .safe_file import remove_file
+from .safe_tree import TreeRemoval, remove_directory
 
 LOCKS_DIR = ".locks"
 # A lock touched this recently means a download is still writing the model (S13).
@@ -70,14 +73,20 @@ def _no_sleep(seconds: float) -> None:
     """The listing runs inside an action: no pacing."""
 
 
-def _fresh_item(*, hub: Path, fingerprint: ItemFingerprint) -> tuple[CacheItem, TreeListing]:
-    """The item as the pure rule sees the cache now; the folder must still be one."""
+def _recognise_item(*, hub: Path, fingerprint: ItemFingerprint) -> None:
+    """The folder must be a cached model for the pure rule as the cache is now."""
     listing = list_tree(root=hub, sleep=_no_sleep)
     items, _ = items_for(CacheKind.HUGGINGFACE, listing, listing.disk_bytes)
-    for item in items:
-        if item.path == fingerprint.realpath and item.id == Path(item.path).name:
-            return item, listing
-    raise ProtectedTarget(f"{fingerprint.realpath} is no longer recognised as a cached model")
+    if not any(i.path == fingerprint.realpath and i.id == Path(i.path).name for i in items):
+        raise ProtectedTarget(f"{fingerprint.realpath} is no longer recognised as a cached model")
+
+
+def _lock_age_ok(*, path: Path, now: float) -> bool:
+    """False if the lock was touched recently; a lock that vanished meanwhile counts as old."""
+    try:
+        return now - os.lstat(path).st_mtime >= LOCK_QUIET_S
+    except FileNotFoundError:
+        return True
 
 
 def _refuse_fresh_lock(*, hub: Path, name: str, control: DiskFsControl) -> None:
@@ -87,9 +96,8 @@ def _refuse_fresh_lock(*, hub: Path, name: str, control: DiskFsControl) -> None:
 
     now = control.clock()
     for current, _, files in os.walk(hub / LOCKS_DIR / name, onerror=unreadable):
-        for file in files:
-            if now - os.lstat(Path(current) / file).st_mtime < LOCK_QUIET_S:
-                raise DownloadInProgress()
+        if not all(_lock_age_ok(path=Path(current) / file, now=now) for file in files):
+            raise DownloadInProgress()
 
 
 def check_cache_item(*, step: PlanStep, control: DiskFsControl) -> bool:
@@ -102,33 +110,51 @@ def check_cache_item(*, step: PlanStep, control: DiskFsControl) -> bool:
         raise ProtectedTarget(f"{fingerprint.realpath} is not owned by the current user")
     if fingerprint.realpath in control.mounts():
         raise TargetChanged(f"{fingerprint.realpath} is a mount point, nothing was touched")
-    _fresh_item(hub=hub, fingerprint=fingerprint)
+    _recognise_item(hub=hub, fingerprint=fingerprint)
     _refuse_fresh_lock(hub=hub, name=Path(fingerprint.realpath).name, control=control)
     return True
 
 
+def _remove_one(*, hub: Path, blob: ItemBlob) -> tuple[TreeRemoval, bool]:
+    """Unlink one planned blob; (what was removed, True if it had to be kept)."""
+    try:
+        return remove_file(
+            root=str(hub), relative=blob.path, st_ino=blob.st_ino, st_dev=blob.st_dev
+        ), False
+    except FileNotFoundError:
+        return TreeRemoval(), False
+    except TargetChanged:
+        return TreeRemoval(), True
+    except OSError as error:
+        sample = (f"{blob.path}: {error.strerror or error}",)
+        return TreeRemoval(error_count=1, error_samples=sample), False
+
+
 def _remove_blobs(
-    *, hub: Path, fingerprint: ItemFingerprint, item: CacheItem, listing: TreeListing
+    *, hub: Path, fingerprint: ItemFingerprint, listing: TreeListing
 ) -> tuple[TreeRemoval, int]:
-    """Remove the planned blobs that are still exclusive and unchanged; count those kept."""
-    exclusive = {(b.path, b.st_dev, b.st_ino) for b in item.blobs}
-    present = {entry.path for entry in listing.entries}
+    """Remove the planned blobs that no remaining repo reaches; count those kept.
+
+    `listing` is taken after the folder is gone, so a link another repo gained meanwhile shows.
+    """
+    reached = reached_identities(listing=listing)
+    by_path = {entry.path: entry for entry in listing.entries}
     removal, kept = TreeRemoval(), 0
     for blob in fingerprint.blobs:
-        if (blob.path, blob.st_dev, blob.st_ino) not in exclusive:
-            kept += blob.path in present
+        entry = by_path.get(blob.path)
+        if entry is None:
             continue
-        try:
-            removal += remove_file(
-                root=str(hub), relative=blob.path, st_ino=blob.st_ino, st_dev=blob.st_dev
-            )
-        except FileNotFoundError:
-            continue
-        except TargetChanged:
+        identity = (blob.st_dev, blob.st_ino)
+        if (
+            (entry.st_dev, entry.st_ino) != identity
+            or identity in reached
+            or not blob.path.startswith(STORE_PREFIX)
+        ):
             kept += 1
-        except OSError as error:
-            sample = (f"{blob.path}: {error.strerror or error}",)
-            removal += TreeRemoval(error_count=1, error_samples=sample)
+        else:
+            done, was_kept = _remove_one(hub=hub, blob=blob)
+            removal += done
+            kept += was_kept
     return removal, kept
 
 
@@ -140,23 +166,32 @@ def _require_complete(*, removal: TreeRemoval, where: str) -> None:
         )
 
 
+def _outcome(*, order: int, removal: TreeRemoval, blobs: TreeRemoval, kept: int) -> StepOutcome:
+    if blobs.error_count:
+        # The folder is gone: report what was freed instead of hiding it behind the failure.
+        message = (
+            f"{blobs.error_count} store file(s) could not be removed "
+            f"(first: {blobs.error_samples[0]})"
+        )
+        return StepOutcome(
+            order=order, status=StepStatus.FAILED, message=message, freed_bytes=removal.freed_bytes
+        )
+    # A technical note like the other step messages; the UI builds its texts from the status.
+    note = f"{kept} store file(s) kept: no longer used only by this model" if kept else None
+    return StepOutcome(
+        order=order, status=StepStatus.DONE, message=note, freed_bytes=removal.freed_bytes
+    )
+
+
 def run_cache_item(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
-    """Remove the folder, then the blobs that the fresh listing still shows as exclusive."""
+    """Remove the folder, then the planned blobs that a fresh listing shows nobody reaches."""
     fingerprint = _fingerprint(step=step)
     hub = _hub_of(folder=fingerprint.realpath, control=control)
-    item, listing = _fresh_item(hub=hub, fingerprint=fingerprint)
     folder = DirFingerprint(
         realpath=fingerprint.realpath, st_ino=fingerprint.st_ino, st_dev=fingerprint.st_dev
     )
     removal = remove_directory(fingerprint=folder, mountpoints=control.mounts())
     _require_complete(removal=removal, where=fingerprint.realpath)
-    blobs, kept = _remove_blobs(hub=hub, fingerprint=fingerprint, item=item, listing=listing)
-    removal += blobs
-    _require_complete(removal=removal, where=str(hub))
-    return StepOutcome(
-        order=step.order,
-        status=StepStatus.DONE,
-        # A technical note like the other step messages; the UI builds its texts from the status.
-        message=f"{kept} store file(s) kept: no longer used only by this model" if kept else None,
-        freed_bytes=removal.freed_bytes,
-    )
+    listing = list_tree(root=hub, sleep=_no_sleep)
+    blobs, kept = _remove_blobs(hub=hub, fingerprint=fingerprint, listing=listing)
+    return _outcome(order=step.order, removal=removal + blobs, blobs=blobs, kept=kept)
