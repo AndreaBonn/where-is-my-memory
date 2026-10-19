@@ -31,7 +31,7 @@ class ContainerReader(Protocol):
 
 
 class ContainerListReader(Protocol):
-    def list(self, *, all: bool) -> Sequence[ContainerReader]: ...
+    def list(self, *, all: bool, ignore_removed: bool) -> Sequence[ContainerReader]: ...
 
 
 class DockerReader(Protocol):
@@ -103,7 +103,8 @@ def _list_containers(
     answered = False
     for engine in engines:
         try:
-            listed.extend(engine.client.containers.list(all=True))
+            # A container removed between listing and inspection is skipped, not fatal.
+            listed.extend(engine.client.containers.list(all=True, ignore_removed=True))
         except Exception as error:
             provider.discard(engine=engine)
             detail = str(error) or type(error).__name__

@@ -111,7 +111,9 @@ class DockerComposeControl:
                     engine,
                     frozenset(
                         c.id
-                        for c in engine.client.containers.list(all=True, filters={"label": label})
+                        for c in engine.client.containers.list(
+                            all=True, filters={"label": label}, ignore_removed=True
+                        )
                     ),
                 )
                 for engine in view.engines

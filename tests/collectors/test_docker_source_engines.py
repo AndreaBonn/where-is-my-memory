@@ -56,8 +56,8 @@ class FakeEngineClient:
     def info(self) -> dict[str, str]:
         return {"ID": "docker-id"}
 
-    def list(self, all: bool) -> Sequence[FakeContainer]:
-        assert all is True
+    def list(self, *, all: bool, ignore_removed: bool) -> Sequence[FakeContainer]:
+        assert all is True and ignore_removed is True
         if self.failure is not None:
             raise docker.errors.DockerException(self.failure)
         return self.items

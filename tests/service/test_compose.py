@@ -48,8 +48,10 @@ class FakeContainers:
     error: Exception | None = None
     filters_seen: list[dict[str, str]] = field(default_factory=list)
 
-    def list(self, *, all: bool, filters: dict[str, str]) -> list[FakeContainer]:
-        assert all is True
+    def list(
+        self, *, all: bool, filters: dict[str, str], ignore_removed: bool
+    ) -> list[FakeContainer]:
+        assert all is True and ignore_removed is True
         if self.error is not None:
             raise self.error
         self.filters_seen.append(filters)

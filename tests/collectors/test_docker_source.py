@@ -56,8 +56,8 @@ class FakeReader:
         self.containers = self
         self.failure = False
 
-    def list(self, all: bool) -> Sequence[ContainerReader]:
-        assert all is True
+    def list(self, *, all: bool, ignore_removed: bool) -> Sequence[ContainerReader]:
+        assert all is True and ignore_removed is True
         if self.failure:
             raise docker.errors.DockerException("socket denied")
         return [cast(ContainerReader, item) for item in self.items]
