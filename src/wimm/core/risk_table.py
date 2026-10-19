@@ -28,6 +28,7 @@ class ConsequenceKey(StrEnum):
     DOWN_VOLUMES = "down_volumes"
     REGISTRY = "registry"
     LOCAL_IMAGE = "local_image"
+    DANGLING_IMAGE = "dangling_image"
     BUILD = "build"
     VOLUME = "volume"
     CACHE = "cache"
@@ -114,6 +115,10 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.REGISTRY: N_("Si riscarica dal registry quando serve."),
     ConsequenceKey.LOCAL_IMAGE: N_(
         "Immagine costruita in locale, non è su un registry: per riaverla serve ricostruirla."
+    ),
+    ConsequenceKey.DANGLING_IMAGE: N_(
+        "Nessun nome punta più a questa immagine e nessun contenitore la usa: "
+        "sparisce senza perdere niente."
     ),
     ConsequenceKey.BUILD: N_("Le prossime build saranno più lente."),
     ConsequenceKey.VOLUME: N_("I dati del volume vengono cancellati in modo definitivo."),

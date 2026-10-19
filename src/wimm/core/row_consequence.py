@@ -27,7 +27,7 @@ def row_consequence(
     -------
     str
         The first consequence of the risk assessment (the devdir text names the rebuild
-        command); empty when the assessment has nothing to say, as for a dangling image.
+        command).
     """
     if action is ActionKind.DEVDIR_DELETE:
         return devdir_consequence(folder_name=folder_name, marker=marker)

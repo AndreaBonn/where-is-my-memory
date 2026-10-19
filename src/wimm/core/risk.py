@@ -197,7 +197,7 @@ def _resource_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessme
         )
     if action is ActionKind.IMAGE_REMOVE:
         if target.dangling:
-            return RiskAssessment(level=Risk.SAFE, consequences=())
+            return _assessment(level=Risk.SAFE, key=ConsequenceKey.DANGLING_IMAGE)
         if target.has_repo_digests:
             return _assessment(level=Risk.SAFE, key=ConsequenceKey.REGISTRY)
         return _assessment(level=Risk.CAUTION, key=ConsequenceKey.LOCAL_IMAGE)

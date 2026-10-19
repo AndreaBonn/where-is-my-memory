@@ -97,7 +97,10 @@ def test_row_consequence_image_depends_on_where_it_can_be_pulled_from(
     assert row_consequence(action=ActionKind.IMAGE_REMOVE, target=target) == expected
 
 
-def test_row_consequence_dangling_image_has_no_text() -> None:
+def test_row_consequence_dangling_image_says_it_goes_away_without_loss() -> None:
     target = RiskTarget(kind="image", has_repo_digests=False, dangling=True)
 
-    assert row_consequence(action=ActionKind.IMAGE_REMOVE, target=target) == ""
+    assert row_consequence(action=ActionKind.IMAGE_REMOVE, target=target) == (
+        "Nessun nome punta più a questa immagine e nessun contenitore la usa: "
+        "sparisce senza perdere niente."
+    )

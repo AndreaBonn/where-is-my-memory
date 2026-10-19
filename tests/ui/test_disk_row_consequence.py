@@ -64,6 +64,7 @@ def test_image_row_carries_the_dialog_consequence() -> None:
 def test_dangling_image_row_has_the_same_text_as_its_plan() -> None:
     disk = report(docker=docker_disk(images=(image(char="b", tags=(), dangling=True),)))
     (row,) = rows_of(disk=disk, key="images")
+    assert row.consequence
     assert row.consequence == plan_text(disk=disk, row=row)
 
 

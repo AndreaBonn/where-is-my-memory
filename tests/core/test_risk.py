@@ -95,7 +95,10 @@ CONTAINER_TIMEOUT_TEXT = "Se il container non si ferma da solo, Docker lo termin
             Action.IMAGE_REMOVE,
             Risk.CAUTION,
         ),
-        (None): (
+        (
+            "Nessun nome punta più a questa immagine e nessun contenitore la usa: "
+            "sparisce senza perdere niente."
+        ): (
             Target(kind="image", has_repo_digests=False, dangling=True),
             Action.IMAGE_REMOVE,
             Risk.SAFE,
@@ -331,7 +334,10 @@ class TestRiskBehavior:
         target = Target(kind="image", dangling=True, has_repo_digests=has_repo_digests)
         result = assess_risk(target=target, action=Action.IMAGE_REMOVE)
         assert result.level is Risk.SAFE
-        assert result.consequences == ()
+        assert result.consequences == (
+            "Nessun nome punta più a questa immagine e nessun contenitore la usa: "
+            "sparisce senza perdere niente.",
+        )
         assert assess_risk(
             target=replace(target, dangling=False), action=Action.IMAGE_REMOVE
         ).consequences
