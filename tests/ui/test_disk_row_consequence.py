@@ -8,10 +8,12 @@ from tests.core.disk_helpers import (
     stopped,
     volume,
 )
-from wimm.core.planning_disk import DISK_PLANNERS, plan_cache_clean
+from tests.core.planning_helpers import NOW, OWNER_UID, container, group, snapshot
+from wimm.core.planning import PlanningContext, plan_action
+from wimm.core.row_consequence import join_consequences
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DiskReport
-from wimm.model.enums import ActionKind, TargetId
+from wimm.model.enums import PlanId, TargetId
 from wimm.ui.disk_model import DiskRowView
 from wimm.ui.disk_view import build_disk_sections
 
@@ -25,19 +27,19 @@ def rows_of(*, disk: DiskReport, key: str) -> tuple[DiskRowView, ...]:
 
 
 def plan_text(*, disk: DiskReport, row: DiskRowView) -> str:
-    """The first "Cosa succede" line the dialog shows for this row's action ("" if none)."""
+    """The "Cosa succede" text the dialog shows for this row's action, from the real planner."""
     assert row.action_kind is not None
     target_id = None if row.target_id is None else TargetId(row.target_id)
     request = ActionRequest(kind=row.action_kind, target_id=target_id)
-    if row.action_kind is ActionKind.CONTAINER_REMOVE:
-        # A stopped container is planned as one step of "remove the stopped containers".
-        request = ActionRequest(kind=ActionKind.CONTAINERS_PRUNE_STOPPED)
-    if row.action_kind is ActionKind.CACHE_CLEAN:
-        drafts = plan_cache_clean(request=request, report=disk)
-    else:
-        drafts = DISK_PLANNERS[request.kind](request=request, report=disk)
-    consequences = drafts[0].assessed.consequences
-    return consequences[0] if consequences else ""
+    # A stopped container is planned from the snapshot, as the app does for the row's button.
+    exited = tuple(container(cid=c.id, state=c.state) for c in disk.docker.stopped_containers)
+    context = PlanningContext(
+        owner_uid=OWNER_UID, now=lambda: NOW, new_plan_id=lambda: PlanId("p"), disk_report=disk
+    )
+    plan = plan_action(
+        request=request, snapshot=snapshot(group(gid="g", members=exited)), context=context
+    )
+    return join_consequences(consequences=plan.consequences)
 
 
 def test_trash_row_carries_the_dialog_consequence() -> None:
