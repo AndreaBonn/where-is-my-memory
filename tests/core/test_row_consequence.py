@@ -13,7 +13,7 @@ def _cache_target(*, kind: CacheKind) -> tuple[ActionKind, RiskTarget]:
 
 
 @pytest.mark.parametrize("kind", list(CacheKind))
-def test_row_consequence_cache_is_the_first_consequence_of_the_assessment(
+def test_row_consequence_cache_joins_the_consequences_of_the_assessment(
     kind: CacheKind,
 ) -> None:
     action, target = _cache_target(kind=kind)
@@ -21,7 +21,9 @@ def test_row_consequence_cache_is_the_first_consequence_of_the_assessment(
     text = row_consequence(action=action, target=target)
 
     assert text
-    assert text == assess_risk(target=target, action=action).consequences[0]
+    assert text == join_consequences(
+        consequences=assess_risk(target=target, action=action).consequences
+    )
 
 
 @pytest.mark.parametrize(
@@ -121,3 +123,7 @@ def test_join_consequences_puts_one_line_per_consequence() -> None:
     assert join_consequences(consequences=("a", "b")) == "a\nb"
     assert join_consequences(consequences=("only",)) == "only"
     assert join_consequences(consequences=()) == ""
+
+
+def test_join_consequences_shows_a_repeated_line_once_like_the_plan() -> None:
+    assert join_consequences(consequences=("a", "b", "a")) == "a\nb"

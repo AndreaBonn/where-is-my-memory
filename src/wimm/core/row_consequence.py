@@ -10,8 +10,11 @@ CONSEQUENCE_SEPARATOR = "\n"
 
 
 def join_consequences(*, consequences: tuple[str, ...]) -> str:
-    """Compose consequence lines the way the Disco rows and the dialog both show them."""
-    return CONSEQUENCE_SEPARATOR.join(consequences)
+    """Compose consequence lines the way the Disco rows and the dialog both show them.
+
+    A repeated line shows once, as the plan de-duplicates its consequences.
+    """
+    return CONSEQUENCE_SEPARATOR.join(dict.fromkeys(consequences))
 
 
 def row_consequence(
