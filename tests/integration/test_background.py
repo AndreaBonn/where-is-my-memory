@@ -10,9 +10,9 @@ from tests.service.inspector_dbus_helpers import private_bus_address as private_
 from wimm.first_run import mark_welcomed
 
 STARTUP_TIMEOUT_S = 10
-# Only a guard against a hang, never stricter than the budget the test asserts: a 5 s guard
-# quit before the second cycle on a loaded machine and failed a run that met the 10 s budget.
-PROBE_GUARD_S = STARTUP_TIMEOUT_S - 1
+# The functional run only guards against a hang: at load 39 two real cycles took over 10 s.
+# The 10 s budget itself is measured on a quiet machine with make perf (decision 2026-10-19).
+HANG_GUARD_S = 60
 RSS_LIMIT_KIB = 120 * 1024
 BACKGROUND_PROBE = """
 import os
@@ -53,27 +53,42 @@ raise SystemExit(exit_code)
 """
 
 
-@pytest.mark.integration
-@pytest.mark.dbus
-def test_background_startup_and_two_real_cycles_do_not_load_gtk(private_bus_address: str) -> None:
+def _run_probe(*, bus: str, guard_s: int) -> tuple[subprocess.CompletedProcess[str], float]:
     # Not the first run: that one opens the window with the welcome (A1).
     mark_welcomed(state_dir=Path(os.environ["XDG_STATE_HOME"]) / "where-is-my-memory")
     started = monotonic()
     result = subprocess.run(
         args=[sys.executable, "-"],
-        input=BACKGROUND_PROBE.replace("GUARD_S", str(PROBE_GUARD_S)),
+        # The probe's own guard stays under the outer timeout, so a hang still reports.
+        input=BACKGROUND_PROBE.replace("GUARD_S", str(guard_s - 1)),
         env={
             **os.environ,
-            "DBUS_SESSION_BUS_ADDRESS": private_bus_address,
+            "DBUS_SESSION_BUS_ADDRESS": bus,
             "WIMM_APP_ID": "io.github.wimm.BackgroundTest",
         },
         capture_output=True,
         text=True,
         check=False,
-        timeout=STARTUP_TIMEOUT_S,
+        timeout=guard_s,
     )
+    return result, monotonic() - started
+
+
+@pytest.mark.integration
+@pytest.mark.dbus
+def test_background_startup_and_two_real_cycles_do_not_load_gtk(private_bus_address: str) -> None:
+    result, _ = _run_probe(bus=private_bus_address, guard_s=HANG_GUARD_S)
     assert result.returncode == 0, result.stderr
     prefix, rss = result.stdout.strip().rsplit(sep="=", maxsplit=1)
     assert prefix == "cycles=2 Gtk=False Adw=False rss_kib"
     assert 0 < int(rss) < RSS_LIMIT_KIB
-    assert monotonic() - started < STARTUP_TIMEOUT_S
+
+
+@pytest.mark.integration
+@pytest.mark.dbus
+@pytest.mark.perf
+def test_background_startup_and_two_real_cycles_fit_the_budget(private_bus_address: str) -> None:
+    result, elapsed = _run_probe(bus=private_bus_address, guard_s=STARTUP_TIMEOUT_S)
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.startswith("cycles=2 ")
+    assert elapsed < STARTUP_TIMEOUT_S
