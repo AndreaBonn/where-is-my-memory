@@ -50,6 +50,7 @@ def test_item_kinds_cover_every_cache_with_an_item_rule() -> None:
         "android_avd",
         "playwright_browser",
         "jetbrains_product",
+        "ollama_model",
     }
 
 

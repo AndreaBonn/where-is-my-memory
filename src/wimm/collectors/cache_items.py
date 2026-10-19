@@ -2,8 +2,9 @@ import errno
 import logging
 import os
 import stat
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
+from types import MappingProxyType
 
 from wimm.collectors.dirsize import pace
 from wimm.core.cache_items import EntryType, TreeEntry, TreeListing
@@ -19,8 +20,14 @@ ITEM_KINDS = frozenset(
         CacheKind.ANDROID_AVD,
         CacheKind.PLAYWRIGHT,
         CacheKind.JETBRAINS,
+        CacheKind.OLLAMA,
     }
 )
+# Kinds that need the content of a few small files to split themselves: the folder (relative to
+# the cache root, trailing slash) whose files are read during the walk.
+TEXT_PREFIXES: Mapping[CacheKind, str] = MappingProxyType({CacheKind.OLLAMA: "manifests/"})
+MAX_TEXT_BYTES = 64 * 1024
+FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_CLOEXEC | os.O_NONBLOCK
 BLOCK_BYTES = 512
 # Never follows a link at open time: a directory swapped for a symlink after its lstat fails.
 DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
@@ -50,8 +57,10 @@ def _entry_for(*, name: str, relative: str, info: os.stat_result, fd: int) -> Tr
 class _Walk:
     """One pass over a tree through directory descriptors: the entries and the disk bytes."""
 
-    def __init__(self, *, sleep: Callable[[float], None]) -> None:
+    def __init__(self, *, sleep: Callable[[float], None], text_prefix: str = "") -> None:
         self._sleep = sleep
+        self._text_prefix = text_prefix
+        self.texts: list[tuple[str, str]] = []
         self._seen: set[tuple[int, int]] = set()
         self._count = 0
         self.entries: list[TreeEntry] = []
@@ -80,6 +89,22 @@ class _Walk:
             self.skipped += 1
             return None
 
+    def _read_text(self, *, name: str, relative: str, fd: int) -> None:
+        """Keep the content of a small regular file; any problem leaves it out, silently."""
+        try:
+            file_fd = os.open(name, FILE_FLAGS, dir_fd=fd)
+        except OSError as error:
+            LOGGER.info("Cannot open %s to read it: %s", relative, error)
+            return
+        try:
+            with os.fdopen(file_fd, "rb") as handle:
+                data = handle.read(MAX_TEXT_BYTES + 1)
+            if len(data) <= MAX_TEXT_BYTES:
+                self.texts.append((relative, data.decode("utf-8")))
+        except (OSError, ValueError) as error:
+            # ValueError covers UnicodeDecodeError: a binary file is not a text we can use.
+            LOGGER.info("Cannot read %s as text: %s", relative, error)
+
     def _read(self, *, fd: int, prefix: str) -> list[str]:
         """Record the children of an open directory; return the names of its subdirectories."""
         try:
@@ -97,6 +122,12 @@ class _Walk:
             if node is None:
                 continue
             self.entries.append(node)
+            if (
+                node.type is EntryType.FILE
+                and node.path.startswith(self._text_prefix)
+                and self._text_prefix
+            ):
+                self._read_text(name=name, relative=node.path, fd=fd)
             if node.type is EntryType.DIR:
                 subdirs.append(name)
         return subdirs
@@ -143,21 +174,25 @@ class _Walk:
             raise
 
 
-def list_tree(*, root: Path, sleep: Callable[[float], None]) -> TreeListing:
+def list_tree(*, root: Path, sleep: Callable[[float], None], text_prefix: str = "") -> TreeListing:
     """Observe the tree under ``root`` without following links (S5).
 
     File sizes are disk space (``st_blocks * 512``), kept on every path: hard links are told
     apart by (st_dev, st_ino), which the core uses to count each file once. ``disk_bytes`` is
     the whole tree measured as ``measure_dir_size`` does. Symlinks keep their raw ``readlink``
     text and are never resolved. Unreadable or vanished entries are skipped and counted in
-    ``skipped``; nothing is raised for them. ``sleep`` is called at the cadence of
-    ``measure_dir_size`` and whatever it raises (a cancelled scan) propagates.
+    ``skipped``; nothing is raised for them. With a ``text_prefix`` the regular files below that
+    folder are also read (at most ``MAX_TEXT_BYTES``, UTF-8, never through a link) into
+    ``texts``; a file that cannot be read is left out of ``texts`` and stays in ``entries``.
+    ``sleep`` is called at the cadence of ``measure_dir_size`` and whatever it raises (a
+    cancelled scan) propagates.
     """
-    walk = _Walk(sleep=sleep)
+    walk = _Walk(sleep=sleep, text_prefix=text_prefix)
     walk.run(root=root)
     return TreeListing(
         root=str(root),
         entries=tuple(walk.entries),
         disk_bytes=walk.disk_bytes,
         skipped=walk.skipped,
+        texts=tuple(walk.texts),
     )

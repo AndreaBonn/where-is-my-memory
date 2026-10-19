@@ -1,65 +1,14 @@
 from collections.abc import Mapping
-from enum import StrEnum
 from types import MappingProxyType
 
 from wimm.i18n import N_, _
 from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind, CacheItemKind, Risk
 
+from .consequence_keys import (
+    ConsequenceKey as ConsequenceKey,
+)  # re-exported: the enum moved out to keep this file under the size limit
 from .tool_labels import ToolLabel
-
-
-class ConsequenceKey(StrEnum):
-    IDLE = "idle"
-    IDLE_PROGRAM = "idle_program"
-    ACTIVE = "active"
-    FOREGROUND = "foreground"
-    AGENT = "agent"
-    BROWSER = "browser"
-    DOCUMENTS = "documents"
-    APP = "app"
-    TERMINAL = "terminal"
-    KILL = "kill"
-    STOP = "stop"
-    STOP_TIMEOUT = "stop_timeout"
-    START = "start"
-    CONTAINER_REMOVE = "container_remove"
-    DOWN = "down"
-    DOWN_VOLUMES = "down_volumes"
-    REGISTRY = "registry"
-    LOCAL_IMAGE = "local_image"
-    DANGLING_IMAGE = "dangling_image"
-    BUILD = "build"
-    VOLUME = "volume"
-    CACHE = "cache"
-    CACHE_GIT = "cache_git"
-    CACHE_BUILD = "cache_build"
-    CACHE_GRADLE = "cache_gradle"
-    CACHE_BROWSERS = "cache_browsers"
-    CACHE_MAVEN = "cache_maven"
-    CACHE_JETBRAINS = "cache_jetbrains"
-    CACHE_HUGGINGFACE = "cache_huggingface"
-    CACHE_OLLAMA = "cache_ollama"
-    CACHE_ANDROID_AVD = "cache_android_avd"
-    CACHE_ANDROID_SDK = "cache_android_sdk"
-    CACHE_UNLISTED = "cache_unlisted"
-    ITEM_HF_MODEL = "item_hf_model"
-    ITEM_HF_OTHER = "item_hf_other"
-    ITEM_ANDROID_PACKAGE = "item_android_package"
-    ITEM_ANDROID_AVD = "item_android_avd"
-    ITEM_PLAYWRIGHT = "item_playwright"
-    ITEM_JETBRAINS = "item_jetbrains"
-    TRASH = "trash"
-    DEVDIR = "devdir"
-    DEVDIR_REBUILD = "devdir_rebuild"
-    OTHER = "other"
-    TOOL_BUSY = "tool_busy"
-    BUILD_DAEMON = "build_daemon"
-    LANGUAGE_SERVER = "language_server"
-    ANDROID_EMULATOR = "android_emulator"
-    VIRTUAL_MACHINE = "virtual_machine"
-    LOCAL_CLUSTER = "local_cluster"
-
 
 CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.IDLE: N_("Il server si ferma."),
@@ -181,6 +130,10 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
     ConsequenceKey.ITEM_JETBRAINS: N_(
         "Cache e indici di questa versione dell'IDE, rifatti all'avvio; le impostazioni restano."
     ),
+    ConsequenceKey.ITEM_OLLAMA: N_(
+        "Il modello si riscarica con ollama pull, anche diversi GB; "
+        "se l'hai creato tu in locale non si recupera."
+    ),
     ConsequenceKey.TRASH: N_("I file nel cestino vengono eliminati in modo definitivo."),
     ConsequenceKey.DEVDIR: N_(
         "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
@@ -189,6 +142,7 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
         "Per usare di nuovo il progetto serve ricostruire la cartella con {command}."
     ),
 }
+
 # Rebuild command by folder name; ``target`` depends on the project file beside it.
 DEVDIR_COMMANDS_BY_NAME: Mapping[str, str] = MappingProxyType(
     {
@@ -269,6 +223,7 @@ ITEM_ASSESSMENTS: dict[CacheItemKind, tuple[Risk, ConsequenceKey]] = {
     CacheItemKind.ANDROID_AVD: (Risk.DANGER, ConsequenceKey.ITEM_ANDROID_AVD),
     CacheItemKind.PLAYWRIGHT_BROWSER: (Risk.SAFE, ConsequenceKey.ITEM_PLAYWRIGHT),
     CacheItemKind.JETBRAINS_PRODUCT: (Risk.CAUTION, ConsequenceKey.ITEM_JETBRAINS),
+    CacheItemKind.OLLAMA_MODEL: (Risk.DANGER, ConsequenceKey.ITEM_OLLAMA),
 }
 UNLISTED_CACHE_ASSESSMENT = (Risk.CAUTION, ConsequenceKey.CACHE_UNLISTED)
 

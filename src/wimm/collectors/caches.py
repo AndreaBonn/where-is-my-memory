@@ -5,7 +5,7 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
-from wimm.collectors.cache_items import ITEM_KINDS, list_tree
+from wimm.collectors.cache_items import ITEM_KINDS, TEXT_PREFIXES, list_tree
 from wimm.collectors.dirsize import measure_dir_size
 from wimm.core.cache_catalog import CacheAccess, CacheResolution
 from wimm.core.cache_items import items_for
@@ -19,7 +19,7 @@ def _split_items(
     *, kind: CacheKind, folder: Path, sleep: Callable[[float], None]
 ) -> tuple[int, tuple[CacheItem, ...], CacheRest]:
     """Size, items and rest of an item kind from ONE fresh walk; none when items cannot fit."""
-    listing = list_tree(root=folder, sleep=sleep)
+    listing = list_tree(root=folder, sleep=sleep, text_prefix=TEXT_PREFIXES.get(kind, ""))
     size = listing.disk_bytes
     items, rest = items_for(kind=kind, listing=listing, size=size)
     if sum(item.size for item in items) + rest.shared > size:

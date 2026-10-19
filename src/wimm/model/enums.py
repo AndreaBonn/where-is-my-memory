@@ -109,3 +109,4 @@ class CacheItemKind(Enum):
     ANDROID_AVD = "android_avd"
     PLAYWRIGHT_BROWSER = "playwright_browser"
     JETBRAINS_PRODUCT = "jetbrains_product"
+    OLLAMA_MODEL = "ollama_model"

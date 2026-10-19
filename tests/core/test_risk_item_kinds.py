@@ -9,6 +9,7 @@ EXPECTED = {
     CacheItemKind.ANDROID_AVD: (Risk.DANGER, "dispositivo virtuale"),
     CacheItemKind.PLAYWRIGHT_BROWSER: (Risk.SAFE, "playwright install"),
     CacheItemKind.JETBRAINS_PRODUCT: (Risk.CAUTION, "IDE"),
+    CacheItemKind.OLLAMA_MODEL: (Risk.DANGER, "ollama pull"),
 }
 
 

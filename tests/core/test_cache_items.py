@@ -32,6 +32,7 @@ WITH_A_RULE = {
     CacheKind.ANDROID_AVD,
     CacheKind.PLAYWRIGHT,
     CacheKind.JETBRAINS,
+    CacheKind.OLLAMA,
 }
 
 
