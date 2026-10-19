@@ -11,7 +11,7 @@ import posixpath
 from collections import defaultdict
 from types import MappingProxyType
 
-from wimm.model.cache_items import CacheItem
+from wimm.model.cache_items import CacheItem, ItemBlob
 from wimm.model.enums import CacheItemKind
 
 from .cache_items import EntryType, TreeEntry, TreeListing
@@ -124,7 +124,9 @@ def _claims(*, listing: TreeListing, repos: set[str]) -> dict[Identity, set[str]
     return claims
 
 
-def _make_item(*, folder: TreeEntry, size: int, root: str) -> CacheItem | None:
+def _make_item(
+    *, folder: TreeEntry, size: int, root: str, blobs: tuple[ItemBlob, ...] = ()
+) -> CacheItem | None:
     parsed = _repo_kind(folder.path)
     if parsed is None:
         return None
@@ -137,6 +139,31 @@ def _make_item(*, folder: TreeEntry, size: int, root: str) -> CacheItem | None:
         st_ino=folder.st_ino,
         st_dev=folder.st_dev,
         kind=kind,
+        blobs=blobs,
+    )
+
+
+def _store_blobs(
+    *, listing: TreeListing, owner: str, identities: set[Identity]
+) -> tuple[ItemBlob, ...]:
+    """The files of `identities` that lie outside the owner folder, one per identity.
+
+    A file with a path inside the folder goes with the folder, so it is not listed.
+    """
+    outside: dict[Identity, TreeEntry] = {}
+    inside: set[Identity] = set()
+    for entry in sorted(listing.entries, key=lambda e: e.path):
+        identity = _identity(entry)
+        if entry.type is not EntryType.FILE or identity not in identities:
+            continue
+        if entry.path.startswith(owner + OWNER_SEPARATOR):
+            inside.add(identity)
+        else:
+            outside.setdefault(identity, entry)
+    return tuple(
+        ItemBlob(path=e.path, size=e.size, st_ino=e.st_ino, st_dev=e.st_dev)
+        for identity, e in outside.items()
+        if identity not in inside
     )
 
 
@@ -151,14 +178,22 @@ def hf_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
     }
     sizes = {_identity(e): e.size for e in listing.entries if e.type is EntryType.FILE}
     per_repo = dict.fromkeys(folders, 0)
+    exclusive: dict[str, set[Identity]] = {name: set() for name in folders}
     shared = 0
     for identity, owners in _claims(listing=listing, repos=set(folders)).items():
         if len(owners) > 1:
             shared += sizes[identity]
         else:
-            per_repo[next(iter(owners))] += sizes[identity]
+            owner = next(iter(owners))
+            per_repo[owner] += sizes[identity]
+            exclusive[owner].add(identity)
     made = (
-        _make_item(folder=folder, size=per_repo[name], root=listing.root)
+        _make_item(
+            folder=folder,
+            size=per_repo[name],
+            root=listing.root,
+            blobs=_store_blobs(listing=listing, owner=name, identities=exclusive[name]),
+        )
         for name, folder in folders.items()
     )
     return tuple(item for item in made if item is not None), shared

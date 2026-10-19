@@ -40,6 +40,7 @@ OPTIONAL_INTEGER = nullable(decoder=INTEGER)
 OPTIONAL_FIELDS: dict[type, dict[str, Any]] = {
     m.DevDir: {"marker": ""},
     m.CacheEntry: {"items": [], "rest": {"shared": 0, "unattributed": 0}},
+    m.CacheItem: {"blobs": []},
 }
 
 
@@ -102,7 +103,9 @@ SCHEMAS: dict[type, Schema] = {
         "st_ino": INTEGER,
         "st_dev": INTEGER,
         "kind": enumeration(enum=m.CacheItemKind),
+        "blobs": sequence(decoder=_record(cls=m.ItemBlob)),
     },
+    m.ItemBlob: {"path": TEXT, "size": byte_count, "st_ino": INTEGER, "st_dev": INTEGER},
     m.CacheRest: {"shared": byte_count, "unattributed": byte_count},
     m.DevDir: {
         "path": TEXT,

@@ -5,11 +5,40 @@ from .validation import ImmutableModel, require_bytes, require_nonnegative, requ
 
 
 @dataclass(frozen=True, slots=True)
+class ItemBlob(ImmutableModel):
+    """A hub-store file that only one item reaches, so it goes with the item.
+
+    `path` is relative to the cache root, POSIX style, and never leaves it.
+    """
+
+    path: str
+    size: int
+    st_ino: int
+    st_dev: int
+
+    def __post_init__(self) -> None:
+        ImmutableModel.__post_init__(self)
+        require_text(value=self.path, field="path")
+        if self.path.startswith("/") or any(p in ("", "..") for p in self.path.split("/")):
+            raise ValueError("path must be relative, without empty or '..' components")
+        require_bytes(value=self.size, field="size")
+        require_nonnegative(value=self.st_ino, field="st_ino")
+        require_nonnegative(value=self.st_dev, field="st_dev")
+
+
+def require_unique_blob_paths(*, blobs: tuple[ItemBlob, ...]) -> None:
+    paths = [blob.path for blob in blobs]
+    if len(set(paths)) != len(paths):
+        raise ValueError("blob paths must be unique")
+
+
+@dataclass(frozen=True, slots=True)
 class CacheItem(ImmutableModel):
     """One removable part of a cache, e.g. a HuggingFace model.
 
     `id` is stable within the cache (the folder name, `models--org--name`); `size` is
-    what the item alone holds.
+    what the item alone holds. `blobs` are the store files outside the folder that only
+    this item reaches (removed with it); files inside the folder are not listed.
     """
 
     id: str
@@ -19,9 +48,11 @@ class CacheItem(ImmutableModel):
     st_ino: int
     st_dev: int
     kind: CacheItemKind
+    blobs: tuple[ItemBlob, ...] = ()
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
+        require_unique_blob_paths(blobs=self.blobs)
         require_text(value=self.id, field="id")
         require_text(value=self.title, field="title")
         require_text(value=self.path, field="path")

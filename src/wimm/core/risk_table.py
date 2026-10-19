@@ -4,7 +4,7 @@ from types import MappingProxyType
 
 from wimm.i18n import N_, _
 from wimm.model.disk import CacheKind
-from wimm.model.enums import ActionKind, Risk
+from wimm.model.enums import ActionKind, CacheItemKind, Risk
 
 from .tool_labels import ToolLabel
 
@@ -43,6 +43,8 @@ class ConsequenceKey(StrEnum):
     CACHE_ANDROID_AVD = "cache_android_avd"
     CACHE_ANDROID_SDK = "cache_android_sdk"
     CACHE_UNLISTED = "cache_unlisted"
+    ITEM_HF_MODEL = "item_hf_model"
+    ITEM_HF_OTHER = "item_hf_other"
     TRASH = "trash"
     DEVDIR = "devdir"
     DEVDIR_REBUILD = "devdir_rebuild"
@@ -157,6 +159,14 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
         "Questo tipo di cache non è stato classificato: potrebbe contenere dati "
         "che non si riscaricano."
     ),
+    ConsequenceKey.ITEM_HF_MODEL: N_(
+        "Il modello si riscarica quando serve, anche diversi GB. "
+        "Vengono rimossi anche i file del magazzino usati solo da lui."
+    ),
+    ConsequenceKey.ITEM_HF_OTHER: N_(
+        "Si riscarica da HuggingFace quando serve, anche diversi GB. "
+        "Vengono rimossi anche i file del magazzino usati solo da questo elemento."
+    ),
     ConsequenceKey.TRASH: N_("I file nel cestino vengono eliminati in modo definitivo."),
     ConsequenceKey.DEVDIR: N_(
         "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
@@ -235,6 +245,13 @@ CACHE_ASSESSMENTS: dict[CacheKind, tuple[Risk, ConsequenceKey]] = {
     CacheKind.ANDROID_AVD: (Risk.DANGER, ConsequenceKey.CACHE_ANDROID_AVD),
     CacheKind.ANDROID_SDK: (Risk.CAUTION, ConsequenceKey.CACHE_ANDROID_SDK),
 }
+# Removing one HuggingFace item is CAUTION like the whole cache: a model made locally or
+# a private repo does not download again. A per-item entry, not the whole-cache one.
+ITEM_ASSESSMENTS: dict[CacheItemKind, tuple[Risk, ConsequenceKey]] = {
+    CacheItemKind.HF_MODEL: (Risk.CAUTION, ConsequenceKey.ITEM_HF_MODEL),
+    CacheItemKind.HF_DATASET: (Risk.CAUTION, ConsequenceKey.ITEM_HF_OTHER),
+    CacheItemKind.HF_SPACE: (Risk.CAUTION, ConsequenceKey.ITEM_HF_OTHER),
+}
 UNLISTED_CACHE_ASSESSMENT = (Risk.CAUTION, ConsequenceKey.CACHE_UNLISTED)
 
 # R19: risk of terminating a recognised tool. SAFE means it comes back by itself (a build
@@ -258,6 +275,8 @@ STATIC_ASSESSMENTS: dict[ActionKind, tuple[Risk, ConsequenceKey]] = {
     ActionKind.BUILDER_PRUNE: (Risk.SAFE, ConsequenceKey.BUILD),
     ActionKind.VOLUME_REMOVE: (Risk.DANGER, ConsequenceKey.VOLUME),
     ActionKind.CACHE_CLEAN: (Risk.SAFE, ConsequenceKey.CACHE),
+    # Without a known item kind the item is unclassified, so CAUTION, never SAFE (S18).
+    ActionKind.CACHE_ITEM_REMOVE: (Risk.CAUTION, ConsequenceKey.CACHE_UNLISTED),
     ActionKind.TRASH_EMPTY: (Risk.DANGER, ConsequenceKey.TRASH),
     ActionKind.DEVDIR_DELETE: (Risk.CAUTION, ConsequenceKey.DEVDIR),
 }

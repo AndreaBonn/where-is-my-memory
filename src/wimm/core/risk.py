@@ -5,6 +5,7 @@ from wimm.core.constants import DB_PROCESS_NAMES
 from wimm.core.risk_table import (
     CACHE_ASSESSMENTS,
     CONSEQUENCES,
+    ITEM_ASSESSMENTS,
     STATIC_ASSESSMENTS,
     TOOL_ASSESSMENTS,
     UNLISTED_CACHE_ASSESSMENT,
@@ -13,7 +14,15 @@ from wimm.core.risk_table import (
 from wimm.core.tool_labels import ToolLabel
 from wimm.i18n import _
 from wimm.model.disk import CacheKind
-from wimm.model.enums import ActionKind, ActivityState, Category, Protection, Risk, protection_of
+from wimm.model.enums import (
+    ActionKind,
+    ActivityState,
+    CacheItemKind,
+    Category,
+    Protection,
+    Risk,
+    protection_of,
+)
 from wimm.model.snapshot import ActionOffer
 
 TargetKind = Literal[
@@ -27,6 +36,7 @@ TargetKind = Literal[
     "build_cache",
     "volume",
     "cache",
+    "cache_item",
     "trash",
     "devdir",
 ]
@@ -47,6 +57,7 @@ ACTIONS_BY_KIND: dict[TargetKind, tuple[ActionKind, ...]] = {
     "build_cache": (ActionKind.BUILDER_PRUNE,),
     "volume": (ActionKind.VOLUME_REMOVE,),
     "cache": (ActionKind.CACHE_CLEAN,),
+    "cache_item": (ActionKind.CACHE_ITEM_REMOVE,),
     "trash": (ActionKind.TRASH_EMPTY,),
     "devdir": (ActionKind.DEVDIR_DELETE,),
 }
@@ -69,6 +80,7 @@ class RiskTarget:
     is_running: bool | None = None
     volume_names: tuple[str, ...] = ()
     cache_kind: CacheKind | None = None
+    item_kind: CacheItemKind | None = None
     tool: ToolLabel | None = None
 
     def __post_init__(self) -> None:
@@ -211,6 +223,9 @@ def _resource_assessment(target: RiskTarget, action: ActionKind) -> RiskAssessme
         )
     if action is ActionKind.CACHE_CLEAN and target.cache_kind is not None:
         level, key = CACHE_ASSESSMENTS.get(target.cache_kind, UNLISTED_CACHE_ASSESSMENT)
+        return _assessment(level=level, key=key)
+    if action is ActionKind.CACHE_ITEM_REMOVE and target.item_kind is not None:
+        level, key = ITEM_ASSESSMENTS[target.item_kind]
         return _assessment(level=level, key=key)
     level, key = STATIC_ASSESSMENTS[action]
     return _assessment(level=level, key=key)

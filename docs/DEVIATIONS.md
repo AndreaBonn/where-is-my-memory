@@ -631,6 +631,14 @@ dentro la cartella del modello: cancellerebbe i symlink e lascerebbe i GB. Inolt
 `huggingface_hub` non sono installati. Il blob si rimuove solo se, ricontrollato al momento
 dell'esecuzione, nessun altro symlink della cache lo raggiunge (decisione Q1=A, 2026-10-19).
 
+Verifica del 2026-10-19 con context7 sulla guida alla cache di `huggingface_hub`
+(https://github.com/huggingface/huggingface_hub/blob/main/docs/source/en/guides/manage-cache.md,
+sezione "Delete strategy"): `delete_revisions` rimuove la cartella dello snapshot e i blob
+"targeted only by revisions to be deleted", cioè quelli dentro la cartella del repo. Non conosce
+un magazzino alla radice di `hub`, quindi su questo layout lascerebbe i GB: la nota UNVERIFIED
+sopra è ora verificata. Perché il piano possa elencare quei blob, `CacheItem` porta i blob
+esclusivi del magazzino nel campo `blobs`, compatibile con lo schema 5.
+
 ## Elementi delle cache e schema 5 (002-disk-granular, T-6.17)
 
 **Schema 5 (Q4=A).** Ogni voce di cache del report disco può avere `items`, la lista degli

@@ -370,180 +370,188 @@ msgstr "{name} (pid {pid})"
 msgid "Lo strumento che pulisce questa cache non è installato"
 msgstr "The tool that cleans this cache is not installed"
 
-#: src/wimm/core/risk.py:193
+#: src/wimm/core/risk.py:198
 msgid "associati al progetto"
 msgstr "linked to the project"
 
-#: src/wimm/core/risk_table.py:59
+#: src/wimm/core/risk_table.py:62
 msgid "Il server si ferma."
 msgstr "The server stops."
 
-#: src/wimm/core/risk_table.py:60
+#: src/wimm/core/risk_table.py:63
 msgid "Il programma si ferma."
 msgstr "The program stops."
 
-#: src/wimm/core/risk_table.py:61
+#: src/wimm/core/risk_table.py:64
 msgid "È in uso adesso: chi lo sta usando perde la connessione."
 msgstr "It is in use right now: whoever is using it loses the connection."
 
-#: src/wimm/core/risk_table.py:63
+#: src/wimm/core/risk_table.py:66
 msgid "È in esecuzione in primo piano in un terminale: potresti interrompere un lavoro in corso."
 msgstr "It is running in the foreground in a terminal: you might interrupt work in progress."
 
-#: src/wimm/core/risk_table.py:66
+#: src/wimm/core/risk_table.py:69
 msgid "La sessione dell'agente si chiude: il lavoro non salvato nella conversazione si perde."
 msgstr "The agent session closes: unsaved work in the conversation is lost."
 
-#: src/wimm/core/risk_table.py:71
+#: src/wimm/core/risk_table.py:74
 msgid "Il browser si chiude senza la chiusura normale: alla riapertura ripristina le schede dal salvataggio automatico, che può essere indietro di qualche secondo."
 msgstr "The browser closes without a normal shutdown: when reopened it restores the tabs from its automatic save, which may be a few seconds behind."
 
-#: src/wimm/core/risk_table.py:74
+#: src/wimm/core/risk_table.py:77
 msgid "Eventuali file non salvati possono andare persi."
 msgstr "Any unsaved files may be lost."
 
-#: src/wimm/core/risk_table.py:76
+#: src/wimm/core/risk_table.py:79
 msgid "Il programma si ferma: ciò che ha in memoria e non ha salvato va perso. Se è un servizio, potrebbe riavviarsi da solo."
 msgstr "The program stops: whatever it holds in memory and has not saved is lost. If it is a service, it might restart on its own."
 
-#: src/wimm/core/risk_table.py:79
+#: src/wimm/core/risk_table.py:82
 msgid "L'applicazione si chiude."
 msgstr "The application closes."
 
-#: src/wimm/core/risk_table.py:80
+#: src/wimm/core/risk_table.py:83
 msgid "Sta lavorando adesso: l'operazione in corso si interrompe."
 msgstr "It is working right now: the operation in progress is interrupted."
 
-#: src/wimm/core/risk_table.py:82
+#: src/wimm/core/risk_table.py:85
 msgid "Il daemon si ferma e riparte da solo alla prossima build, che sarà un po' più lenta."
 msgstr "The daemon stops and starts again by itself on the next build, which will be a bit slower."
 
-#: src/wimm/core/risk_table.py:85
+#: src/wimm/core/risk_table.py:88
 msgid "L'editor lo rilancia da solo; per qualche secondo completamento e controlli non rispondono."
 msgstr "The editor relaunches it by itself; for a few seconds completion and checks do not respond."
 
-#: src/wimm/core/risk_table.py:89
+#: src/wimm/core/risk_table.py:92
 msgid "L'emulatore si chiude senza spegnere il dispositivo: ciò che l'app in prova non ha salvato si perde."
 msgstr "The emulator closes without shutting the device down: whatever the app under test has not saved is lost."
 
-#: src/wimm/core/risk_table.py:93
+#: src/wimm/core/risk_table.py:96
 msgid "La macchina virtuale si ferma di colpo, come staccando la corrente: lo stato del sistema ospite non salvato si perde e il disco virtuale può danneggiarsi."
 msgstr "The virtual machine stops abruptly, as if the power were cut: the unsaved state of the guest system is lost and the virtual disk may be damaged."
 
-#: src/wimm/core/risk_table.py:97
+#: src/wimm/core/risk_table.py:100
 msgid "Il cluster locale si ferma: i carichi in esecuzione al suo interno si interrompono."
 msgstr "The local cluster stops: the workloads running inside it are interrupted."
 
-#: src/wimm/core/risk_table.py:100
+#: src/wimm/core/risk_table.py:103
 msgid "Si chiudono tutte le finestre e le schede del terminale e i programmi al loro interno."
 msgstr "All the terminal windows and tabs close, along with the programs inside them."
 
-#: src/wimm/core/risk_table.py:102
+#: src/wimm/core/risk_table.py:105
 msgid "Chiusura immediata senza salvataggio."
 msgstr "Immediate shutdown without saving."
 
-#: src/wimm/core/risk_table.py:103
+#: src/wimm/core/risk_table.py:106
 msgid "Il container si ferma; dati e configurazione restano."
 msgstr "The container stops; its data and configuration remain."
 
-#: src/wimm/core/risk_table.py:105
+#: src/wimm/core/risk_table.py:108
 msgid "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
 msgstr "If the container does not stop by itself, Docker ends it after 10 seconds."
 
-#: src/wimm/core/risk_table.py:107
+#: src/wimm/core/risk_table.py:110
 msgid "Il container riparte con la configurazione di prima."
 msgstr "The container starts again with its previous configuration."
 
-#: src/wimm/core/risk_table.py:109
+#: src/wimm/core/risk_table.py:112
 msgid "Le modifiche fatte dentro il container fuori dai volumi si perdono."
 msgstr "Changes made inside the container outside its volumes are lost."
 
-#: src/wimm/core/risk_table.py:111
+#: src/wimm/core/risk_table.py:114
 msgid "I container vengono rimossi; i volumi con i dati restano."
 msgstr "The containers are removed; the volumes with the data remain."
 
-#: src/wimm/core/risk_table.py:113
+#: src/wimm/core/risk_table.py:116
 #, python-brace-format
 msgid "I dati dei volumi {volumes} vengono cancellati in modo definitivo."
 msgstr "The data in the volumes {volumes} is permanently deleted."
 
-#: src/wimm/core/risk_table.py:115
+#: src/wimm/core/risk_table.py:118
 msgid "Si riscarica dal registry quando serve."
 msgstr "It is downloaded again from the registry when needed."
 
-#: src/wimm/core/risk_table.py:117
+#: src/wimm/core/risk_table.py:120
 msgid "Immagine costruita in locale, non è su un registry: per riaverla serve ricostruirla."
 msgstr "Image built locally, not on a registry: to get it back you have to build it again."
 
-#: src/wimm/core/risk_table.py:120
+#: src/wimm/core/risk_table.py:123
 msgid "Nessun nome punta più a questa immagine e nessun contenitore la usa: sparisce senza perdere niente."
 msgstr "No name points to this image any more and no container uses it: it goes away without losing anything."
 
-#: src/wimm/core/risk_table.py:123
+#: src/wimm/core/risk_table.py:126
 msgid "Le prossime build saranno più lente."
 msgstr "The next builds will be slower."
 
-#: src/wimm/core/risk_table.py:124
+#: src/wimm/core/risk_table.py:127
 msgid "I dati del volume vengono cancellati in modo definitivo."
 msgstr "The volume data is permanently deleted."
 
-#: src/wimm/core/risk_table.py:125
+#: src/wimm/core/risk_table.py:128
 msgid "I pacchetti si riscaricano quando servono."
 msgstr "Packages are downloaded again when needed."
 
-#: src/wimm/core/risk_table.py:126
+#: src/wimm/core/risk_table.py:129
 msgid "I repository git si riscaricano quando servono."
 msgstr "Git repositories are downloaded again when needed."
 
-#: src/wimm/core/risk_table.py:127
+#: src/wimm/core/risk_table.py:130
 msgid "Le prossime compilazioni saranno più lente."
 msgstr "The next compilations will be slower."
 
-#: src/wimm/core/risk_table.py:129
+#: src/wimm/core/risk_table.py:132
 msgid "Le dipendenze si riscaricano e la prossima build sarà più lenta."
 msgstr "Dependencies are downloaded again and the next build will be slower."
 
-#: src/wimm/core/risk_table.py:131
+#: src/wimm/core/risk_table.py:134
 msgid "I browser si riscaricano alla prossima esecuzione."
 msgstr "Browsers are downloaded again the next time they run."
 
-#: src/wimm/core/risk_table.py:133
+#: src/wimm/core/risk_table.py:136
 msgid "Gli artefatti installati in locale con mvn install non si riscaricano da nessuna parte: per riaverli serve ricostruire i progetti."
 msgstr "Artifacts installed locally with mvn install cannot be downloaded from anywhere: to get them back you need to rebuild the projects."
 
-#: src/wimm/core/risk_table.py:137
+#: src/wimm/core/risk_table.py:140
 msgid "Gli IDE JetBrains ricostruiscono gli indici al prossimo avvio: l'apertura dei progetti sarà più lenta."
 msgstr "JetBrains IDEs rebuild their indexes at the next start: opening projects will be slower."
 
-#: src/wimm/core/risk_table.py:141
+#: src/wimm/core/risk_table.py:144
 msgid "Modelli di HuggingFace: si riscaricano quando servono, anche diversi GB."
 msgstr "HuggingFace models: they download again when needed, often several GB."
 
-#: src/wimm/core/risk_table.py:144
+#: src/wimm/core/risk_table.py:147
 msgid "Modelli di ollama: si riscaricano con ollama pull, anche diversi GB. Quelli creati in locale con ollama create non si riscaricano da nessuna parte."
 msgstr "ollama models: they download again with ollama pull, often several GB. Models you created locally with ollama create cannot be downloaded again."
 
-#: src/wimm/core/risk_table.py:148
+#: src/wimm/core/risk_table.py:151
 msgid "Gli emulatori Android vengono cancellati con le app e i dati al loro interno: non si recuperano. Chiudi prima gli emulatori aperti, altrimenti lo spazio torna libero solo quando si chiudono."
 msgstr "Android emulators are deleted together with the apps and data inside them: they cannot be recovered. Close any running emulator first, otherwise the space is freed only when it closes."
 
-#: src/wimm/core/risk_table.py:153
+#: src/wimm/core/risk_table.py:156
 msgid "Piattaforme, build-tools e immagini di sistema si riscaricano con sdkmanager: finché non lo fai le build Android non funzionano."
 msgstr "Platforms, build-tools and system images download again with sdkmanager: until you do, Android builds do not work."
 
-#: src/wimm/core/risk_table.py:157
+#: src/wimm/core/risk_table.py:160
 msgid "Questo tipo di cache non è stato classificato: potrebbe contenere dati che non si riscaricano."
 msgstr "This cache type has not been classified: it may hold data that cannot be downloaded again."
 
-#: src/wimm/core/risk_table.py:160
+#: src/wimm/core/risk_table.py:164
+msgid "Il modello si riscarica quando serve, anche diversi GB. Vengono rimossi anche i file del magazzino usati solo da lui."
+msgstr "The model is downloaded again when needed, even several GB. The store files used only by it are removed too."
+
+#: src/wimm/core/risk_table.py:168
+msgid "Si riscarica da HuggingFace quando serve, anche diversi GB. Vengono rimossi anche i file del magazzino usati solo da questo elemento."
+msgstr "It is downloaded again from HuggingFace when needed, even several GB. The store files used only by this item are removed too."
+
+#: src/wimm/core/risk_table.py:171
 msgid "I file nel cestino vengono eliminati in modo definitivo."
 msgstr "The files in the trash are permanently deleted."
 
-#: src/wimm/core/risk_table.py:162
+#: src/wimm/core/risk_table.py:173
 msgid "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
 msgstr "You need to reinstall the dependencies (npm install or uv sync) before using the project."
 
-#: src/wimm/core/risk_table.py:165
+#: src/wimm/core/risk_table.py:176
 #, python-brace-format
 msgid "Per usare di nuovo il progetto serve ricostruire la cartella con {command}."
 msgstr "To use the project again, rebuild the folder with {command}."
@@ -1593,7 +1601,7 @@ msgstr ""
 msgid "dimensione sconosciuta"
 msgstr "unknown size"
 
-#: src/wimm/ui/disk_model.py:81
+#: src/wimm/ui/disk_model.py:85
 #, python-brace-format
 msgid "e altre {count}"
 msgstr "and {count} more"

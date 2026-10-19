@@ -61,6 +61,7 @@ class ActionKind(Enum):
     CONTAINERS_PRUNE_STOPPED = "containers_prune_stopped"
     VOLUME_REMOVE = "volume_remove"
     CACHE_CLEAN = "cache_clean"
+    CACHE_ITEM_REMOVE = "cache_item_remove"
     TRASH_EMPTY = "trash_empty"
     DEVDIR_DELETE = "devdir_delete"
     DISK_FREE_SAFE = "disk_free_safe"

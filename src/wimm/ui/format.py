@@ -75,6 +75,7 @@ ACTION_LABELS = MappingProxyType(
         ActionKind.CACHE_CLEAN: N_("Pulisci cache"),
         ActionKind.TRASH_EMPTY: N_("Svuota cestino"),
         ActionKind.DEVDIR_DELETE: N_("Elimina cartella"),
+        ActionKind.CACHE_ITEM_REMOVE: N_("Rimuovi"),
         ActionKind.DISK_FREE_SAFE: N_("Libera spazio"),
         ActionKind.CONTAINER_START: N_("Riaccendi"),
         ActionKind.RESTART_STOPPED: N_("Riaccendi"),

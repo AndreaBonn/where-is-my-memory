@@ -14,6 +14,7 @@ from wimm.model.snapshot import ContainerMember, Group, Member, ProcessMember, S
 
 from .assemble_members import STOPPABLE_STATES
 from .constants import PLAN_ID_BYTES, PLAN_TTL_S
+from .planning_cache_item import plan_cache_item_remove
 from .planning_disk import DISK_PLANNERS, plan_cache_clean
 from .planning_disk_safe import plan_disk_free_safe
 from .planning_drafts import (
@@ -167,6 +168,9 @@ _TOOL_PLANNERS: dict[ActionKind, ToolPlanner] = {
 }
 
 
+_DISK_PLANNERS = {**DISK_PLANNERS, ActionKind.CACHE_ITEM_REMOVE: plan_cache_item_remove}
+
+
 def _confirm_phrase(*, drafts: list[Draft]) -> str | None:
     danger = [draft for draft in drafts if draft.risk is Risk.DANGER]
     if not danger:
@@ -237,7 +241,7 @@ def _drafts(*, request: ActionRequest, snapshot: Snapshot, context: PlanningCont
     tool_planner = _TOOL_PLANNERS.get(request.kind)
     if tool_planner is not None:
         return tool_planner(request=request, report=context.disk_report, which=context.which)
-    disk_planner = DISK_PLANNERS.get(request.kind)
+    disk_planner = _DISK_PLANNERS.get(request.kind)
     if disk_planner is not None:
         return disk_planner(request=request, report=context.disk_report)
     planner = _PLANNERS.get(request.kind)

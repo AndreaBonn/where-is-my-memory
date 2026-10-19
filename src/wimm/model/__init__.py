@@ -23,6 +23,9 @@ from .actions import (
     ImageFingerprint as ImageFingerprint,
 )
 from .actions import (
+    ItemFingerprint as ItemFingerprint,
+)
+from .actions import (
     Plan as Plan,
 )
 from .actions import (
@@ -39,6 +42,9 @@ from .cache_items import (
 )
 from .cache_items import (
     CacheRest as CacheRest,
+)
+from .cache_items import (
+    ItemBlob as ItemBlob,
 )
 from .disk import (
     CacheEntry as CacheEntry,

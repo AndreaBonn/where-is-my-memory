@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from types import MappingProxyType
 
+from .cache_items import ItemBlob, require_unique_blob_paths
 from .enums import ActionKind, GroupId, PlanId, Risk, TargetId, TargetShape
 from .validation import ImmutableModel, require_aware, require_bytes, require_nonnegative
 
@@ -24,6 +25,7 @@ ACTION_TARGET_SHAPES: Mapping[ActionKind, TargetShape] = MappingProxyType(
         ActionKind.CONTAINERS_PRUNE_STOPPED: TargetShape.NONE,
         ActionKind.VOLUME_REMOVE: TargetShape.TARGET,
         ActionKind.CACHE_CLEAN: TargetShape.TARGET,
+        ActionKind.CACHE_ITEM_REMOVE: TargetShape.TARGET,
         ActionKind.TRASH_EMPTY: TargetShape.NONE,
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
         ActionKind.DISK_FREE_SAFE: TargetShape.NONE,
@@ -116,6 +118,20 @@ class DirFingerprint(ImmutableModel):
     st_dev: int
 
 
+@dataclass(frozen=True, slots=True)
+class ItemFingerprint(ImmutableModel):
+    """One cache item (a model folder) and the exclusive store blobs removed with it."""
+
+    realpath: str
+    st_ino: int
+    st_dev: int
+    blobs: tuple[ItemBlob, ...] = ()
+
+    def __post_init__(self) -> None:
+        ImmutableModel.__post_init__(self)
+        require_unique_blob_paths(blobs=self.blobs)
+
+
 Fingerprint = (
     ProcessFingerprint
     | ContainerFingerprint
@@ -123,6 +139,7 @@ Fingerprint = (
     | ImageFingerprint
     | VolumeFingerprint
     | DirFingerprint
+    | ItemFingerprint
 )
 
 
@@ -144,6 +161,7 @@ ACTION_FINGERPRINT_TYPES: Mapping[ActionKind, tuple[type, ...]] = MappingProxyTy
         ActionKind.VOLUME_REMOVE: (VolumeFingerprint,),
         ActionKind.DEVDIR_DELETE: (DirFingerprint,),
         ActionKind.CACHE_CLEAN: (DirFingerprint,),
+        ActionKind.CACHE_ITEM_REMOVE: (ItemFingerprint,),
         ActionKind.TRASH_EMPTY: (DirFingerprint,),
         ActionKind.IMAGES_PRUNE_DANGLING: (type(None),),
         ActionKind.IMAGES_PRUNE_UNUSED: (type(None),),
