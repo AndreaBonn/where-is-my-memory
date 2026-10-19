@@ -9,7 +9,7 @@ from wimm.model.disk import CacheEntry, CacheKind
 from wimm.model.enums import CacheItemKind
 from wimm.ui.disk_items import ItemRowsView, item_rows
 
-SHARED_TITLE = "Condiviso fra più modelli"
+SHARED_TITLE = "Condiviso fra più elementi"
 UNATTRIBUTED_TITLE = "Non attribuito"
 
 
@@ -98,7 +98,7 @@ def test_item_rows_unattributed_explains_it_goes_with_the_whole_cache() -> None:
     view = item_rows(entry=_entry(count=1, unattributed=MB))
 
     text = view.rows[-1].subtitle
-    assert "nessun modello" in text
+    assert "nessun elemento" in text
     assert "tutta la cache" in text
 
 

@@ -29,6 +29,10 @@ class DiskRowView:
     items: tuple["DiskRowView", ...] = ()
     items_more: str | None = None
 
+    def __post_init__(self) -> None:
+        if self.items_more is not None and not self.items:
+            raise ValueError("items_more needs item sub-rows")
+
 
 @dataclass(frozen=True, slots=True)
 class SectionActionView:

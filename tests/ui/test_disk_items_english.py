@@ -13,7 +13,7 @@ MB = 1_000_000
 def test_item_rows_english_titles_and_counter() -> None:
     view = item_rows(entry=_entry(count=CACHE_ITEMS_CAP + 10, shared=MB, unattributed=MB))
 
-    assert [row.title for row in view.rows[-2:]] == ["Shared between models", "Unattributed"]
+    assert [row.title for row in view.rows[-2:]] == ["Shared between items", "Unattributed"]
     assert view.more_text == "and 10 more"
 
 
@@ -21,6 +21,14 @@ def test_item_rows_english_unattributed_sentence() -> None:
     view = item_rows(entry=_entry(count=1, unattributed=MB))
 
     assert view.rows[-1].subtitle == (
-        "Files no model links to, lock files and files at the root of the cache. "
+        "Files no item links to, lock files and files at the root of the cache. "
         "They are freed only by cleaning the whole cache."
+    )
+
+
+def test_item_rows_english_shared_sentence() -> None:
+    view = item_rows(entry=_entry(count=1, shared=MB))
+
+    assert view.rows[-1].subtitle == (
+        "Files used by more than one item: they stay as long as one of them remains."
     )

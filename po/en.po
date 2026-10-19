@@ -1725,20 +1725,20 @@ msgid "Libera {size} senza rischi"
 msgstr "Free {size} with no risk"
 
 #: src/wimm/ui/disk_texts.py:122
-msgid "Condiviso fra più modelli"
-msgstr "Shared between models"
+msgid "Condiviso fra più elementi"
+msgstr "Shared between items"
 
 #: src/wimm/ui/disk_texts.py:123
-msgid "File usati da più di un modello: restano finché ne resta uno."
-msgstr "Files used by more than one model: they stay as long as one remains."
+msgid "File usati da più di un elemento: restano finché ne resta uno."
+msgstr "Files used by more than one item: they stay as long as one of them remains."
 
 #: src/wimm/ui/disk_texts.py:124
 msgid "Non attribuito"
 msgstr "Unattributed"
 
 #: src/wimm/ui/disk_texts.py:126
-msgid "File che nessun modello usa, file di blocco e file alla radice della cache. Si liberano solo pulendo tutta la cache."
-msgstr "Files no model links to, lock files and files at the root of the cache. They are freed only by cleaning the whole cache."
+msgid "File che nessun elemento usa, file di blocco e file alla radice della cache. Si liberano solo pulendo tutta la cache."
+msgstr "Files no item links to, lock files and files at the root of the cache. They are freed only by cleaning the whole cache."
 
 #: src/wimm/ui/disk_tiers.py:18
 msgid "Cache pesanti da riscaricare"

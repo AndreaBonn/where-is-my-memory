@@ -119,10 +119,10 @@ def review_text(*, totals: DiskTotals | None) -> str:
 
 
 # Sub-rows of a cache with items (S5, S8): the two rows that no single item owns.
-SHARED_ROW_TITLE = N_("Condiviso fra più modelli")
-SHARED_ROW_TEXT = N_("File usati da più di un modello: restano finché ne resta uno.")
+SHARED_ROW_TITLE = N_("Condiviso fra più elementi")
+SHARED_ROW_TEXT = N_("File usati da più di un elemento: restano finché ne resta uno.")
 UNATTRIBUTED_ROW_TITLE = N_("Non attribuito")
 UNATTRIBUTED_ROW_TEXT = N_(
-    "File che nessun modello usa, file di blocco e file alla radice della cache. "
+    "File che nessun elemento usa, file di blocco e file alla radice della cache. "
     "Si liberano solo pulendo tutta la cache."
 )
