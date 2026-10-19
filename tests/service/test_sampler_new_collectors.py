@@ -5,7 +5,7 @@ from typing import NoReturn
 
 import pytest
 
-from tests.service.test_sampler import make_sampler
+from tests.service.sampler_helpers import make_sampler
 from wimm.model.enums import GpuVendor, Pressure
 from wimm.model.memory import GpuMemory
 from wimm.model.raw import KernelMemory, PsiSample

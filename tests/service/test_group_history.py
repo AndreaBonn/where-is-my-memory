@@ -4,8 +4,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from tests.core.helpers import group, process
+from tests.service.sampler_helpers import NOW, make_sampler
 from tests.service.service_helpers import FixedClock
-from tests.service.test_sampler import NOW, make_sampler
 from wimm.collectors import CollectorResult
 from wimm.core import constants as c
 from wimm.model.enums import GroupId

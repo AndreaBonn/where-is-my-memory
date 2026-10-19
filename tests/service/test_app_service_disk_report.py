@@ -10,13 +10,13 @@ from tests.service.app_service_disk_helpers import (
     QUICK_START_S,
     build_rig,
 )
+from tests.service.sampler_helpers import make_sampler
 from tests.service.service_helpers import (
     TIMEOUT_S,
     FakeSampler,
     spin_for,
     spin_until,
 )
-from tests.service.test_sampler import make_sampler
 from wimm.config import Config
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind

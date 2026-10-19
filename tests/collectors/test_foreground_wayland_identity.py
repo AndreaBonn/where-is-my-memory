@@ -5,7 +5,7 @@ import sys
 import pytest
 from gi.repository import GLib
 
-from tests.collectors.test_foreground_wayland import (
+from tests.collectors.foreground_wayland_helpers import (
     FOCUSED_PID,
     SHELL_PID,
     FakeProxy,

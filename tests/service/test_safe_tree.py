@@ -7,24 +7,12 @@ from typing import Any
 import pytest
 
 from tests.service.fs_fakes import fingerprint_of
+from tests.service.safe_tree_helpers import MOUNTINFO, _trash_like, tree
 from wimm.model.actions import DirFingerprint
 from wimm.service import safe_tree
 from wimm.service.errors import ControlFailed, TargetChanged
 from wimm.service.fs_controls import PsutilCwds, SubprocessRunner
 from wimm.service.safe_tree import empty_directory, parse_mountinfo, remove_directory
-
-MOUNTINFO = (
-    "36 35 98:0 /mnt1 /mnt2 rw,noatime master:1 - ext3 /dev/root rw,errors=continue\n"
-    "40 36 8:1 / /home/u/with\\040space rw - ext4 /dev/sda1 rw\n"
-    "garbage\n"
-)
-
-
-def tree(*, base: Path) -> Path:
-    (base / "a" / "b").mkdir(parents=True)
-    (base / "a" / "b" / "deep.txt").write_text("d" * 4096, encoding="utf-8")
-    (base / "top.txt").write_text("t", encoding="utf-8")
-    return base
 
 
 def test_parse_mountinfo_lists_mount_points_and_decodes_escapes() -> None:
@@ -163,13 +151,6 @@ def test_empty_directory_refuses_a_root_on_another_device_than_its_parent(
 
     assert (base / "a" / "b" / "deep.txt").exists() and (base / "top.txt").exists()
     assert empty_directory(fingerprint=fingerprint).remaining == 0
-
-
-def _trash_like(*, base: Path) -> Path:
-    for name in ("files", "info"):
-        (base / name).mkdir(parents=True)
-        (base / name / "x.txt").write_text("x" * 4096, encoding="utf-8")
-    return base
 
 
 def test_a_trash_child_listed_as_a_mount_is_skipped_and_its_content_survives(

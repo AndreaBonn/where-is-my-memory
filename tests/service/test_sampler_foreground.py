@@ -8,7 +8,7 @@ import pytest
 
 from tests.core.assemble_helpers import draft
 from tests.core.helpers import FIREFOX, process
-from tests.service.test_sampler import NOW, make_sampler
+from tests.service.sampler_helpers import NOW, make_sampler
 from wimm.collectors import CollectorResult
 from wimm.collectors.foreground import (
     DISABLED_STATE,

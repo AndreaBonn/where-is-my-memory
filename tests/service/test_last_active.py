@@ -4,7 +4,7 @@ from pathlib import Path
 
 from tests.core.assemble_helpers import container
 from tests.core.helpers import process
-from tests.service.test_sampler import NOW, make_sampler
+from tests.service.sampler_helpers import NOW, make_sampler
 from wimm.collectors import CollectorResult
 from wimm.collectors.docker_source import DockerSample
 from wimm.model.enums import ActivityState
