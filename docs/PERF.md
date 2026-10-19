@@ -182,3 +182,20 @@ Script `measure_caches.py` nella cartella temporanea di sessione. Codice `077b73
 | 2026-10-19 | baseline `077b733` | 14 | 39,8 GB | 2,36 s (2,41 / 2,05 / 2,36) | riferimento per T-6.14 (budget +15%) |
 
 Test: `make test` 3509 passati (447 deselezionati), copertura del core 99,96%. BASIS: measured.
+
+## Rimisura con gli elementi delle cache (002-disk-granular, T-6.14, 2026-10-19)
+
+Stesso script e stesso metodo di T-6.2 (`collect_caches` sulla home reale, cartella delle
+dimensioni vuota a ogni run, senza pausa, 3 run per giro). Baseline e codice nuovo misurati
+nella stessa sessione, a giri alternati (4 giri ciascuno), perché il rumore fra giri arriva a
+oltre 1 s: la baseline gira da un worktree temporaneo di `077b733` con lo stesso venv. Il
+primo run a freddo della baseline (11,02 s, cache del filesystem fredda) è escluso.
+
+| Data | Codice | Voci | Elementi | Durata (mediana di tutti i run) | Verdetto |
+|---|---|---|---|---|---|
+| 2026-10-19 | baseline `077b733` | 14 | - | 2,26 s (11 run, 2,03-3,69) | riferimento |
+| 2026-10-19 | `819f317` | 14 | 5 (HuggingFace) | 2,23 s (12 run, 2,07-3,08) | tenuta: dentro il rumore, sotto il budget +15% |
+
+Il secondo giro del listing tocca solo la cache HuggingFace (19,2 GB, 5 modelli). Sulla home
+reale: XTTS-v2 2,09 GB con i blob del magazzino, condiviso 0, non attribuito 0,3 MB.
+BASIS: measured.
