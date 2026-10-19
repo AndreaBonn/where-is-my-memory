@@ -630,3 +630,20 @@ della cache di `huggingface_hub` (UNVERIFIED, da verificare in T-6.20) conosce s
 dentro la cartella del modello: cancellerebbe i symlink e lascerebbe i GB. Inoltre `hf` e
 `huggingface_hub` non sono installati. Il blob si rimuove solo se, ricontrollato al momento
 dell'esecuzione, nessun altro symlink della cache lo raggiunge (decisione Q1=A, 2026-10-19).
+
+## Elementi delle cache e schema 5 (002-disk-granular, T-6.17)
+
+**Schema 5 (Q4=A).** Ogni voce di cache del report disco può avere `items`, la lista degli
+elementi (per ora i repo HuggingFace: `id`, `title`, `path`, `size`, `st_ino`, `st_dev`,
+`kind`), e `rest`, con i byte `shared` (raggiunti da link di due o più elementi) e
+`unattributed` (nella cache ma fuori da ogni elemento). Sono campi opzionali: una cache senza
+elementi viene scritta come prima, senza le due chiavi. `SCHEMA_VERSION` è una sola per
+snapshot e report disco e passa a 5 per tutti e due; uno snapshot o un report con schema 4
+viene rifiutato. Il modello rifiuta id duplicati e una somma di elementi e resto superiore alla
+dimensione della cache; se la misura degli elementi supera quella della cartella (cache delle
+dimensioni non aggiornata, file cambiati durante la lettura), il collector non allega elementi
+e la riga resta com'era.
+
+**Sola lettura in questo lotto.** Le sotto-righe mostrano dimensione e testo, senza azione: la
+rimozione del singolo modello arriva con L3. La riga della cache diventa espandibile e il suo
+bottone si chiama "Pulisci tutta la cache", con la stessa azione e lo stesso dialogo di prima.
