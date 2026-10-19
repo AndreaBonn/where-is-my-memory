@@ -27,3 +27,17 @@ PyGObject arrivano da apt, ADR-002): l'audit copre gli strumenti di sviluppo. I 
 apt seguono gli aggiornamenti di sicurezza di Ubuntu e restano fuori da questo controllo.
 `--no-deps --disable-pip` evita che pip provi a compilare PyGObject dagli stub; l'export è
 interamente pinnato. BASIS: measured.
+
+## Correzione del 2026-10-19
+
+Il run del 2026-10-18 era incompleto. `uvx` sceglieva Python 3.11, che non legge la
+sintassi 3.12 del progetto: bandit saltava 16 file di `src` ("syntax error while parsing
+AST") e lo segnalava solo nel riepilogo, che `-q` nasconde. Il "nessun finding" valeva
+quindi per una parte del codice. Ora `make audit` fissa l'interprete (`AUDIT_PYTHON := 3.12`).
+
+Rieseguito su tutti i file (0 saltati): un finding, B108 (Medium, confidenza Medium) su
+`src/wimm/core/constants.py`, la voce `"/tmp"` di `SYSTEM_PATH_PREFIXES`. È un falso
+positivo: la tupla elenca i prefissi che una radice di sviluppo non può avere (ADR-007),
+e l'app non apre mai un file in `/tmp` da lì. Il finding è soppresso solo su quella riga
+(`# nosec B108`, con il motivo nel commento), così B108 resta attivo nel resto del codice.
+pip-audit: "No known vulnerabilities found". `make audit` esce 0. BASIS: measured.

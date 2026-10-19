@@ -40,16 +40,19 @@ lint:
 # apt one and broke python3-docker 5.0.3 (tests/test_lockfile.py).
 BANDIT := bandit@1.9.4
 PIP_AUDIT := pip-audit@2.10.1
+# uvx picks its own default interpreter; on 3.11 bandit cannot parse the 3.12 syntax of
+# src and skips those files without failing. Pin the project's version.
+AUDIT_PYTHON := 3.12
 
 # Security scan. The runtime has no PyPI dependencies (psutil, docker and PyGObject come
 # from apt), so pip-audit covers the development group exported by uv. The export is fully
 # pinned, so pip-audit skips its own resolution (--no-deps --disable-pip): resolving would
 # build PyGObject, which only exists as a stub dependency here.
 audit:
-	uvx $(BANDIT) -c pyproject.toml -r src -q
+	uvx --python $(AUDIT_PYTHON) $(BANDIT) -c pyproject.toml -r src -q
 	@req="$$(mktemp)" && trap 'rm -f "$$req"' EXIT && \
 		uv export --no-hashes --no-emit-project > "$$req" && \
-		uvx $(PIP_AUDIT) --no-deps --disable-pip -r "$$req"
+		uvx --python $(AUDIT_PYTHON) $(PIP_AUDIT) --no-deps --disable-pip -r "$$req"
 
 # Extract every marked string into the (unversioned) template.
 pot:

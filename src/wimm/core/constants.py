@@ -41,7 +41,8 @@ SYSTEM_PATH_PREFIXES = (
     "/snap",
     "/root",
     "/srv",
-    "/tmp",
+    # A refused prefix, never a temp file the app opens: bandit B108 misreads the literal.
+    "/tmp",  # nosec B108
     # Merged-/usr links and the fsck folder: paths of the system, whatever their owner says.
     "/bin",
     "/sbin",
