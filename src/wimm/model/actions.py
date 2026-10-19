@@ -224,6 +224,9 @@ class PlanStep(ImmutableModel):
     target_label: str
     fingerprint: Fingerprint | None
     risk: Risk
+    # What this one step costs the user, in the language of the planning. Optional: a step
+    # built without it stays valid, and the executor never reads it.
+    consequences: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)

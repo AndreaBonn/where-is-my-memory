@@ -110,8 +110,10 @@ class ConfirmDialog(Adw.AlertDialog):
 
     def _build_row(self, *, entry: StepEntry) -> Adw.PreferencesRow:
         if not self._session.multiple or entry.step_id is None:
-            return Adw.ActionRow(title=entry.label, use_markup=False)
-        row = Adw.SwitchRow(title=entry.label, use_markup=False, active=True)
+            return Adw.ActionRow(title=entry.label, subtitle=entry.consequence, use_markup=False)
+        row = Adw.SwitchRow(
+            title=entry.label, subtitle=entry.consequence, use_markup=False, active=True
+        )
         row.connect("notify::active", self._on_toggled, entry.step_id)
         return row
 
@@ -162,7 +164,8 @@ class ConfirmDialog(Adw.AlertDialog):
     def _show_consequences(self, *, plan: Plan | None) -> None:
         """C3: what happens, what stays and how to restart; warning style only when risky."""
         clear_children(container=self._warning)
-        facts = () if plan is None else facts_for(plan=plan, snapshot=self._snapshot)
+        own = self._session.shows_own_consequences
+        facts = () if plan is None or own else facts_for(plan=plan, snapshot=self._snapshot)
         for title, text in facts:
             heading = Gtk.Label(label=title, xalign=0, wrap=True)
             heading.add_css_class("heading")

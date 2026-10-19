@@ -5,6 +5,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 
 from wimm.core.planning_disk import BUILD_CACHE_ID
+from wimm.core.row_consequence import join_consequences
 from wimm.i18n import N_, _
 from wimm.model.actions import (
     EXCLUDABLE_ACTIONS,
@@ -33,6 +34,7 @@ class StepEntry:
     step_id: str | None
     label: str
     group: str | None
+    consequence: str = ""
 
 
 def step_id_of(*, step: PlanStep) -> str | None:
@@ -74,6 +76,7 @@ def _selected_entries(*, plan: Plan, members: dict[str, Member]) -> tuple[StepEn
                 step_id=ids[index] if aligned else None,
                 label=entry_label(step=step, members=members),
                 group=_(RISK_TEXT[step.risk]),
+                consequence=join_consequences(consequences=step.consequences),
             ),
         )
         for index, step in enumerate(plan.steps)
@@ -118,6 +121,13 @@ class ConfirmSession:
             (plan.request.kind in EXCLUDABLE_ACTIONS or self.kind is ActionKind.DISK_FREE_SELECTED)
             and (plan.request.kind is ActionKind.STOP_ALL_IDLE_SAFE or len(plan.steps) > 1)
             and all(entry.step_id is not None for entry in entries)
+        )
+
+    @property
+    def shows_own_consequences(self) -> bool:
+        """True when a selection lists what each entry costs, so no shared box is needed."""
+        return self.kind is ActionKind.DISK_FREE_SELECTED and all(
+            entry.consequence for entry in self.entries
         )
 
     @property

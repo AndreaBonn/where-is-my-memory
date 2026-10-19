@@ -31,6 +31,15 @@ def _caption(*, text: str = "") -> Gtk.Label:
     return label
 
 
+def set_wrapping_label(*, button: Gtk.Button, text: str) -> None:
+    """Set a button label that wraps, so a long one cannot widen the header past 360 px."""
+    button.set_label(text)
+    label = button.get_child()
+    if isinstance(label, Gtk.Label):
+        label.set_wrap(True)
+        label.set_justify(Gtk.Justification.CENTER)
+
+
 def tier_heading(*, tier: str) -> Gtk.Box:
     """The title and the one-line meaning of a risk tier, above its sections."""
     title = Gtk.Label(label=_(TIER_TITLES[tier]), xalign=0, wrap=True)
@@ -82,7 +91,7 @@ class DiskHeader:
         self.select_toggle.set_name(SELECT_TOGGLE_NAME)
         self.free_selected = Gtk.Button(halign=Gtk.Align.START, visible=False, sensitive=False)
         self.free_selected.set_name(FREE_SELECTED_NAME)
-        self.free_selected.set_label(selected_label(count=0, total_bytes=0))
+        set_wrapping_label(button=self.free_selected, text=selected_label(count=0, total_bytes=0))
 
     def _layout(self) -> Gtk.Box:
         texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=HEADER_SPACING, hexpand=True)
@@ -101,7 +110,7 @@ class DiskHeader:
             label.set_label(text)
             label.set_visible(bool(text))
         self.scan_text.set_label(scan_text)
-        self.safe.set_label(safe_label)
+        set_wrapping_label(button=self.safe, text=safe_label)
         # Without the action service the button could do nothing: it is not shown at all.
         shown = bool(safe_label) and self._can_safe
         self.safe.set_visible(shown)
@@ -117,7 +126,8 @@ class DiskHeader:
         """The "Libera i selezionati (N, X)" button: shown while selecting, off with none ticked."""
         self._ticked = count
         self.free_selected.set_visible(selecting)
-        self.free_selected.set_label(selected_label(count=count, total_bytes=total_bytes))
+        label = selected_label(count=count, total_bytes=total_bytes)
+        set_wrapping_label(button=self.free_selected, text=label)
         self.free_selected.set_sensitive(count > 0 and not self._busy)
 
     def set_scanning(self, *, scanning: bool) -> None:

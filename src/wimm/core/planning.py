@@ -194,6 +194,7 @@ def _build_plan(*, request: ActionRequest, drafts: list[Draft], context: Plannin
             target_label=draft.label,
             fingerprint=draft.fingerprint,
             risk=draft.risk,
+            consequences=draft.assessed.consequences,
         )
         for order, draft in enumerate(drafts, start=1)
     )
