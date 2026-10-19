@@ -41,8 +41,16 @@ def test_cache_without_items_has_empty_items_and_zero_rest() -> None:
     assert built.rest == CacheRest(shared=0, unattributed=0)
 
 
-def test_item_kinds_cover_model_dataset_and_space() -> None:
-    assert {kind.value for kind in CacheItemKind} == {"hf_model", "hf_dataset", "hf_space"}
+def test_item_kinds_cover_every_cache_with_an_item_rule() -> None:
+    assert {kind.value for kind in CacheItemKind} == {
+        "hf_model",
+        "hf_dataset",
+        "hf_space",
+        "android_package",
+        "android_avd",
+        "playwright_browser",
+        "jetbrains_product",
+    }
 
 
 def test_duplicate_item_ids_are_rejected() -> None:

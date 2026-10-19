@@ -26,7 +26,16 @@ def test_items_sorted_by_size_descending_ties_by_id_and_not_truncated() -> None:
     assert [i.id for i in items[1:4]] == ["models--a--m00", "models--a--m01", "models--a--m02"]
 
 
-@pytest.mark.parametrize("kind", [k for k in CacheKind if k is not CacheKind.HUGGINGFACE])
+WITH_A_RULE = {
+    CacheKind.HUGGINGFACE,
+    CacheKind.ANDROID_SDK,
+    CacheKind.ANDROID_AVD,
+    CacheKind.PLAYWRIGHT,
+    CacheKind.JETBRAINS,
+}
+
+
+@pytest.mark.parametrize("kind", [k for k in CacheKind if k not in WITH_A_RULE])
 def test_kind_without_a_rule_gives_no_item(kind: CacheKind) -> None:
     items, rest = items_for(kind=kind, listing=hf_listing(), size=12345)
     assert items == ()

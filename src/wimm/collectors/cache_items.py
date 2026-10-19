@@ -12,7 +12,15 @@ from wimm.model.disk import CacheKind
 LOGGER = logging.getLogger(__name__)
 
 # Kinds whose tree is read a second time to split them into items; must match `items_for`.
-ITEM_KINDS = frozenset({CacheKind.HUGGINGFACE})
+ITEM_KINDS = frozenset(
+    {
+        CacheKind.HUGGINGFACE,
+        CacheKind.ANDROID_SDK,
+        CacheKind.ANDROID_AVD,
+        CacheKind.PLAYWRIGHT,
+        CacheKind.JETBRAINS,
+    }
+)
 BLOCK_BYTES = 512
 # Never follows a link at open time: a directory swapped for a symlink after its lstat fails.
 DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC

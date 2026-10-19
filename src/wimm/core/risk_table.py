@@ -45,6 +45,10 @@ class ConsequenceKey(StrEnum):
     CACHE_UNLISTED = "cache_unlisted"
     ITEM_HF_MODEL = "item_hf_model"
     ITEM_HF_OTHER = "item_hf_other"
+    ITEM_ANDROID_PACKAGE = "item_android_package"
+    ITEM_ANDROID_AVD = "item_android_avd"
+    ITEM_PLAYWRIGHT = "item_playwright"
+    ITEM_JETBRAINS = "item_jetbrains"
     TRASH = "trash"
     DEVDIR = "devdir"
     DEVDIR_REBUILD = "devdir_rebuild"
@@ -167,6 +171,16 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
         "Si riscarica da HuggingFace quando serve, anche diversi GB. "
         "Vengono rimossi anche i file del magazzino usati solo da questo elemento."
     ),
+    ConsequenceKey.ITEM_ANDROID_PACKAGE: N_(
+        "Il pacchetto si riscarica con sdkmanager; senza, le build che lo usano falliscono."
+    ),
+    ConsequenceKey.ITEM_ANDROID_AVD: N_(
+        "Il dispositivo virtuale e i suoi dati si perdono: app e file non si recuperano."
+    ),
+    ConsequenceKey.ITEM_PLAYWRIGHT: N_("Si riscarica con playwright install quando serve."),
+    ConsequenceKey.ITEM_JETBRAINS: N_(
+        "Impostazioni e cache di questa versione dell'IDE: gli indici si rifanno all'avvio."
+    ),
     ConsequenceKey.TRASH: N_("I file nel cestino vengono eliminati in modo definitivo."),
     ConsequenceKey.DEVDIR: N_(
         "Serve reinstallare le dipendenze (npm install o uv sync) prima di usare il progetto."
@@ -251,6 +265,10 @@ ITEM_ASSESSMENTS: dict[CacheItemKind, tuple[Risk, ConsequenceKey]] = {
     CacheItemKind.HF_MODEL: (Risk.CAUTION, ConsequenceKey.ITEM_HF_MODEL),
     CacheItemKind.HF_DATASET: (Risk.CAUTION, ConsequenceKey.ITEM_HF_OTHER),
     CacheItemKind.HF_SPACE: (Risk.CAUTION, ConsequenceKey.ITEM_HF_OTHER),
+    CacheItemKind.ANDROID_PACKAGE: (Risk.CAUTION, ConsequenceKey.ITEM_ANDROID_PACKAGE),
+    CacheItemKind.ANDROID_AVD: (Risk.DANGER, ConsequenceKey.ITEM_ANDROID_AVD),
+    CacheItemKind.PLAYWRIGHT_BROWSER: (Risk.SAFE, ConsequenceKey.ITEM_PLAYWRIGHT),
+    CacheItemKind.JETBRAINS_PRODUCT: (Risk.CAUTION, ConsequenceKey.ITEM_JETBRAINS),
 }
 UNLISTED_CACHE_ASSESSMENT = (Risk.CAUTION, ConsequenceKey.CACHE_UNLISTED)
 

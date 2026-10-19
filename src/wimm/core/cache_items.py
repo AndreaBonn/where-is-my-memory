@@ -1,5 +1,7 @@
 """The parts of one cache the user can remove on their own, and what is left over (S5-S8)."""
 
+from collections import defaultdict
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from enum import Enum
 
@@ -89,6 +91,63 @@ def _rest_for(*, items: tuple[CacheItem, ...], shared: int, size: int) -> CacheR
     return CacheRest(shared=shared, unattributed=unattributed)
 
 
+def folder_sizes(*, listing: TreeListing, folders: Collection[str]) -> tuple[dict[str, int], int]:
+    """Disk bytes each folder holds alone, and the bytes held by two or more of them.
+
+    A regular file counts for every folder that contains it; files are told apart by identity
+    (device, inode), so a hard link counts once, and one reached from several folders is
+    shared and belongs to none. Folders are paths relative to the listing root.
+    """
+    wanted = set(folders)
+    claims: dict[tuple[int, int], set[str]] = defaultdict(set)
+    sizes: dict[tuple[int, int], int] = {}
+    for entry in listing.entries:
+        if entry.type is not EntryType.FILE:
+            continue
+        parts = entry.path.split("/")[:-1]
+        owners = {"/".join(parts[:i]) for i in range(1, len(parts) + 1)} & wanted
+        if owners:
+            identity = (entry.st_dev, entry.st_ino)
+            claims[identity] |= owners
+            sizes[identity] = entry.size
+    per_folder = dict.fromkeys(wanted, 0)
+    shared = 0
+    for identity, owners in claims.items():
+        if len(owners) > 1:
+            shared += sizes[identity]
+        else:
+            per_folder[next(iter(owners))] += sizes[identity]
+    return per_folder, shared
+
+
+ItemRule = Callable[..., tuple[tuple[CacheItem, ...], int]]
+
+
+def _rule_for(kind: CacheKind) -> ItemRule | None:
+    # Imported here because the rules build on the tree types defined above.
+    if kind is CacheKind.HUGGINGFACE:
+        from .cache_items_hf import hf_items
+
+        return hf_items
+    if kind is CacheKind.ANDROID_SDK:
+        from .cache_items_android import sdk_items
+
+        return sdk_items
+    if kind is CacheKind.ANDROID_AVD:
+        from .cache_items_android import avd_items
+
+        return avd_items
+    if kind is CacheKind.PLAYWRIGHT:
+        from .cache_items_misc import playwright_items
+
+        return playwright_items
+    if kind is CacheKind.JETBRAINS:
+        from .cache_items_misc import jetbrains_items
+
+        return jetbrains_items
+    return None
+
+
 def items_for(
     kind: CacheKind, listing: TreeListing, size: int
 ) -> tuple[tuple[CacheItem, ...], CacheRest]:
@@ -97,11 +156,9 @@ def items_for(
     Kinds with no item rule give no items and an all-zero rest. Items are never truncated:
     the cap on what is shown belongs to the UI (`CACHE_ITEMS_CAP`).
     """
-    if kind is not CacheKind.HUGGINGFACE:
+    rule = _rule_for(kind)
+    if rule is None:
         return (), CacheRest()
-    # Imported here because the HuggingFace rule builds on the tree types defined above.
-    from .cache_items_hf import hf_items
-
-    found, shared = hf_items(listing=listing)
+    found, shared = rule(listing=listing)
     items = tuple(sorted(found, key=lambda item: (-item.size, item.id)))
     return items, _rest_for(items=items, shared=shared, size=size)

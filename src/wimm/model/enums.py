@@ -105,3 +105,7 @@ class CacheItemKind(Enum):
     HF_MODEL = "hf_model"
     HF_DATASET = "hf_dataset"
     HF_SPACE = "hf_space"
+    ANDROID_PACKAGE = "android_package"
+    ANDROID_AVD = "android_avd"
+    PLAYWRIGHT_BROWSER = "playwright_browser"
+    JETBRAINS_PRODUCT = "jetbrains_product"
