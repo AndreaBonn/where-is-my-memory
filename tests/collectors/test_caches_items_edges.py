@@ -1,6 +1,9 @@
 import os
 from pathlib import Path
 
+import pytest
+
+from wimm.collectors import caches
 from wimm.collectors.cache_table import read_cache_table
 from wimm.collectors.caches import collect_caches
 from wimm.model.disk import CacheEntry, CacheKind
@@ -48,3 +51,38 @@ def test_collect_caches_puts_a_cross_repo_hard_link_in_shared(tmp_path: Path) ->
     entry = _hf(home, tmp_path)
     assert {item.title: item.size for item in entry.items} == {"o/a": 0, "o/b": 0}
     assert entry.rest.shared == _size(one)
+
+
+def test_collect_caches_does_not_use_the_dirsize_cache_for_item_kinds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    home = tmp_path / "home"
+    root = _hf_root(home)
+    own = _blob(root / "models--org--a" / "blobs" / "own", 16384)
+
+    def stale(**kwargs: object) -> None:
+        raise AssertionError("an item kind is sized by its own walk")
+
+    monkeypatch.setattr(caches, "measure_dir_size", stale)
+    entry = _hf(home, tmp_path)
+    assert [item.size for item in entry.items] == [_size(own)]
+    assert entry.size == entry.items[0].size + entry.rest.unattributed
+
+
+def test_collect_caches_boundary_falls_back_to_the_plain_entry_on_value_error(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    home = tmp_path / "home"
+    root = _hf_root(home)
+    _blob(root / "models--org--a" / "blobs" / "own", 16384)
+
+    def broken(**kwargs: object) -> None:
+        raise ValueError("odd tree")
+
+    monkeypatch.setattr(caches, "items_for", broken)
+    with caplog.at_level("WARNING"):
+        entry = _hf(home, tmp_path)
+    assert entry.items == ()
+    assert (entry.rest.shared, entry.rest.unattributed) == (0, 0)
+    assert entry.size > 0
+    assert any(str(root) in record.getMessage() for record in caplog.records)

@@ -8,8 +8,12 @@ from wimm.collectors.cache_items import list_tree
 from wimm.core.cache_items import EntryType, TreeEntry
 
 
+def _noop(_seconds: float) -> None:
+    return None
+
+
 def _by_path(root: Path) -> dict[str, TreeEntry]:
-    return {entry.path: entry for entry in list_tree(root=root).entries}
+    return {entry.path: entry for entry in list_tree(root=root, sleep=_noop).entries}
 
 
 def _blocks(path: Path) -> int:
@@ -21,7 +25,7 @@ def test_list_tree_reports_files_dirs_and_links_relative_to_root(tmp_path: Path)
     (root / "a" / "b").mkdir(parents=True)
     (root / "a" / "b" / "f.bin").write_bytes(b"x" * 5000)
     (root / "a" / "link").symlink_to("b/f.bin")
-    listing = list_tree(root=root)
+    listing = list_tree(root=root, sleep=_noop)
     found = {entry.path: entry for entry in listing.entries}
     assert listing.root == str(root)
     assert set(found) == {"a", "a/b", "a/b/f.bin", "a/link"}
@@ -65,7 +69,7 @@ def test_list_tree_keeps_the_size_on_every_hard_link_with_one_shared_identity(
     root.mkdir()
     (root / "one.bin").write_bytes(b"z" * 8192)
     os.link(root / "one.bin", root / "two.bin")
-    entries = list_tree(root=root).entries
+    entries = list_tree(root=root, sleep=_noop).entries
     assert [entry.size for entry in entries] == [_blocks(root / "one.bin")] * 2
     assert entries[0].size > 0
     assert len({(entry.st_dev, entry.st_ino) for entry in entries}) == 1
@@ -82,11 +86,11 @@ def test_list_tree_skips_unreadable_directory_without_raising(
     (locked / "hidden").write_bytes(b"2")
     real_scandir = os.scandir
 
-    def scandir(path: Path) -> Iterator[os.DirEntry[str]]:
+    def scandir(fd: int) -> Iterator[os.DirEntry[str]]:
         # A permission check is not portable (root, some sandboxes read anyway): fake it.
-        if Path(path) == locked:
-            raise PermissionError(13, "Permission denied", str(path))
-        return real_scandir(path)
+        if os.readlink(f"/proc/self/fd/{fd}") == str(locked):
+            raise PermissionError(13, "Permission denied", str(locked))
+        return real_scandir(fd)
 
     monkeypatch.setattr(os, "scandir", scandir)
 
@@ -98,4 +102,4 @@ def test_list_tree_skips_unreadable_directory_without_raising(
 
 
 def test_list_tree_of_missing_root_is_empty(tmp_path: Path) -> None:
-    assert list_tree(root=tmp_path / "gone").entries == ()
+    assert list_tree(root=tmp_path / "gone", sleep=_noop).entries == ()

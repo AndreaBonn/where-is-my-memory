@@ -4,9 +4,10 @@ from pathlib import Path
 import pytest
 
 from wimm.collectors import caches
+from wimm.collectors.cache_items import list_tree
 from wimm.collectors.cache_table import read_cache_table
 from wimm.collectors.caches import collect_caches
-from wimm.collectors.dirsize import measure_dir_size
+from wimm.core.cache_items import TreeListing
 from wimm.model.disk import CacheEntry, CacheKind
 
 
@@ -113,16 +114,19 @@ def test_collect_caches_does_not_walk_kinds_without_a_rule(
     assert entry.rest.unattributed == 0
 
 
-def test_collect_caches_fails_closed_when_items_exceed_measured_size(
+def test_collect_caches_fails_closed_when_items_exceed_the_walked_size(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
     home = tmp_path / "home"
     root = _hf_root(home)
     _model(root, "org--a", own=16384)
-    real = measure_dir_size
-    small = real(root=root, cache_dir=tmp_path / "sizes", sleep=lambda _s: None)
-    stale = type(small)(size_bytes=4096, error_count=0, from_cache=True)
-    monkeypatch.setattr(caches, "measure_dir_size", lambda **kwargs: stale)
+    real = list_tree
+
+    def understated(**kwargs: object) -> TreeListing:
+        listing = real(**kwargs)  # type: ignore[arg-type]
+        return TreeListing(root=listing.root, entries=listing.entries, disk_bytes=4096)
+
+    monkeypatch.setattr(caches, "list_tree", understated)
     with caplog.at_level("WARNING"):
         entry = _collect(home, tmp_path)[CacheKind.HUGGINGFACE]
     assert entry.size == 4096

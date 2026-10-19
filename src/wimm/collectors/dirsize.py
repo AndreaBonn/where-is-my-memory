@@ -40,6 +40,14 @@ class DirSize:
     from_cache: bool
 
 
+def pace(*, count: int, sleep: Callable[[float], None]) -> None:
+    """Yield the GIL every 1,000 entries and pause 10 ms every 10,000."""
+    if count % DIRSIZE_PAUSE_EVERY == 0:
+        sleep(DIRSIZE_PAUSE_S)
+    elif count % DIRSIZE_YIELD_EVERY == 0:
+        sleep(0)
+
+
 class _Scanner:
     def __init__(self, sleep: Callable[[float], None]) -> None:
         self._sleep = sleep
@@ -50,10 +58,7 @@ class _Scanner:
 
     def _tick(self) -> None:
         self._entries += 1
-        if self._entries % DIRSIZE_PAUSE_EVERY == 0:
-            self._sleep(DIRSIZE_PAUSE_S)
-        elif self._entries % DIRSIZE_YIELD_EVERY == 0:
-            self._sleep(0)
+        pace(count=self._entries, sleep=self._sleep)
 
     def _account(self, info: os.stat_result) -> None:
         # Directories always have st_nlink > 1 but cannot be hard linked.

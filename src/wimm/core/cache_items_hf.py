@@ -27,6 +27,7 @@ REPO_ID_SEPARATOR = "--"
 OWNER_SEPARATOR = "/"
 PARENT = ".."
 HERE = "."
+MAX_LINK_HOPS = 40  # the kernel gives up after 40 links too: a cycle never resolves
 
 
 def _repo_kind(name: str) -> tuple[str, CacheItemKind] | None:
@@ -38,35 +39,64 @@ def _repo_kind(name: str) -> tuple[str, CacheItemKind] | None:
     return None
 
 
-def _inside_root(*, link: TreeEntry, root: str) -> str | None:
-    """The normalized root-relative path a link points at, or None if it leaves the root."""
-    target = link.target or ""
-    if target.startswith("/"):
-        prefix = root + "/"
-        absolute = posixpath.normpath(target)
-        if not absolute.startswith(prefix):
-            return None
-        relative = absolute[len(prefix) :]
-    else:
-        relative = posixpath.normpath(posixpath.join(posixpath.dirname(link.path), target))
-    if relative in (PARENT, HERE) or relative.startswith(PARENT + "/"):
+def _inside(*, target: str, root: str) -> list[str] | None:
+    """The components of an absolute link target below the root, or None if it is outside."""
+    prefix = root + "/"
+    if not target.startswith(prefix):
         return None
-    return relative
+    return target[len(prefix) :].split("/")
+
+
+def _target_parts(*, link: TreeEntry, root: str) -> tuple[bool, list[str]] | None:
+    """(is_absolute, components) of a link target; None for an absolute one outside the root."""
+    target = link.target or ""
+    if not target.startswith("/"):
+        return False, target.split("/")
+    parts = _inside(target=target, root=root)
+    return None if parts is None else (True, parts)
+
+
+def _step(
+    *, part: str, base: list[str], by_path: dict[str, TreeEntry]
+) -> tuple[bool, TreeEntry | None]:
+    """Walk one path component; (False, None) on leaving the root or a missing node."""
+    if part == PARENT:
+        if not base:
+            return False, None
+        base.pop()
+        return True, None
+    if part in ("", HERE):
+        return True, None
+    entry = by_path.get("/".join([*base, part]))
+    if entry is not None and entry.type is not EntryType.SYMLINK:
+        base.append(part)
+    return entry is not None, entry
 
 
 def _resolve(*, link: TreeEntry, by_path: dict[str, TreeEntry], root: str) -> str | None:
-    """Follow a link chain to a regular file inside the root; None on leaving it or a cycle."""
-    seen: set[str] = set()
-    current = link
-    while current.type is EntryType.SYMLINK:
-        if current.path in seen:
+    """Follow a link to a regular file inside the root, one component at a time.
+
+    A component that is itself a link is replaced by its target, so a path through a symlinked
+    directory is followed. Returns None on leaving the root, a missing node or a link cycle.
+    """
+    base = link.path.split("/")[:-1]
+    todo: list[str] = []
+    hops = 0
+    current: TreeEntry | None = link
+    while True:
+        if current is not None and current.type is EntryType.SYMLINK:
+            hops += 1
+            target = _target_parts(link=current, root=root)
+            if hops > MAX_LINK_HOPS or target is None:
+                return None
+            base = [] if target[0] else base
+            todo.extend(reversed(target[1]))
+            current = None
+        if not todo:
+            return current.path if current and current.type is EntryType.FILE else None
+        ok, current = _step(part=todo.pop(), base=base, by_path=by_path)
+        if not ok:
             return None
-        seen.add(current.path)
-        relative = _inside_root(link=current, root=root)
-        if relative is None or relative not in by_path:
-            return None
-        current = by_path[relative]
-    return current.path if current.type is EntryType.FILE else None
 
 
 Identity = tuple[int, int]

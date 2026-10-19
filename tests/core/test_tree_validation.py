@@ -61,3 +61,12 @@ def test_listing_paths_must_be_unique() -> None:
     entry = TreeEntry(path="a", type=FILE)
     with pytest.raises(ValueError, match="unique"):
         TreeListing(root="/r", entries=(entry, entry))
+
+
+def test_tree_listing_rejects_a_negative_disk_bytes() -> None:
+    with pytest.raises(ValueError, match="disk_bytes"):
+        TreeListing(root="/r", entries=(), disk_bytes=-1)
+
+
+def test_tree_listing_keeps_a_valid_disk_bytes() -> None:
+    assert TreeListing(root="/r", entries=(), disk_bytes=4096).disk_bytes == 4096

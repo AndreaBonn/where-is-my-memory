@@ -55,13 +55,20 @@ def _require_relative(path: str) -> None:
 
 @dataclass(frozen=True, slots=True)
 class TreeListing:
-    """The observed tree of one cache: its absolute root and every entry below it."""
+    """The observed tree of one cache: its absolute root and every entry below it.
+
+    `disk_bytes` is the disk space of the whole tree as one walk measured it, directories and
+    the root included (a directory carries no size in `entries`), so a cache is sized by the
+    same observation its items come from.
+    """
 
     root: str
     entries: tuple[TreeEntry, ...]
+    disk_bytes: int = 0
 
     def __post_init__(self) -> None:
         require_text(value=self.root, field="root")
+        require_bytes(value=self.disk_bytes, field="disk_bytes")
         if not self.root.startswith("/"):
             raise ValueError("root must be absolute")
         if type(self.entries) is not tuple:
