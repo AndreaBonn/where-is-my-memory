@@ -6,6 +6,13 @@ from typing import Any
 
 import pytest
 
+from tests.private_session import (
+    OUTER_KEY,
+    SESSION_KEY,
+    start_private_session,
+    stop_private_session,
+)
+
 ISOLATED_DIRECTORIES = {
     "HOME": "home",
     "XDG_CONFIG_HOME": "config",
@@ -94,3 +101,17 @@ def guard_removals(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[
         monkeypatch.setattr(executor_disk_fs, name, guarded(getattr(executor_disk_fs, name)))
     yield escapes
     assert escapes == [], f"executor aimed a removal outside the tmpdir: {escapes}"
+
+
+# F12: at import, not in pytest_configure. pytest imports the conftest of a test path given on
+# the command line (tests/ui imports Gtk, which opens the display and the session bus) before
+# pytest_configure runs, and always imports this parent conftest first.
+_SESSION, _OUTER = start_private_session()
+
+
+def pytest_configure(config: pytest.Config) -> None:
+    config.stash[SESSION_KEY] = _SESSION
+    config.stash[OUTER_KEY] = _OUTER
+    # A cleanup, not pytest_unconfigure: a conftest that defines that hook again must not
+    # leave the display and the bus running.
+    config.add_cleanup(lambda: stop_private_session(session=_SESSION))

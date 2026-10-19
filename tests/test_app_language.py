@@ -107,6 +107,8 @@ def test_the_real_conftest_leaves_no_language_behind_after_the_last_test(tmp_pat
         encoding="utf-8",
     )
     child_env = {key: value for key, value in os.environ.items() if key != "LANGUAGE"}
+    # The real conftest imports tests.private_session from the repository root.
+    child_env["PYTHONPATH"] = str(Path(__file__).resolve().parents[1])
     result = subprocess.run(
         [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "-o", "addopts=", "."],
         cwd=tmp_path,

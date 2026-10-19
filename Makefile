@@ -21,11 +21,12 @@ test:
 	uv run pytest -m "not integration and not ui and not dbus" $(CORE_COVERAGE)
 
 test-all:
-	dbus-run-session -- xvfb-run -a uv run pytest
+	# tests/private_session.py gives every run its own display and session bus.
+	uv run pytest
 
 perf:
 	# Same renderer the app sets for itself in wimm.app.GRAPHICS_DEFAULTS.
-	GSK_RENDERER=cairo GDK_DEBUG=gl-disable,vulkan-disable xvfb-run -a uv run pytest -m perf -s
+	GSK_RENDERER=cairo GDK_DEBUG=gl-disable,vulkan-disable uv run pytest -m perf -s
 
 lint:
 	# No cache: a stale .ruff_cache once hid an import-order error that a clean clone caught.
