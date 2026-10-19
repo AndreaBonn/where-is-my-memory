@@ -10,6 +10,9 @@ from tests.service.inspector_dbus_helpers import private_bus_address as private_
 from wimm.first_run import mark_welcomed
 
 STARTUP_TIMEOUT_S = 10
+# Only a guard against a hang, never stricter than the budget the test asserts: a 5 s guard
+# quit before the second cycle on a loaded machine and failed a run that met the 10 s budget.
+PROBE_GUARD_S = STARTUP_TIMEOUT_S - 1
 RSS_LIMIT_KIB = 120 * 1024
 BACKGROUND_PROBE = """
 import os
@@ -42,7 +45,7 @@ def started(app):
     app._service.connect('snapshot-updated', updated)
 
 application.connect('startup', started)
-GLib.timeout_add_seconds(5, lambda: application.activate_action('quit', None))
+GLib.timeout_add_seconds(GUARD_S, lambda: application.activate_action('quit', None))
 exit_code = application.run(argv=['wimm', '--background'])
 assert len(updates) == 2, f'Expected two snapshots, received {len(updates)}'
 assert observations == [(False, False)], f'Unexpected GUI imports: {observations}'
@@ -58,7 +61,7 @@ def test_background_startup_and_two_real_cycles_do_not_load_gtk(private_bus_addr
     started = monotonic()
     result = subprocess.run(
         args=[sys.executable, "-"],
-        input=BACKGROUND_PROBE,
+        input=BACKGROUND_PROBE.replace("GUARD_S", str(PROBE_GUARD_S)),
         env={
             **os.environ,
             "DBUS_SESSION_BUS_ADDRESS": private_bus_address,
