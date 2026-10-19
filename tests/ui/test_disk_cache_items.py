@@ -8,6 +8,7 @@ from tests.ui.conftest import descendants
 from wimm.model.cache_items import CacheItem, CacheRest
 from wimm.model.disk import CacheEntry, CacheKind
 from wimm.model.enums import CacheItemKind
+from wimm.ui.disk_model import DiskRowView
 from wimm.ui.disk_view import build_disk_sections
 from wimm.ui.pages.disk_rows import build_disk_row
 from wimm.ui.widgets import ACCESSIBLE_LABEL_ATTR
@@ -87,16 +88,66 @@ def test_button_says_whole_cache_only_with_items(display: None) -> None:
     with_items, buttons_a = _row(entry=_hf_entry())
     _plain, buttons_b = _row(entry=_plain_entry())
 
-    assert [b.get_label() for b in buttons_a] == ["Pulisci tutta la cache"]
+    assert [b.get_label() for b in buttons_a].count("Pulisci tutta la cache") == 1
     assert [b.get_label() for b in buttons_b] == ["Pulisci cache"]
-    assert _button_labels(widget=with_items) == ["Pulisci tutta la cache"]
+    assert _button_labels(widget=with_items).count("Pulisci tutta la cache") == 1
 
 
-def test_sub_rows_have_no_button(display: None) -> None:
+def _sub_row(*, widget: Gtk.Widget, title: str) -> Adw.ActionRow:
+    return next(r for r in _action_rows(widget=widget) if r.get_title() == title)
+
+
+def _sub_button(*, widget: Gtk.Widget, title: str) -> Gtk.Button:
+    sub = _sub_row(widget=widget, title=title)
+    return next(w for w in descendants(sub) if isinstance(w, Gtk.Button))
+
+
+def test_each_model_has_one_remove_button_and_rest_rows_none(display: None) -> None:
     widget, buttons = _row(entry=_hf_entry())
 
-    assert len(buttons) == 1  # the cache's own; sub-rows add none
-    assert len(_button_labels(widget=widget)) == 1  # expander toggle is not a Gtk.Button label
+    for index in range(5):
+        assert _button_labels(widget=_sub_row(widget=widget, title=f"org/m{index}")) == ["Rimuovi"]
+    assert _button_labels(widget=_sub_row(widget=widget, title="Non attribuito")) == []
+    assert (
+        sorted(b.get_label() or "" for b in buttons) == ["Pulisci tutta la cache"] + ["Rimuovi"] * 5
+    )
+
+
+def test_model_sub_row_shows_badge_and_consequence(display: None) -> None:
+    widget, _buttons = _row(entry=_hf_entry())
+
+    sub = _sub_row(widget=widget, title="org/m0")
+    path, consequence = (sub.get_subtitle() or "").split("\n")
+    assert path == f"{HF_PATH}/models--org--m0"
+    assert consequence
+    assert getattr(sub, ACCESSIBLE_LABEL_ATTR).endswith(consequence)
+    labels = [w.get_label() for w in descendants(sub) if isinstance(w, Gtk.Label)]
+    assert "Attenzione" in labels
+    rest = _sub_row(widget=widget, title="Non attribuito")
+    assert "Attenzione" not in [
+        w.get_label() for w in descendants(rest) if isinstance(w, Gtk.Label)
+    ]
+
+
+def test_clicking_remove_calls_on_action_with_the_sub_row(display: None) -> None:
+    sections = build_disk_sections(report=report(caches=(_hf_entry(),)), min_age_days=90)
+    row = next(r for s in sections for r in s.rows if r.subtitle == HF_PATH)
+    seen: list[DiskRowView] = []
+    widget = build_disk_row(row=row, on_action=seen.append, buttons=[])
+
+    _sub_button(widget=widget, title="org/m2").emit("clicked")
+
+    assert seen == [row.items[2]]
+    assert seen[0].target_id == "huggingface:models--org--m2"
+
+
+def test_sub_row_buttons_are_in_the_busy_list(display: None) -> None:
+    widget, buttons = _row(entry=_hf_entry())
+
+    assert _sub_button(widget=widget, title="org/m0") in buttons
+    for button in buttons:
+        button.set_sensitive(False)
+    assert not _sub_button(widget=widget, title="org/m4").get_sensitive()
 
 
 def test_expander_toggles(display: None) -> None:

@@ -3,9 +3,14 @@
 from dataclasses import dataclass
 
 from wimm.core.constants import CACHE_ITEMS_CAP
+from wimm.core.planning_cache_item import ITEM_TARGET_SEPARATOR
+from wimm.core.risk import RiskTarget
+from wimm.core.row_consequence import row_consequence
 from wimm.i18n import _
+from wimm.model.cache_items import CacheItem
 from wimm.model.disk import CacheEntry
-from wimm.ui.disk_model import DiskRowView, make_row, more_text
+from wimm.model.enums import ActionKind
+from wimm.ui.disk_model import ActionSpec, DiskRowView, make_row, more_text
 from wimm.ui.disk_texts import (
     SHARED_ROW_TEXT,
     SHARED_ROW_TITLE,
@@ -23,12 +28,17 @@ class ItemRowsView:
 
 
 def item_rows(*, entry: CacheEntry) -> ItemRowsView:
-    """Sub-rows of `entry`, no action on any (L2); empty for a cache without items."""
+    """Sub-rows of `entry`: a model can be removed, the rest rows cannot; empty without items."""
     if not entry.items:
         return ItemRowsView()
     shown = entry.items[:CACHE_ITEMS_CAP]
     rows = [
-        make_row(title=item.title, subtitle=item.path, size=item.size, action=None)
+        make_row(
+            title=item.title,
+            subtitle=item.path,
+            size=item.size,
+            action=_item_action(entry=entry, item=item),
+        )
         for item in shown
     ]
     if entry.rest.shared > 0:
@@ -47,3 +57,15 @@ def item_rows(*, entry: CacheEntry) -> ItemRowsView:
 
 def _rest_row(*, title: str, text: str, size: int) -> DiskRowView:
     return make_row(title=_(title), subtitle=_(text), size=size, action=None)
+
+
+def _item_action(*, entry: CacheEntry, item: CacheItem) -> ActionSpec:
+    """Same target and consequence text as the plan, so the row and the dialog agree."""
+    kind = ActionKind.CACHE_ITEM_REMOVE
+    target = RiskTarget(kind="cache_item", item_kind=item.kind)
+    return ActionSpec(
+        kind=kind,
+        target=target,
+        target_id=f"{entry.kind.value}{ITEM_TARGET_SEPARATOR}{item.id}",
+        consequence=row_consequence(action=kind, target=target),
+    )

@@ -54,16 +54,6 @@ def test_item_rows_five_models_and_unattributed() -> None:
     )
 
 
-def test_item_rows_have_no_action_and_no_badge() -> None:
-    view = item_rows(entry=_entry(count=2, shared=MB, unattributed=MB))
-
-    assert all(
-        (row.action_kind, row.target_id, row.risk, row.risk_text, row.risk_style)
-        == (None, None, None, None, None)
-        for row in view.rows
-    )
-
-
 def test_item_rows_cap_hides_the_rest_behind_a_counter() -> None:
     view = item_rows(entry=_entry(count=CACHE_ITEMS_CAP + 10))
 

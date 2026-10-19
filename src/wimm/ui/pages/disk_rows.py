@@ -87,7 +87,9 @@ def _action_label(*, row: DiskRowView, kind: ActionKind) -> str:
     return button_label(kind=kind)
 
 
-def _make_widget(*, row: DiskRowView) -> Adw.ActionRow | Adw.ExpanderRow:
+def _make_widget(
+    *, row: DiskRowView, on_action: RowAction | None, buttons: list[Gtk.Button] | None
+) -> Adw.ActionRow | Adw.ExpanderRow:
     """An expander (collapsed) for a cache with items, a plain row for everything else."""
     subtitle = row_subtitle(row=row)
     if not row.items:
@@ -108,7 +110,7 @@ def _make_widget(*, row: DiskRowView) -> Adw.ActionRow | Adw.ExpanderRow:
         tooltip_text=row.title,
         expanded=False,
     )
-    for child in item_children(row=row):
+    for child in item_children(row=row, on_action=on_action, buttons=buttons):
         expander.add_row(child)
     return expander
 
@@ -122,7 +124,7 @@ def build_disk_row(
     appended to ``buttons`` so the caller can disable it while an action runs. A row with
     ``items`` is an Adw.ExpanderRow whose children are those items.
     """
-    widget = _make_widget(row=row)
+    widget = _make_widget(row=row, on_action=on_action, buttons=buttons)
     name = row_accessible_name(row=row)
     widget.update_property([Gtk.AccessibleProperty.LABEL], [name])
     setattr(widget, ACCESSIBLE_LABEL_ATTR, name)  # GTK 4.14 has no getter; see widgets/__init__
