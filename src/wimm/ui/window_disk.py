@@ -48,16 +48,22 @@ class DiskBinding:
             on_section=self._section_action if acting else None,
             on_choose_folder=on_choose_folder or self._open_folders,
         )
+        if acting:
+            self.page.set_selection_handler(self._selected_action)
         if self._has_disk_scan():
-            self._handlers = [
-                source.connect(REPORT_SIGNAL, self._on_report),
-                source.connect(FAILED_SIGNAL, self._on_failed),
-                source.connect(STARTED_SIGNAL, self._on_started),
-                source.connect(SNAPSHOT_SIGNAL, self._on_snapshot),
-            ]
-            self._on_report()
-            if getattr(self._source, "disk_scanning", lambda: False)():
-                self.page.begin_scan()
+            self._connect_source()
+
+    def _connect_source(self) -> None:
+        source = self._source
+        self._handlers = [
+            source.connect(REPORT_SIGNAL, self._on_report),
+            source.connect(FAILED_SIGNAL, self._on_failed),
+            source.connect(STARTED_SIGNAL, self._on_started),
+            source.connect(SNAPSHOT_SIGNAL, self._on_snapshot),
+        ]
+        self._on_report()
+        if getattr(source, "disk_scanning", lambda: False)():
+            self.page.begin_scan()
 
     def watch_totals(self, on_totals: Callable[[DiskTotals | None], None]) -> None:
         """Hand the page's totals to ``on_totals`` now and after every report."""
@@ -88,6 +94,12 @@ class DiskBinding:
     def _section_action(self, kind: ActionKind) -> None:
         if self._start is not None:
             self._start(ActionRequest(kind=kind), None)
+
+    def _selected_action(self, entries: frozenset[str]) -> None:
+        """Plan the ticked rows as one action (S16)."""
+        if self._start is not None:
+            request = ActionRequest(kind=ActionKind.DISK_FREE_SELECTED, selected_ids=entries)
+            self._start(request, None)
 
     def _config(self) -> Any:
         config: Any = getattr(self._source, "config", None)

@@ -20,7 +20,7 @@ from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.service.errors import PlanExpired, TargetChanged
 from wimm.ui.dialogs.confirm import ConfirmDialog
 from wimm.ui.dialogs.outcome import OutcomeDialog
-from wimm.ui.dialogs.session import ConfirmSession, entries_for
+from wimm.ui.dialogs.session import CHANGED_NOTICE, ConfirmSession, entries_for
 from wimm.ui.outcome import (
     OK_STATUSES,
     StepReport,
@@ -38,6 +38,7 @@ NOTHING_SAFE_ON_DISK_TEXT = N_("Non c'è niente da liberare senza rischi sul dis
 NOTHING_LEFT_TEXTS = {
     ActionKind.STOP_ALL_IDLE_SAFE: NOTHING_TO_STOP_TEXT,
     ActionKind.DISK_FREE_SAFE: NOTHING_SAFE_ON_DISK_TEXT,
+    ActionKind.DISK_FREE_SELECTED: CHANGED_NOTICE,
 }
 REPLAN_TEXT = N_("La situazione è cambiata, ricalcolo…")
 DETAILS_LABEL = N_("Dettagli")

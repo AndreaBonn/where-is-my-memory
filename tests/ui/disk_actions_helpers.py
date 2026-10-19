@@ -79,7 +79,7 @@ def click_label(window: MainWindow, label: str) -> None:
     (button,) = [
         w
         for w in descendants(window.disk)
-        if isinstance(w, Gtk.Button) and (w.get_label() or "").startswith(label)
+        if isinstance(w, Gtk.Button) and w.get_visible() and (w.get_label() or "").startswith(label)
     ]
     button.emit("clicked")
 

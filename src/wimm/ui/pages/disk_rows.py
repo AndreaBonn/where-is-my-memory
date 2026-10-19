@@ -7,6 +7,7 @@ from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, EmptyStateView, SectionActionView
 from wimm.ui.format import button_label, cache_clean_all_label
 from wimm.ui.pages.disk_item_rows import item_children
+from wimm.ui.pages.disk_select import OwnerChecks, SelectionChecks
 from wimm.ui.widgets import ACCESSIBLE_LABEL_ATTR, color_primary
 from wimm.ui.widgets.risk_badge import make_risk_badge
 
@@ -87,57 +88,89 @@ def _action_label(*, row: DiskRowView, kind: ActionKind) -> str:
     return button_label(kind=kind)
 
 
-def _make_widget(
-    *, row: DiskRowView, on_action: RowAction | None, buttons: list[Gtk.Button] | None
-) -> Adw.ActionRow | Adw.ExpanderRow:
-    """An expander (collapsed) for a cache with items, a plain row for everything else."""
-    subtitle = row_subtitle(row=row)
-    if not row.items:
-        return Adw.ActionRow(
-            title=row.title,
-            subtitle=subtitle,
-            use_markup=False,
-            title_lines=2,
-            subtitle_lines=SUBTITLE_LINES,
-            tooltip_text=row.title,
-        )
-    expander = Adw.ExpanderRow(
+def _plain_row(*, row: DiskRowView) -> Adw.ActionRow:
+    return Adw.ActionRow(
         title=row.title,
-        subtitle=subtitle,
+        subtitle=row_subtitle(row=row),
+        use_markup=False,
+        title_lines=2,
+        subtitle_lines=SUBTITLE_LINES,
+        tooltip_text=row.title,
+    )
+
+
+def _expander_row(*, row: DiskRowView) -> Adw.ExpanderRow:
+    return Adw.ExpanderRow(
+        title=row.title,
+        subtitle=row_subtitle(row=row),
         use_markup=False,
         title_lines=2,
         subtitle_lines=SUBTITLE_LINES,
         tooltip_text=row.title,
         expanded=False,
     )
-    for child in item_children(row=row, on_action=on_action, buttons=buttons):
+
+
+def _make_widget(
+    *,
+    row: DiskRowView,
+    on_action: RowAction | None,
+    buttons: list[Gtk.Button] | None,
+    checks: OwnerChecks | None,
+) -> Adw.ActionRow | Adw.ExpanderRow:
+    """An expander (collapsed) for a cache with items, a plain row for everything else."""
+    if not row.items:
+        return _plain_row(row=row)
+    expander = _expander_row(row=row)
+    sub_checks = None if checks is None else checks.children_of
+    for child in item_children(
+        row=row, on_action=on_action, buttons=buttons, make_check=sub_checks
+    ):
         expander.add_row(child)
     return expander
 
 
+def _add_action_button(
+    *,
+    suffix: Gtk.Box,
+    row: DiskRowView,
+    on_action: RowAction | None,
+    buttons: list[Gtk.Button] | None,
+) -> None:
+    if on_action is None or row.action_kind is None or row.risk is None:
+        return
+    button = Gtk.Button(label=_action_label(row=row, kind=row.action_kind), halign=Gtk.Align.END)
+    color_primary(button=button, risk=row.risk)
+    button.connect("clicked", lambda *_a: on_action(row))
+    suffix.append(button)
+    if buttons is not None:
+        buttons.append(button)
+
+
 def build_disk_row(
-    *, row: DiskRowView, on_action: RowAction | None = None, buttons: list[Gtk.Button] | None = None
+    *,
+    row: DiskRowView,
+    on_action: RowAction | None = None,
+    buttons: list[Gtk.Button] | None = None,
+    checks: OwnerChecks | None = None,
 ) -> Adw.ActionRow | Adw.ExpanderRow:
     """One row: title, state, size, risk badge; an action button only when a callback is given.
 
     Markup is off, so names containing "&" or "<" show as typed. The action button is also
     appended to ``buttons`` so the caller can disable it while an action runs. A row with
-    ``items`` is an Adw.ExpanderRow whose children are those items.
+    ``items`` is an Adw.ExpanderRow whose children are those items. With ``checks``, a row that
+    can be selected gets its check box as prefix.
     """
-    widget = _make_widget(row=row, on_action=on_action, buttons=buttons)
+    widget = _make_widget(row=row, on_action=on_action, buttons=buttons, checks=checks)
+    check = None if checks is None else checks.make(row)
+    if check is not None:
+        widget.add_prefix(check)
     name = row_accessible_name(row=row)
     widget.update_property([Gtk.AccessibleProperty.LABEL], [name])
     setattr(widget, ACCESSIBLE_LABEL_ATTR, name)  # GTK 4.14 has no getter; see widgets/__init__
     suffix = _build_suffix(row=row)
     widget.add_suffix(suffix)
-    if on_action is not None and row.action_kind is not None and row.risk is not None:
-        label = _action_label(row=row, kind=row.action_kind)
-        button = Gtk.Button(label=label, halign=Gtk.Align.END)
-        color_primary(button=button, risk=row.risk)
-        button.connect("clicked", lambda *_a: on_action(row))
-        suffix.append(button)
-        if buttons is not None:
-            buttons.append(button)
+    _add_action_button(suffix=suffix, row=row, on_action=on_action, buttons=buttons)
     return widget
 
 
@@ -163,7 +196,12 @@ class SectionGroup:
         self._buttons: list[Gtk.Button] = []
         self._children: list[Gtk.Widget] = []
         self._shown: DiskSectionView | None = None
+        self._checks: OwnerChecks | None = None
         self.set_scanning(scanning=False)
+
+    def bind_selection(self, *, checks: SelectionChecks) -> None:
+        """Give the rows a check box each in the Seleziona mode (S16)."""
+        self._checks = checks.owned(owner=self.key)
 
     @property
     def row_count(self) -> int:
@@ -192,23 +230,33 @@ class SectionGroup:
         for child in self._children:
             self.group.remove(child)
         self._buttons = []
-        self._children = [self._actions_row(actions=section.actions)] if section.actions else []
-        self._children += [build_warning_row(text=text) for text in section.warnings]
+        if self._checks is not None:
+            self._checks.drop()
+        self._children = self._build_children(section=section)
+        for child in self._children:
+            self.group.add(child)
+        self.set_busy(busy=self._busy)
+
+    def _build_children(self, *, section: DiskSectionView) -> list[Gtk.Widget]:
+        children: list[Gtk.Widget] = (
+            [self._actions_row(actions=section.actions)] if section.actions else []
+        )
+        children += [build_warning_row(text=text) for text in section.warnings]
         if section.empty_state is not None:
-            self._children.append(
+            children.append(
                 build_empty_state_row(
                     state=section.empty_state, on_choose=self._on_choose, buttons=self._buttons
                 )
             )
-        self._children += [
-            build_disk_row(row=r, on_action=self._on_action, buttons=self._buttons)
+        children += [
+            build_disk_row(
+                row=r, on_action=self._on_action, buttons=self._buttons, checks=self._checks
+            )
             for r in section.rows
         ]
         if section.more_text:
-            self._children.append(Adw.ActionRow(title=section.more_text, use_markup=False))
-        for child in self._children:
-            self.group.add(child)
-        self.set_busy(busy=self._busy)
+            children.append(Adw.ActionRow(title=section.more_text, use_markup=False))
+        return children
 
     def set_busy(self, *, busy: bool) -> None:
         """Disable the section buttons while an action runs, like the overview does."""

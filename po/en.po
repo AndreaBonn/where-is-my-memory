@@ -1036,32 +1036,32 @@ msgstr "There is nothing to stop without risk"
 msgid "Non c'è niente da liberare senza rischi sul disco"
 msgstr "There is nothing to free on the disk without risk"
 
-#: src/wimm/ui/action_flow.py:42
+#: src/wimm/ui/action_flow.py:43
 msgid "La situazione è cambiata, ricalcolo…"
 msgstr "Things have changed, recalculating…"
 
-#: src/wimm/ui/action_flow.py:43
+#: src/wimm/ui/action_flow.py:44
 msgid "Dettagli"
 msgstr "Details"
 
-#: src/wimm/ui/action_flow.py:44 src/wimm/ui/format.py:81
+#: src/wimm/ui/action_flow.py:45 src/wimm/ui/format.py:81
 #: src/wimm/ui/format.py:82
 msgid "Riaccendi"
 msgstr "Start again"
 
-#: src/wimm/ui/action_flow.py:45
+#: src/wimm/ui/action_flow.py:46
 msgid "Copia comando di riavvio"
 msgstr "Copy restart command"
 
-#: src/wimm/ui/action_flow.py:47
+#: src/wimm/ui/action_flow.py:48
 msgid "Il comando può contenere password o token; resta copiato per un minuto."
 msgstr "The command may contain passwords or tokens; it stays copied for one minute."
 
-#: src/wimm/ui/action_flow.py:48
+#: src/wimm/ui/action_flow.py:49
 msgid "Comando copiato"
 msgstr "Command copied"
 
-#: src/wimm/ui/action_flow.py:49
+#: src/wimm/ui/action_flow.py:50
 msgid "Non riesco a copiare negli appunti"
 msgstr "Cannot copy to the clipboard"
 
@@ -1413,7 +1413,7 @@ msgstr "Folders to search"
 msgid "Percorsi di cartelle, anche fuori dalla tua cartella personale, separati da virgola"
 msgstr "Folder paths, also outside your home folder, separated by commas"
 
-#: src/wimm/ui/dialogs/session.py:25
+#: src/wimm/ui/dialogs/session.py:26
 msgid "La situazione è cambiata: chiudi e riapri per vedere l'elenco aggiornato."
 msgstr "Things have changed: close and reopen to see the updated list."
 
@@ -1501,72 +1501,76 @@ msgid "Liberare lo spazio che si ricrea da solo?"
 msgstr "Free the space that is recreated by itself?"
 
 #: src/wimm/ui/dialogs/text.py:31
+msgid "Liberare lo spazio delle voci scelte?"
+msgstr "Free the space of the chosen items?"
+
+#: src/wimm/ui/dialogs/text.py:32
 #, python-brace-format
 msgid "Riaccendere {subject}?"
 msgstr "Start {subject} again?"
 
-#: src/wimm/ui/dialogs/text.py:32
+#: src/wimm/ui/dialogs/text.py:33
 msgid "Riaccendere i contenitori appena fermati?"
 msgstr "Start the containers you just stopped again?"
 
-#: src/wimm/ui/dialogs/text.py:35
+#: src/wimm/ui/dialogs/text.py:36
 msgid "Annulla"
 msgstr "Cancel"
 
-#: src/wimm/ui/dialogs/text.py:36
+#: src/wimm/ui/dialogs/text.py:37
 msgid "Nessuna voce selezionata: non c'è nulla da eseguire."
 msgstr "No item selected: there is nothing to run."
 
-#: src/wimm/ui/dialogs/text.py:38
+#: src/wimm/ui/dialogs/text.py:39
 msgid "Ripartono come prima e tornano a usare la loro memoria."
 msgstr "They start as before and use their memory again."
 
-#: src/wimm/ui/dialogs/text.py:39
+#: src/wimm/ui/dialogs/text.py:40
 msgid "Quanto si libera non si può stimare prima."
 msgstr "How much is freed cannot be estimated beforehand."
 
-#: src/wimm/ui/dialogs/text.py:40
+#: src/wimm/ui/dialogs/text.py:41
 msgid "In tutto liberi circa"
 msgstr "In total you free about"
 
-#: src/wimm/ui/dialogs/text.py:41
+#: src/wimm/ui/dialogs/text.py:42
 msgid "Liberi circa"
 msgstr "You free about"
 
-#: src/wimm/ui/dialogs/text.py:44
+#: src/wimm/ui/dialogs/text.py:45
 msgid "questi elementi"
 msgstr "these items"
 
-#: src/wimm/ui/dialogs/text.py:46
+#: src/wimm/ui/dialogs/text.py:47
 msgid "Ti chiediamo di scrivere il nome perché questa azione cancella dati in modo definitivo: serve a evitare un clic per sbaglio."
 msgstr "We ask you to type the name because this action deletes data for good: it avoids a click by mistake."
 
-#: src/wimm/ui/dialogs/text.py:63
+#: src/wimm/ui/dialogs/text.py:64
 #, python-brace-format
 msgid "Scrivi {phrase} per confermare"
 msgstr "Type {phrase} to confirm"
 
-#: src/wimm/ui/dialogs/text.py:71
+#: src/wimm/ui/dialogs/text.py:72
 #, python-brace-format
 msgid "{prefix} {ram} di memoria e {disk} di spazio sul disco."
 msgstr "{prefix} {ram} of memory and {disk} of disk space."
 
-#: src/wimm/ui/dialogs/text.py:74
+#: src/wimm/ui/dialogs/text.py:75
 #, python-brace-format
 msgid "{prefix} {ram} di memoria."
 msgstr "{prefix} {ram} of memory."
 
-#: src/wimm/ui/dialogs/text.py:76
+#: src/wimm/ui/dialogs/text.py:77
 #, python-brace-format
 msgid "{prefix} {disk} di spazio sul disco."
 msgstr "{prefix} {disk} of disk space."
 
-#: src/wimm/ui/dialogs/text.py:84
+#: src/wimm/ui/dialogs/text.py:85
 #, python-brace-format
 msgid "Nella lista conta {listed}: il resto è di parti che non si fermano da qui."
 msgstr "The list counts {listed}: the rest belongs to parts that cannot be stopped from here."
 
-#: src/wimm/ui/dialogs/text.py:97
+#: src/wimm/ui/dialogs/text.py:98
 #, python-brace-format
 msgid "{count} voce nell'elenco"
 msgid_plural "{count} voci nell'elenco"
@@ -1655,100 +1659,109 @@ msgstr "Another {size} if you accept downloading or rebuilding again"
 msgid "{size} si liberano se accetti di riscaricare o ricostruire"
 msgstr "{size} can be freed if you accept downloading or rebuilding again"
 
-#: src/wimm/ui/disk_texts.py:24
+#: src/wimm/ui/disk_texts.py:24 src/wimm/ui/format.py:79
+msgid "Libera i selezionati"
+msgstr "Free the selected"
+
+#: src/wimm/ui/disk_texts.py:25
 msgid "Ogni bottone ti mostra prima cosa succede e chiede conferma."
 msgstr "Every button first shows you what will happen and asks for confirmation."
 
-#: src/wimm/ui/disk_texts.py:27
+#: src/wimm/ui/disk_texts.py:28
 msgid "Docker serve a far girare programmi in contenitori separati."
 msgstr "Docker runs programs in separate containers."
 
-#: src/wimm/ui/disk_texts.py:29
+#: src/wimm/ui/disk_texts.py:30
 msgid "Copie per avviare i contenitori: quelle costruite qui si ricostruiscono, non si riscaricano."
 msgstr "Copies used to start containers: the ones built here are rebuilt, not downloaded again."
 
-#: src/wimm/ui/disk_texts.py:32
+#: src/wimm/ui/disk_texts.py:33
 msgid "Copie scaricate che nessun contenitore usa: si riscaricano quando servono."
 msgstr "Downloaded copies no container uses: they are downloaded again when needed."
 
-#: src/wimm/ui/disk_texts.py:33
+#: src/wimm/ui/disk_texts.py:34
 msgid "Si ricreano, ma riscaricarle costa tempo o molti dati."
 msgstr "They come back, but downloading them again costs time or a lot of data."
 
-#: src/wimm/ui/disk_texts.py:35
+#: src/wimm/ui/disk_texts.py:36
 msgid "Modelli AI ed emulatori Android: dentro ci sono dati che non tornano uguali."
 msgstr "AI models and Android emulators: they hold data that does not come back the same."
 
-#: src/wimm/ui/disk_texts.py:37
+#: src/wimm/ui/disk_texts.py:38
 msgid "Contenitori spenti che occupano ancora un po' di spazio."
 msgstr "Stopped containers that still take up some space."
 
-#: src/wimm/ui/disk_texts.py:38
+#: src/wimm/ui/disk_texts.py:39
 msgid "Dati salvati dai contenitori, per esempio un database."
 msgstr "Data saved by containers, for example a database."
 
-#: src/wimm/ui/disk_texts.py:39
+#: src/wimm/ui/disk_texts.py:40
 msgid "Pezzi salvati per costruire i contenitori più in fretta: si ricreano."
 msgstr "Data saved to build containers faster: it is recreated."
 
-#: src/wimm/ui/disk_texts.py:40
+#: src/wimm/ui/disk_texts.py:41
 msgid "File temporanei dei programmi di sviluppo: si ricreano da soli."
 msgstr "Temporary files of development tools: they recreate themselves."
 
-#: src/wimm/ui/disk_texts.py:41
+#: src/wimm/ui/disk_texts.py:42
 msgid "Librerie scaricate per progetti vecchi: si reinstallano se riapri il progetto."
 msgstr "Libraries downloaded for old projects: they are reinstalled if you reopen the project."
 
-#: src/wimm/ui/disk_texts.py:42
+#: src/wimm/ui/disk_texts.py:43
 msgid "File che hai già cancellato: svuotandolo spariscono per sempre."
 msgstr "Files you have already deleted: emptying it removes them for good."
 
-#: src/wimm/ui/disk_texts.py:48
+#: src/wimm/ui/disk_texts.py:49
 msgid "Si libera senza pensarci"
 msgstr "Free it without a second thought"
 
-#: src/wimm/ui/disk_texts.py:49
+#: src/wimm/ui/disk_texts.py:50
 msgid "Da guardare prima"
 msgstr "Take a look first"
 
-#: src/wimm/ui/disk_texts.py:50
+#: src/wimm/ui/disk_texts.py:51
 msgid "Attenzione: cancella dati"
 msgstr "Caution: deletes data"
 
-#: src/wimm/ui/disk_texts.py:53
+#: src/wimm/ui/disk_texts.py:54
 msgid "Si ricrea da solo quando serve."
 msgstr "It recreates itself when needed."
 
-#: src/wimm/ui/disk_texts.py:54
+#: src/wimm/ui/disk_texts.py:55
 msgid "Si può riscaricare o ricreare, ma con un po' di lavoro."
 msgstr "It can be downloaded or recreated again, but it takes some work."
 
-#: src/wimm/ui/disk_texts.py:55
+#: src/wimm/ui/disk_texts.py:56
 msgid "Dentro possono esserci database o file che non si recuperano."
 msgstr "It may hold databases or files that cannot be recovered."
 
-#: src/wimm/ui/disk_texts.py:70
+#: src/wimm/ui/disk_texts.py:71
 msgid "Pulisce solo ciò che si ricrea da solo: il cestino e i tuoi dati restano."
 msgstr "Only cleans what recreates itself: the trash and your data stay."
 
-#: src/wimm/ui/disk_texts.py:100
+#: src/wimm/ui/disk_texts.py:101
 #, python-brace-format
 msgid "Libera {size} senza rischi"
 msgstr "Free {size} with no risk"
 
-#: src/wimm/ui/disk_texts.py:122
+#: src/wimm/ui/disk_texts.py:108
+#, python-brace-format
+msgid "Libera i selezionati ({count}, {size})"
+msgstr "Free the selected ({count}, {size})"
+
+#: src/wimm/ui/disk_texts.py:132
 msgid "Condiviso fra più elementi"
 msgstr "Shared between items"
 
-#: src/wimm/ui/disk_texts.py:123
+#: src/wimm/ui/disk_texts.py:133
 msgid "File usati da più di un elemento: restano finché ne resta uno."
 msgstr "Files used by more than one item: they stay as long as one of them remains."
 
-#: src/wimm/ui/disk_texts.py:124
+#: src/wimm/ui/disk_texts.py:134
 msgid "Non attribuito"
 msgstr "Unattributed"
 
-#: src/wimm/ui/disk_texts.py:126
+#: src/wimm/ui/disk_texts.py:136
 msgid "File che nessun elemento usa, file di blocco e file alla radice della cache. Si liberano solo pulendo tutta la cache."
 msgstr "Files no item links to, lock files and files at the root of the cache. They are freed only by cleaning the whole cache."
 
@@ -1764,7 +1777,7 @@ msgstr "Models and emulators"
 msgid "Immagini Docker scaricate"
 msgstr "Downloaded Docker images"
 
-#: src/wimm/ui/disk_view.py:38 src/wimm/ui/pages/disk.py:26
+#: src/wimm/ui/disk_view.py:38 src/wimm/ui/pages/disk.py:28
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
@@ -2079,10 +2092,6 @@ msgstr "Empty the trash"
 msgid "Elimina cartella"
 msgstr "Delete folder"
 
-#: src/wimm/ui/format.py:79
-msgid "Libera i selezionati"
-msgstr "Free the selected"
-
 #: src/wimm/ui/format.py:80
 msgid "Libera spazio"
 msgstr "Free up space"
@@ -2293,29 +2302,38 @@ msgstr "Freed {ram} of RAM and {disk} of disk"
 msgid "Liberati {size} di RAM"
 msgstr "Freed {size} of RAM"
 
-#: src/wimm/ui/pages/disk.py:27
+#: src/wimm/ui/pages/disk.py:29
 msgid "Il primo controllo parte poco dopo l'avvio. Puoi avviarlo con Controlla ora."
 msgstr "The first check starts shortly after launch. You can start it with Check now."
 
-#: src/wimm/ui/pages/disk.py:28
+#: src/wimm/ui/pages/disk.py:30
 msgid "Controllo in corso…"
 msgstr "Checking…"
 
-#: src/wimm/ui/pages/disk.py:29
+#: src/wimm/ui/pages/disk.py:31
 msgid "Il controllo non è riuscito: l'elenco mostra l'ultimo risultato."
 msgstr "The check failed: the list shows the last result."
 
-#: src/wimm/ui/pages/disk.py:30
+#: src/wimm/ui/pages/disk.py:32
 msgid "Il controllo non è riuscito. Riprova con Controlla ora."
 msgstr "The check failed. Try again with Check now."
 
-#: src/wimm/ui/pages/disk_header.py:13
+#: src/wimm/ui/pages/disk_header.py:19
 msgid "Controlla ora"
 msgstr "Check now"
 
-#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:159
+#: src/wimm/ui/pages/disk_header.py:21 src/wimm/ui/pages/disk_rows.py:175
 msgid "Controllo in corso"
 msgstr "Checking"
+
+#: src/wimm/ui/pages/disk_header.py:22
+msgid "Seleziona"
+msgstr "Select"
+
+#: src/wimm/ui/pages/disk_select.py:69
+#, python-brace-format
+msgid "Seleziona {name}"
+msgstr "Select {name}"
 
 #: src/wimm/ui/plain.py:10
 msgid "Lo stai usando adesso."

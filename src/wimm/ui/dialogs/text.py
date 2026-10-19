@@ -28,6 +28,7 @@ TITLES = MappingProxyType(
         ActionKind.TRASH_EMPTY: N_("Svuotare il cestino?"),
         ActionKind.DEVDIR_DELETE: N_("Eliminare la cartella {subject}?"),
         ActionKind.DISK_FREE_SAFE: N_("Liberare lo spazio che si ricrea da solo?"),
+        ActionKind.DISK_FREE_SELECTED: N_("Liberare lo spazio delle voci scelte?"),
         ActionKind.CONTAINER_START: N_("Riaccendere {subject}?"),
         ActionKind.RESTART_STOPPED: N_("Riaccendere i contenitori appena fermati?"),
     }

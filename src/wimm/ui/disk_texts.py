@@ -21,6 +21,7 @@ NOTHING_SAFE_TEXT = N_("Niente da liberare senza perdere qualcosa")
 SAFE_HEADLINE = N_("Puoi liberare {size} senza perdere niente")
 REVIEW_MORE_TEXT = N_("Altri {size} se accetti di riscaricare o ricostruire")
 REVIEW_ONLY_TEXT = N_("{size} si liberano se accetti di riscaricare o ricostruire")
+SELECTED_LABEL = N_("Libera i selezionati")
 ACTIONS_NOTE = N_("Ogni bottone ti mostra prima cosa succede e chiede conferma.")
 # D4: one sentence per section, for someone who has never heard of Docker or caches.
 SECTION_DESCRIPTIONS = {
@@ -98,6 +99,15 @@ def safe_label(*, sections: Iterable["DiskSectionView"]) -> str:
     if totals is None or totals.safe <= 0:
         return ""
     return _("Libera {size} senza rischi").format(size=format_size(size=totals.safe))
+
+
+def selected_label(*, count: int, total_bytes: int) -> str:
+    """S16: "Libera i selezionati (2, 1,2 GB)"; the plain action label while nothing is ticked."""
+    if count <= 0:
+        return _(SELECTED_LABEL)
+    return _("Libera i selezionati ({count}, {size})").format(
+        count=count, size=format_size(size=total_bytes)
+    )
 
 
 def disk_headline(*, sections: Iterable["DiskSectionView"]) -> str:

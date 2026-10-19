@@ -5,7 +5,13 @@ from collections.abc import Callable
 from gi.repository import Adw, Gtk
 
 from wimm.i18n import N_, _
-from wimm.ui.disk_texts import ACTIONS_NOTE, SAFE_CAPTION, TIER_DESCRIPTIONS, TIER_TITLES
+from wimm.ui.disk_texts import (
+    ACTIONS_NOTE,
+    SAFE_CAPTION,
+    TIER_DESCRIPTIONS,
+    TIER_TITLES,
+    selected_label,
+)
 
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
@@ -13,6 +19,9 @@ HEADER_SPACING = 2
 SCAN_LABEL = N_("Controlla ora")
 SAFE_BUTTON_NAME = "disk-free-safe"
 SCANNING_LABEL = N_("Controllo in corso")
+SELECT_LABEL = N_("Seleziona")
+SELECT_TOGGLE_NAME = "disk-select"
+FREE_SELECTED_NAME = "disk-free-selected"
 
 
 def _caption(*, text: str = "") -> Gtk.Label:
@@ -42,11 +51,7 @@ class DiskHeader:
         self.widget = Adw.Clamp(maximum_size=MAX_CONTENT_WIDTH, margin_top=PAGE_MARGIN)
         self.widget.set_margin_start(PAGE_MARGIN)
         self.widget.set_margin_end(PAGE_MARGIN)
-        self.headline = Gtk.Label(xalign=0, wrap=True, visible=False)
-        self.headline.add_css_class("title-3")
-        self.review = Gtk.Label(xalign=0, wrap=True, visible=False)
-        self.scan_text = Gtk.Label(label=waiting, xalign=0, wrap=True)
-        self.scan_text.add_css_class("dim-label")
+        self._build_texts(waiting=waiting)
         self.safe = Gtk.Button(halign=Gtk.Align.START, visible=False)
         self.safe.set_name(SAFE_BUTTON_NAME)
         self.safe.add_css_class("suggested-action")
@@ -54,16 +59,35 @@ class DiskHeader:
         if on_safe is not None:
             self.safe.connect("clicked", lambda *_a: on_safe())
         self.safe_caption = _caption(text=_(SAFE_CAPTION))
+        self._build_selection_widgets()
+        self._busy = False
+        self._ticked = 0
         self.spinner = Gtk.Spinner(visible=False)
         self.spinner.update_property([Gtk.AccessibleProperty.LABEL], [_(SCANNING_LABEL)])
         self.scan = Gtk.Button(label=_(SCAN_LABEL), valign=Gtk.Align.CENTER)
         self.scan.connect("clicked", lambda *_a: on_scan())
         self.widget.set_child(self._layout())
 
+    def _build_texts(self, *, waiting: str) -> None:
+        self.headline = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self.headline.add_css_class("title-3")
+        self.review = Gtk.Label(xalign=0, wrap=True, visible=False)
+        self.scan_text = Gtk.Label(label=waiting, xalign=0, wrap=True)
+        self.scan_text.add_css_class("dim-label")
+
+    def _build_selection_widgets(self) -> None:
+        self.select_toggle = Gtk.ToggleButton(
+            label=_(SELECT_LABEL), halign=Gtk.Align.START, visible=False
+        )
+        self.select_toggle.set_name(SELECT_TOGGLE_NAME)
+        self.free_selected = Gtk.Button(halign=Gtk.Align.START, visible=False, sensitive=False)
+        self.free_selected.set_name(FREE_SELECTED_NAME)
+        self.free_selected.set_label(selected_label(count=0, total_bytes=0))
+
     def _layout(self) -> Gtk.Box:
         texts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=HEADER_SPACING, hexpand=True)
         lines: list[Gtk.Widget] = [self.headline, self.review, self.scan_text, self.safe]
-        lines.append(self.safe_caption)
+        lines += [self.safe_caption, self.select_toggle, self.free_selected]
         for line in [*lines, _caption(text=_(ACTIONS_NOTE))]:
             texts.append(line)
         header = Gtk.Box(spacing=PAGE_MARGIN)
@@ -85,7 +109,16 @@ class DiskHeader:
 
     def set_busy(self, *, busy: bool) -> None:
         """No second plan while one runs; without the service the button stays off."""
+        self._busy = busy
         self.safe.set_sensitive(self._can_safe and not busy)
+        self.free_selected.set_sensitive(self._ticked > 0 and not busy)
+
+    def show_selection(self, *, selecting: bool, count: int, total_bytes: int) -> None:
+        """The "Libera i selezionati (N, X)" button: shown while selecting, off with none ticked."""
+        self._ticked = count
+        self.free_selected.set_visible(selecting)
+        self.free_selected.set_label(selected_label(count=count, total_bytes=total_bytes))
+        self.free_selected.set_sensitive(count > 0 and not self._busy)
 
     def set_scanning(self, *, scanning: bool) -> None:
         """Spinner on and rescan off while a scan runs."""

@@ -9,6 +9,7 @@ from wimm.i18n import N_, _
 from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import ROOTS_FINE, DiskSectionView, RootsState
+from wimm.ui.disk_selection import DiskSelection
 from wimm.ui.disk_texts import (
     TIER_TITLES,
     DiskTotals,
@@ -20,6 +21,7 @@ from wimm.ui.disk_texts import (
 from wimm.ui.disk_view import build_disk_sections, last_scan_text
 from wimm.ui.pages.disk_header import DiskHeader, tier_heading
 from wimm.ui.pages.disk_rows import RowAction, SectionAction, SectionGroup
+from wimm.ui.pages.disk_select import SelectionChecks
 
 MAX_CONTENT_WIDTH = 800
 PAGE_MARGIN = 12
@@ -46,6 +48,8 @@ class DiskPage(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self._on_rescan, self._on_action, self._on_section = on_rescan, on_action, on_section
         self._on_choose_folder = on_choose_folder
+        self._on_selected: Callable[[frozenset[str]], None] | None = None
+        self._checks = SelectionChecks(on_change=self._show_selection)
         self._busy = False
         self._scanning = False
         self._has_report = False
@@ -57,6 +61,7 @@ class DiskPage(Gtk.Box):
             on_scan=self._start_scan,
             on_safe=None if on_section is None else lambda: on_section(ActionKind.DISK_FREE_SAFE),
         )
+        self._wire_selection()
         self.append(self._header.widget)
         self._notice = Gtk.Label(xalign=0, wrap=True, visible=False)
         self._notice.add_css_class("wimm-warning")
@@ -115,6 +120,29 @@ class DiskPage(Gtk.Box):
         """Rows listed over all sections."""
         return sum(g.row_count for g in self._groups.values())
 
+    def set_selection_handler(self, on_selected: Callable[[frozenset[str]], None]) -> None:
+        """Offer the Seleziona mode; ``on_selected`` gets the ticked entries of the button."""
+        self._on_selected = on_selected
+        self._header.select_toggle.set_visible(self._has_report)
+
+    def _wire_selection(self) -> None:
+        self._header.select_toggle.connect("toggled", self._on_select_toggled)
+        self._header.free_selected.connect("clicked", self._free_selected)
+
+    def _on_select_toggled(self, toggle: Gtk.ToggleButton) -> None:
+        self._checks.set_active(active=toggle.get_active())
+
+    def _show_selection(self, selection: DiskSelection) -> None:
+        self._header.show_selection(
+            selecting=self._checks.active,
+            count=selection.count,
+            total_bytes=selection.total_bytes,
+        )
+
+    def _free_selected(self, *_args: object) -> None:
+        if self._on_selected is not None and self._checks.selection.count:
+            self._on_selected(self._checks.selection.entries)
+
     def _start_scan(self) -> None:
         # The scan state follows the service: a request that starts nothing shows nothing.
         self._on_rescan()
@@ -155,7 +183,10 @@ class DiskPage(Gtk.Box):
             scan_text=last_scan_text(report=report, now=now),
             safe_label=safe_label(sections=sections),
         )
+        self._checks.new_report()
         self._sync_groups(sections=sections)
+        self._checks.refresh()
+        self._header.select_toggle.set_visible(bool(sections) and self._on_selected is not None)
         self._set_scanning(scanning=False)
 
     def set_busy(self, *, busy: bool) -> None:
@@ -192,6 +223,8 @@ class DiskPage(Gtk.Box):
             )
             for s in sections
         }
+        for group in self._groups.values():
+            group.bind_selection(checks=self._checks)
         tier = None
         for section, group in zip(sections, self._groups.values(), strict=True):
             # The "Docker non disponibile" notice belongs to no risk tier: no title above it.
