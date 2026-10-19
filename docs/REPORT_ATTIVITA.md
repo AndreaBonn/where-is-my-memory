@@ -644,3 +644,54 @@ L'obiettivo della sessione era far capire, appena si apre l'applicazione, quanto
 Push di main, da fare solo su richiesta dell'utente.
 
 ---
+
+## 2026-10-19 | Sessione #10 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Chiusura del lotto L1 del piano `specs/002-disk-granular` (T-6.3..T-6.9), poi correzione dei finding della sua review. Tutti i commit sono su main, senza push.
+
+### Richiesta
+
+Chiudere il lotto L1: ogni riga della pagina Disco mostra in riga la conseguenza dell'azione (RF-29, decisione O1), senza dover aprire il dialogo di conferma. Poi correggere i finding della review di L1.
+
+### Azioni Eseguite
+
+**Lotto L1**
+- Le righe Disco portano la conseguenza in riga (T-6.3..T-6.9, RF-29, decisione O1).
+
+**Fix della review di L1**
+- R1 `d8d1cea`: la riga "Immagine senza nome" non mostrava nessuna conseguenza.
+- R2 `975cf63`: riga e dialogo compongono le conseguenze con una sola funzione, `join_consequences`, quindi i due testi non possono più divergere.
+- R3 `28a80fc`: il test sulla conseguenza della riga passa dal percorso reale `plan_action`, non da un piano costruito a mano.
+- R4 `79eae02` e `bc84658`: il sottotitolo della riga non ha più un limite di righe. Misurato a 360 px: con il tetto a 4 righe, 6 conseguenze uscivano troncate. Decisione dell'utente del 2026-10-19. Corretti `assets/SPECIFICHE.md` (RF-29), la spec (S4), il piano e i task.
+
+**Test**
+- `91cbc09`: il test del nome accessibile della riga chiede a GTK se `LABEL` è impostato, perché GTK 4.14 non ha un getter del valore.
+- `4f61832`: ogni tipo di cache è confrontato riga contro piano (22 test in più, tutti verdi). I testi di HuggingFace e `node_modules` sono fissati come letterali.
+
+### Verifica
+
+- Click-through sull'app reale con HOME isolata: "Scegli una cartella" apre Impostazioni avanzate su "Cartelle di sviluppo", con il focus sul campo, a 360 e 1280 px. Il click-through precedente era inconcludente perché la scansione Disco non era ancora partita.
+- Render della pagina Disco a 360 e 1280 px osservato: nessuna sovrapposizione, conseguenze intere.
+- `make lint`: pulito.
+- `make test-all`: 4039 passati, 1 saltato (misura precedente a `4f61832`, che aggiunge 22 test).
+- `make deb`: ok. `make test-deb`: OK (1.0.0), lintian senza errori.
+
+CHECKS L1: code-reviewer ESEGUITO (nessun CRITICAL né HIGH; 2 MEDIUM sui test, risolti in `4f61832`; 3 LOW aperti) | verify ESEGUITO (click-through e render a 360 e 1280 px) | a11y-gate N/A (app GTK, non HTML) | type-design-analyzer N/A (nessun tipo nuovo in L1) | /analyze ESEGUITO (1 CRITICAL: tre file di test oltre 300 righe, A1; MEDIUM A2 drift di T-6.3; LOW A3 dedup; remediation approvata dall'utente).
+
+### Limiti noti / Aperti
+
+- LOW: `planning.py` elimina i duplicati nelle conseguenze, `join_consequences` no. Riga e piano possono quindi differire se il piano ne produce di ripetute.
+- LOW: il test del ritorno a capo dipende dal font in uso.
+- LOW: il nome accessibile è verificato solo come presenza, non nel contenuto.
+- Difetto preesistente, fuori da L1: a 360 px il dialogo delle preferenze spezza le etichette sillaba per sillaba ("tocc-are", "Cart-elle").
+- `/analyze`: A1 (test oltre 300 righe), A2 (T-6.3 cita la sola prima conseguenza) e A3 (dedup) approvati per la correzione prima di L2.
+
+### Note per il Cliente
+
+Nella pagina Disco ogni voce ora dice subito che cosa succede se la si cancella, per esempio che cosa andrà riscaricato o ricostruito, senza dover aprire la finestra di conferma. La stessa frase compare nella finestra di conferma, quindi i due testi coincidono sempre. Anche sullo schermo stretto le frasi si leggono per intero. In revisione sono emersi alcuni difetti, ora corretti: una voce senza nome non mostrava nessuna spiegazione, e su schermo stretto alcune spiegazioni lunghe venivano tagliate. Restano aperti tre difetti minori, che riguardano solo i controlli automatici o un caso raro di testo ripetuto, e uno già presente prima di questo lavoro: sullo schermo più stretto le etichette della finestra delle preferenze vanno a capo spezzando le parole.
+
+### Prossimo passo
+
+Remediation A1-A3 di `/analyze`, poi lotto L2 (T-6.10).
+
+---
