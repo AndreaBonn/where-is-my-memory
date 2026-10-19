@@ -4,7 +4,14 @@ from wimm.core.risk import RiskTarget, assess_risk
 from wimm.core.risk_table import devdir_consequence
 from wimm.model.enums import ActionKind
 
-__all__ = ["row_consequence"]
+__all__ = ["CONSEQUENCE_SEPARATOR", "join_consequences", "row_consequence"]
+
+CONSEQUENCE_SEPARATOR = "\n"
+
+
+def join_consequences(*, consequences: tuple[str, ...]) -> str:
+    """Compose consequence lines the way the Disco rows and the dialog both show them."""
+    return CONSEQUENCE_SEPARATOR.join(consequences)
 
 
 def row_consequence(
@@ -26,10 +33,9 @@ def row_consequence(
     Returns
     -------
     str
-        The first consequence of the risk assessment (the devdir text names the rebuild
-        command).
+        Every consequence of the risk assessment, joined as the dialog joins them (the devdir
+        text names the rebuild command).
     """
     if action is ActionKind.DEVDIR_DELETE:
         return devdir_consequence(folder_name=folder_name, marker=marker)
-    consequences = assess_risk(target=target, action=action).consequences
-    return consequences[0] if consequences else ""
+    return join_consequences(consequences=assess_risk(target=target, action=action).consequences)

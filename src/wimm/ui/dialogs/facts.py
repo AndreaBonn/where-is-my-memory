@@ -1,5 +1,6 @@
 """C2/C3: what a confirmation says in plain words: the targets, and what happens to them."""
 
+from wimm.core.row_consequence import CONSEQUENCE_SEPARATOR, join_consequences
 from wimm.i18n import N_, _
 from wimm.model.actions import (
     ContainerFingerprint,
@@ -35,7 +36,7 @@ SHORT_ID_CHARS = 12
 KEEP_KINDS = frozenset(
     {ActionKind.PROCESS_TERMINATE, ActionKind.APP_CLOSE, ActionKind.CONTAINER_STOP}
 )
-LINE_SEPARATOR = "\n"
+LINE_SEPARATOR = CONSEQUENCE_SEPARATOR
 FIELD_SEPARATOR = " · "
 
 Fact = tuple[str, str]
@@ -114,7 +115,7 @@ def facts_for(*, plan: Plan, snapshot: Snapshot | None) -> tuple[Fact, ...]:
     """C3: "Cosa succede", then for stops "Cosa resta" and "Per riaccenderlo"."""
     facts: list[Fact] = []
     if plan.consequences:
-        facts.append((_(WHAT_TITLE), LINE_SEPARATOR.join(plan.consequences)))
+        facts.append((_(WHAT_TITLE), join_consequences(consequences=plan.consequences)))
     if {step.kind for step in plan.steps} <= KEEP_KINDS:
         facts.append((_(KEEP_TITLE), _(KEEP_TEXT)))
         restart = _restart_lines(plan=plan, members=members_by_id(snapshot=snapshot))

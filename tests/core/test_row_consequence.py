@@ -1,7 +1,7 @@
 import pytest
 
 from wimm.core.risk import RiskTarget, assess_risk
-from wimm.core.row_consequence import row_consequence
+from wimm.core.row_consequence import join_consequences, row_consequence
 from wimm.model.disk import CacheKind
 from wimm.model.enums import ActionKind
 
@@ -104,3 +104,20 @@ def test_row_consequence_dangling_image_says_it_goes_away_without_loss() -> None
         "Nessun nome punta più a questa immagine e nessun contenitore la usa: "
         "sparisce senza perdere niente."
     )
+
+
+def test_row_consequence_keeps_every_line_like_the_dialog() -> None:
+    target = RiskTarget(kind="container", is_running=True)
+
+    text = row_consequence(action=ActionKind.CONTAINER_STOP, target=target)
+
+    assert text == (
+        "Il container si ferma; dati e configurazione restano.\n"
+        "Se il container non si ferma da solo, Docker lo termina dopo 10 secondi."
+    )
+
+
+def test_join_consequences_puts_one_line_per_consequence() -> None:
+    assert join_consequences(consequences=("a", "b")) == "a\nb"
+    assert join_consequences(consequences=("only",)) == "only"
+    assert join_consequences(consequences=()) == ""
