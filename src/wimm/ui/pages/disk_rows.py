@@ -54,11 +54,15 @@ def _build_suffix(*, row: DiskRowView) -> Gtk.Box:
     suffix = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=SUFFIX_SPACING)
     suffix.set_valign(Gtk.Align.CENTER)
     info = Gtk.Box(spacing=SUFFIX_SPACING, halign=Gtk.Align.END)
-    size = Gtk.Label(label=row.size_text, valign=Gtk.Align.CENTER)
+    # F11: on one baseline. Centred, the bold size and the small badge text (baselines 15 and
+    # 14) gave the box one height without a width and another with one, and GTK warned per row.
+    size = Gtk.Label(label=row.size_text, valign=Gtk.Align.BASELINE_CENTER)
     size.add_css_class("wimm-reclaim")
     info.append(size)
     if row.risk_text is not None and row.risk_style is not None:
-        info.append(make_risk_badge(text=row.risk_text, style=row.risk_style))
+        badge = make_risk_badge(text=row.risk_text, style=row.risk_style)
+        badge.set_valign(Gtk.Align.BASELINE_CENTER)
+        info.append(badge)
     suffix.append(info)
     return suffix
 
