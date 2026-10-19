@@ -1,17 +1,21 @@
-from datetime import datetime
-
 import pytest
-from gi.repository import Adw, Gtk
+from gi.repository import Gtk
 
 from tests.ui.conftest import descendants, main_context_iterate
-from wimm.model.snapshot import Snapshot
-from wimm.ui.viewmodel import build_rows
+from tests.ui.widgets_rows_helpers import (
+    focus_is_inside,
+    labels_under,
+    member_menu,
+    member_row_named,
+    open_in_window,
+    with_first_member_memory,
+)
+from tests.ui.widgets_rows_helpers import group_row as group_row
 from wimm.ui.views import (
     GroupRow,
     MemberRow,
-    RowFilters,
 )
-from wimm.ui.widgets import icon_only_label, install_style
+from wimm.ui.widgets import icon_only_label
 from wimm.ui.widgets.context_menu import MenuTarget
 from wimm.ui.widgets.group_row import PRIMARY_ACTION_NAME, GroupRowWidget
 from wimm.ui.widgets.member_row import (
@@ -23,16 +27,6 @@ from wimm.ui.widgets.member_row import (
 
 pytestmark = pytest.mark.ui
 LONG_NAME_LENGTH = 200
-
-
-@pytest.fixture
-def group_row(display: None, snapshot: Snapshot, now: datetime) -> GroupRow:
-    install_style()
-    return build_rows(snapshot=snapshot, filters=RowFilters(), now=now)[0]
-
-
-def labels_under(widget: Gtk.Widget) -> list[Gtk.Label]:
-    return [w for w in descendants(widget) if isinstance(w, Gtk.Label)]
 
 
 def test_actionable_group_row_has_exactly_one_disabled_primary_button(group_row: GroupRow) -> None:
@@ -211,37 +205,6 @@ def test_icon_only_buttons_register_their_accessible_label(group_row: GroupRow) 
         assert button.get_tooltip_text() == icon_only_label(button=button)
 
 
-def open_in_window(widget: GroupRowWidget) -> Gtk.Window:
-    window = Gtk.Window(default_width=900, default_height=700)
-    box = Gtk.ListBox()
-    box.append(widget)
-    window.set_child(box)
-    window.present()
-    main_context_iterate()
-    return window
-
-
-def member_row_named(widget: GroupRowWidget, name: str) -> Adw.ActionRow:
-    return next(
-        w for w in descendants(widget) if isinstance(w, Adw.ActionRow) and w.get_title() == name
-    )
-
-
-def member_menu(row: Adw.ActionRow) -> Gtk.MenuButton:
-    return next(
-        w
-        for w in descendants(row)
-        if isinstance(w, Gtk.MenuButton) and w.get_icon_name() is not None
-    )
-
-
-def with_first_member_memory(group_row: GroupRow, memory: str) -> GroupRow:
-    from dataclasses import replace
-
-    first = replace(group_row.members[0], memory=memory)
-    return replace(group_row, members=(first, *group_row.members[1:]))
-
-
 def test_update_keeps_member_widgets_and_the_open_menu(group_row: GroupRow) -> None:
     widget = GroupRowWidget(row=group_row)
     window = open_in_window(widget)
@@ -259,12 +222,6 @@ def test_update_keeps_member_widgets_and_the_open_menu(group_row: GroupRow) -> N
     assert "999 MB" in (member_row.get_subtitle() or "")
     assert menu.get_active()
     window.destroy()
-
-
-def focus_is_inside(*, window: Gtk.Window, button: Gtk.MenuButton) -> bool:
-    """MenuButton hands the focus to its inner toggle, so test the button or a descendant."""
-    focus = window.get_focus()
-    return focus is not None and (focus is button or focus.is_ancestor(button))
 
 
 def test_update_keeps_the_focus_on_a_member_button(group_row: GroupRow) -> None:

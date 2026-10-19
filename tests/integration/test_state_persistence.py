@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.service.test_inspector_dbus import private_bus_address as private_bus_address
+from tests.service.inspector_dbus_helpers import private_bus_address as private_bus_address
 from wimm.first_run import mark_welcomed
 
 TIMEOUT_S = 15

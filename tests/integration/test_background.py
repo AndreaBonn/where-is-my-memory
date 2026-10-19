@@ -6,7 +6,7 @@ from time import monotonic
 
 import pytest
 
-from tests.service.test_inspector_dbus import private_bus_address as private_bus_address
+from tests.service.inspector_dbus_helpers import private_bus_address as private_bus_address
 from wimm.first_run import mark_welcomed
 
 STARTUP_TIMEOUT_S = 10

@@ -9,7 +9,7 @@ from time import monotonic, sleep
 import pytest
 from gi.repository import Gio, GLib
 
-from tests.service.test_inspector_dbus import private_bus_address as private_bus_address
+from tests.service.inspector_dbus_helpers import private_bus_address as private_bus_address
 from wimm.cli_status import EXIT_OK
 from wimm.first_run import mark_welcomed
 from wimm.model.snapshot import Snapshot

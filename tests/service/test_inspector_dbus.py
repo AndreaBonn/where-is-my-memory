@@ -1,61 +1,33 @@
 import json
 import os
-import signal
 import subprocess
 import sys
-from collections.abc import Iterator
-from dataclasses import replace
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import pytest
 from gi.repository import Gio, GLib
 
-from tests.core.assemble_helpers import build_input, draft, pair
 from tests.core.disk_helpers import MB, cache, devdir, report
 from tests.core.helpers import process
 from tests.service.dbus_helpers import stop_application, wait_for_actions
-from tests.service.test_app_service import spin_until
+from tests.service.inspector_dbus_helpers import (
+    SnapshotSource,
+    call,
+    sensitive_snapshot,
+)
+from tests.service.inspector_dbus_helpers import private_bus_address as private_bus_address
+from tests.service.inspector_dbus_helpers import private_connections as private_connections
 from wimm import __version__
-from wimm.core.assemble import assemble_snapshot
 from wimm.core.disk_wire import disk_report_from_json
-from wimm.model.disk import CacheKind, DiskReport
-from wimm.model.enums import Category
-from wimm.model.snapshot import ProcessMember, Snapshot
+from wimm.model.disk import CacheKind
+from wimm.model.snapshot import ProcessMember
 from wimm.serialize import snapshot_from_json
-from wimm.service.inspector_dbus import INTERFACE, OBJECT_PATH, Inspector
+from wimm.service.inspector_dbus import INTERFACE, Inspector
 from wimm.snapshot_redaction import redacted_snapshot_json
 
 # Allow Gio.Application startup and the first sample on a private bus.
 APP_STARTUP_TIMEOUT_S = 45
-
-
-class SnapshotSource:
-    current: Snapshot | None = None
-    report: DiskReport | None = None
-
-    def disk_report(self) -> DiskReport | None:
-        return self.report
-
-    def snapshot(self) -> Snapshot | None:
-        return self.current
-
-
-def sensitive_snapshot() -> Snapshot:
-    proc, decision = pair(20, Category.DEV_PROCESS)
-    proc = replace(
-        proc,
-        cmdline=(
-            "node",
-            "--token=abc",
-            "--password",
-            "two words",
-            "--port=8000",
-            "Authorization: Bearer abc",
-            "https://user:pass@host/x",
-        ),
-    )
-    return assemble_snapshot(inputs=build_input([draft("g", pids=(20,))], pairs=[(proc, decision)]))
 
 
 def test_snapshot_redaction_preserves_model_and_json_contract() -> None:
@@ -76,82 +48,6 @@ def test_snapshot_redaction_preserves_model_and_json_contract() -> None:
     )
     assert original.cmdline[1] == "--token=abc"
     assert process().cmdline is None
-
-
-@pytest.fixture
-def private_bus_address() -> Iterator[str]:
-    result = subprocess.run(
-        args=["/usr/bin/dbus-daemon", "--session", "--fork", "--print-address=1", "--print-pid=1"],
-        capture_output=True,
-        text=True,
-        timeout=5,
-        check=False,
-    )
-    if result.returncode:
-        pytest.skip(f"Private D-Bus unavailable: {result.stderr.strip()}")
-    address, pid = result.stdout.splitlines()
-    try:
-        yield address
-    finally:
-        os.kill(int(pid), signal.SIGTERM)
-
-
-@pytest.fixture
-def private_connections(
-    private_bus_address: str,
-) -> Iterator[tuple[Gio.DBusConnection, Gio.DBusConnection]]:
-    flags = (
-        Gio.DBusConnectionFlags.AUTHENTICATION_CLIENT
-        | Gio.DBusConnectionFlags.MESSAGE_BUS_CONNECTION
-    )
-    connections: list[Gio.DBusConnection] = []
-    try:
-        for _ in range(2):
-            connections.append(
-                Gio.DBusConnection.new_for_address_sync(
-                    address=private_bus_address,
-                    flags=flags,
-                    observer=None,
-                    cancellable=None,
-                )
-            )
-        yield connections[0], connections[1]
-    finally:
-        for connection in connections:
-            connection.close_sync(cancellable=None)
-
-
-def call(
-    connections: tuple[Gio.DBusConnection, Gio.DBusConnection],
-    method: str,
-    interface: str = INTERFACE,
-    parameters: GLib.Variant | None = None,
-) -> GLib.Variant:
-    server, client = connections
-    results: list[Any] = []
-
-    def complete(connection: Gio.DBusConnection, result: Gio.AsyncResult) -> None:
-        try:
-            results.append(connection.call_finish(result))
-        except GLib.Error as error:
-            results.append(error)
-
-    client.call(
-        bus_name=server.get_unique_name(),
-        object_path=OBJECT_PATH,
-        interface_name=interface,
-        method_name=method,
-        parameters=parameters,
-        reply_type=None,
-        flags=Gio.DBusCallFlags.NONE,
-        timeout_msec=3000,
-        cancellable=None,
-        callback=complete,
-    )
-    spin_until(predicate=lambda: bool(results))
-    if isinstance(results[0], GLib.Error):
-        raise results[0]
-    return cast(GLib.Variant, results[0])
 
 
 @pytest.mark.dbus
