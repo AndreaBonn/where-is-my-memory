@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from wimm.core.risk import RiskTarget, assess_risk
 from wimm.i18n import N_, _, decimal_separator
 from wimm.model.enums import ActionKind, Risk
-from wimm.ui.format import DISK_RISK_CONSEQUENCE, RISK_STYLE, format_size
+from wimm.ui.format import RISK_STYLE, RISK_TEXT, format_size
 
 UNKNOWN_SIZE_TEXT = N_("dimensione sconosciuta")
 
@@ -23,6 +23,7 @@ class DiskRowView:
     action_kind: ActionKind | None = None
     target_id: str | None = None
     size_bytes: int = 0
+    consequence: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,11 +79,15 @@ def more_text(*, count: int) -> str | None:
 
 @dataclass(frozen=True, slots=True)
 class ActionSpec:
-    """What a row can do: the planner's risk target, the action and the id it acts on."""
+    """What a row can do: the risk target, the action, the id it acts on, what it costs.
+
+    `consequence` is the `row_consequence` text, the same as the confirmation dialog's.
+    """
 
     kind: ActionKind
     target: RiskTarget
     target_id: str | None
+    consequence: str = ""
 
 
 def make_row(
@@ -100,9 +105,10 @@ def make_row(
         subtitle=subtitle,
         size_text=size_text,
         risk=level,
-        risk_text=_(DISK_RISK_CONSEQUENCE[level]),
+        risk_text=_(RISK_TEXT[level]),
         risk_style=RISK_STYLE[level],
         action_kind=action.kind,
         target_id=action.target_id,
         size_bytes=size or 0,
+        consequence=action.consequence,
     )

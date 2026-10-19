@@ -163,10 +163,10 @@ def test_image_rows_state_risk_and_in_use_has_no_badge() -> None:
     by_title = {row.title: row for row in rows}
     assert by_title["app:1"].risk_text is None
     assert "in uso" in by_title["app:1"].subtitle
-    assert by_title["Immagine senza nome"].risk_text == "Sicuro: si ricrea quando serve"
-    assert by_title["loc:1"].risk_text == "Attenzione: leggi prima cosa si perde"
+    assert by_title["Immagine senza nome"].risk_text == "Sicuro"
+    assert by_title["loc:1"].risk_text == "Attenzione"
     assert by_title["loc:1"].risk_style == "warning"
-    assert by_title["reg:1"].risk_text == "Sicuro: si ricrea quando serve"
+    assert by_title["reg:1"].risk_text == "Sicuro"
     assert by_title["reg:1"].size_text == "5 MB"
 
 
@@ -184,7 +184,7 @@ def test_volume_rows_unknown_size_and_missing_created_at() -> None:
         sections=build_disk_sections(report=report(docker=docker), min_age_days=MIN_AGE)
     )["volumes"].rows
     by_title = {row.title: row for row in rows}
-    assert by_title["ok"].risk_text == "Pericolo: cancella dati"
+    assert by_title["ok"].risk_text == "Pericolo"
     assert by_title["ok"].risk_style == "error"
     assert by_title["nosize"].size_text == "dimensione sconosciuta"
     assert by_title["nodate"].risk_text is None
@@ -208,12 +208,12 @@ def test_containers_and_build_cache_rows() -> None:
     container = by_key["containers"]
     assert container.rows[0].title == "ctr-a"
     assert container.rows[0].subtitle == "fermo"
-    assert container.rows[0].risk_text == "Attenzione: leggi prima cosa si perde"
+    assert container.rows[0].risk_text == "Attenzione"
     assert container.more_text == "e altre 3"
     build = by_key["build_cache"].rows[0]
     assert build.size_text == "10 MB"
     assert "4 MB" in build.subtitle
-    assert build.risk_text == "Sicuro: si ricrea quando serve"
+    assert build.risk_text == "Sicuro"
 
 
 def test_build_cache_with_nothing_to_reclaim_has_no_badge() -> None:
@@ -254,9 +254,9 @@ def test_caches_and_trash_are_separate_sections() -> None:
         sections=build_disk_sections(report=report(caches=caches), min_age_days=MIN_AGE)
     )
     assert [row.title for row in by_key["caches"].rows] == ["uv"]
-    assert by_key["caches"].rows[0].risk_text == "Sicuro: si ricrea quando serve"
+    assert by_key["caches"].rows[0].risk_text == "Sicuro"
     assert by_key["trash"].rows[0].size_text == "9 MB"
-    assert by_key["trash"].rows[0].risk_text == "Pericolo: cancella dati"
+    assert by_key["trash"].rows[0].risk_text == "Pericolo"
 
 
 def test_every_cache_type_has_a_title_and_the_badge_of_its_own_risk() -> None:
@@ -274,7 +274,7 @@ def test_every_cache_type_has_a_title_and_the_badge_of_its_own_risk() -> None:
     assert (rows["Maven"].risk_text or "").startswith("Attenzione")
     assert (rows["Gradle"].risk_text or "").startswith("Sicuro")
     assert rows["Cargo (pacchetti)"].action_kind is ActionKind.CACHE_CLEAN
-    assert rows["Modelli ollama"].risk_text == "Pericolo: cancella dati"
+    assert rows["Modelli ollama"].risk_text == "Pericolo"
     assert (rows["SDK Android"].risk_text or "").startswith("Attenzione")
 
 

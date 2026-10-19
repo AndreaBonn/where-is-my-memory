@@ -128,7 +128,7 @@ def test_image_rows_describe_their_state_in_english() -> None:
     assert unnamed.subtitle == "not in use · unnamed · built locally · id " + "a" * 12
     assert used.subtitle == "used by a container"
     # A dangling image can be recreated, the one in use has no button at all.
-    assert unnamed.risk_text == "Safe: it recreates itself when needed"
+    assert unnamed.risk_text == "Safe"
     assert used.risk_text is None
 
 
