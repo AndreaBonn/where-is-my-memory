@@ -76,6 +76,20 @@ class Bus:
             flags=Gio.DBusSignalFlags.NONE,
             callback=collect,
         )
+        # signal_subscribe sends AddMatch without waiting: a signal from the other connection
+        # could reach the daemon first and be lost. The daemon handles one connection's
+        # messages in order, so once this round trip returns the match is in place.
+        self.client.call_sync(
+            bus_name="org.freedesktop.DBus",
+            object_path="/org/freedesktop/DBus",
+            interface_name="org.freedesktop.DBus.Peer",
+            method_name="Ping",
+            parameters=None,
+            reply_type=None,
+            flags=Gio.DBusCallFlags.NONE,
+            timeout_msec=CALL_TIMEOUT_MS,
+            cancellable=None,
+        )
         return received
 
 
