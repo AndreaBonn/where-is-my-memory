@@ -27,12 +27,18 @@ from wimm.model.enums import ActionKind
 
 from .control_protocols import StepOutcome, StepStatus, failed_outcome
 from .errors import CacheIsLink, ControlFailed, InvalidRequest, ProtectedTarget, TargetChanged
+from .executor_cache_item import check_cache_item, run_cache_item
 from .fs_controls import DiskFsControl
 from .safe_tree import TreeRemoval, empty_directory, remove_directory
 
 LOGGER = logging.getLogger(__name__)
 DISK_FS_KINDS = frozenset(
-    {ActionKind.CACHE_CLEAN, ActionKind.TRASH_EMPTY, ActionKind.DEVDIR_DELETE}
+    {
+        ActionKind.CACHE_CLEAN,
+        ActionKind.TRASH_EMPTY,
+        ActionKind.DEVDIR_DELETE,
+        ActionKind.CACHE_ITEM_REMOVE,
+    }
 )
 
 
@@ -158,6 +164,8 @@ def _check_cache(*, step: PlanStep, control: DiskFsControl) -> bool:
 
 def check_disk_fs(*, step: PlanStep, control: DiskFsControl) -> bool:
     """Raise if the step must not run now; True if its folder is there, False if gone."""
+    if step.kind is ActionKind.CACHE_ITEM_REMOVE:
+        return check_cache_item(step=step, control=control)
     if step.kind is ActionKind.DEVDIR_DELETE:
         return _check_devdir(fingerprint=_fingerprint(step=step), control=control)
     return _check_cache(step=step, control=control)
@@ -241,6 +249,8 @@ def _run_cache(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
 
 
 def _run_removal(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
+    if step.kind is ActionKind.CACHE_ITEM_REMOVE:
+        return run_cache_item(step=step, control=control)
     fingerprint = _fingerprint(step=step)
     mounts = control.mounts()
     if step.kind is ActionKind.DEVDIR_DELETE:

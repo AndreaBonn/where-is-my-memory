@@ -147,6 +147,7 @@ EXEMPT = {
         "build cache",
     },
     "service/executor_disk_docker.py": {"tags left alone, now on another image: {}"},
+    "service/executor_cache_item.py": {"{} store file(s) kept: no longer used only by this model"},
     "service/executor_disk_fs.py": {"{} entries left in {} (first: {})", "mount point skipped"},
     "service/executor_docker.py": {
         "container no longer exists",
