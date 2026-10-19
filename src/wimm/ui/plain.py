@@ -47,6 +47,17 @@ PROCESS_NAMES = (
     # The git status daemon of the zsh prompt (powerlevel10k): one per open terminal.
     ("gitstatusd", N_("Stato git del terminale")),
 )
+# F10: programs that come back by themselves, and how; measured on gitstatusd 2026-10-19,
+# whose zsh does not restart it while a new terminal starts its own.
+PROCESS_RESTARTS = (
+    (
+        "gitstatusd",
+        N_(
+            "Lo stato git del terminale: riparte da solo nei terminali che apri dopo; "
+            "in quelli già aperti torna quando li riapri."
+        ),
+    ),
+)
 NAME_SEPARATORS = "-_."
 
 
@@ -86,10 +97,22 @@ def friendly_container_name(*, image: str) -> str | None:
 
 def friendly_process_name(*, name: str) -> str | None:
     """The name of use of a process from its name, None for unknown or generic names."""
+    head = _name_head(name=name)
+    return next((_(label) for key, label in PROCESS_NAMES if head == key), None)
+
+
+def restart_hint(*, name: str) -> str | None:
+    """F10: how a program that restarts by itself comes back; None for the others."""
+    head = _name_head(name=name)
+    return next((_(text) for key, text in PROCESS_RESTARTS if head == key), None)
+
+
+def _name_head(*, name: str) -> str:
+    """The part of a name before any separator: gitstatusd-linux-x86_64 gives gitstatusd."""
     head = name.lower()
     for separator in NAME_SEPARATORS:
         head = head.split(separator, 1)[0]
-    return next((_(label) for key, label in PROCESS_NAMES if head == key), None)
+    return head
 
 
 def group_title(*, group: Group) -> str:

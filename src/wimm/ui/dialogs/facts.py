@@ -11,7 +11,12 @@ from wimm.model.actions import (
 from wimm.model.enums import ActionKind
 from wimm.model.snapshot import Member, ProcessMember, Snapshot
 from wimm.ui.format import format_size
-from wimm.ui.plain import friendly_container_name, friendly_process_name, titled_name
+from wimm.ui.plain import (
+    friendly_container_name,
+    friendly_process_name,
+    restart_hint,
+    titled_name,
+)
 
 WHAT_TITLE = N_("Cosa succede")
 KEEP_TITLE = N_("Cosa resta")
@@ -93,8 +98,12 @@ def _restart_lines(*, plan: Plan, members: dict[str, Member]) -> list[str]:
         if step.kind is ActionKind.PROCESS_TERMINATE
         and isinstance(step.fingerprint, ProcessFingerprint)
     ]
-    if processes:
-        cwd = _shared_cwd(members=processes)
+    hints = [restart_hint(name=m.name) if isinstance(m, ProcessMember) else None for m in processes]
+    # One line per program that comes back by itself, however many copies stop.
+    lines.extend(dict.fromkeys(hint for hint in hints if hint is not None))
+    plain = [member for member, hint in zip(processes, hints, strict=True) if hint is None]
+    if plain:
+        cwd = _shared_cwd(members=plain)
         lines.append(_(PROCESS_RESTART).format(cwd=cwd) if cwd else _(PROCESS_RESTART_NO_CWD))
     if ActionKind.APP_CLOSE in kinds:
         lines.append(_(APP_RESTART))

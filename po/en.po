@@ -1049,44 +1049,44 @@ msgstr "Command copied"
 msgid "Non riesco a copiare negli appunti"
 msgstr "Cannot copy to the clipboard"
 
-#: src/wimm/ui/dialogs/facts.py:16
+#: src/wimm/ui/dialogs/facts.py:21
 msgid "Cosa succede"
 msgstr "What happens"
 
-#: src/wimm/ui/dialogs/facts.py:17
+#: src/wimm/ui/dialogs/facts.py:22
 msgid "Cosa resta"
 msgstr "What stays"
 
-#: src/wimm/ui/dialogs/facts.py:18
+#: src/wimm/ui/dialogs/facts.py:23
 msgid "Per riaccenderlo"
 msgstr "To start it again"
 
-#: src/wimm/ui/dialogs/facts.py:19
+#: src/wimm/ui/dialogs/facts.py:24
 msgid "I file salvati, i dati e le impostazioni."
 msgstr "Saved files, data and settings."
 
-#: src/wimm/ui/dialogs/facts.py:21
+#: src/wimm/ui/dialogs/facts.py:26
 msgid "I contenitori: con «Riaccendi» nel messaggio che compare dopo, se tutto va a buon fine."
 msgstr "Containers: with \"Start again\" in the message that appears afterwards, if all goes well."
 
-#: src/wimm/ui/dialogs/facts.py:23
+#: src/wimm/ui/dialogs/facts.py:28
 #, python-brace-format
 msgid "I programmi del terminale: con lo stesso comando, nella cartella {cwd}."
 msgstr "Terminal programs: with the same command, in the folder {cwd}."
 
-#: src/wimm/ui/dialogs/facts.py:24
+#: src/wimm/ui/dialogs/facts.py:29
 msgid "I programmi del terminale: con lo stesso comando di prima."
 msgstr "Terminal programs: with the same command as before."
 
-#: src/wimm/ui/dialogs/facts.py:25
+#: src/wimm/ui/dialogs/facts.py:30
 msgid "Le applicazioni: dal menu delle applicazioni, come al solito."
 msgstr "Applications: from the applications menu, as usual."
 
-#: src/wimm/ui/dialogs/facts.py:26 src/wimm/ui/disk_view_docker.py:155
+#: src/wimm/ui/dialogs/facts.py:31 src/wimm/ui/disk_view_docker.py:155
 msgid "Cache di build Docker"
 msgstr "Docker build cache"
 
-#: src/wimm/ui/dialogs/facts.py:27
+#: src/wimm/ui/dialogs/facts.py:32
 #, python-brace-format
 msgid "Immagine senza nome ({short})"
 msgstr "Unnamed image ({short})"
@@ -2367,12 +2367,16 @@ msgstr "Kubernetes connection"
 msgid "Stato git del terminale"
 msgstr "Terminal git status"
 
-#: src/wimm/ui/plain.py:67
+#: src/wimm/ui/plain.py:56
+msgid "Lo stato git del terminale: riparte da solo nei terminali che apri dopo; in quelli già aperti torna quando li riapri."
+msgstr "The terminal's git status: it starts again by itself in terminals you open later; in the ones already open it comes back when you reopen them."
+
+#: src/wimm/ui/plain.py:78
 #, python-brace-format
 msgid "Non lo usi da almeno {span}{tail}"
 msgstr "You haven't used it for at least {span}{tail}"
 
-#: src/wimm/ui/plain.py:68
+#: src/wimm/ui/plain.py:79
 #, python-brace-format
 msgid "Non lo usi da {span}{tail}"
 msgstr "You haven't used it for {span}{tail}"
