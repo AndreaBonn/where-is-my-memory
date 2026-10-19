@@ -795,3 +795,50 @@ Nella pagina Disco ogni modello HuggingFace ha ora il bottone "Rimuovi". La fine
 Lotto L6 (selezione multipla), poi L4 e L5.
 
 ---
+
+## 2026-10-19 | Sessione #13 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Lotto L6 del piano `specs/002-disk-granular`: selezione multipla nella pagina Disco (T-6.26..T-6.29), con la review di chiusura. Tutti i commit sono su main; il repository non ha un remote.
+
+### Richiesta
+
+Realizzare il lotto L6: nella pagina Disco si possono spuntare più voci e liberarle in un'unica operazione, con un solo dialogo di conferma che mostra la conseguenza di ciascuna voce.
+
+### Azioni Eseguite
+
+**Lotto L6**
+- T-6.26 e T-6.27 `00399c2`: azione `DISK_FREE_SELECTED` e relativo planner, che riusa i planner delle singole voci. Rifiuta le voci di classe Pericolo (decisione Q3=A) e una cache intera selezionata insieme a un suo elemento.
+- T-6.28 `7710930`: stato puro della selezione, senza dipendenze dall'interfaccia.
+- T-6.29 `ff578cd`: modalità "Seleziona" con le caselle sulle righe, bottone "Libera i selezionati (N, X GB)" e dialogo raggruppato per rischio, nel quale ogni voce si può togliere prima di confermare.
+
+**Correzioni emerse dal click-through e dalla review**
+- F28 `03271c7`: ogni voce del dialogo mostra la propria conseguenza (S16).
+- F29 `03271c7`: a 360 px il bottone "Controlla ora" usciva dal bordo dell'intestazione della pagina Disco.
+- F30 HIGH `63c326d`: dopo "Libera i selezionati" il servizio non rimisurava il disco, quindi le righe liberate restavano spuntate sul report vecchio. Ora la misura viene rifatta subito.
+- F31 LOW scartato: una selezione può contenere immagini Docker, quindi la lettura dei motori serve e non va eliminata.
+
+**Test a tempo**
+- `2d41cb9`: il probe del test di avvio in background chiudeva dopo 5 secondi fissi, più severo del budget di 10 secondi che il test verifica. La guardia ora è a 9 secondi e il budget resta invariato.
+
+### Verifica
+
+- Click-through sull'app reale con un hub finto in una HOME isolata: spuntati due modelli, bottone "Libera i selezionati (2, 9 MB)", dialogo sotto "Attenzione", una voce tolta, conferma. È stato rimosso solo l'altro modello; dopo la nuova misura la riga sparisce e il bottone si azzera. Render controllati a 1280 e 360 px.
+- `make lint`: pulito.
+- `make test-all`: 4376 passati, 1 saltato.
+
+CHECKS L6: code-reviewer ESEGUITO (1 HIGH corretto, 1 LOW scartato) | verify ESEGUITO (click-through della selezione a 360 e 1280 px) | a11y-gate N/A (UI GTK, non HTML) | /analyze N/A (nessun cambio a spec o piano in L6).
+
+### Limiti noti / Aperti
+
+- F15 MEDIUM: il test sul budget CPU della scansione dei processi (`test_processes`) è instabile sotto carico pesante. La decisione sulla soglia è lasciata all'utente.
+- F24 e F25 LOW (parked): restano come descritti nella sessione #12.
+
+### Note per il Cliente
+
+Nella pagina Disco si possono ora spuntare più voci insieme e liberarle con un solo comando. Prima di confermare, una finestra elenca le voci raggruppate per livello di rischio, spiega che cosa succede a ciascuna e permette di toglierne qualcuna dalla selezione. Le voci classificate come pericolose non si possono selezionare, e una cache intera non si può scegliere insieme a un suo elemento. Nella prova con due modelli di test, togliendone uno dalla finestra e confermando, è stato rimosso solo l'altro; subito dopo la riga è sparita dall'elenco e il bottone si è azzerato. Durante la revisione è emerso un difetto serio: dopo la liberazione l'elenco non si aggiornava e le voci già rimosse restavano spuntate. È stato corretto. Resta aperto un controllo automatico che a volte fallisce quando il computer è molto occupato, senza effetto sull'uso dell'app.
+
+### Prossimo passo
+
+Lotto L4 (Android SDK, AVD, Playwright, JetBrains), poi L5.
+
+---
