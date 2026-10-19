@@ -96,6 +96,9 @@ def test_denied_memory_preserves_rss(tmp_path: Path) -> None:
 
 
 @pytest.mark.integration
+# CPU time also inflates under contention (1.62 s at load 26 on 16 cores, 918 processes):
+# like the other budgets it runs on a quiet machine with make perf (decision 2026-10-19).
+@pytest.mark.perf
 def test_real_user_process_scan_under_budget(caplog: pytest.LogCaptureFixture) -> None:
     own_cgroup = collect_process_cgroup(pid=os.getpid()).data
     if own_cgroup is not None and is_docker_scope(path=own_cgroup):
