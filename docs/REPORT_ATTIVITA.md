@@ -586,3 +586,61 @@ I controlli automatici dell'applicazione ora coprono quasi tutto il codice (dal 
 Push di main, da fare solo su richiesta dell'utente.
 
 ---
+
+## 2026-10-18/19 | Sessione #9 [FIX]
+
+Progetto: where-is-my-memory (comando `wimm`). Audit della schermata iniziale rispetto allo scopo dell'app, poi correzione dei finding uno alla volta. Tutti i commit sono su main, senza push.
+
+### Richiesta
+
+L'utente ha chiesto se, ad app aperta, si capisce facilmente quanto spazio si libera davvero senza perdere dati e cosa si sta chiudendo ("il mio vero scopo è esattamente questo"). L'audit ha prodotto i finding F1-F12; l'utente ha chiesto di correggerli uno alla volta.
+
+### Azioni Eseguite
+
+**Panoramica**
+- `7311ef7` (feat, ui): in cima alla Panoramica compare la frase "Puoi liberare X senza perdere niente", che somma memoria e disco sicuro. Sotto ci sono un pulsante "Libera X di memoria", un pulsante per il disco sicuro, un collegamento alla pagina Disco e la riga "Altri Y se accetti di riscaricare o ricostruire". Prima del primo controllo del disco la frase dice che conta solo la memoria. Soluzione scelta dall'utente tra le proposte, con l'opzione "Due pulsanti".
+
+**Pagina Disco e Docker**
+- `d3f75ec` (F1): le immagini Docker costruite in locale venivano trattate come scaricate, perché con lo store containerd anche le build locali hanno un digest. La provenienza ora si legge da `Identity.Pull` di `GET /images/{id}/json` (API Docker 1.53 o successiva). Un'ispezione fallita conta come build locale. Budget di 30 s.
+- `59bd992` (F4 e resto di F7): ogni riga della pagina Disco sta nella fascia del suo rischio. Maven e SDK Android vanno in "Da guardare prima", i modelli ollama e gli emulatori in "Attenzione: cancella dati", le immagini scaricate in "Si libera senza pensarci". I pulsanti cumulativi seguono le righe. Le immagini fissate per digest mostrano il nome. Le cartelle di dipendenze si leggono "progetto · node_modules". Specifica aggiornata (§5.3, §10.2).
+- `bb3e8f8` (docker): un container rimosso mentre l'app legge l'elenco faceva risultare Docker "non raggiungibile" per un intero ciclo, perché docker-py solleva `NotFound`. Ora il container viene saltato (`ignore_removed=True`), anche nell'elenco dei progetti compose. Trovato dal controllo di fine turno, con un container rimosso da un'altra suite in parallelo.
+
+**Nomi e testi dei dialoghi**
+- `f738da3` (F8): nei dialoghi le cache hanno lo stesso nome della pagina Disco, non il nome della cartella.
+- `a72ed02` (F7): i programmi noti si chiamano col nome d'uso, per esempio "Stato git del terminale (gitstatusd-linux-x86_64)", anche quando il gruppo ha più copie. Il dialogo di un programma di sviluppo che non è un server dice "Il programma si ferma." invece di "Il server si ferma.". Un progetto che si chiama come un programma noto tiene il suo nome.
+- `21bd2ef` (F9): il finding come scritto era un errore di lettura. I processi gitstatusd sono 24, per 12 MB in tutto, coerenti ovunque; nel dialogo erano visibili solo 4 righe di un elenco a scorrimento. Il difetto vero era un altro: il dialogo non diceva quante voci contiene. Ora mostra "N voci nell'elenco" sopra la lista, da 2 voci in su.
+- `e5f183a` (F10): per gitstatusd il dialogo diceva di riaccenderlo "con lo stesso comando, nella cartella /". Misurato in una zsh privata: dopo lo stop la shell non lo riavvia (nemmeno dopo 4 prompt), mentre un terminale nuovo ne avvia uno suo. Il dialogo ora dice "Lo stato git del terminale: riparte da solo nei terminali che apri dopo; in quelli già aperti torna quando li riapri." La frase compare una volta, per quanti processi si fermino.
+
+**Elenco "Da liberare" e inattività**
+- `f3c67f1` (F5a): "Da liberare" elenca solo i gruppi inattivi che hanno un'azione disponibile; conteggi e ordinamento sono coerenti.
+- `1bf64c2` (F5b): un container con data di creazione sconosciuta conserva il tempo di inattività salvato dopo un riavvio dell'app.
+
+**Test**
+- `71e7387`: i test del riavvio e degli appunti non dipendono più dai tempi.
+- `81af4ba` (F12): un `uv run pytest` senza opzioni, quello del controllo di fine turno, apriva finestre GTK sul desktop dell'utente, scriveva nei suoi appunti e si registrava sul suo bus di sessione. Ora ogni esecuzione crea un display Xvfb e un dbus-daemon privati, avviati al caricamento di `tests/conftest.py` e non in `pytest_configure`, che arriva dopo l'import di GTK nei test dell'interfaccia (un test ha mostrato GTK aprire ":1"). I due server terminano con pytest anche se viene ucciso con SIGKILL (`PR_SET_PDEATHSIG`). Il bus riceve display, home e cartelle XDG private, così anche il servizio di accessibilità che attiva resta isolato. `make test-all` e `make perf` non usano più `xvfb-run` e `dbus-run-session`.
+
+### Verifica
+
+- `uv run pytest -x`: 3941 test passati.
+- `make test-all`: 3941 passati.
+- `make test`: 3504 passati, copertura core 99,96%.
+- `make lint`: pulito.
+- Ogni correzione è passata dal `code-reviewer`.
+- Le modifiche all'interfaccia sono state osservate sull'app vera, con i dati reali, a 1280 e 375 px.
+
+### Limiti noti / Aperti
+
+- **F11 (bassa), aperto:** all'arrivo del report del disco GTK scrive circa 90 avvisi sulle altezze minime dei widget. Erano già presenti a inizio sessione. A schermo la pagina è composta bene.
+- Dopo aver spento alcune voci nel dialogo, la riga "N voci nell'elenco" conta le righe, non quelle selezionate.
+- Il testo di gitstatusd non dice esplicitamente che nei terminali già aperti il prompt resta senza stato git.
+- Ogni esecuzione di pytest paga circa 0,3 s per avviare display e bus.
+
+### Note per il Cliente
+
+L'obiettivo della sessione era far capire, appena si apre l'applicazione, quanto spazio si può liberare senza perdere nulla e che cosa verrebbe chiuso. Ora la prima schermata lo dice con una frase e due pulsanti: uno libera la memoria, l'altro il disco che si può svuotare senza rischi. Sotto indica anche quanto si potrebbe recuperare in più accettando di riscaricare o ricostruire qualcosa. Le voci del disco sono ordinate in base al rischio reale (per esempio i modelli ollama e gli emulatori sono ora segnalati come cancellazione di dati), i programmi hanno nomi comprensibili e i messaggi di conferma spiegano che cosa succede dopo, per esempio che lo stato git di un terminale torna da solo nei terminali nuovi. Sono stati corretti anche alcuni errori: un'immagine creata in locale veniva scambiata per una scaricata, e un container Docker rimosso al momento sbagliato faceva credere che Docker fosse irraggiungibile. Infine, i controlli automatici non disturbano più il computer di chi sviluppa: prima aprivano finestre e toccavano gli appunti, ora lavorano in un ambiente isolato. Resta aperto un difetto minore, che non si vede a schermo.
+
+### Prossimo passo
+
+Push di main, da fare solo su richiesta dell'utente.
+
+---
