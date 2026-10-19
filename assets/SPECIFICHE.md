@@ -105,13 +105,14 @@ Ogni requisito ha un ID citabile nei test e nei commit.
 
 - **RF-20** Azioni su processi: termina (SIGTERM all'albero del processo), forza chiusura (SIGKILL) offerta solo se dopo il timeout il processo è ancora vivo.
 - **RF-21** Azioni su container: ferma, rimuovi (solo se fermo, senza volumi), ferma progetto compose, rimuovi progetto compose senza volumi, rimuovi progetto compose con volumi (rischio `danger`).
-- **RF-22** Azioni su disco: rimuovi immagine inutilizzata, rimuovi immagini dangling, rimuovi tutte le immagini inutilizzate, svuota build cache, rimuovi container fermi, rimuovi volume orfano, pulisci cache uv/npm/pip, svuota cestino, elimina le cartelle di dipendenze ricostruibili della §7.6 di un progetto inattivo.
+- **RF-22** Azioni su disco: rimuovi immagine inutilizzata, rimuovi immagini dangling, rimuovi tutte le immagini inutilizzate, svuota build cache, rimuovi container fermi, rimuovi volume orfano, pulisci cache uv/npm/pip, svuota cestino, elimina le cartelle di dipendenze ricostruibili della §7.6 di un progetto inattivo. Azione `cache_item_remove` (RF-51): rimuovi un singolo elemento di una cache (un modello HuggingFace, un pacchetto dell'Android SDK, un dispositivo AVD, un browser di Playwright, un prodotto JetBrains, un modello ollama), con il comando del tool quando esiste e con una cancellazione controllata altrimenti.
 - **RF-23** Azione di gruppo: "Ferma tutto il gruppo", che compone le azioni dei membri in un solo piano.
 - **RF-24** Azione multipla: "Ferma tutti i gruppi inattivi sicuri", che include solo gruppi `idle` e azioni `safe`.
 - **RF-25** Nessuna azione parte senza un'anteprima che mostra bersagli, conseguenze, rischio e recupero stimato. Le conferme crescono col rischio (sezione 8.3).
 - **RF-26** Dopo l'esecuzione il pannello mostra l'esito per bersaglio e la memoria o il disco effettivamente liberati (differenza misurata, non stima).
 - **RF-27** Un gruppo si può "ignorare" (escluso da notifiche e da "recuperabile ora") o "silenziare" per un tempo (1 h, 24 h, 7 giorni).
 - **RF-28** Nessuna azione è disponibile su entità `protected`. Il pulsante non esiste: non è disabilitato, è assente, e la riga dice perché.
+- **RF-29** Spiegazione in riga (decisione O1, 2026-10-19). Ogni riga della vista Disco che ha un'azione mostra come sottotitolo il percorso o la descrizione e, su una riga sotto, la conseguenza dell'azione: il testo è identico al "Cosa succede" del dialogo di conferma della stessa riga (lo produce una sola funzione pura, usata da riga e da piano). Il badge è corto: Sicuro, Attenzione, Pericolo. Vale per cache, cestino, immagini, container fermi, volumi, build cache, cartelle di dipendenze e sotto-elementi di RF-51. Una riga senza azione non ha la seconda riga. Il sottotitolo arriva a 4 righe e a 360 px non si sovrappone a titolo, dimensione, badge e bottone.
 
 ### Notifiche
 
@@ -131,6 +132,23 @@ Ogni requisito ha un ID citabile nei test e nei commit.
 ### Impostazioni
 
 - **RF-50** Preferenze modificabili dal pannello: finestra di osservazione, soglia di notifica, soglia minima di recuperabile, soglie di pressione, intervallo di campionamento, radici da scansionare per le cartelle di dipendenze, età minima delle cartelle, notifiche attive per categoria, lista dei gruppi ignorati.
+
+### Disco granulare
+
+- **RF-51** Elementi delle cache (decisione O3, 2026-10-19). La riga di una cache con contenuti distinguibili si espande e mostra un sotto-elemento per elemento, ordinato per dimensione decrescente, con titolo, dimensione, conseguenza, badge e azione "Rimuovi"; al massimo 50 sotto-righe più "e altre N". La pulizia della cache intera resta, con il bottone "Pulisci tutta la cache". L'elemento di HuggingFace (`models--*`, `datasets--*`, `spaces--*`) vale la somma dei suoi file più i blob del magazzino `blobs/` raggiunti **solo** dai suoi symlink; un symlink il cui bersaglio esce dalla cache non conta. Gli elementi per cache sono questi, le altre cache restano righe semplici:
+
+  | Cache | Elemento | Rimozione | Rischio |
+  |---|---|---|---|
+  | huggingface | repo `models--*`, `datasets--*`, `spaces--*` e blob esclusivi | cancellazione controllata della cartella e dei blob esclusivi, ricalcolati all'esecuzione (Q1=A) | caution |
+  | ollama (home e servizio di sistema) | modello, `<nome>:<tag>` | `ollama rm`, richiede il server attivo (Q2=A) | danger |
+  | android_sdk | pacchetto (`platforms;android-35`, `build-tools;35.0.0`, ...) | `sdkmanager --sdk_root=<cache> --uninstall <id>`, solo con il tool; mai `cmdline-tools` né `licenses` | caution |
+  | android_avd | dispositivo (`<nome>.avd` e `<nome>.ini`) | `avdmanager delete avd -n <nome>`, rifiutato se l'emulatore è in esecuzione | danger |
+  | playwright | browser (`chromium-<rev>`, `firefox-<rev>`, `webkit-<rev>`, `ffmpeg-<rev>`) | cancellazione controllata della cartella | safe |
+  | jetbrains | cartella prodotto-versione (`PyCharm2025.1`) | cancellazione controllata della cartella | caution |
+
+  Nessun elemento per Maven (Q4=A), Gradle, uv, pip, npm, pnpm, yarn, bun, conda, cargo, go, miniature e cestino. Il report disco passa a `SCHEMA_VERSION` 5: ogni cache porta `items` e `rest`.
+- **RF-52** "Condiviso fra più modelli" e "Non attribuito". I blob del magazzino raggiunti da symlink di due o più elementi compaiono nella sotto-riga "Condiviso fra più modelli" e non nella dimensione di nessun elemento. I byte fuori da ogni elemento (blob senza riferimenti, `.locks`, file alla radice) compaiono nella sotto-riga "Non attribuito", con una frase che dice cosa contiene e che si libera solo con "Pulisci tutta la cache"; le due sotto-righe non hanno azione propria. La somma di elementi, condiviso e non attribuito è uguale alla dimensione della cache.
+- **RF-53** Selezione multipla ("Libera i selezionati"). La modalità "Seleziona" mette una casella su ogni riga e sotto-riga con azione; il bottone "Libera i selezionati (N, X GB)" apre **un** dialogo con le voci raggruppate per rischio, il totale stimato, la conseguenza di ciascuna e la possibilità di togliere singole voci (§8.3). Il livello di conferma è quello della voce più rischiosa. Le voci `danger` non hanno la casella (Q3=A): si rimuovono una per volta con la frase digitata. Selezionare una cache intera toglie la selezione dei suoi elementi e viceversa. La selezione non sopravvive a un nuovo report; un elemento sparito o cambiato è segnalato nel dialogo invece di essere confermato. "Libera spazio" resta il massivo senza perdite: prende solo voci `safe`.
 
 ---
 
@@ -540,6 +558,7 @@ La protezione si ricontrolla nell'executor anche se il piano l'ha già esclusa: 
 - `caution`: come sopra, con le conseguenze in un riquadro di avviso e il pulsante in stile `destructive-action`.
 - `danger`: come `caution`, più un `Adw.EntryRow` "Scrivi `<nome>` per confermare"; il pulsante si abilita solo quando il testo coincide. Il servizio ricontrolla la frase (`ConfirmationMismatch`).
 - Azioni multiple (RF-24): un solo dialogo con l'elenco raggruppato, il totale stimato e la possibilità di togliere singole voci prima di confermare.
+- Selezione multipla (RF-53): un solo dialogo "Libera i selezionati", con le voci raggruppate per rischio (prima `safe`, poi `caution`), la conseguenza di ciascuna, il totale stimato e la possibilità di togliere singole voci prima di confermare. Il livello del dialogo è quello della voce più rischiosa; le voci `danger` non sono selezionabili (Q3=A) e non compaiono, quindi non serve la frase digitata.
 
 ### 8.4 Esecuzione
 
@@ -890,6 +909,70 @@ Ogni fase si chiude con `make lint` e `make test` verdi e con il proprio `verify
 - **T-5.3** Azioni disco (8.4) con validazioni sulle cartelle. verify: test che rifiuta un path fuori dalle radici, un symlink, un nome diverso da `node_modules`/`.venv`; integrazione su immagine `alpine` taggata dal test.
 - **T-5.4** Vista Disco nella finestra. verify: click-through su ogni tipo di riga con un bersaglio di test.
 - **T-5.5** (opzionale) `collectors/foreground.py` per X11 (7.8). verify: un'app tenuta in background per una finestra di test passa a `idle`; su Wayland la funzione risulta disattivata.
+
+### Fase 6 - Disco granulare (usabile: ogni riga spiega cosa si perde, le cache si aprono per elemento, si libera più di una voce con un solo dialogo)
+
+Piano e requisiti in `specs/002-disk-granular/` (`plan.md`, `spec.md`, `tasks.md`); questa specifica prevale. Decisioni dell'utente del 2026-10-19: **O1** (la conseguenza è il sottotitolo della riga, il badge si riduce a Sicuro, Attenzione, Pericolo), **O3** (le cache si espandono per elemento, con una voce "Non attribuito" per i byte fuori dagli elementi), **Q1=A** (i blob esclusivi del magazzino HuggingFace si rimuovono con il modello, ricontrollati all'esecuzione), **Q2=A** (ollama anche come servizio di sistema, via `ollama list` e `ollama rm`), **Q3=A** (le voci `danger` non sono selezionabili nella selezione multipla), **Q4=A** (nessun elemento per Maven in questa fase). Ordine di esecuzione: L0, L1, L2, L3, L6, L4, L5; ogni lotto è rilasciabile da solo. Lo schema del report passa da 4 a 5 (RF-51, RF-52). T-6.1 è l'aggiornamento di questa specifica.
+
+**Lotto L0: specifica e baseline**
+
+- **T-6.2** Baseline: numero di test (`make test`), durata della scansione disco sulla home reale; voce DEVIATIONS "HuggingFace: rimozione per elemento senza il comando del tool" (assunzione del plan). verify: riga baseline in `docs/PERF.md` con comando e condizioni.
+
+**Lotto L1: spiegazione in riga (O1)**
+
+- **T-6.3** `core/row_consequence.py`: `row_consequence(kind, target, marker)` puro, testo = prima conseguenza di `assess_risk` o `devdir_consequence`. verify: `tests/core/test_row_consequence.py` parametrico su ogni `CacheKind`, devdir con e senza marker, immagine locale e da registry.
+- **T-6.4** Il planner usa `row_consequence` per cache e devdir (stesso testo del dialogo); `planning_disk.py` resta <= 290 righe. verify: test esistenti verdi; `test_plan_cache_clean_consequence_matches_row_consequence`.
+- **T-6.5** `DiskRowView.consequence`; `make_row` riceve il testo e usa `RISK_TEXT` per il badge. verify: `tests/ui/test_disk_model.py::test_make_row_badge_is_the_short_risk_text` + caso appaiato riga senza azione.
+- **T-6.6** Righe di cache, cestino, devdir (`disk_view.py`) e Docker (`disk_view_docker.py`) passano la conseguenza. verify: `tests/ui/test_disk_view.py::test_cache_row_subtitle_carries_the_dialog_consequence` e una riga per tipo.
+- **T-6.7** Rimozione di `DISK_RISK_CONSEQUENCE` se orfano; `make po`, traduzioni. verify: `grep -rn DISK_RISK_CONSEQUENCE src` vuoto; `make lint`.
+- **T-6.8** GTK: sottotitolo percorso + conseguenza su righe separate, `subtitle_lines=4`, nome accessibile con la conseguenza. verify: test `-m ui` sul nome accessibile; render osservato a 360 e 1280 px senza sovrapposizioni; click-through di un bottone per sezione.
+- **T-6.9** Chiusura L1: `code-reviewer`, riga `CHECKS:`, REPORT_ATTIVITA. verify: `make lint && make test` verdi, test > baseline.
+
+**Lotto L2: elementi delle cache in sola lettura (O3)**
+
+- **T-6.10** `model/cache_items.py`: `CacheItem`, `CacheRest`; `CacheEntry.items`/`rest` opzionali; `disk_wire` (`OPTIONAL_FIELDS`), `SCHEMA_VERSION` 5, XML D-Bus. verify: `tests/core/test_disk_wire.py` round-trip con elementi; schema 4 rifiutato; validazione: somma <= size.
+- **T-6.11** `core/cache_items.py`: `TreeListing` (nomi, tipi, dimensioni, target dei link), dispatch per tipo, `CACHE_ITEMS_CAP`=50, ordinamento, resto = size meno elementi. verify: `tests/core/test_cache_items.py::test_items_and_rest_sum_to_cache_size`; tipo senza regola → nessun elemento.
+- **T-6.12** `core/cache_items_hf.py`: repo `models--`/`datasets--`/`spaces--`, file regolari + blob raggiunti solo dai suoi link, condiviso, non attribuito; link fuori dalla cache ignorati. verify: `tests/core/test_cache_items_hf.py` con fixture che riproduce il layout misurato (magazzino `blobs/3b/...`, un repo standard, un blob condiviso, un blob orfano, un link verso `/tmp`).
+- **T-6.13** `collectors/cache_items.py`: `scandir` senza seguire link, `readlink`, dimensioni via `measure_dir_size`; `collect_caches` allega gli elementi. verify: test su albero in `tmp_path`; nessun `os.path.realpath` su link fuori cache (test).
+- **T-6.14** Rimisura della scansione con lo stesso comando di T-6.2. verify: riga risultato, aumento <= 15% o causa e scelta dichiarate.
+- **T-6.15** `ui/disk_items.py`: sotto-righe pure (titolo leggibile `org/nome` da `models--org--nome`, "Condiviso fra più modelli", "Non attribuito" con la sua frase, "e altre N"). verify: `tests/ui/test_disk_items.py` con il report di fixture HF.
+- **T-6.16** GTK: riga di cache con elementi come `Adw.ExpanderRow`, sotto-righe senza azione in questa fase; bottone della cache "Pulisci tutta la cache". verify: test `-m ui`: espansione mostra 5 modelli e "Non attribuito"; render 360/1280; click-through espandi/chiudi.
+- **T-6.17** `make po`, traduzioni; DEVIATIONS schema 5. verify: `make lint`.
+- **T-6.18** Chiusura L2: `code-reviewer`, `type-design-analyzer` sui tipi nuovi, `CHECKS:`. verify: suite verde; scansione reale mostra XTTS-v2 con i GB del magazzino.
+
+**Lotto L3: rimozione del singolo modello HuggingFace**
+
+- **T-6.19** `ActionKind.CACHE_ITEM_REMOVE`, `TargetShape.TARGET`, `ItemFingerprint` (cartella + blob esclusivi con ino/dev). verify: `tests/model/test_actions.py` validazione dell'impronta.
+- **T-6.20** `core/planning_cache_item.py` + voci in `risk_table` (rischio per elemento); verifica con context7 di `huggingface_hub` cache API, esito in DEVIATIONS. verify: `tests/core/test_planning_cache_item.py`: piano con un passo, id sconosciuto → `InvalidRequest`.
+- **T-6.21** `service/executor_cache_item.py`: controlli di S12 (cache in tabella, regola pura, niente link, owner, impronta). verify: `tests/service/test_executor_cache_item.py::test_*_is_refused` (`../`, fuori tabella, link, owner, ino cambiato), ognuno con il caso che passa; bersaglio intatto.
+- **T-6.22** Rimozione HF: esclusività ricalcolata sui link attuali, `remove_directory` sulla cartella, `remove` dei blob esclusivi via `safe_tree`; blob diventato condiviso → resta, esito lo dice. verify: test in `tmp_path`: blob esclusivo rimosso, blob condiviso dopo il piano intatto, liberato = byte rimossi.
+- **T-6.23** Dispatch dell'azione nel servizio, rimisura della cache dopo l'esito. verify: test del servizio con executor finto: esito con liberato, report aggiornato.
+- **T-6.24** GTK: "Rimuovi" sulle sotto-righe, testi del dialogo (`dialogs/text.py`), `make po`. verify: click-through su un modello di test in una HOME isolata: dialogo, conferma, esito, riga sparita.
+- **T-6.25** Chiusura L3: `security-reviewer` su T-6.21-T-6.22, `code-reviewer`, `CHECKS:`. verify: suite verde.
+
+**Lotto L6: selezione multipla (eseguita dopo L3)**
+
+- **T-6.26** `ActionKind.DISK_FREE_SELECTED`, `ActionRequest.selected_ids` (solo per questa azione), escludibile. verify: validazione: `selected_ids` vuoto o su altra azione → `ValueError`.
+- **T-6.27** `core/planning_disk_selected.py`: un passo per id dai planner singoli, DANGER rifiutato (Q3=A), cache intera e suoi elementi non insieme. verify: `tests/core/test_planning_disk_selected.py` con il caso di DoD (elemento CAUTION + build cache).
+- **T-6.28** `ui/disk_selection.py`: stato puro della selezione, esclusione reciproca cache/elementi, totale, azzeramento a ogni nuovo report. verify: `tests/ui/test_disk_selection.py`.
+- **T-6.29** GTK: modalità "Seleziona", caselle, "Libera i selezionati (N, X GB)", dialogo raggruppato per rischio; `make po`. verify: click-through: seleziona 2 voci, togline una nel dialogo, conferma; render 360/1280.
+- **T-6.30** Chiusura L6: `code-reviewer`, `CHECKS:`. verify: suite verde.
+
+**Lotto L4: Android SDK, AVD, Playwright, JetBrains**
+
+- **T-6.31** `core/cache_items_android.py`: pacchetti SDK da `package.xml` (id `path` con `;`), mai `cmdline-tools`/`licenses`; AVD da `<nome>.ini` + `<nome>.avd`. verify: fixture con `platforms/android-35/package.xml`; `licenses` assente dagli elementi.
+- **T-6.32** Executor SDK: `sdkmanager --sdk_root=<cache> --uninstall <id>` (argv verificato con `--help` nel task), solo con il tool, nessun fallback di cancellazione. verify: `test_item_argv_android_sdk` con runner finto; tool assente → azione non offerta.
+- **T-6.33** Executor AVD: `avdmanager delete avd -n <nome>`; rifiuto con emulatore `-avd <nome>` in esecuzione. verify: test con processo finto in esecuzione → rifiuto; caso appaiato senza.
+- **T-6.34** `core/cache_items_misc.py`: Playwright (`<browser>-<rev>`) e JetBrains (prodotto+versione); rimozione via `safe_tree`. verify: fixture con 2 revisioni di chromium; nome non riconosciuto → non elemento.
+- **T-6.35** Testi, `make po`, `security-reviewer`, `code-reviewer`, `CHECKS:`. verify: suite verde.
+
+**Lotto L5: ollama per modello (dopo la risposta a Q2)**
+
+- **T-6.36** Elementi ollama dalla home: manifest `manifests/<host>/<ns>/<nome>/<tag>`, dimensione dai layer, layer condivisi in "Condiviso". verify: fixture con due modelli che condividono un layer.
+- **T-6.37** (Q2=A) collector `ollama list` con timeout per l'installazione di sistema: voce di sola rimozione, nessun accesso ai file. verify: parser su output reale registrato come fixture; tool assente → nessuna voce.
+- **T-6.38** Executor `ollama rm <nome>:<tag>`: richiede il server attivo (inverso di `OllamaServing`), argv in lista. verify: test: server assente → rifiuto con messaggio; pulizia intera con server attivo resta rifiutata.
+- **T-6.39** GTK e testi della conferma DANGER (frase = nome del modello), `make po`. verify: click-through con runner finto.
+- **T-6.40** Chiusura L5: `security-reviewer`, `code-reviewer`, `CHECKS:`, REPORT_ATTIVITA. verify: suite verde.
 
 ---
 
