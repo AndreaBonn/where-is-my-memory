@@ -34,7 +34,7 @@ def test_row_with_action_shows_the_consequence_under_the_path(display: None) -> 
     row = build_disk_row(row=make_view(consequence=CONSEQUENCE, with_action=True))
 
     assert row.get_subtitle() == f"{PATH}\n{CONSEQUENCE}"
-    assert row.get_subtitle_lines() == 4
+    assert row.get_subtitle_lines() == 0  # no cap: never ellipsized (S4)
 
 
 def test_row_with_action_names_itself_with_the_consequence(display: None) -> None:

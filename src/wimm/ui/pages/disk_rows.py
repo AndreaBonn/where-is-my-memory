@@ -10,8 +10,8 @@ from wimm.ui.widgets import ACCESSIBLE_LABEL_ATTR, color_primary
 from wimm.ui.widgets.risk_badge import make_risk_badge
 
 SPINNER_SIZE = 16
-# Path line plus a consequence that wraps (never truncated) at 360 px.
-SUBTITLE_LINES = 4
+# 0 = no cap: the path and the whole consequence wrap at 360 px, never ellipsized (S4).
+SUBTITLE_LINES = 0
 
 RowAction = Callable[[DiskRowView], None]
 SectionAction = Callable[[ActionKind], None]
