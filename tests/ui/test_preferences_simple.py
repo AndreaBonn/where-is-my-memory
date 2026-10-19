@@ -6,7 +6,7 @@ import pytest
 from gi.repository import Adw, Gtk
 
 from tests.ui.conftest import FakeActionService, descendants, main_context_iterate
-from tests.ui.test_preferences_dialog import home, paths, service, spin, tree
+from tests.ui.preferences_dialog_helpers import home, paths, service, spin, tree
 from wimm.config import Config
 from wimm.paths import UserPaths
 from wimm.ui.dialogs.preferences import PreferencesDialog

@@ -6,7 +6,7 @@ import pytest
 from gi.repository import Gtk
 
 from tests.ui.conftest import FakeActionService
-from tests.ui.test_preferences_dialog import home, paths, service, spin, tree
+from tests.ui.preferences_dialog_helpers import home, paths, service, spin, tree
 from tests.ui.test_preferences_simple import open_dialog, preset_button
 from wimm.paths import UserPaths
 
