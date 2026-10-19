@@ -1,3 +1,5 @@
+import pytest
+
 from tests.core.disk_helpers import (
     MB,
     cache,
@@ -22,19 +24,28 @@ NODE_MODULES = "/home/u/proj/node_modules"
 
 
 def rows_of(*, disk: DiskReport, key: str) -> tuple[DiskRowView, ...]:
-    sections = build_disk_sections(report=disk, min_age_days=MIN_AGE)
+    # Every tool is on PATH, as plan_text's `which` says, so no command-only cache is withheld.
+    sections = build_disk_sections(report=disk, min_age_days=MIN_AGE, withheld=frozenset())
     return tuple(row for section in sections for row in section.rows if section.key.startswith(key))
 
 
 def plan_text(*, disk: DiskReport, row: DiskRowView) -> str:
-    """The "Cosa succede" text the dialog shows for this row's action, from the real planner."""
+    """The "Cosa succede" text the dialog shows for this row's action, from the real planner.
+
+    Cache, trash and devdir planners call row_consequence themselves, so for those rows the
+    equality checks the wiring; the pinned literals below check the text itself.
+    """
     assert row.action_kind is not None
     target_id = None if row.target_id is None else TargetId(row.target_id)
     request = ActionRequest(kind=row.action_kind, target_id=target_id)
     # A stopped container is planned from the snapshot, as the app does for the row's button.
     exited = tuple(container(cid=c.id, state=c.state) for c in disk.docker.stopped_containers)
     context = PlanningContext(
-        owner_uid=OWNER_UID, now=lambda: NOW, new_plan_id=lambda: PlanId("p"), disk_report=disk
+        owner_uid=OWNER_UID,
+        now=lambda: NOW,
+        new_plan_id=lambda: PlanId("p"),
+        disk_report=disk,
+        which=lambda name: f"/usr/bin/{name}",
     )
     plan = plan_action(
         request=request, snapshot=snapshot(group(gid="g", members=exited)), context=context
@@ -103,3 +114,25 @@ def test_rows_without_an_action_have_no_consequence() -> None:
         (row,) = rows_of(disk=disk, key=key)
         assert row.action_kind is None
         assert row.consequence == ""
+
+
+@pytest.mark.parametrize("kind", [k for k in CacheKind if k is not CacheKind.TRASH])
+def test_cache_row_carries_the_dialog_consequence(kind: CacheKind) -> None:
+    disk = report(caches=(cache(kind=kind, size=MB),))
+    (row,) = rows_of(disk=disk, key="caches")
+    assert row.consequence
+    assert row.consequence == plan_text(disk=disk, row=row)
+
+
+def test_huggingface_row_says_the_models_are_downloaded_again() -> None:
+    disk = report(caches=(cache(kind=CacheKind.HUGGINGFACE, size=MB),))
+    (row,) = rows_of(disk=disk, key="caches")
+    expected = "Modelli di HuggingFace: si riscaricano quando servono, anche diversi GB."
+    assert row.consequence == expected == plan_text(disk=disk, row=row)
+
+
+def test_devdir_row_names_npm_install_as_the_rebuild() -> None:
+    disk = report(devdirs=(devdir(path=NODE_MODULES, marker="package.json"),))
+    (row,) = rows_of(disk=disk, key="devdirs")
+    expected = "Per usare di nuovo il progetto serve ricostruire la cartella con npm install."
+    assert row.consequence == expected == plan_text(disk=disk, row=row)
