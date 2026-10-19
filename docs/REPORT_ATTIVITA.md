@@ -695,3 +695,57 @@ Nella pagina Disco ogni voce ora dice subito che cosa succede se la si cancella,
 Remediation A1-A3 di `/analyze`, poi lotto L2 (T-6.10).
 
 ---
+
+## 2026-10-19 | Sessione #11 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Remediation dei finding di `/analyze` su L1, poi lotto L2 del piano `specs/002-disk-granular` (elementi delle cache in sola lettura, decisione O3, T-6.10..T-6.17) con la sua review di chiusura. Tutti i commit sono su main; il repository non ha un remote.
+
+### Richiesta
+
+Applicare la remediation approvata di `/analyze` (A1-A3), poi realizzare il lotto L2: la pagina Disco mostra gli elementi contenuti in una cache, per ora senza poterli cancellare uno per uno, e il bottone "Pulisci tutta la cache" resta l'unica azione.
+
+### Azioni Eseguite
+
+**Remediation di `/analyze` su L1**
+- A2 e A3 in `bbe4db6`.
+- A1: i 33 file di test oltre 300 righe sono stati divisi in 9 commit (`99da857`..`481401b`). I test raccolti restano identici (4063) e i corpi delle funzioni sono identici secondo il confronto via `ast` (815 su 815).
+- `ab24c96`: il gate dei limiti dimensionali ora controlla anche `tests/`. Prova di efficacia: con un file di prova da 377 righe il gate diventa rosso.
+
+**Lotto L2 (O3)**
+- T-6.10 `d914a9e`: tipi `CacheItem` e `CacheRest`, schema 5.
+- T-6.11 e T-6.12 `61644e3`: attribuzione dei byte di HuggingFace tramite i collegamenti simbolici (symlink) che puntano ai blob del magazzino.
+- T-6.13 `819f317`: collector degli elementi.
+- T-6.14 `6aa360f`: misura dei tempi. Mediana 2,26 s di baseline contro 2,23 s con la modifica: dentro il rumore, entro il budget del +15%.
+- T-6.15 `7a3a7d0`: sotto-righe pure (senza dipendenze da GTK).
+- T-6.16 `d58d220`: riga espandibile e bottone "Pulisci tutta la cache".
+- T-6.17 `3f685d0`: schema 5 documentato in DEVIATIONS.
+
+**Review di chiusura L2**
+- `code-reviewer`: 1 HIGH e 3 MEDIUM. Il HIGH (F1): una cartella chiamata `models-- ` faceva fallire l'intera scansione Disco.
+- `type-design-analyzer`: 3 MEDIUM.
+- F1-F10 corretti in `691c043`, `01ea891`, `2f3a845`.
+- Seconda review delle correzioni: nessun CRITICAL né HIGH, 4 finding minori (F11-F14) corretti in `320a631`.
+
+### Verifica
+
+- Scansione reale sulla home (sola lettura): 5 modelli HuggingFace, XTTS-v2 con 2,09 GB comprensivi dei blob del magazzino, condiviso 0, non attribuito 0,3 MB. La dimensione ricavata dalla lettura dell'albero coincide al byte con `measure_dir_size` (19.222.589.440).
+- Click-through sull'app reale con un hub finto in una HOME isolata: la riga HuggingFace si apre e si chiude a 360 e 1280 px, le sotto-righe non hanno bottoni. Render osservati.
+- `make lint`: pulito.
+- `make test-all`: 4208 passati, 1 saltato.
+
+CHECKS L2: code-reviewer ESEGUITO (due giri: 1 HIGH + 3 MEDIUM, poi 4 LOW, tutti corretti) | type-design-analyzer ESEGUITO (3 MEDIUM corretti) | verify ESEGUITO (scansione reale e click-through a 360 e 1280 px) | a11y-gate N/A (UI GTK, non HTML) | /analyze N/A (eseguito su L1, in L2 nessun cambio a spec o piano salvo DEVIATIONS).
+
+### Limiti noti / Aperti
+
+- Nessun finding aperto.
+- Codex: il login è attivo ma il broker non è pronto (`ready:false`), quindi tutti gli agent hanno lavorato in-house.
+
+### Note per il Cliente
+
+Nella pagina Disco la riga di una cache, per esempio quella dei modelli HuggingFace, ora si apre e mostra i singoli elementi che la compongono con la loro dimensione, così si capisce che cosa occupa lo spazio. Per ora gli elementi si possono solo guardare: l'unica azione resta "Pulisci tutta la cache". Sul computer di prova i conti tornano al byte con la misura precedente e la scansione non è diventata più lenta in modo percepibile. Durante la revisione è emerso un difetto serio: una cartella con un nome insolito poteva far fallire l'intera scansione del disco. È stato corretto insieme a una serie di difetti minori, e una seconda revisione non ne ha trovati di gravi. In parallelo sono stati divisi i file di test troppo lunghi, senza cambiare cosa verificano, e il controllo automatico sulla lunghezza dei file ora copre anche i test.
+
+### Prossimo passo
+
+Lotto L3: rimozione del singolo modello HuggingFace (T-6.19..T-6.25).
+
+---
