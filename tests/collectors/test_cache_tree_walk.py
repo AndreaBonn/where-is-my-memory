@@ -1,3 +1,4 @@
+import errno
 import os
 from pathlib import Path
 
@@ -120,3 +121,23 @@ def test_list_tree_closes_every_directory_descriptor(tmp_path: Path) -> None:
     before = len(os.listdir("/proc/self/fd"))
     list_tree(root=root, sleep=_noop)
     assert len(os.listdir("/proc/self/fd")) == before
+
+
+def test_list_tree_warns_when_out_of_file_descriptors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    # Running out of descriptors hides a whole subtree: that must not look like a routine skip.
+    root = tmp_path / "tree"
+    (root / "deep").mkdir(parents=True)
+    real_open = os.open
+
+    def exhausted(path: str, flags: int, *args: object, **kwargs: object) -> int:
+        if path == "deep":
+            raise OSError(errno.EMFILE, "Too many open files")
+        return real_open(path, flags, *args, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(os, "open", exhausted)
+    with caplog.at_level("INFO"):
+        list_tree(root=root, sleep=_noop)
+    levels = [r.levelname for r in caplog.records if "deep" in r.getMessage()]
+    assert levels == ["WARNING"]

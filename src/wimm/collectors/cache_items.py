@@ -1,3 +1,4 @@
+import errno
 import logging
 import os
 import stat
@@ -15,6 +16,7 @@ ITEM_KINDS = frozenset({CacheKind.HUGGINGFACE})
 BLOCK_BYTES = 512
 # Never follows a link at open time: a directory swapped for a symlink after its lstat fails.
 DIR_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC
+OUT_OF_DESCRIPTORS = frozenset({errno.EMFILE, errno.ENFILE})
 
 Frame = tuple[int, str, list[str]]
 
@@ -63,7 +65,8 @@ class _Walk:
             info = os.stat(name, dir_fd=fd, follow_symlinks=False)
             self._account(info)
             return _entry_for(name=name, relative=f"{prefix}{name}", info=info, fd=fd)
-        except OSError as error:
+        except (OSError, ValueError) as error:
+            # ValueError: an entry TreeEntry refuses (a link with a blank target) is skipped.
             LOGGER.info("Skipping %s%s in cache tree: %s", prefix, name, error)
             return None
 
@@ -91,7 +94,9 @@ class _Walk:
         try:
             fd = os.open(name, DIR_FLAGS, dir_fd=parent)
         except OSError as error:
-            LOGGER.info("Skipping %s%s in cache tree, it changed: %s", prefix, name, error)
+            # Out of descriptors hides a whole subtree: say so louder than a routine change.
+            level = logging.WARNING if error.errno in OUT_OF_DESCRIPTORS else logging.INFO
+            LOGGER.log(level, "Skipping %s%s in cache tree: %s", prefix, name, error)
             return None
         child_prefix = f"{prefix}{name}/"
         try:

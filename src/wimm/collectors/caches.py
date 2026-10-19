@@ -44,7 +44,9 @@ def _itemized_entry(
             rest=rest,
         )
     except ValueError as error:
-        LOGGER.warning("Cannot split cache %s into items, showing it whole: %s", folder, error)
+        LOGGER.warning(
+            "Cannot split cache %s into items, showing it whole: %s", folder, error, exc_info=True
+        )
         return None
 
 

@@ -86,3 +86,31 @@ def test_collect_caches_boundary_falls_back_to_the_plain_entry_on_value_error(
     assert (entry.rest.shared, entry.rest.unattributed) == (0, 0)
     assert entry.size > 0
     assert any(str(root) in record.getMessage() for record in caplog.records)
+
+
+def test_collect_caches_keeps_items_next_to_a_link_with_a_blank_target(tmp_path: Path) -> None:
+    home = tmp_path / "home"
+    root = _hf_root(home)
+    valid = _blob(root / "models--org--a" / "blobs" / "own", 8192)
+    (root / "models--org--b").mkdir()
+    (root / "models--org--b" / "odd").symlink_to(" ")
+    entry = _hf(home, tmp_path)
+    assert [item.title for item in entry.items] == ["org/a", "org/b"]
+    assert entry.items[0].size == _size(valid)
+
+
+def test_itemizing_fallback_logs_the_traceback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    home = tmp_path / "home"
+    _blob(_hf_root(home) / "models--org--a" / "blobs" / "own", 8192)
+
+    def broken(**_kwargs: object) -> object:
+        raise ValueError("bug in items_for")
+
+    monkeypatch.setattr(caches, "items_for", broken)
+    with caplog.at_level("WARNING"):
+        entry = _hf(home, tmp_path)
+    assert entry.items == ()
+    record = next(r for r in caplog.records if "showing it whole" in r.getMessage())
+    assert record.exc_info is not None

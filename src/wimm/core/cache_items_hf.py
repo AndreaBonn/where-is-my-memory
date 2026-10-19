@@ -129,19 +129,15 @@ def _make_item(*, folder: TreeEntry, size: int, root: str) -> CacheItem | None:
     if parsed is None:
         return None
     repo_id, kind = parsed
-    try:
-        return CacheItem(
-            id=folder.path,
-            title=repo_id.replace(REPO_ID_SEPARATOR, OWNER_SEPARATOR),
-            path=f"{root.rstrip('/')}/{folder.path}",
-            size=size,
-            st_ino=folder.st_ino,
-            st_dev=folder.st_dev,
-            kind=kind,
-        )
-    except ValueError:
-        # An odd folder name must never take the whole report down; it is just not an item.
-        return None
+    return CacheItem(
+        id=folder.path,
+        title=repo_id.replace(REPO_ID_SEPARATOR, OWNER_SEPARATOR),
+        path=f"{root.rstrip('/')}/{folder.path}",
+        size=size,
+        st_ino=folder.st_ino,
+        st_dev=folder.st_dev,
+        kind=kind,
+    )
 
 
 def hf_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
