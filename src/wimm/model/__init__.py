@@ -34,6 +34,12 @@ from .actions import (
 from .actions import (
     VolumeFingerprint as VolumeFingerprint,
 )
+from .cache_items import (
+    CacheItem as CacheItem,
+)
+from .cache_items import (
+    CacheRest as CacheRest,
+)
 from .disk import (
     CacheEntry as CacheEntry,
 )
@@ -66,6 +72,9 @@ from .enums import (
 )
 from .enums import (
     ActivityState as ActivityState,
+)
+from .enums import (
+    CacheItemKind as CacheItemKind,
 )
 from .enums import (
     Category as Category,

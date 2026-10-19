@@ -31,7 +31,7 @@ def test_dotted_reports_keys_with_dots_and_indexes_with_brackets() -> None:
         (("schema",), 1),
         (("schema",), 2),
         (("schema",), 3),
-        (("schema",), 5),
+        (("schema",), 6),
         (("schema",), True),
         (("schema",), 1.0),
         (("pressure",), "bad"),

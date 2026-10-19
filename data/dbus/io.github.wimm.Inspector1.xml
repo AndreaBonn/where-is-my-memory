@@ -7,8 +7,10 @@
     and adds memory.video, a list of {vendor, used_bytes, total_bytes} kept
     outside the breakdown. Version 4 adds group.growth to every group, either
     null or {delta_bytes, span_s}: the sustained rise of the group's memory.
-    The disk report keeps its shape and only carries the new number. Readers accept only the version they know: a
-    document with another "schema" is rejected, never guessed.
+    The disk report keeps its shape and only carries the new number. Version 5 lets a
+    disk report cache carry "items" (id, title, path, size, st_ino, st_dev, kind) and
+    "rest" ({shared, unattributed}); both are omitted when empty. Readers accept only
+    the version they know: a document with another "schema" is rejected, never guessed.
   -->
   <interface name="io.github.wimm.Inspector1">
     <method name="GetSnapshot">

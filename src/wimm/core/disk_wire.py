@@ -36,7 +36,11 @@ OPTIONAL_INTEGER = nullable(decoder=INTEGER)
 
 # Fields added after the first release: a report written without them decodes to the
 # default, and the encoder leaves them out while they hold it, so old readers still parse.
-OPTIONAL_FIELDS: dict[type, dict[str, Any]] = {m.DevDir: {"marker": ""}}
+# Defaults are in wire form (what the JSON would carry).
+OPTIONAL_FIELDS: dict[type, dict[str, Any]] = {
+    m.DevDir: {"marker": ""},
+    m.CacheEntry: {"items": [], "rest": {"shared": 0, "unattributed": 0}},
+}
 
 
 def _record[T](cls: type[T]) -> Decoder:
@@ -87,7 +91,19 @@ SCHEMAS: dict[type, Schema] = {
         "size": byte_count,
         "st_ino": INTEGER,
         "st_dev": INTEGER,
+        "items": sequence(decoder=_record(cls=m.CacheItem)),
+        "rest": _record(cls=m.CacheRest),
     },
+    m.CacheItem: {
+        "id": TEXT,
+        "title": TEXT,
+        "path": TEXT,
+        "size": byte_count,
+        "st_ino": INTEGER,
+        "st_dev": INTEGER,
+        "kind": enumeration(enum=m.CacheItemKind),
+    },
+    m.CacheRest: {"shared": byte_count, "unattributed": byte_count},
     m.DevDir: {
         "path": TEXT,
         "size": byte_count,
@@ -116,11 +132,8 @@ def _encode(value: Any) -> Any:
         return [_encode(value=item) for item in value]
     if type(value) in SCHEMAS:
         defaults = OPTIONAL_FIELDS.get(type(value), {})
-        return {
-            f.name: _encode(value=getattr(value, f.name))
-            for f in dataclass_fields(value)
-            if f.name not in defaults or getattr(value, f.name) != defaults[f.name]
-        }
+        encoded = {f.name: _encode(value=getattr(value, f.name)) for f in dataclass_fields(value)}
+        return {k: v for k, v in encoded.items() if k not in defaults or v != defaults[k]}
     return value
 
 

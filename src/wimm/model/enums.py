@@ -4,7 +4,7 @@ from typing import NewType
 GroupId = NewType("GroupId", str)
 PlanId = NewType("PlanId", str)
 TargetId = NewType("TargetId", str)
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 class Category(Enum):
@@ -97,3 +97,9 @@ def protection_of(category: Category) -> Protection:
     if category in {Category.SYSTEM, Category.SESSION, Category.SELF}:
         return Protection.PROTECTED
     return Protection.ACTIONABLE
+
+
+class CacheItemKind(Enum):
+    HF_MODEL = "hf_model"
+    HF_DATASET = "hf_dataset"
+    HF_SPACE = "hf_space"

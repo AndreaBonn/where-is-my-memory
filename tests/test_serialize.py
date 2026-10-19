@@ -35,7 +35,7 @@ def test_fixture_roundtrip_exact_json_values_and_model(
     encoded = snapshot_to_json(snapshot=snapshot)
     assert json.loads(encoded) == document
     assert snapshot_from_json(text=encoded) == snapshot
-    assert SCHEMA_VERSION == 4
+    assert SCHEMA_VERSION == 5
     group = snapshot.groups[0]
     assert group.category is Category.PROJECT
     assert group.protection is Protection.ACTIONABLE

@@ -1,7 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
+from .cache_items import CacheItem, CacheRest
 from .snapshot import DockerStatus
 from .validation import ImmutableModel, require_aware, require_bytes, require_nonnegative
 
@@ -146,11 +147,19 @@ class DockerDisk(ImmutableModel):
 
 @dataclass(frozen=True, slots=True)
 class CacheEntry(ImmutableModel):
+    """A known cache folder; `items` are its parts, `rest` what no item owns.
+
+    The collector makes items plus rest add up to `size`; the model only refuses a sum
+    above it, which no measurement can produce.
+    """
+
     kind: CacheKind
     path: str
     size: int
     st_ino: int
     st_dev: int
+    items: tuple[CacheItem, ...] = ()
+    rest: CacheRest = field(default_factory=CacheRest)
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
@@ -158,6 +167,12 @@ class CacheEntry(ImmutableModel):
         require_bytes(value=self.size, field="size")
         require_nonnegative(value=self.st_ino, field="st_ino")
         require_nonnegative(value=self.st_dev, field="st_dev")
+        ids = [item.id for item in self.items]
+        if len(ids) != len(set(ids)):
+            raise ValueError("items must have unique ids")
+        accounted = sum(item.size for item in self.items) + self.rest.shared
+        if accounted + self.rest.unattributed > self.size:
+            raise ValueError("items and rest must not exceed size")
 
 
 @dataclass(frozen=True, slots=True)
