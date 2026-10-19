@@ -8,6 +8,8 @@ MAX_FUNCTION_LINES = 30
 MAX_PARAMETERS = 4
 ALLOWED_SIGNATURES: dict[str, str] = {}
 SOURCE_ROOT = Path(__file__).resolve().parents[1] / "src" / "wimm"
+# Tests follow the file-length limit too (decision 2026-10-19); function limits stay on src.
+TESTS_ROOT = Path(__file__).resolve().parent
 
 
 def analyze_source(source: str) -> list[str]:
@@ -33,6 +35,17 @@ def test_source_limits_project_sources() -> None:
     assert sources
     for path in sources:
         assert analyze_source(source=path.read_text(encoding="utf-8")) == [], str(path)
+
+
+def test_test_files_stay_within_the_file_length_limit() -> None:
+    sources = sorted(TESTS_ROOT.rglob(pattern="*.py"))
+    assert sources
+    oversized = [
+        str(path)
+        for path in sources
+        if len(path.read_text(encoding="utf-8").splitlines()) > MAX_FILE_LINES
+    ]
+    assert oversized == []
 
 
 @pytest.mark.parametrize("is_async", [False, True])
