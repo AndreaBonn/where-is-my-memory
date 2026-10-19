@@ -7,7 +7,7 @@ from gi.repository import Adw
 
 from tests.core.planning_helpers import container, group, proc, snapshot
 from tests.ui.conftest import FakeActionService, WindowFactory, main_context_iterate
-from tests.ui.test_window_outcome import button_labelled, confirmed, flow_of, ready, shown
+from tests.ui.window_outcome_helpers import button_labelled, confirmed, flow_of, ready, shown
 from wimm.core.planning_restart import StoppedContainer
 from wimm.model.enums import ActionKind, Risk, TargetId
 from wimm.model.snapshot import ActionOffer, Snapshot

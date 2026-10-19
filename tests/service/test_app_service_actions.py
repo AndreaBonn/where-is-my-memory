@@ -1,129 +1,33 @@
 import threading
-from collections.abc import Iterator
-from dataclasses import dataclass, field
 
 import pytest
-from gi.repository import GLib
 
 from tests.core.disk_helpers import docker_disk, report
 from tests.core.disk_helpers import volume as disk_volume
-from tests.core.planning_helpers import NOW, container, group, proc, snapshot
+from tests.service.app_service_actions_helpers import (
+    FakeExecutor,
+    RigFactory,
+    rigs,
+    terminate,
+    volume,
+)
 from tests.service.service_helpers import (
     TIMEOUT_S,
-    FakeSampler,
-    FixedClock,
-    spin_for,
     spin_until,
-    with_free_space,
 )
 from wimm.config import Config
-from wimm.model.actions import ActionRequest, EngineIdentity, Plan
+from wimm.model.actions import Plan
 from wimm.model.disk import DiskReport
-from wimm.model.enums import ActionKind, Category, PlanId, TargetId
-from wimm.model.snapshot import Snapshot
-from wimm.service.actions import ActionSetup, ReclaimDelta
-from wimm.service.app_service import AppService
 from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.service.errors import (
     ConfirmationMismatch,
     ControlFailed,
-    InvalidRequest,
     PlanExpired,
     PlanNotFound,
     TargetChanged,
-    WimmError,
 )
 
-OWNER_UID = 1000
-PID = 8
-
-
-@dataclass
-class FakeExecutor:
-    error: WimmError | None = None
-    gate: threading.Event = field(default_factory=lambda: _open_gate())
-    started: threading.Event = field(default_factory=threading.Event)
-    plans: list[Plan] = field(default_factory=list)
-    threads: list[int] = field(default_factory=list)
-
-    def apply_config(self, *, config: Config) -> None:
-        return None
-
-    def execute(self, *, plan: Plan) -> tuple[StepOutcome, ...]:
-        self.started.set()
-        self.threads.append(threading.get_ident())
-        assert self.gate.wait(timeout=TIMEOUT_S)
-        if self.error is not None:
-            raise self.error
-        self.plans.append(plan)
-        return tuple(StepOutcome(order=s.order, status=StepStatus.DONE) for s in plan.steps)
-
-
-def _open_gate() -> threading.Event:
-    gate = threading.Event()
-    gate.set()
-    return gate
-
-
-@dataclass
-class Rig:
-    service: AppService
-    sampler: FakeSampler
-    executor: FakeExecutor
-    clock: FixedClock
-    finished: list[tuple[str, tuple[StepOutcome, ...], int]] = field(default_factory=list)
-    rejected: list[tuple[str, WimmError]] = field(default_factory=list)
-    measured: list[tuple[str, ReclaimDelta]] = field(default_factory=list)
-
-
-def build_rig(*, base: Snapshot | None = None, executor: FakeExecutor | None = None) -> Rig:
-    sampler = FakeSampler()
-    sampler.proceed.set()
-    sampler.current = base or snapshot(
-        group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=PID),))
-    )
-    clock = FixedClock(NOW)
-    fake = executor or FakeExecutor()
-    setup = ActionSetup(executor=fake, owner_uid=OWNER_UID, measure_delay_s=0.0)
-    service = AppService(sampler=sampler, config=Config(), clock=clock, actions=setup)
-    rig = Rig(service=service, sampler=sampler, executor=fake, clock=clock)
-    service.connect(
-        "action-finished",
-        lambda _s, pid, out: rig.finished.append((pid, out, threading.get_ident())),
-    )
-    service.connect("action-rejected", lambda _s, pid, err: rig.rejected.append((pid, err)))
-    service.connect("reclaim-measured", lambda _s, pid, delta: rig.measured.append((pid, delta)))
-    service.start()
-    spin_until(predicate=lambda: service.snapshot() is not None)
-    return rig
-
-
-def terminate(pid: int = PID) -> ActionRequest:
-    return ActionRequest(kind=ActionKind.PROCESS_TERMINATE, target_id=TargetId(str(pid)))
-
-
-def volume(name: str) -> ActionRequest:
-    return ActionRequest(kind=ActionKind.VOLUME_REMOVE, target_id=TargetId(name))
-
-
-class RigFactory:
-    def __init__(self) -> None:
-        self.rigs: list[Rig] = []
-
-    def build(self, *, base: Snapshot | None = None, executor: FakeExecutor | None = None) -> Rig:
-        rig = build_rig(base=base, executor=executor)
-        self.rigs.append(rig)
-        return rig
-
-
-@pytest.fixture
-def rigs() -> Iterator[RigFactory]:
-    factory = RigFactory()
-    yield factory
-    for rig in factory.rigs:
-        rig.sampler.proceed.set()
-        rig.executor.gate.set()
-        rig.service.stop()
+__all__ = ["rigs"]
 
 
 def test_execute_delivers_outcomes_on_the_main_loop_from_a_worker(rigs: RigFactory) -> None:
@@ -241,188 +145,3 @@ def test_crashing_executor_surfaces_a_control_failed_not_the_raw_exception(
     assert "boom" not in str(error)
     assert rig.finished == []
     assert "crashed" in caplog.text
-
-
-def test_actions_and_sampling_share_one_worker_so_they_never_overlap(rigs: RigFactory) -> None:
-    rig = rigs.build()
-    rig.sampler.proceed.clear()
-    rig.sampler.entered.clear()
-    rig.service.request_cycle()
-    assert rig.sampler.entered.wait(timeout=TIMEOUT_S)
-    plan = rig.service.plan(request=terminate())
-
-    rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
-
-    assert not rig.executor.started.wait(timeout=0.2)
-    rig.sampler.proceed.set()
-    assert rig.executor.started.wait(timeout=TIMEOUT_S)
-    spin_until(predicate=lambda: bool(rig.finished))
-
-
-def test_reclaim_delta_is_measured_on_a_later_snapshot_after_an_immediate_cycle(
-    rigs: RigFactory,
-) -> None:
-    base = snapshot(group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=PID),)))
-    before = with_free_space(snapshot=base, available=400, free=900)
-    after = with_free_space(snapshot=base, available=700, free=950)
-    rig = rigs.build(base=before)
-    plan = rig.service.plan(request=terminate())
-    calls = rig.sampler.calls
-    rig.sampler.current = after
-
-    rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
-    spin_until(predicate=lambda: bool(rig.measured))
-
-    assert rig.measured == [(plan.plan_id, ReclaimDelta(freed_ram=300, freed_disk=50))]
-    assert rig.sampler.calls > calls
-    assert rig.service.snapshot() == after
-
-
-def test_a_sample_already_in_flight_when_the_delay_elapses_is_not_used_for_the_delta(
-    rigs: RigFactory,
-) -> None:
-    base = snapshot(group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=PID),)))
-    before = with_free_space(snapshot=base, available=400, free=900)
-    after = with_free_space(snapshot=base, available=700, free=950)
-    rig = rigs.build(base=before)
-    plan = rig.service.plan(request=terminate())
-    rig.sampler.proceed.clear()
-    rig.sampler.entered.clear()
-    rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
-    spin_until(predicate=lambda: bool(rig.finished))
-    assert rig.sampler.entered.wait(timeout=TIMEOUT_S)
-
-    rig.sampler.current = after
-    spin_for(seconds=0.1)
-    assert rig.measured == []
-    rig.sampler.proceed.set()
-    spin_until(predicate=lambda: bool(rig.measured))
-
-    assert rig.measured == [(plan.plan_id, ReclaimDelta(freed_ram=300, freed_disk=50))]
-
-
-def test_plan_without_actions_or_snapshot_raises_invalid_request() -> None:
-    bare = AppService(sampler=FakeSampler(), config=Config())
-    equipped = AppService(
-        sampler=FakeSampler(),
-        config=Config(),
-        actions=ActionSetup(executor=FakeExecutor(), owner_uid=OWNER_UID),
-    )
-    try:
-        with pytest.raises(InvalidRequest):
-            bare.plan(request=terminate())
-        with pytest.raises(InvalidRequest):
-            equipped.plan(request=terminate())
-        with pytest.raises(InvalidRequest):
-            bare.execute(plan_id=PlanId("x"), typed_confirmation=None)
-    finally:
-        bare.stop()
-        equipped.stop()
-
-
-def test_completion_after_stop_is_discarded(rigs: RigFactory) -> None:
-    executor = FakeExecutor(gate=threading.Event())
-    rig = rigs.build(executor=executor)
-    plan = rig.service.plan(request=terminate())
-    rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
-    assert executor.started.wait(timeout=TIMEOUT_S)
-    stopper = threading.Thread(target=rig.service.stop)
-    stopper.start()
-
-    executor.gate.set()
-    stopper.join(timeout=TIMEOUT_S)
-    context = GLib.MainContext.default()
-    while context.pending():
-        context.iteration(may_block=False)
-
-    assert rig.finished == []
-    with pytest.raises(InvalidRequest):
-        rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
-
-
-def test_stop_returns_at_once_while_an_action_is_still_running(rigs: RigFactory) -> None:
-    executor = FakeExecutor(gate=threading.Event())
-    rig = rigs.build(executor=executor)
-    plan = rig.service.plan(request=terminate())
-    rig.service.execute(plan_id=plan.plan_id, typed_confirmation=None)
-    assert executor.started.wait(timeout=TIMEOUT_S)
-
-    stopper = threading.Thread(target=rig.service.stop)
-    stopper.start()
-    stopper.join(timeout=TIMEOUT_S)
-    returned_while_blocked = not stopper.is_alive()
-
-    executor.gate.set()
-    stopper.join(timeout=TIMEOUT_S)
-    context = GLib.MainContext.default()
-    while context.pending():
-        context.iteration(may_block=False)
-    assert returned_while_blocked
-    assert rig.finished == []
-
-
-def test_each_plan_is_measured_against_its_own_baseline(rigs: RigFactory) -> None:
-    base = snapshot(group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=PID),)))
-    s0 = with_free_space(snapshot=base, available=400, free=900)
-    s1 = with_free_space(snapshot=base, available=500, free=910)
-    s2 = with_free_space(snapshot=base, available=700, free=950)
-    rig = rigs.build(base=s0)
-    first = rig.service.plan(request=terminate())
-    second = rig.service.plan(request=terminate())
-    rig.sampler.proceed.clear()
-    rig.sampler.entered.clear()
-    rig.sampler.current = s1
-    rig.service.execute(plan_id=first.plan_id, typed_confirmation=None)
-    spin_until(predicate=lambda: bool(rig.finished))
-    assert rig.sampler.entered.wait(timeout=TIMEOUT_S)
-    spin_for(seconds=0.1)
-
-    # `second` queues behind the sample in flight, which will publish s1.
-    rig.service.execute(plan_id=second.plan_id, typed_confirmation=None)
-    rig.sampler.current = s2
-    rig.sampler.proceed.set()
-    spin_until(predicate=lambda: len(rig.measured) == 2)
-
-    assert rig.measured == [
-        (first.plan_id, ReclaimDelta(freed_ram=300, freed_disk=50)),
-        (second.plan_id, ReclaimDelta(freed_ram=200, freed_disk=40)),
-    ]
-
-
-def _plan_with_engine_probe(*, request: ActionRequest) -> tuple[Plan, list[int]]:
-    engines = (EngineIdentity(path="/var/run/docker.sock", st_ino=10, st_dev=5),)
-    reads: list[int] = []
-
-    def identities() -> tuple[EngineIdentity, ...]:
-        reads.append(1)
-        return engines
-
-    sampler = FakeSampler()
-    sampler.proceed.set()
-    sampler.current = snapshot(
-        group(gid="dev", category=Category.DEV_SERVER, members=(proc(pid=PID),)),
-        group(gid="db", category=Category.CONTAINER, members=(container(cid="up"),)),
-    )
-    setup = ActionSetup(executor=FakeExecutor(), owner_uid=OWNER_UID, engine_identities=identities)
-    service = AppService(sampler=sampler, config=Config(), clock=FixedClock(NOW), actions=setup)
-    service.start()
-    try:
-        spin_until(predicate=lambda: service.snapshot() is not None)
-        plan = service.plan(request=request)
-    finally:
-        service.stop()
-    return plan, reads
-
-
-def test_plan_records_the_engines_the_actions_currently_use() -> None:
-    stop = ActionRequest(kind=ActionKind.CONTAINER_STOP, target_id=TargetId("up"))
-    plan, reads = _plan_with_engine_probe(request=stop)
-    assert plan.engines == (EngineIdentity(path="/var/run/docker.sock", st_ino=10, st_dev=5),)
-    assert reads == [1]
-
-
-def test_a_process_plan_does_not_query_the_engines() -> None:
-    # A stuck socket must never delay planning a kill that has nothing to do with Docker.
-    plan, reads = _plan_with_engine_probe(request=terminate())
-    assert plan.engines == ()
-    assert reads == []

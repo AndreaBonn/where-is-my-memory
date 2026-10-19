@@ -5,6 +5,7 @@ import pytest
 from gi.repository import GLib
 
 from tests.core.disk_helpers import MB, cache, docker_disk, image, report
+from tests.service.app_service_actions_helpers import OWNER_UID, FakeExecutor
 from tests.service.app_service_disk_helpers import (
     QUICK_START_S,
     build_rig,
@@ -15,7 +16,6 @@ from tests.service.service_helpers import (
     spin_for,
     spin_until,
 )
-from tests.service.test_app_service_actions import OWNER_UID, FakeExecutor
 from tests.service.test_sampler import make_sampler
 from wimm.config import Config
 from wimm.model.actions import ActionRequest

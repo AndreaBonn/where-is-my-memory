@@ -3,8 +3,8 @@
 import pytest
 
 from tests.core.planning_helpers import container, group, proc, snapshot
+from tests.service.app_service_actions_helpers import RigFactory, rigs
 from tests.service.service_helpers import spin_until
-from tests.service.test_app_service_actions import RigFactory, rigs
 from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind, Category, GroupId, TargetId
 from wimm.service.errors import InvalidRequest

@@ -3,7 +3,7 @@
 import pytest
 
 from tests.ui.conftest import FakeActionService, WindowFactory, main_context_iterate
-from tests.ui.test_window_outcome import button_labelled, confirmed, ready, shown
+from tests.ui.window_outcome_helpers import button_labelled, confirmed, ready, shown
 from wimm.model.enums import PlanId
 from wimm.service.control_protocols import StepOutcome, StepStatus
 from wimm.ui import action_flow

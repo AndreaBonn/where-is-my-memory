@@ -3,12 +3,12 @@ from dataclasses import dataclass, field
 
 from tests.core.disk_helpers import cache, report
 from tests.core.planning_helpers import group, proc, snapshot
+from tests.service.app_service_actions_helpers import OWNER_UID, FakeExecutor
 from tests.service.service_helpers import (
     TIMEOUT_S,
     FakeSampler,
     spin_until,
 )
-from tests.service.test_app_service_actions import OWNER_UID, FakeExecutor
 from wimm.config import Config
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DiskReport

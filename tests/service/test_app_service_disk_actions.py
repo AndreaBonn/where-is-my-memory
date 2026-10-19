@@ -1,5 +1,6 @@
 import threading
 
+from tests.service.app_service_actions_helpers import FakeExecutor
 from tests.service.app_service_disk_helpers import (
     build_rig,
     disk_action_service,
@@ -10,7 +11,6 @@ from tests.service.service_helpers import (
     spin_for,
     spin_until,
 )
-from tests.service.test_app_service_actions import FakeExecutor
 from wimm.config import Config
 from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind, TargetId

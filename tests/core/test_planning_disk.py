@@ -1,9 +1,18 @@
 import pytest
 
-from wimm.core.disk_rules import unavailable_docker
+from tests.core.disk_helpers import (
+    MB,
+    VOLUME_CREATED_AT,
+    devdir,
+    docker_disk,
+    image,
+    report,
+    stopped,
+    volume,
+)
+from tests.core.planning_disk_helpers import _plan
+from tests.core.planning_helpers import NOW, OWNER_UID, snapshot
 from wimm.core.planning import PlanningContext, plan_action
-from wimm.core.risk import RiskTarget
-from wimm.core.row_consequence import row_consequence
 from wimm.model.actions import (
     ActionRequest,
     ContainerFingerprint,
@@ -12,34 +21,8 @@ from wimm.model.actions import (
     Plan,
     VolumeFingerprint,
 )
-from wimm.model.disk import CacheKind, DiskReport
-from wimm.model.enums import ActionKind, PlanId, Risk, TargetId
+from wimm.model.enums import ActionKind, PlanId, Risk
 from wimm.model.errors import InvalidRequest
-
-from .disk_helpers import (
-    MB,
-    SCANNED_AT,
-    VOLUME_CREATED_AT,
-    cache,
-    devdir,
-    docker_disk,
-    image,
-    report,
-    stopped,
-    volume,
-)
-from .planning_helpers import NOW, OWNER_UID, snapshot
-
-
-def _plan(*, kind: ActionKind, disk: DiskReport | None, target: str | None = None) -> Plan:
-    request = ActionRequest(kind=kind, target_id=None if target is None else TargetId(target))
-    context = PlanningContext(
-        owner_uid=OWNER_UID,
-        now=lambda: NOW,
-        new_plan_id=lambda: PlanId("p-1"),
-        disk_report=disk,
-    )
-    return plan_action(request=request, snapshot=snapshot(), context=context)
 
 
 def test_devdir_delete_plans_one_step_with_directory_fingerprint() -> None:
@@ -219,188 +202,3 @@ def test_excluded_stopped_containers_leave_the_prune_and_excluding_all_is_refuse
     assert plan.estimated_reclaim_disk == 20
     with pytest.raises(InvalidRequest):
         plan_without(first.id, second.id)
-
-
-def test_image_remove_assesses_the_single_image() -> None:
-    local = image(char="a", local_build=True)
-    used = image(char="b", in_use=True)
-    disk = report(docker=docker_disk(images=(local, used)))
-
-    plan = _plan(kind=ActionKind.IMAGE_REMOVE, disk=disk, target=local.id)
-
-    assert plan.risk is Risk.CAUTION
-    assert plan.steps[0].fingerprint == ImageFingerprint(id=local.id)
-    with pytest.raises(InvalidRequest, match="in use"):
-        _plan(kind=ActionKind.IMAGE_REMOVE, disk=disk, target=used.id)
-
-
-def test_containers_prune_stopped_plans_removal_by_id() -> None:
-    first, second = stopped(cid="1", size=2048), stopped(cid="2", state="created", size=0)
-    disk = report(docker=docker_disk(containers=(first, second)))
-
-    plan = _plan(kind=ActionKind.CONTAINERS_PRUNE_STOPPED, disk=disk)
-
-    assert [s.fingerprint for s in plan.steps] == [
-        ContainerFingerprint(id=first.id, status="exited"),
-        ContainerFingerprint(id=second.id, status="created"),
-    ]
-    assert {s.kind for s in plan.steps} == {ActionKind.CONTAINER_REMOVE}
-    assert plan.estimated_reclaim_disk == 2048
-
-
-def test_builder_prune_is_a_single_step_without_fingerprint() -> None:
-    disk = report(docker=docker_disk(build_cache_size=100 * MB))
-
-    plan = _plan(kind=ActionKind.BUILDER_PRUNE, disk=disk)
-
-    assert len(plan.steps) == 1
-    assert plan.steps[0].fingerprint is None
-    assert plan.steps[0].kind is ActionKind.BUILDER_PRUNE
-    assert plan.risk is Risk.SAFE
-    assert plan.estimated_reclaim_disk == 100 * MB
-
-
-def test_builder_prune_reclaims_only_the_unshared_unused_part() -> None:
-    disk = report(docker=docker_disk(build_cache_size=100 * MB, build_cache_reclaimable=30 * MB))
-
-    plan = _plan(kind=ActionKind.BUILDER_PRUNE, disk=disk)
-
-    assert plan.estimated_reclaim_disk == 30 * MB
-
-
-def test_builder_prune_with_nothing_reclaimable_is_refused() -> None:
-    disk = report(docker=docker_disk(build_cache_size=100 * MB, build_cache_reclaimable=0))
-
-    with pytest.raises(InvalidRequest):
-        _plan(kind=ActionKind.BUILDER_PRUNE, disk=disk)
-
-
-def test_image_remove_and_prune_reclaim_the_unique_size() -> None:
-    shared = image(char="a", size=10 * MB, unique_size=4 * MB)
-    dangling = image(char="b", tags=(), size=6 * MB, unique_size=6 * MB, dangling=True)
-    disk = report(docker=docker_disk(images=(shared, dangling)))
-
-    single = _plan(kind=ActionKind.IMAGE_REMOVE, disk=disk, target=shared.id)
-    unused = _plan(kind=ActionKind.IMAGES_PRUNE_UNUSED, disk=disk)
-    only_dangling = _plan(kind=ActionKind.IMAGES_PRUNE_DANGLING, disk=disk)
-
-    assert single.estimated_reclaim_disk == 4 * MB
-    assert unused.estimated_reclaim_disk == 10 * MB
-    assert only_dangling.estimated_reclaim_disk == 6 * MB
-
-
-def test_builder_prune_with_empty_cache_is_refused() -> None:
-    with pytest.raises(InvalidRequest):
-        _plan(kind=ActionKind.BUILDER_PRUNE, disk=report())
-
-
-def test_cache_clean_uses_the_directory_fingerprint_of_the_named_cache() -> None:
-    uv = cache(kind=CacheKind.UV, size=3 * MB, ino=5, dev=9)
-    disk = report(caches=(uv, cache(kind=CacheKind.NPM)))
-
-    plan = _plan(kind=ActionKind.CACHE_CLEAN, disk=disk, target="uv")
-
-    assert plan.steps[0].fingerprint == DirFingerprint(realpath=uv.path, st_ino=5, st_dev=9)
-    assert plan.risk is Risk.SAFE
-    assert plan.estimated_reclaim_disk == 3 * MB
-
-
-def test_cache_clean_refuses_trash_and_missing_caches() -> None:
-    disk = report(caches=(cache(kind=CacheKind.TRASH), cache(kind=CacheKind.UV)))
-
-    with pytest.raises(InvalidRequest):
-        _plan(kind=ActionKind.CACHE_CLEAN, disk=disk, target="trash")
-    with pytest.raises(InvalidRequest):
-        _plan(kind=ActionKind.CACHE_CLEAN, disk=disk, target="pip")
-
-
-def test_trash_empty_is_danger_with_the_trash_label_as_phrase() -> None:
-    trash = cache(kind=CacheKind.TRASH, size=40 * MB)
-
-    plan = _plan(kind=ActionKind.TRASH_EMPTY, disk=report(caches=(trash,)))
-
-    assert plan.risk is Risk.DANGER
-    assert plan.confirm_phrase == "Cestino"
-    assert plan.steps[0].fingerprint == DirFingerprint(realpath=trash.path, st_ino=11, st_dev=2049)
-    assert plan.estimated_reclaim_disk == 40 * MB
-
-
-@pytest.mark.parametrize(
-    ("kind", "target"),
-    [
-        (ActionKind.IMAGES_PRUNE_DANGLING, None),
-        (ActionKind.IMAGES_PRUNE_UNUSED, None),
-        (ActionKind.CONTAINERS_PRUNE_STOPPED, None),
-        (ActionKind.BUILDER_PRUNE, None),
-        (ActionKind.TRASH_EMPTY, None),
-        (ActionKind.DEVDIR_DELETE, "/w/old/node_modules"),
-        (ActionKind.CACHE_CLEAN, "uv"),
-    ],
-)
-def test_disk_actions_without_a_report_are_refused(kind: ActionKind, target: str | None) -> None:
-    with pytest.raises(InvalidRequest, match="report"):
-        _plan(kind=kind, disk=None, target=target)
-
-
-def test_docker_actions_with_docker_unavailable_name_the_reason() -> None:
-    disk = DiskReport(
-        scanned_at=SCANNED_AT,
-        docker=unavailable_docker(error="daemon stopped"),
-        caches=(),
-        devdirs=(),
-    )
-
-    with pytest.raises(InvalidRequest, match="daemon stopped"):
-        _plan(kind=ActionKind.IMAGES_PRUNE_UNUSED, disk=disk)
-
-
-def test_volume_remove_without_a_report_is_refused() -> None:
-    # Without a report there is no creation time, and the executor would refuse anyway.
-    with pytest.raises(InvalidRequest):
-        _plan(kind=ActionKind.VOLUME_REMOVE, disk=None, target="pgdata")
-
-
-@pytest.mark.parametrize(
-    ("path", "marker", "command"),
-    [
-        ("/w/rs/target", "Cargo.toml", "cargo build"),
-        ("/w/java/target", "pom.xml", "mvn package"),
-        ("/w/web/node_modules", "", "npm install"),
-    ],
-)
-def test_devdir_delete_plan_tells_how_to_rebuild_that_kind_of_folder(
-    path: str, marker: str, command: str
-) -> None:
-    disk = report(devdirs=(devdir(path=path, marker=marker),))
-
-    plan = _plan(kind=ActionKind.DEVDIR_DELETE, disk=disk, target=path)
-
-    assert plan.consequences == (
-        f"Per usare di nuovo il progetto serve ricostruire la cartella con {command}.",
-    )
-
-
-@pytest.mark.parametrize("kind", [CacheKind.UV, CacheKind.MAVEN, CacheKind.OLLAMA])
-def test_plan_cache_clean_consequence_matches_row_consequence(kind: CacheKind) -> None:
-    disk = report(caches=(cache(kind=kind),))
-
-    plan = _plan(kind=ActionKind.CACHE_CLEAN, disk=disk, target=kind.value)
-
-    expected = row_consequence(
-        action=ActionKind.CACHE_CLEAN, target=RiskTarget(kind="cache", cache_kind=kind)
-    )
-    assert plan.consequences == (expected,)
-
-
-def test_plan_devdir_delete_consequence_matches_row_consequence() -> None:
-    disk = report(devdirs=(devdir(path="/w/rs/target", marker="Cargo.toml"),))
-
-    plan = _plan(kind=ActionKind.DEVDIR_DELETE, disk=disk, target="/w/rs/target")
-
-    expected = row_consequence(
-        action=ActionKind.DEVDIR_DELETE,
-        target=RiskTarget(kind="devdir"),
-        folder_name="target",
-        marker="Cargo.toml",
-    )
-    assert plan.consequences == (expected,)
