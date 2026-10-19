@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.ui.test_viewmodel import make_group, with_groups
+from tests.ui.viewmodel_helpers import make_group, with_groups
 from wimm.model.enums import Risk
 from wimm.model.snapshot import Snapshot
 from wimm.serialize import snapshot_from_json

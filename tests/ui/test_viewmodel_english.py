@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from tests.ui.test_viewmodel import make_group, roomy_disk, with_groups
+from tests.ui.viewmodel_helpers import make_group, roomy_disk, with_groups
 from wimm.core import text
 from wimm.model.enums import ActivityState, Category, Pressure
 from wimm.model.snapshot import Snapshot
