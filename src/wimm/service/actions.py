@@ -25,6 +25,7 @@ DISK_REQUEST_KINDS = frozenset(
         ActionKind.TRASH_EMPTY,
         ActionKind.DEVDIR_DELETE,
         ActionKind.DISK_FREE_SAFE,
+        ActionKind.DISK_FREE_SELECTED,
     }
 )
 
