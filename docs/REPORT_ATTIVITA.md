@@ -842,3 +842,57 @@ Nella pagina Disco si possono ora spuntare più voci insieme e liberarle con un 
 Lotto L4 (Android SDK, AVD, Playwright, JetBrains), poi L5.
 
 ---
+
+## 2026-10-20 | Sessione #14 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Lotto L4 del piano `specs/002-disk-granular` (Android SDK, AVD, Playwright, JetBrains): T-6.31..T-6.35, con la review di chiusura. Tutti i commit sono su main; il repository non ha un remote.
+
+### Richiesta
+
+Realizzare il lotto L4: rimuovere un singolo elemento delle cache Android SDK (un pacchetto), Android AVD (un dispositivo virtuale), Playwright (un browser) e JetBrains (un prodotto), con il comando dello strumento quando esiste e con una cancellazione controllata altrimenti.
+
+### Azioni Eseguite
+
+**Lotto L4**
+- T-6.31 e T-6.34 `6f822d9`: riconoscimento degli elementi (pacchetti SDK con id `platforms;android-34`, dispositivi AVD con il loro `.ini`, browser Playwright `<browser>-<rev>`, prodotti JetBrains). `cmdline-tools` e `licenses` non sono mai elementi.
+- T-6.34 `cd902d2`: rimozione di un browser Playwright o di un prodotto JetBrains cancellando solo la sua cartella, con tutti i controlli già usati per i modelli HuggingFace.
+- T-6.32 e T-6.33 `67ecb31`: pacchetti SDK rimossi solo con `sdkmanager --uninstall`, dispositivi solo con `avdmanager delete avd`, cercando lo strumento prima nell'SDK e poi nel PATH. Nessuna cancellazione di riserva se lo strumento fallisce; un AVD con l'emulatore acceso viene rifiutato.
+- T-6.35 `906a552`: il testo per JetBrains diceva che si perdevano anche le impostazioni; la cartella contiene solo cache e indici, il testo ora lo dice.
+
+**Correzioni dalle review**
+- F33, F34, F35 `67ecb31` (review del codice generato con Codex): l'emulatore viene riconosciuto anche se avviato con `-avd=<nome>` o `@<nome>`; il `.ini` del dispositivo deve indicare esattamente la cartella controllata, perché `avdmanager` cancella la cartella scritta lì; subito prima del comando si ricontrolla che la cartella sia la stessa del controllo.
+- S-L4-1 MEDIUM, S-L4-2 e S-L4-3 LOW `6458229` (security-reviewer): il `.ini` accetta solo le chiavi che `avdmanager` scrive, ciascuna una volta; nomi con `;` o che iniziano con `-` non diventano elementi, così nessun argomento dello strumento può essere frainteso.
+- C-L4-1 MEDIUM e C-L4-2 LOW `6458229` (code-reviewer): senza `sdkmanager` o `avdmanager` la pagina mostrava comunque "Rimuovi" sull'elemento e solo il piano lo rifiutava, con un errore tecnico; ora la pagina fa la stessa verifica del servizio. Un AVD senza `.ini` si vede ma non si offre.
+
+**Test e strumenti di verifica**
+- `4130a3d`: `make test` eseguiva anche i test di tempo marcati `perf` (il `-m` del target sostituiva quello di configurazione); ora li esclude, come deciso per F15.
+- `0b0fbda`: il test D-Bus controllava il gruppo di processi subito dopo la chiusura dell'app; un figlio ancora in uscita lo faceva fallire sotto carico. Ora aspetta che il gruppo sparisca.
+
+### Verifica
+
+- Click-through sull'app reale con un SDK finto in una HOME isolata, a 360 e 1280 px: senza `sdkmanager` la riga del pacchetto non ha bottone e la cache intera conserva "Pulisci tutta la cache"; con un `sdkmanager` finto compare "Rimuovi", il dialogo mostra titolo, spazio liberato e conseguenza, "Annulla" lo chiude senza eseguire nulla. `sdkmanager` e `avdmanager` veri non sono mai stati eseguiti.
+- Mutation check: 20 rifiuti nuovi del lotto, ciascuno rotto di proposito fa fallire almeno un test.
+- `make lint`: pulito.
+- `make test`: 4002 passati, 1 saltato, copertura 99,91%.
+- `make test-all`: 4477 passati, 1 saltato.
+
+CHECKS L4: code-reviewer ESEGUITO (2 review: codice Codex con F33-F36, lotto con C-L4-1 e C-L4-2, corretti) | security-reviewer ESEGUITO (S-L4-1..3 corretti, H1-H3 note di hardening) | verify ESEGUITO (click-through a 360 e 1280 px) | a11y-gate N/A (UI GTK, non HTML) | /analyze N/A (nessun cambio a spec o piano in L4).
+
+### Limiti noti / Aperti
+
+- F36 parked: lo strumento Android riceve un ambiente ridotto (PATH, LANG, JAVA_HOME, HOME). Se l'app parte con un PATH senza Java, la rimozione fallisce in modo pulito senza cancellare nulla.
+- H2 parked: allo scadere del timeout viene fermato solo il processo diretto, la JVM di `sdkmanager` può restare attiva.
+- F32 MEDIUM: la durata della scansione con gli elementi L4 è stata misurata solo con la macchina carica (mediana 6,05 s contro 4,87 s, dispersione circa 4 s, inconcludente). Va rimisurata a macchina scarica con `make perf`.
+- F24 e F25 LOW (parked): come nella sessione #12.
+- La forma di avvio `emulator @<nome>` è coperta dalla documentazione Android, non provata: l'emulatore non è installato su questa macchina.
+- F15 (test di budget CPU instabile) è chiuso: per decisione dell'utente i test di tempo girano con `make perf`.
+
+### Note per il Cliente
+
+Nella pagina Disco si può ora rimuovere un singolo elemento anche dalle cache di Android (un pacchetto dell'SDK o un dispositivo virtuale), di Playwright (un browser) e di JetBrains (un prodotto). Per Android l'app usa i programmi ufficiali di Android e non cancella nulla di propria iniziativa se quei programmi non ci sono o non riescono; un dispositivo virtuale con l'emulatore acceso viene rifiutato. Per Playwright e JetBrains viene cancellata solo la cartella dell'elemento scelto, e per JetBrains il testo ora chiarisce che le impostazioni dell'ambiente di sviluppo restano al loro posto. Se mancano i programmi di Android, il bottone "Rimuovi" non compare. Nella prova con un SDK finto il dialogo ha mostrato lo spazio liberato e la conseguenza, e "Annulla" non ha eseguito nulla. Le revisioni hanno trovato e fatto correggere alcuni difetti, il più serio dei quali riguardava il controllo del file che descrive il dispositivo virtuale. Resta da rimisurare la velocità della scansione a computer scarico, senza effetto sull'uso dell'app.
+
+### Prossimo passo
+
+Lotto L5 (modelli ollama, uno per uno), T-6.36..T-6.40.
+
+---
