@@ -6,7 +6,7 @@ from typing import cast
 
 import docker.errors
 
-from tests.collectors.test_docker_source import FakeContainer
+from tests.collectors.docker_source_helpers import FakeContainer
 from wimm.collectors.docker_source import ContainerReader, DockerSource
 
 
