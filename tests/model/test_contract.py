@@ -36,7 +36,8 @@ from wimm.model import (
 NOW = datetime(2026, 10, 16, tzinfo=UTC)
 
 
-@pytest.mark.parametrize("kind", list(ActionKind))
+# The mass action over a chosen set needs its ids: it has its own tests in test_actions_selected.
+@pytest.mark.parametrize("kind", [k for k in ActionKind if k is not ActionKind.DISK_FREE_SELECTED])
 def test_request_target_shapes_and_exclusions(kind: ActionKind) -> None:
     shape = ACTION_TARGET_SHAPES[kind]
     request = ActionRequest(
@@ -249,6 +250,7 @@ def test_action_catalog_is_exact() -> None:
         "trash_empty",
         "devdir_delete",
         "disk_free_safe",
+        "disk_free_selected",
         "container_start",
         "restart_stopped",
     }
@@ -276,6 +278,7 @@ def test_action_target_shape_map_is_complete() -> None:
         ActionKind.TRASH_EMPTY: TargetShape.NONE,
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
         ActionKind.DISK_FREE_SAFE: TargetShape.NONE,
+        ActionKind.DISK_FREE_SELECTED: TargetShape.NONE,
         ActionKind.CONTAINER_START: TargetShape.TARGET,
         ActionKind.RESTART_STOPPED: TargetShape.TARGET,
     }

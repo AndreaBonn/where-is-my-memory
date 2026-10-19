@@ -29,6 +29,7 @@ ACTION_TARGET_SHAPES: Mapping[ActionKind, TargetShape] = MappingProxyType(
         ActionKind.TRASH_EMPTY: TargetShape.NONE,
         ActionKind.DEVDIR_DELETE: TargetShape.TARGET,
         ActionKind.DISK_FREE_SAFE: TargetShape.NONE,
+        ActionKind.DISK_FREE_SELECTED: TargetShape.NONE,
         ActionKind.CONTAINER_START: TargetShape.TARGET,
         # C4: the target is the stop plan whose containers start again.
         ActionKind.RESTART_STOPPED: TargetShape.TARGET,
@@ -45,14 +46,36 @@ EXCLUDABLE_ACTIONS = frozenset(
         ActionKind.DISK_FREE_SAFE,
     }
 )
+# The single Disco row actions the user can tick (S16). The danger ones are listed too: the
+# planner refuses them, so the rule lives in one place (Q3=A: those are removed one at a time).
+SELECTABLE_KINDS: frozenset[ActionKind] = frozenset(
+    {
+        ActionKind.IMAGE_REMOVE,
+        ActionKind.CONTAINER_REMOVE,
+        ActionKind.VOLUME_REMOVE,
+        ActionKind.BUILDER_PRUNE,
+        ActionKind.CACHE_CLEAN,
+        ActionKind.CACHE_ITEM_REMOVE,
+        ActionKind.TRASH_EMPTY,
+        ActionKind.DEVDIR_DELETE,
+    }
+)
+SELECTED_ENTRY_SEPARATOR = "|"
 
 
 @dataclass(frozen=True, slots=True)
 class ActionRequest(ImmutableModel):
+    """What the user asked for.
+
+    `selected_ids` is the set of ticked rows of `DISK_FREE_SELECTED`, each one built by
+    `selected_entry_id`; it is required there and refused for every other kind.
+    """
+
     kind: ActionKind
     group_id: GroupId | None = None
     target_id: TargetId | None = None
     excluded_ids: frozenset[str] = frozenset()
+    selected_ids: frozenset[str] = frozenset()
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
@@ -63,6 +86,25 @@ class ActionRequest(ImmutableModel):
             raise ValueError("group_id and target_id do not match action target shape")
         if self.excluded_ids and self.kind not in EXCLUDABLE_ACTIONS:
             raise ValueError("excluded_ids is not allowed for this action")
+        if bool(self.selected_ids) != (self.kind is ActionKind.DISK_FREE_SELECTED):
+            raise ValueError("selected_ids is required for, and only for, disk_free_selected")
+
+
+def selected_entry_id(*, kind: ActionKind, target_id: str | None) -> str:
+    """The id of one ticked row: `<action kind value>|<target id, empty if none>`."""
+    return f"{kind.value}{SELECTED_ENTRY_SEPARATOR}{target_id or ''}"
+
+
+def parse_selected_entry(*, entry: str) -> ActionRequest:
+    """The single-row request a ticked row stands for; `ValueError` if the id is not valid."""
+    value, separator, target = entry.partition(SELECTED_ENTRY_SEPARATOR)
+    try:
+        kind = ActionKind(value)
+        if not separator or kind not in SELECTABLE_KINDS:
+            raise ValueError(value)
+        return ActionRequest(kind=kind, target_id=TargetId(target) if target else None)
+    except ValueError as err:
+        raise ValueError(f"malformed selected entry {entry!r}") from err
 
 
 @dataclass(frozen=True, slots=True)
@@ -168,6 +210,7 @@ ACTION_FINGERPRINT_TYPES: Mapping[ActionKind, tuple[type, ...]] = MappingProxyTy
         ActionKind.BUILDER_PRUNE: (type(None),),
         ActionKind.CONTAINERS_PRUNE_STOPPED: (type(None),),
         ActionKind.DISK_FREE_SAFE: (),
+        ActionKind.DISK_FREE_SELECTED: (),
         ActionKind.CONTAINER_START: (ContainerFingerprint,),
         ActionKind.RESTART_STOPPED: (),
     }

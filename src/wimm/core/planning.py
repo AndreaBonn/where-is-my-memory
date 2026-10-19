@@ -17,6 +17,7 @@ from .constants import PLAN_ID_BYTES, PLAN_TTL_S
 from .planning_cache_item import plan_cache_item_remove
 from .planning_disk import DISK_PLANNERS, plan_cache_clean
 from .planning_disk_safe import plan_disk_free_safe
+from .planning_disk_selected import plan_disk_free_selected
 from .planning_drafts import (
     APP_CLOSE_KINDS,
     Draft,
@@ -215,9 +216,10 @@ def plan_action(*, request: ActionRequest, snapshot: Snapshot, context: Planning
     """Build the confirmation plan for a request, deterministic for equal inputs.
 
     Target ids are the pid, container id, volume name, image id, cache kind, folder path
-    or group id; `excluded_ids` holds member or group ids. Disk actions read the report
-    from `context.disk_report`; image and container prunes expand to one removal step per
-    id (Q-13). With several danger steps `confirm_phrase` is the name
+    or group id; `excluded_ids` holds member or group ids, `selected_ids` the ticked disk
+    rows. Disk actions read the report from `context.disk_report`; image and container
+    prunes expand to one removal step per id (Q-13). With several danger steps
+    `confirm_phrase` is the name
     of the first danger target in step order; with none it is None. A danger target
     with a blank name is refused rather than given an empty phrase.
 
@@ -238,6 +240,11 @@ def _drafts(*, request: ActionRequest, snapshot: Snapshot, context: PlanningCont
     """Pick the planner by what it reads: the stopped plans, the disk report or the snapshot."""
     if request.kind is ActionKind.RESTART_STOPPED:
         return plan_restart(request=request, stopped=context.stopped)
+    if request.kind is ActionKind.DISK_FREE_SELECTED:
+        return plan_disk_free_selected(
+            request=request,
+            plan_one=lambda single: _drafts(request=single, snapshot=snapshot, context=context),
+        )
     tool_planner = _TOOL_PLANNERS.get(request.kind)
     if tool_planner is not None:
         return tool_planner(request=request, report=context.disk_report, which=context.which)
