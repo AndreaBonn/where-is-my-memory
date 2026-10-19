@@ -5,11 +5,27 @@ import time
 from collections.abc import Callable
 from pathlib import Path
 
+from wimm.collectors.cache_items import ITEM_KINDS, list_tree
 from wimm.collectors.dirsize import measure_dir_size
 from wimm.core.cache_catalog import CacheAccess, CacheResolution
+from wimm.core.cache_items import items_for
+from wimm.model.cache_items import CacheItem, CacheRest
 from wimm.model.disk import CacheEntry, CacheKind
 
 LOGGER = logging.getLogger(__name__)
+
+
+def _split_items(
+    *, kind: CacheKind, folder: Path, size: int
+) -> tuple[tuple[CacheItem, ...], CacheRest]:
+    """Items and rest of a cache; none at all when they cannot fit the measured size."""
+    if kind not in ITEM_KINDS:
+        return (), CacheRest()
+    items, rest = items_for(kind=kind, listing=list_tree(root=folder), size=size)
+    if sum(item.size for item in items) + rest.shared > size:
+        LOGGER.warning("Items of cache %s exceed its measured size %d: dropped", folder, size)
+        return (), CacheRest()
+    return items, rest
 
 
 def _measure_cache(
@@ -28,12 +44,15 @@ def _measure_cache(
     size = measure_dir_size(root=folder, cache_dir=cache_dir, sleep=sleep)
     if size.error_count:
         LOGGER.info("Cache %s measured with %d unreadable entries", folder, size.error_count)
+    items, rest = _split_items(kind=kind, folder=folder, size=size.size_bytes)
     return CacheEntry(
         kind=kind,
         path=str(folder),
         size=size.size_bytes,
         st_ino=info.st_ino,
         st_dev=info.st_dev,
+        items=items,
+        rest=rest,
     )
 
 
