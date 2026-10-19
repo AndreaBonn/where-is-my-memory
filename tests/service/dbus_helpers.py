@@ -46,6 +46,14 @@ def stop_application(*, application: subprocess.Popen[bytes]) -> None:
     except subprocess.TimeoutExpired:
         os.killpg(application.pid, signal.SIGKILL)
         application.wait(timeout=SHUTDOWN_TIMEOUT_S)
-    with pytest.raises(ProcessLookupError) as excinfo:
-        os.killpg(application.pid, 0)
-    assert excinfo.value.errno == errno.ESRCH
+    # A collector child (nvidia-smi, xprop) got the SIGTERM too, but under load it can still be
+    # exiting or waiting to be reaped when the leader is gone: wait for the group, not a guess.
+    deadline = monotonic() + SHUTDOWN_TIMEOUT_S
+    while monotonic() < deadline:
+        try:
+            os.killpg(application.pid, 0)
+        except ProcessLookupError as error:
+            assert error.errno == errno.ESRCH
+            return
+        Event().wait(timeout=POLL_INTERVAL_S)
+    pytest.fail(f"process group {application.pid} still alive after shutdown")
