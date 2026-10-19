@@ -5,7 +5,8 @@ from gi.repository import Adw, GLib, Gtk
 from wimm.i18n import _
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, EmptyStateView, SectionActionView
-from wimm.ui.format import button_label
+from wimm.ui.format import button_label, cache_clean_all_label
+from wimm.ui.pages.disk_item_rows import item_children
 from wimm.ui.widgets import ACCESSIBLE_LABEL_ATTR, color_primary
 from wimm.ui.widgets.risk_badge import make_risk_badge
 
@@ -79,29 +80,57 @@ def row_accessible_name(*, row: DiskRowView) -> str:
     return ". ".join(part for part in (row.title, row.subtitle, row.consequence) if part)
 
 
-def build_disk_row(
-    *, row: DiskRowView, on_action: RowAction | None = None, buttons: list[Gtk.Button] | None = None
-) -> Adw.ActionRow:
-    """One row: title, state, size, risk badge; an action button only when a callback is given.
+def _action_label(*, row: DiskRowView, kind: ActionKind) -> str:
+    """ "Pulisci tutta la cache" on a cache that lists items: the button is not per model (S9)."""
+    if kind is ActionKind.CACHE_CLEAN and row.items:
+        return cache_clean_all_label()
+    return button_label(kind=kind)
 
-    Markup is off, so names containing "&" or "<" show as typed. The action button is also
-    appended to ``buttons`` so the caller can disable it while an action runs.
-    """
-    widget = Adw.ActionRow(
+
+def _make_widget(*, row: DiskRowView) -> Adw.ActionRow | Adw.ExpanderRow:
+    """An expander (collapsed) for a cache with items, a plain row for everything else."""
+    subtitle = row_subtitle(row=row)
+    if not row.items:
+        return Adw.ActionRow(
+            title=row.title,
+            subtitle=subtitle,
+            use_markup=False,
+            title_lines=2,
+            subtitle_lines=SUBTITLE_LINES,
+            tooltip_text=row.title,
+        )
+    expander = Adw.ExpanderRow(
         title=row.title,
-        subtitle=row_subtitle(row=row),
+        subtitle=subtitle,
         use_markup=False,
         title_lines=2,
         subtitle_lines=SUBTITLE_LINES,
         tooltip_text=row.title,
+        expanded=False,
     )
+    for child in item_children(row=row):
+        expander.add_row(child)
+    return expander
+
+
+def build_disk_row(
+    *, row: DiskRowView, on_action: RowAction | None = None, buttons: list[Gtk.Button] | None = None
+) -> Adw.ActionRow | Adw.ExpanderRow:
+    """One row: title, state, size, risk badge; an action button only when a callback is given.
+
+    Markup is off, so names containing "&" or "<" show as typed. The action button is also
+    appended to ``buttons`` so the caller can disable it while an action runs. A row with
+    ``items`` is an Adw.ExpanderRow whose children are those items.
+    """
+    widget = _make_widget(row=row)
     name = row_accessible_name(row=row)
     widget.update_property([Gtk.AccessibleProperty.LABEL], [name])
     setattr(widget, ACCESSIBLE_LABEL_ATTR, name)  # GTK 4.14 has no getter; see widgets/__init__
     suffix = _build_suffix(row=row)
     widget.add_suffix(suffix)
     if on_action is not None and row.action_kind is not None and row.risk is not None:
-        button = Gtk.Button(label=button_label(kind=row.action_kind), halign=Gtk.Align.END)
+        label = _action_label(row=row, kind=row.action_kind)
+        button = Gtk.Button(label=label, halign=Gtk.Align.END)
         color_primary(button=button, risk=row.risk)
         button.connect("clicked", lambda *_a: on_action(row))
         suffix.append(button)

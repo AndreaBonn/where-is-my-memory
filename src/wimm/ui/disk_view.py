@@ -12,6 +12,7 @@ from wimm.core.row_consequence import row_consequence
 from wimm.i18n import N_, _, ngettext
 from wimm.model.disk import CacheEntry, CacheKind, DevDir, DiskReport
 from wimm.model.enums import ActionKind
+from wimm.ui.disk_items import item_rows
 from wimm.ui.disk_model import (
     ROOTS_FINE,
     ActionSpec,
@@ -55,9 +56,11 @@ def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:
 
 def _cache_row(*, entry: CacheEntry, withheld: frozenset[CacheKind]) -> DiskRowView:
     action = None if entry.kind in withheld else _cache_action(entry=entry)
-    return make_row(
+    row = make_row(
         title=_(CACHE_TITLES[entry.kind]), subtitle=entry.path, size=entry.size, action=action
     )
+    view = item_rows(entry=entry)
+    return replace(row, items=view.rows, items_more=view.more_text) if view.rows else row
 
 
 def _cache_action(*, entry: CacheEntry) -> ActionSpec:

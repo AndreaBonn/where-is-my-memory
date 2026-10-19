@@ -24,6 +24,10 @@ class DiskRowView:
     target_id: str | None = None
     size_bytes: int = 0
     consequence: str = ""
+    # Sub-rows of a cache with items (T-6.16). Kept here, not as an ItemRowsView, because
+    # disk_items imports this module: a field typed with it would make an import cycle.
+    items: tuple["DiskRowView", ...] = ()
+    items_more: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

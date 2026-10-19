@@ -80,6 +80,8 @@ ACTION_LABELS = MappingProxyType(
         ActionKind.RESTART_STOPPED: N_("Riaccendi"),
     }
 )
+# A cache with per-item rows: the button is not per model, so the label says so (S9).
+CACHE_CLEAN_ALL_LABEL = N_("Pulisci tutta la cache")
 
 
 def format_elapsed(*, seconds: float) -> str:
@@ -147,6 +149,11 @@ def activity_text(*, state: ActivityState, reason: str, elapsed_s: float | None)
 def button_label(*, kind: ActionKind) -> str:
     """Return the button label, the same for every risk: every action asks first (D7)."""
     return _(ACTION_LABELS[kind])
+
+
+def cache_clean_all_label() -> str:
+    """The button label of a cache that lists items: it still cleans the whole cache."""
+    return _(CACHE_CLEAN_ALL_LABEL)
 
 
 def format_round_size(*, size: int) -> str:

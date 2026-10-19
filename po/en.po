@@ -145,7 +145,7 @@ msgid "Miniature"
 msgstr "Thumbnails"
 
 #: src/wimm/core/cache_titles.py:15 src/wimm/core/planning_disk.py:40
-#: src/wimm/ui/disk_view.py:161
+#: src/wimm/ui/disk_view.py:164
 msgid "Cestino"
 msgstr "Trash"
 
@@ -607,7 +607,7 @@ msgstr[1] "{count} minutes"
 msgid "meno di 1 minuto"
 msgstr "less than 1 minute"
 
-#: src/wimm/core/text.py:55 src/wimm/ui/format.py:173
+#: src/wimm/core/text.py:55 src/wimm/ui/format.py:180
 #, python-brace-format
 msgid "{count} h"
 msgstr "{count} h"
@@ -643,7 +643,7 @@ msgstr "no connection"
 msgid "{prefix} da {duration}"
 msgstr "{prefix} for {duration}"
 
-#: src/wimm/core/text.py:90 src/wimm/ui/format.py:143
+#: src/wimm/core/text.py:90 src/wimm/ui/format.py:145
 msgid "attività non misurabile"
 msgstr "activity cannot be measured"
 
@@ -1593,7 +1593,7 @@ msgstr ""
 msgid "dimensione sconosciuta"
 msgstr "unknown size"
 
-#: src/wimm/ui/disk_model.py:77
+#: src/wimm/ui/disk_model.py:81
 #, python-brace-format
 msgid "e altre {count}"
 msgstr "and {count} more"
@@ -1752,47 +1752,47 @@ msgstr "Models and emulators"
 msgid "Immagini Docker scaricate"
 msgstr "Downloaded Docker images"
 
-#: src/wimm/ui/disk_view.py:37 src/wimm/ui/pages/disk.py:26
+#: src/wimm/ui/disk_view.py:38 src/wimm/ui/pages/disk.py:26
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
-#: src/wimm/ui/disk_view.py:50
+#: src/wimm/ui/disk_view.py:51
 #, python-brace-format
 msgid "Ultimo controllo alle {time}"
 msgstr "Last check at {time}"
 
-#: src/wimm/ui/disk_view.py:51
+#: src/wimm/ui/disk_view.py:52
 #, python-brace-format
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:99
+#: src/wimm/ui/disk_view.py:102
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:132
+#: src/wimm/ui/disk_view.py:135
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:138
+#: src/wimm/ui/disk_view.py:141
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:159
+#: src/wimm/ui/disk_view.py:162
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:159
+#: src/wimm/ui/disk_view.py:162
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:161
+#: src/wimm/ui/disk_view.py:164
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 
@@ -2071,44 +2071,48 @@ msgstr "Delete folder"
 msgid "Libera spazio"
 msgstr "Free up space"
 
-#: src/wimm/ui/format.py:91
+#: src/wimm/ui/format.py:84
+msgid "Pulisci tutta la cache"
+msgstr "Clean the whole cache"
+
+#: src/wimm/ui/format.py:93
 #, python-brace-format
 msgid "da {count} s"
 msgstr "for {count} s"
 
-#: src/wimm/ui/format.py:93
+#: src/wimm/ui/format.py:95
 #, python-brace-format
 msgid "da {count} min"
 msgstr "for {count} min"
 
-#: src/wimm/ui/format.py:95
+#: src/wimm/ui/format.py:97
 #, python-brace-format
 msgid "da {count} h"
 msgstr "for {count} h"
 
-#: src/wimm/ui/format.py:97
+#: src/wimm/ui/format.py:99
 #, python-brace-format
 msgid "da {count} giorno"
 msgid_plural "da {count} giorni"
 msgstr[0] "for {count} day"
 msgstr[1] "for {count} days"
 
-#: src/wimm/ui/format.py:137
+#: src/wimm/ui/format.py:139
 msgid "in uso"
 msgstr "in use"
 
-#: src/wimm/ui/format.py:139
+#: src/wimm/ui/format.py:141
 #, python-brace-format
 msgid "non in uso {elapsed}"
 msgstr "not in use {elapsed}"
 
 #. TRANSLATORS: strftime pattern of a day without the year; English puts the month first.
-#: src/wimm/ui/format.py:161
+#: src/wimm/ui/format.py:168
 #, no-python-format
 msgid "%d/%m"
 msgstr "%m/%d"
 
-#: src/wimm/ui/format.py:176
+#: src/wimm/ui/format.py:183
 #, python-brace-format
 msgid "+{size} in {duration}"
 msgstr "+{size} in {duration}"
@@ -2293,7 +2297,7 @@ msgstr "The check failed. Try again with Check now."
 msgid "Controlla ora"
 msgstr "Check now"
 
-#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:128
+#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:157
 msgid "Controllo in corso"
 msgstr "Checking"
 

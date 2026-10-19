@@ -1,7 +1,7 @@
 """T-6.8: a Disco row shows the consequence under the path and names it for assistive tech."""
 
 import pytest
-from gi.repository import Adw, Gtk
+from gi.repository import Gtk
 
 from wimm.model.enums import ActionKind, Risk
 from wimm.ui.disk_model import DiskRowView
@@ -26,7 +26,7 @@ def make_view(*, consequence: str, with_action: bool) -> DiskRowView:
     )
 
 
-def accessible_name(row: Adw.ActionRow) -> str | None:
+def accessible_name(row: Gtk.Widget) -> str | None:
     """The name GTK exposes: LABEL must be set on the row; GTK 4.14 has no getter for its value."""
     assert Gtk.test_accessible_has_property(row, Gtk.AccessibleProperty.LABEL)
     return getattr(row, ACCESSIBLE_LABEL_ATTR, None)
