@@ -64,7 +64,7 @@ I nomi dei test sono quelli da creare; il test si vede rosso prima del verde.
   i sotto-elementi di S5. Test parametrico su un report di fixture con una riga per tipo | la
   riga `whitebox · node_modules` dice "Per usare di nuovo il progetto serve ricostruire la
   cartella con npm install."
-- S4 | RF-29 | Leggibile a 360 px | sottotitolo fino a 4 righe (`subtitle_lines`), nessuna
+- S4 | RF-29 | Leggibile a 360 px | sottotitolo senza limite di righe (`subtitle_lines=0`, mai troncato), nessuna
   sovrapposizione fra titolo, sottotitolo, dimensione, badge e bottone. Verifica: render
   osservato a 360 e 1280 px, nome accessibile della riga che include la conseguenza |
   screenshot allegati al task

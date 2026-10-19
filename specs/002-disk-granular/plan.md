@@ -143,7 +143,9 @@ buffer nella fascia alta per L3 e L5.
 - Poiché una cache può avere migliaia di elementi (causa), la pagina rallenta (rischio) →
   `CACHE_ITEMS_CAP` = 50 sotto-righe, "e altre N", ordinamento per dimensione.
 - Poiché le righe crescono di una riga di testo (causa), a 360 px titolo e bottone si
-  schiacciano (rischio) → `subtitle_lines` 4, render osservato a 360 e 1280 a fine L1.
+  schiacciano (rischio) → `subtitle_lines` 0, senza limite: con 4 righe la misura a 360 px
+  troncava 6 conseguenze (Maven, SDK Android, ollama, AVD, immagine senza nome), 2026-10-19.
+  Render osservato a 360 e 1280 a fine L1.
 
 ## Fuori scope
 
