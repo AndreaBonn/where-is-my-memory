@@ -21,6 +21,7 @@ DISK_REQUEST_KINDS = frozenset(
         ActionKind.BUILDER_PRUNE,
         ActionKind.VOLUME_REMOVE,
         ActionKind.CACHE_CLEAN,
+        ActionKind.CACHE_ITEM_REMOVE,
         ActionKind.TRASH_EMPTY,
         ActionKind.DEVDIR_DELETE,
         ActionKind.DISK_FREE_SAFE,
@@ -72,6 +73,7 @@ ENGINE_FREE_KINDS = frozenset(
         ActionKind.PROCESS_KILL,
         ActionKind.APP_CLOSE,
         ActionKind.CACHE_CLEAN,
+        ActionKind.CACHE_ITEM_REMOVE,
         ActionKind.TRASH_EMPTY,
         ActionKind.DEVDIR_DELETE,
     }

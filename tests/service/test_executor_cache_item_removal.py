@@ -15,7 +15,9 @@ from tests.service.cache_item_fakes import (
     item_plan,
     planned,
 )
+from tests.service.executor_fakes import OWNER_UID, FakeProcesses
 from wimm.service.control_protocols import StepOutcome, StepStatus
+from wimm.service.executor import PlanExecutor
 
 
 @pytest.fixture
@@ -114,3 +116,19 @@ def test_a_blob_planned_with_a_shared_path_is_kept(cache: HfCache) -> None:
     assert (cache.hub / SHARED_BLOB).exists()
     assert (cache.hub / MODEL).exists() is False
     assert outcome.message == "1 store file(s) kept: no longer used only by this model"
+
+
+def test_a_cache_item_removal_goes_to_the_disk_fs_control_and_touches_no_process(
+    cache: HfCache,
+) -> None:
+    processes = FakeProcesses()
+    executor = PlanExecutor(
+        processes=processes, containers=None, owner_uid=OWNER_UID, disk_fs=cache.rig.control
+    )
+
+    outcome = executor.execute(plan=planned(cache=cache))[0]
+
+    assert outcome.status is StepStatus.DONE
+    assert not cache.model.exists()
+    assert processes.signals == []
+    assert processes.waits == []
