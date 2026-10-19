@@ -16,11 +16,12 @@ from wimm.core.cache_items import TreeListing, items_for
 from wimm.core.cache_items_hf import STORE_PREFIX, reached_identities
 from wimm.i18n import N_
 from wimm.model.actions import DirFingerprint, ItemFingerprint, PlanStep
-from wimm.model.cache_items import ItemBlob
+from wimm.model.cache_items import CacheItem, ItemBlob
 from wimm.model.disk import CacheKind
 
 from .control_protocols import StepOutcome, StepStatus
 from .errors import InvalidRequest, ProtectedTarget, TargetChanged
+from .executor_cache_item_command import ANDROID_TOOLS, item_argv, run_item_command
 from .fs_controls import DiskFsControl
 from .safe_file import remove_file
 from .safe_tree import TreeRemoval, remove_directory
@@ -45,26 +46,24 @@ def _fingerprint(*, step: PlanStep) -> ItemFingerprint:
 
 
 SUPPORTED_KINDS = frozenset({CacheKind.HUGGINGFACE, CacheKind.PLAYWRIGHT, CacheKind.JETBRAINS})
-# Their items go through sdkmanager and avdmanager, which this executor does not run yet.
-COMMAND_KINDS = frozenset({CacheKind.ANDROID_SDK, CacheKind.ANDROID_AVD})
+COMMAND_KINDS = frozenset(ANDROID_TOOLS)
 
 
 class ItemCache(NamedTuple):
-    """The cleanable cache of the start-up table that directly holds an item folder."""
+    """The cleanable cache of the start-up table that holds an item folder."""
 
     kind: CacheKind
     path: Path
 
 
 def _cache_of(*, folder: str, control: DiskFsControl) -> ItemCache:
-    """The cleanable cache that directly holds the folder; its kind comes from the table."""
-    for cache in control.caches.caches:
-        if cache.kind in COMMAND_KINDS and folder.startswith(f"{cache.path}/"):
-            raise InvalidRequest(f"{cache.kind.value} items are not supported yet")
+    """Find the cache in the table; only SDK package folders may be nested below it."""
     parent = str(Path(folder).parent)
     for cache in control.caches.caches:
-        cleanable = cache.access is CacheAccess.CLEANABLE and cache.kind in SUPPORTED_KINDS
-        if cleanable and str(cache.path) == parent:
+        cleanable = cache.access is CacheAccess.CLEANABLE
+        direct = cache.kind in SUPPORTED_KINDS | COMMAND_KINDS and str(cache.path) == parent
+        sdk = cache.kind is CacheKind.ANDROID_SDK and Path(folder).is_relative_to(cache.path)
+        if cleanable and (direct or sdk):
             return ItemCache(kind=cache.kind, path=cache.path)
     raise ProtectedTarget(f"{folder} is not directly inside an item cache of the table")
 
@@ -89,14 +88,14 @@ def _no_sleep(seconds: float) -> None:
     """The listing runs inside an action: no pacing."""
 
 
-def _recognise_item(*, cache: ItemCache, fingerprint: ItemFingerprint) -> None:
+def _recognise_item(*, cache: ItemCache, fingerprint: ItemFingerprint) -> CacheItem:
     """The folder must be an item of its cache kind for the pure rule as the cache is now."""
     listing = list_tree(root=cache.path, sleep=_no_sleep)
     items, _ = items_for(cache.kind, listing, listing.disk_bytes)
-    if not any(i.path == fingerprint.realpath and i.id == Path(i.path).name for i in items):
-        raise ProtectedTarget(
-            f"{fingerprint.realpath} is no longer recognised as an item of its cache"
-        )
+    for item in items:
+        if item.path == fingerprint.realpath:
+            return item
+    raise ProtectedTarget(f"{fingerprint.realpath} is no longer recognised as an item of its cache")
 
 
 def _lock_age_ok(*, path: Path, now: float) -> bool:
@@ -129,6 +128,10 @@ def check_cache_item(*, step: PlanStep, control: DiskFsControl) -> bool:
     if fingerprint.realpath in control.mounts():
         raise TargetChanged(f"{fingerprint.realpath} is a mount point, nothing was touched")
     _recognise_item(cache=cache, fingerprint=fingerprint)
+    if cache.kind in COMMAND_KINDS:
+        item_argv(
+            kind=cache.kind, root=cache.path, folder=Path(fingerprint.realpath), control=control
+        )
     if cache.kind is CacheKind.HUGGINGFACE:
         name = Path(fingerprint.realpath).name
         _refuse_fresh_lock(hub=cache.path, name=name, control=control)
@@ -220,9 +223,15 @@ def _outcome(
 
 
 def run_cache_item(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
-    """Remove the folder, then the planned blobs that a fresh listing shows nobody reaches."""
+    """Use the Android tool, or remove the folder and any exclusively reached store blobs."""
     fingerprint = _fingerprint(step=step)
     cache = _cache_of(folder=fingerprint.realpath, control=control)
+    if cache.kind in COMMAND_KINDS:
+        item = _recognise_item(cache=cache, fingerprint=fingerprint)
+        if (item.st_ino, item.st_dev) != (fingerprint.st_ino, fingerprint.st_dev):
+            raise TargetChanged(f"{item.path} was replaced after the check, nothing was run")
+        argv = item_argv(kind=cache.kind, root=cache.path, folder=Path(item.path), control=control)
+        return run_item_command(step=step, control=control, argv=argv, item=item)
     folder = DirFingerprint(
         realpath=fingerprint.realpath, st_ino=fingerprint.st_ino, st_dev=fingerprint.st_dev
     )

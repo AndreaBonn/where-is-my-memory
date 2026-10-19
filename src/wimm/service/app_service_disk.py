@@ -19,6 +19,8 @@ from wimm.model.actions import EngineIdentity, Plan
 from wimm.model.disk import DiskReport
 from wimm.service.actions import DISK_REQUEST_KINDS
 from wimm.service.disk_scanner import DiskScanner
+from wimm.service.executor import PlanExecutor
+from wimm.service.executor_cache_item_command import planning_report
 
 LOGGER = logging.getLogger(__name__)
 MS_PER_S = 1000
@@ -72,10 +74,12 @@ class DiskMixin:
         engines: tuple[EngineIdentity, ...],
     ) -> PlanningContext:
         """The planner's inputs; the real PATH lookup is injected here, never read in the core."""
+        executor = getattr(getattr(self, "_actions", None), "executor", None)
+        control = executor.disk_fs if isinstance(executor, PlanExecutor) else None
         return PlanningContext(
             owner_uid=owner_uid,
             now=self._clock,
-            disk_report=self._disk_report,
+            disk_report=planning_report(report=self._disk_report, control=control),
             stopped=stopped,
             engines=engines,
             which=shutil.which,
