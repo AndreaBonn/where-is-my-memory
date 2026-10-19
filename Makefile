@@ -18,7 +18,7 @@ setup:
 	uv sync
 
 test:
-	uv run pytest -m "not integration and not ui and not dbus" $(CORE_COVERAGE)
+	uv run pytest -m "not integration and not ui and not dbus and not perf" $(CORE_COVERAGE)
 
 test-all:
 	# tests/private_session.py gives every run its own display and session bus.
