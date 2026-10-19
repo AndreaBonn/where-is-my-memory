@@ -1,4 +1,4 @@
-"""Removal of one cache item, a HuggingFace model folder and its exclusive blobs (S10-S13).
+"""Removal of one cache item: a HuggingFace model and its exclusive blobs, or a folder (S10-S13).
 
 Everything is decided at execution time from the table resolved at start and from a fresh
 listing of the cache; the plan only says which folder and which blobs the user saw (paths and
@@ -8,6 +8,7 @@ identities, nothing else is trusted).
 import os
 import stat
 from pathlib import Path
+from typing import NamedTuple
 
 from wimm.collectors.cache_items import list_tree
 from wimm.core.cache_catalog import CacheAccess
@@ -43,14 +44,29 @@ def _fingerprint(*, step: PlanStep) -> ItemFingerprint:
     return fingerprint
 
 
-def _hub_of(*, folder: str, control: DiskFsControl) -> Path:
-    """The cleanable HuggingFace cache that directly holds the folder, by the start-up table."""
+SUPPORTED_KINDS = frozenset({CacheKind.HUGGINGFACE, CacheKind.PLAYWRIGHT, CacheKind.JETBRAINS})
+# Their items go through sdkmanager and avdmanager, which this executor does not run yet.
+COMMAND_KINDS = frozenset({CacheKind.ANDROID_SDK, CacheKind.ANDROID_AVD})
+
+
+class ItemCache(NamedTuple):
+    """The cleanable cache of the start-up table that directly holds an item folder."""
+
+    kind: CacheKind
+    path: Path
+
+
+def _cache_of(*, folder: str, control: DiskFsControl) -> ItemCache:
+    """The cleanable cache that directly holds the folder; its kind comes from the table."""
+    for cache in control.caches.caches:
+        if cache.kind in COMMAND_KINDS and folder.startswith(f"{cache.path}/"):
+            raise InvalidRequest(f"{cache.kind.value} items are not supported yet")
     parent = str(Path(folder).parent)
     for cache in control.caches.caches:
-        is_hub = cache.kind is CacheKind.HUGGINGFACE and cache.access is CacheAccess.CLEANABLE
-        if is_hub and str(cache.path) == parent:
-            return cache.path
-    raise ProtectedTarget(f"{folder} is not directly inside a HuggingFace cache of the table")
+        cleanable = cache.access is CacheAccess.CLEANABLE and cache.kind in SUPPORTED_KINDS
+        if cleanable and str(cache.path) == parent:
+            return ItemCache(kind=cache.kind, path=cache.path)
+    raise ProtectedTarget(f"{folder} is not directly inside an item cache of the table")
 
 
 def _verify_folder(*, fingerprint: ItemFingerprint) -> bool:
@@ -73,12 +89,14 @@ def _no_sleep(seconds: float) -> None:
     """The listing runs inside an action: no pacing."""
 
 
-def _recognise_item(*, hub: Path, fingerprint: ItemFingerprint) -> None:
-    """The folder must be a cached model for the pure rule as the cache is now."""
-    listing = list_tree(root=hub, sleep=_no_sleep)
-    items, _ = items_for(CacheKind.HUGGINGFACE, listing, listing.disk_bytes)
+def _recognise_item(*, cache: ItemCache, fingerprint: ItemFingerprint) -> None:
+    """The folder must be an item of its cache kind for the pure rule as the cache is now."""
+    listing = list_tree(root=cache.path, sleep=_no_sleep)
+    items, _ = items_for(cache.kind, listing, listing.disk_bytes)
     if not any(i.path == fingerprint.realpath and i.id == Path(i.path).name for i in items):
-        raise ProtectedTarget(f"{fingerprint.realpath} is no longer recognised as a cached model")
+        raise ProtectedTarget(
+            f"{fingerprint.realpath} is no longer recognised as an item of its cache"
+        )
 
 
 def _lock_age_ok(*, path: Path, now: float) -> bool:
@@ -103,15 +121,17 @@ def _refuse_fresh_lock(*, hub: Path, name: str, control: DiskFsControl) -> None:
 def check_cache_item(*, step: PlanStep, control: DiskFsControl) -> bool:
     """Raise if the item must not be removed now; True if its folder is there, False if gone."""
     fingerprint = _fingerprint(step=step)
-    hub = _hub_of(folder=fingerprint.realpath, control=control)
+    cache = _cache_of(folder=fingerprint.realpath, control=control)
     if not _verify_folder(fingerprint=fingerprint):
         return False
     if control.owner_of(fingerprint.realpath) != control.uid:
         raise ProtectedTarget(f"{fingerprint.realpath} is not owned by the current user")
     if fingerprint.realpath in control.mounts():
         raise TargetChanged(f"{fingerprint.realpath} is a mount point, nothing was touched")
-    _recognise_item(hub=hub, fingerprint=fingerprint)
-    _refuse_fresh_lock(hub=hub, name=Path(fingerprint.realpath).name, control=control)
+    _recognise_item(cache=cache, fingerprint=fingerprint)
+    if cache.kind is CacheKind.HUGGINGFACE:
+        name = Path(fingerprint.realpath).name
+        _refuse_fresh_lock(hub=cache.path, name=name, control=control)
     return True
 
 
@@ -202,13 +222,19 @@ def _outcome(
 def run_cache_item(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
     """Remove the folder, then the planned blobs that a fresh listing shows nobody reaches."""
     fingerprint = _fingerprint(step=step)
-    hub = _hub_of(folder=fingerprint.realpath, control=control)
+    cache = _cache_of(folder=fingerprint.realpath, control=control)
     folder = DirFingerprint(
         realpath=fingerprint.realpath, st_ino=fingerprint.st_ino, st_dev=fingerprint.st_dev
     )
     removal = remove_directory(fingerprint=folder, mountpoints=control.mounts())
     if removal.remaining:
         return _left_behind(order=step.order, removal=removal, where=fingerprint.realpath)
+    if cache.kind is not CacheKind.HUGGINGFACE:
+        # Playwright and JetBrains items are just the folder: no store blobs to follow.
+        return StepOutcome(
+            order=step.order, status=StepStatus.DONE, message=None, freed_bytes=removal.freed_bytes
+        )
+    hub = cache.path
     listing = list_tree(root=hub, sleep=_no_sleep)
     blobs, kept = _remove_blobs(hub=hub, fingerprint=fingerprint, listing=listing)
     note = _kept_note(kept=kept, skipped=listing.skipped)
