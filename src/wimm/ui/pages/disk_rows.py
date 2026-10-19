@@ -6,10 +6,12 @@ from wimm.i18n import _
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, EmptyStateView, SectionActionView
 from wimm.ui.format import button_label
-from wimm.ui.widgets import color_primary
+from wimm.ui.widgets import ACCESSIBLE_LABEL_ATTR, color_primary
 from wimm.ui.widgets.risk_badge import make_risk_badge
 
 SPINNER_SIZE = 16
+# Path line plus a consequence that wraps (never truncated) at 360 px.
+SUBTITLE_LINES = 4
 
 RowAction = Callable[[DiskRowView], None]
 SectionAction = Callable[[ActionKind], None]
@@ -67,6 +69,16 @@ def _build_suffix(*, row: DiskRowView) -> Gtk.Box:
     return suffix
 
 
+def row_subtitle(*, row: DiskRowView) -> str:
+    """The path, and the consequence on its own line under it when the row has an action."""
+    return f"{row.subtitle}\n{row.consequence}" if row.consequence else row.subtitle
+
+
+def row_accessible_name(*, row: DiskRowView) -> str:
+    """Title, path and consequence as one sentence run, so a screen reader reads the effect."""
+    return ". ".join(part for part in (row.title, row.subtitle, row.consequence) if part)
+
+
 def build_disk_row(
     *, row: DiskRowView, on_action: RowAction | None = None, buttons: list[Gtk.Button] | None = None
 ) -> Adw.ActionRow:
@@ -77,12 +89,15 @@ def build_disk_row(
     """
     widget = Adw.ActionRow(
         title=row.title,
-        subtitle=row.subtitle,
+        subtitle=row_subtitle(row=row),
         use_markup=False,
         title_lines=2,
-        subtitle_lines=2,
+        subtitle_lines=SUBTITLE_LINES,
         tooltip_text=row.title,
     )
+    name = row_accessible_name(row=row)
+    widget.update_property([Gtk.AccessibleProperty.LABEL], [name])
+    setattr(widget, ACCESSIBLE_LABEL_ATTR, name)  # GTK 4.14 has no getter; see widgets/__init__
     suffix = _build_suffix(row=row)
     widget.add_suffix(suffix)
     if on_action is not None and row.action_kind is not None and row.risk is not None:
