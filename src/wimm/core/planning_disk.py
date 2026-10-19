@@ -26,7 +26,7 @@ from wimm.model.errors import InvalidRequest
 from .planning_drafts import Draft, assess_draft, volume_draft
 from .planning_tools import CacheToolMissing, no_tool
 from .risk import RiskTarget, TargetKind
-from .risk_table import devdir_consequence
+from .row_consequence import row_consequence
 
 __all__ = [
     "BUILD_CACHE_ID",
@@ -220,7 +220,9 @@ def _cache_draft(*, entry: CacheEntry | None, kind: ActionKind) -> list[Draft]:
     draft = replace(draft, label=_(CACHE_TITLES[entry.kind]))
     # The risk depends on what the cache is: maven and the IDE caches are not free to refill.
     target = RiskTarget(kind=DIR_RISK_KINDS[kind], cache_kind=entry.kind)
-    return [replace(draft, assessed=assess_draft(target=target, kind=kind))]
+    assessed = assess_draft(target=target, kind=kind)
+    text = row_consequence(action=kind, target=target)
+    return [replace(draft, assessed=replace(assessed, consequences=(text,)))]
 
 
 def _caches(*, report: DiskReport | None) -> tuple[CacheEntry, ...]:
@@ -265,7 +267,12 @@ def _plan_devdir_delete(*, request: ActionRequest, report: DiskReport | None) ->
                 kind=ActionKind.DEVDIR_DELETE,
                 name=item.path,
             )
-            text = devdir_consequence(folder_name=PurePath(item.path).name, marker=item.marker)
+            text = row_consequence(
+                action=ActionKind.DEVDIR_DELETE,
+                target=RiskTarget(kind="devdir"),
+                folder_name=PurePath(item.path).name,
+                marker=item.marker,
+            )
             assessed = replace(draft.assessed, consequences=(text,))
             return [replace(draft, assessed=assessed)]
     raise InvalidRequest(f"Unknown development folder {request.target_id}")

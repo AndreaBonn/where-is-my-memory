@@ -2,6 +2,8 @@ import pytest
 
 from wimm.core.disk_rules import unavailable_docker
 from wimm.core.planning import PlanningContext, plan_action
+from wimm.core.risk import RiskTarget
+from wimm.core.row_consequence import row_consequence
 from wimm.model.actions import (
     ActionRequest,
     ContainerFingerprint,
@@ -376,3 +378,29 @@ def test_devdir_delete_plan_tells_how_to_rebuild_that_kind_of_folder(
     assert plan.consequences == (
         f"Per usare di nuovo il progetto serve ricostruire la cartella con {command}.",
     )
+
+
+@pytest.mark.parametrize("kind", [CacheKind.UV, CacheKind.MAVEN, CacheKind.OLLAMA])
+def test_plan_cache_clean_consequence_matches_row_consequence(kind: CacheKind) -> None:
+    disk = report(caches=(cache(kind=kind),))
+
+    plan = _plan(kind=ActionKind.CACHE_CLEAN, disk=disk, target=kind.value)
+
+    expected = row_consequence(
+        action=ActionKind.CACHE_CLEAN, target=RiskTarget(kind="cache", cache_kind=kind)
+    )
+    assert plan.consequences == (expected,)
+
+
+def test_plan_devdir_delete_consequence_matches_row_consequence() -> None:
+    disk = report(devdirs=(devdir(path="/w/rs/target", marker="Cargo.toml"),))
+
+    plan = _plan(kind=ActionKind.DEVDIR_DELETE, disk=disk, target="/w/rs/target")
+
+    expected = row_consequence(
+        action=ActionKind.DEVDIR_DELETE,
+        target=RiskTarget(kind="devdir"),
+        folder_name="target",
+        marker="Cargo.toml",
+    )
+    assert plan.consequences == (expected,)
