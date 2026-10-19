@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 
 from wimm.core.constants import CACHE_ITEMS_CAP
+from wimm.core.item_tools import is_item_removable
 from wimm.core.planning_cache_item import ITEM_TARGET_SEPARATOR
 from wimm.core.risk import RiskTarget
 from wimm.core.row_consequence import row_consequence
@@ -27,20 +28,15 @@ class ItemRowsView:
     more_text: str | None = None
 
 
-def item_rows(*, entry: CacheEntry) -> ItemRowsView:
-    """Sub-rows of `entry`: a model can be removed, the rest rows cannot; empty without items."""
+def item_rows(*, entry: CacheEntry, removable: bool = True) -> ItemRowsView:
+    """Sub-rows of `entry`: an item can be removed, the rest rows cannot; empty without items.
+
+    `removable` is False when the tool that removes this cache's items is missing.
+    """
     if not entry.items:
         return ItemRowsView()
     shown = entry.items[:CACHE_ITEMS_CAP]
-    rows = [
-        make_row(
-            title=item.title,
-            subtitle=item.path,
-            size=item.size,
-            action=_item_action(entry=entry, item=item),
-        )
-        for item in shown
-    ]
+    rows = [_item_row(entry=entry, item=item, removable=removable) for item in shown]
     if entry.rest.shared > 0:
         rows.append(_rest_row(title=SHARED_ROW_TITLE, text=SHARED_ROW_TEXT, size=entry.rest.shared))
     if entry.rest.unattributed > 0:
@@ -53,6 +49,12 @@ def item_rows(*, entry: CacheEntry) -> ItemRowsView:
         )
     hidden = len(entry.items) - len(shown)
     return ItemRowsView(rows=tuple(rows), more_text=more_text(count=hidden))
+
+
+def _item_row(*, entry: CacheEntry, item: CacheItem, removable: bool) -> DiskRowView:
+    offered = removable and is_item_removable(item=item)
+    action = _item_action(entry=entry, item=item) if offered else None
+    return make_row(title=item.title, subtitle=item.path, size=item.size, action=action)
 
 
 def _rest_row(*, title: str, text: str, size: int) -> DiskRowView:

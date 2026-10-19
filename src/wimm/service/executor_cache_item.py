@@ -14,6 +14,7 @@ from wimm.collectors.cache_items import list_tree
 from wimm.core.cache_catalog import CacheAccess
 from wimm.core.cache_items import TreeListing, items_for
 from wimm.core.cache_items_hf import STORE_PREFIX, reached_identities
+from wimm.core.item_tools import ITEM_TOOLS
 from wimm.i18n import N_
 from wimm.model.actions import DirFingerprint, ItemFingerprint, PlanStep
 from wimm.model.cache_items import CacheItem, ItemBlob
@@ -21,7 +22,7 @@ from wimm.model.disk import CacheKind
 
 from .control_protocols import StepOutcome, StepStatus
 from .errors import InvalidRequest, ProtectedTarget, TargetChanged
-from .executor_cache_item_command import ANDROID_TOOLS, item_argv, run_item_command
+from .executor_cache_item_command import item_argv, run_item_command
 from .fs_controls import DiskFsControl
 from .safe_file import remove_file
 from .safe_tree import TreeRemoval, remove_directory
@@ -46,7 +47,7 @@ def _fingerprint(*, step: PlanStep) -> ItemFingerprint:
 
 
 SUPPORTED_KINDS = frozenset({CacheKind.HUGGINGFACE, CacheKind.PLAYWRIGHT, CacheKind.JETBRAINS})
-COMMAND_KINDS = frozenset(ANDROID_TOOLS)
+COMMAND_KINDS = frozenset(ITEM_TOOLS)
 
 
 class ItemCache(NamedTuple):

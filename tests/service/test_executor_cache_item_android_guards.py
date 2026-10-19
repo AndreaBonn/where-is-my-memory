@@ -33,7 +33,22 @@ def test_every_emulator_launch_form_of_the_avd_is_refused(
         assert rig.runner.calls == [AVD_DELETE]
 
 
-@pytest.mark.parametrize("content", ["elsewhere", "two", "none", "missing", "symlink", "exact"])
+@pytest.mark.parametrize(
+    "content",
+    [
+        "elsewhere",
+        "two",
+        "none",
+        "missing",
+        "symlink",
+        "indented",
+        "spaced",
+        "rel_elsewhere",
+        "unknown_key",
+        "two_rel",
+        "exact",
+    ],
+)
 def test_avd_ini_must_name_exactly_the_checked_folder(tmp_path: Path, content: str) -> None:
     rig, folder = android_rig(home=tmp_path / "home", avd=True)
     ini = folder.parent / "Pixel.ini"
@@ -43,6 +58,11 @@ def test_avd_ini_must_name_exactly_the_checked_folder(tmp_path: Path, content: s
         "elsewhere": f"path={other}\n",
         "two": f"path={folder}\npath={other}\n",
         "none": "path.rel=avd/Pixel.avd\n",
+        "indented": f"path={folder}\n path={other}\n",
+        "spaced": f"path={folder}\npath ={other}\n",
+        "rel_elsewhere": f"path={folder}\npath.rel=../{other.name}\n",
+        "unknown_key": f"path={folder}\nimage.sysdir.1={other}\n",
+        "two_rel": f"path={folder}\npath.rel=avd/Pixel.avd\npath.rel=x\n",
     }
     if content in texts:
         ini.write_text(texts[content], encoding="utf-8")

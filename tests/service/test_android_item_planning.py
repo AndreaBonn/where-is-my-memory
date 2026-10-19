@@ -7,6 +7,7 @@ from tests.core.disk_helpers import report
 from tests.core.planning_disk_helpers import _plan
 from tests.service.android_item_fakes import android_rig
 from wimm.model import CacheEntry, CacheItem, CacheItemKind, CacheKind
+from wimm.model.cache_items import ItemBlob
 from wimm.model.enums import ActionKind, Risk
 from wimm.model.errors import InvalidRequest
 from wimm.service.executor_cache_item_command import planning_report
@@ -25,6 +26,8 @@ def test_android_planning_requires_tool(tmp_path: Path, avd: bool, available: bo
         st_ino=folder.stat().st_ino,
         st_dev=folder.stat().st_dev,
         kind=CacheItemKind.ANDROID_AVD if avd else CacheItemKind.ANDROID_PACKAGE,
+        # A device goes with its .ini (android_rig writes one): without it nothing is offered.
+        blobs=(ItemBlob(path="Pixel.ini", size=1, st_ino=7, st_dev=1),) if avd else (),
     )
     entry = CacheEntry(
         kind=kind,

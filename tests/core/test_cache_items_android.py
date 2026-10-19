@@ -141,3 +141,29 @@ def test_avd_sum_rule_items_plus_rest_is_the_size() -> None:
     listing = _avd()
     items, rest = _split(listing, CacheKind.ANDROID_AVD)
     assert sum(i.size for i in items) + rest.shared + rest.unattributed == regular_total(listing)
+
+
+def test_a_package_folder_with_an_ambiguous_name_is_not_an_item() -> None:
+    # sdkmanager would read "platforms;android-34" as the real platforms/android-34, and a
+    # leading "-" as one of its options: such folders stay in the rest, never offered.
+    odd = (
+        d("platforms;android-34"),
+        f("platforms;android-34/package.xml", 10),
+        d("--package_file=x"),
+        f("--package_file=x/package.xml", 10),
+        d("extras"),
+        d("extras/-google"),
+        f("extras/-google/package.xml", 10),
+    )
+    ids = {item.id for item in _split(_sdk(extra=odd), CacheKind.ANDROID_SDK)[0]}
+    assert "platforms;android-35" in ids
+    assert ids.isdisjoint({"platforms;android-34", "--package_file=x", "extras;-google"})
+
+
+def test_an_avd_whose_name_starts_with_a_dash_is_not_an_item() -> None:
+    listing = TreeListing(
+        root=AVD_ROOT,
+        entries=(d("-n.avd", ino=33), f("-n.ini", 10), d("Ok.avd", ino=34), f("Ok.ini", 10)),
+    )
+    ids = {item.id for item in _split(listing, CacheKind.ANDROID_AVD)[0]}
+    assert ids == {"Ok"}

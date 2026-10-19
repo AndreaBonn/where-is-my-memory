@@ -8,6 +8,7 @@ from wimm.model.disk import DiskReport
 from wimm.model.enums import ActionKind
 from wimm.model.errors import InvalidRequest
 
+from .item_tools import is_item_removable
 from .planning_drafts import Draft, assess_draft
 from .risk import RiskTarget
 from .row_consequence import row_consequence
@@ -36,6 +37,8 @@ def _find_item(*, request: ActionRequest, report: DiskReport | None) -> CacheIte
 def plan_cache_item_remove(*, request: ActionRequest, report: DiskReport | None) -> list[Draft]:
     """One step removing the item folder and the store blobs only it reaches (Q1=A)."""
     item = _find_item(request=request, report=report)
+    if not is_item_removable(item=item):
+        raise InvalidRequest(f"{item.title} has no .ini beside it, its tool cannot remove it")
     target = RiskTarget(kind="cache_item", item_kind=item.kind)
     assessed = assess_draft(target=target, kind=ActionKind.CACHE_ITEM_REMOVE)
     text = row_consequence(action=ActionKind.CACHE_ITEM_REMOVE, target=target)

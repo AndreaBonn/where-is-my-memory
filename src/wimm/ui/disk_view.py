@@ -1,12 +1,14 @@
 """Pure view model of the Disco page: a disk report in, sections with rows out."""
 
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime
 from pathlib import Path, PurePath
 
-from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
+from wimm.core.cache_catalog import COMMAND_ONLY_KINDS, withheld_kinds
 from wimm.core.cache_titles import CACHE_TITLES
 from wimm.core.constants import DISK_SECTION_CAP
+from wimm.core.item_tools import withheld_item_kinds
 from wimm.core.risk import RiskTarget
 from wimm.core.row_consequence import row_consequence
 from wimm.i18n import N_, _, ngettext
@@ -54,12 +56,28 @@ def last_scan_text(*, report: DiskReport | None, now: datetime) -> str:
     )
 
 
+def withheld_for_report(
+    *,
+    report: DiskReport | None,
+    which: Callable[[str], str | None],
+    is_executable: Callable[[str], bool],
+) -> frozenset[CacheKind]:
+    """The kinds whose tool is missing; Android tools are looked for in the reported SDK."""
+    caches = report.caches if report else ()
+    roots = tuple(entry.path for entry in caches if entry.kind is CacheKind.ANDROID_SDK)
+    items = withheld_item_kinds(sdk_roots=roots, is_executable=is_executable, which=which)
+    return withheld_kinds(which=which) | items
+
+
 def _cache_row(*, entry: CacheEntry, withheld: frozenset[CacheKind]) -> DiskRowView:
-    action = None if entry.kind in withheld else _cache_action(entry=entry)
+    # A missing tool takes the action away from what it cleans: a command-only cache, or
+    # the items of a cache removed one by one with their tool (Android).
+    cache_withheld = entry.kind in withheld and entry.kind in COMMAND_ONLY_KINDS
+    action = None if cache_withheld else _cache_action(entry=entry)
     row = make_row(
         title=_(CACHE_TITLES[entry.kind]), subtitle=entry.path, size=entry.size, action=action
     )
-    view = item_rows(entry=entry)
+    view = item_rows(entry=entry, removable=entry.kind not in withheld)
     return replace(row, items=view.rows, items_more=view.more_text) if view.rows else row
 
 
@@ -174,8 +192,9 @@ def build_disk_sections(
 ) -> tuple[DiskSectionView, ...]:
     """All sections of the page; empty before the first scan.
 
-    ``withheld`` are the caches left without an action because their tool is missing
-    (`withheld_kinds`, computed by the caller)."""
+    ``withheld`` are the kinds whose tool is missing (`withheld_kinds` and
+    `withheld_item_kinds`, computed by the caller): a command-only cache loses its action,
+    an item kind the actions of its items."""
     if report is None:
         return ()
     sections = split_by_risk(

@@ -17,6 +17,12 @@ PACKAGE_SEPARATOR = ";"
 NEVER_ITEMS = frozenset({"cmdline-tools", "licenses"})
 AVD_SUFFIX = ".avd"
 AVD_INI_SUFFIX = ".ini"
+OPTION_PREFIX = "-"
+
+
+def _is_plain_name(*, name: str) -> bool:
+    """A name the tool cannot misread: no `;` (its own separator), no leading `-` (an option)."""
+    return PACKAGE_SEPARATOR not in name and not name.startswith(OPTION_PREFIX)
 
 
 def _package(*, folder: TreeEntry, size: int, root: str) -> CacheItem:
@@ -44,6 +50,7 @@ def _package_folders(*, listing: TreeListing) -> list[TreeEntry]:
         if entry.type is EntryType.DIR
         and entry.path in with_xml
         and entry.path.split("/")[0] not in NEVER_ITEMS
+        and all(_is_plain_name(name=part) for part in entry.path.split("/"))
     ]
 
 
@@ -84,6 +91,7 @@ def avd_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
         if entry.type is EntryType.DIR
         and entry.path.endswith(AVD_SUFFIX)
         and len(entry.path) > len(AVD_SUFFIX)
+        and _is_plain_name(name=entry.path)
     ]
     sizes, shared = folder_sizes(listing=listing, folders=[folder.path for folder in folders])
     items = []

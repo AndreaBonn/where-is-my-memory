@@ -10,6 +10,7 @@ from tests.ui.test_disk_items import _entry
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.row_consequence import join_consequences
 from wimm.model.actions import ActionRequest
+from wimm.model.cache_items import ItemBlob
 from wimm.model.enums import ActionKind, CacheItemKind, PlanId, Risk, TargetId
 from wimm.ui.disk_items import item_rows
 
@@ -28,7 +29,15 @@ def test_sub_row_consequence_equals_the_dialog_text_for_every_item_kind(
     kind: CacheItemKind,
 ) -> None:
     entry = _entry(count=2)
-    entry = replace(entry, items=tuple(replace(item, kind=kind) for item in entry.items))
+    # A device is offered only with its .ini beside it, as the scan always reports it.
+    blobs = (ItemBlob(path="m.ini", size=1, st_ino=90, st_dev=2049),)
+    entry = replace(
+        entry,
+        items=tuple(
+            replace(item, kind=kind, blobs=blobs if kind is CacheItemKind.ANDROID_AVD else ())
+            for item in entry.items
+        ),
+    )
     row = item_rows(entry=entry).rows[1]
     assert row.action_kind is not None and row.target_id is not None
     context = PlanningContext(

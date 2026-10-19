@@ -1,12 +1,12 @@
+import os
 import shutil
 from collections.abc import Callable
 from datetime import datetime
 
 from gi.repository import Adw, Gtk
 
-from wimm.core.cache_catalog import withheld_kinds
 from wimm.i18n import N_, _
-from wimm.model.disk import DiskReport
+from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import ROOTS_FINE, DiskSectionView, RootsState
 from wimm.ui.disk_selection import DiskSelection
@@ -18,7 +18,7 @@ from wimm.ui.disk_texts import (
     review_text,
     safe_label,
 )
-from wimm.ui.disk_view import build_disk_sections, last_scan_text
+from wimm.ui.disk_view import build_disk_sections, last_scan_text, withheld_for_report
 from wimm.ui.pages.disk_header import DiskHeader, tier_heading
 from wimm.ui.pages.disk_rows import RowAction, SectionAction, SectionGroup
 from wimm.ui.pages.disk_select import SelectionChecks
@@ -32,6 +32,15 @@ FAILED_WITH_REPORT = N_("Il controllo non è riuscito: l'elenco mostra l'ultimo 
 FAILED_WITHOUT_REPORT = N_("Il controllo non è riuscito. Riprova con Controlla ora.")
 STATE_WAITING = "waiting"
 STATE_LIST = "list"
+
+
+def _is_executable(path: str) -> bool:
+    return os.path.isfile(path) and os.access(path, os.X_OK)
+
+
+def _withheld(*, report: DiskReport | None) -> frozenset[CacheKind]:
+    """The real PATH and file checks, injected into the pure view model."""
+    return withheld_for_report(report=report, which=shutil.which, is_executable=_is_executable)
 
 
 class DiskPage(Gtk.Box):
@@ -174,7 +183,7 @@ class DiskPage(Gtk.Box):
             report=report,
             min_age_days=min_age_days,
             roots=roots,
-            withheld=withheld_kinds(which=shutil.which),
+            withheld=_withheld(report=report),
         )
         self.totals = disk_totals(sections=sections)
         self._header.fill(
