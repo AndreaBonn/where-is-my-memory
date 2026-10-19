@@ -1,6 +1,6 @@
 import docker.errors
 
-from tests.collectors.test_docker_engines import DOCKER, FakeClient, Rig
+from tests.collectors.docker_engines_helpers import DOCKER, FakeClient, Rig
 from wimm.collectors import docker_engines
 from wimm.core.docker_notices import NoticeCode
 from wimm.model.actions import EngineIdentity
