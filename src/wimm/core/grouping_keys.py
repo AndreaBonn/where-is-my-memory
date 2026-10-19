@@ -52,7 +52,7 @@ DEV_BUCKET = Category.DEV_PROCESS
 Pair = tuple[RawProcess, CategoryDecision]
 
 
-def stable_group_id(*, key_class: str, key: str) -> GroupId:
+def stable_group_id(*, key_class: str, key: str, scope: str = "") -> GroupId:
     """Derive a group id from key class and key, never from a PID (SPECIFICHE 5.5).
 
     The resolved category is deliberately not an input: it changes when a dev
@@ -64,8 +64,15 @@ def stable_group_id(*, key_class: str, key: str) -> GroupId:
         Kind of key: compose, container, folder, app, root_process or protected.
     key : str
         Readable grouping key; must not contain PIDs.
+    scope : str
+        Grouping bucket of a key that is resolved once per bucket (root_process), so two
+        buckets sharing a key stay two ids. Empty for every other key class, which keeps
+        their ids equal to the ones already stored in user state.
     """
-    digest = hashlib.sha256(f"{key_class}{ID_SEPARATOR}{key}".encode()).hexdigest()
+    text = f"{key_class}{ID_SEPARATOR}{key}"
+    if scope:
+        text = f"{text}{ID_SEPARATOR}{scope}"
+    digest = hashlib.sha256(text.encode()).hexdigest()
     return GroupId(ID_PREFIX + digest[:ID_HEX_LENGTH])
 
 
@@ -141,6 +148,7 @@ class Part:
     lead_process: str | None = None
     process_names: tuple[str, ...] = ()
     tool_reason: str | None = None
+    id_scope: str = ""
 
 
 def compose_part(*, project: str, members: list[RawContainer]) -> Part:

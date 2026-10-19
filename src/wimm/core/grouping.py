@@ -242,6 +242,7 @@ def _process_parts(*, grouping: GroupingInput) -> list[Part]:
                 lead_process=items[0].proc.name,
                 process_names=tuple(item.proc.name for item in items),
                 tool_reason=items[0].tool_reason,
+                id_scope=bucket.value if items[0].key_class == KEY_CLASS_ROOT_PROCESS else "",
             )
         )
     return parts
@@ -261,7 +262,7 @@ def _to_draft(*, part: Part) -> GroupDraft:
         tool_reason=part.tool_reason,
     )
     return GroupDraft(
-        id=stable_group_id(key_class=part.key_class, key=part.key),
+        id=stable_group_id(key_class=part.key_class, key=part.key, scope=part.id_scope),
         key=part.key,
         name=part.name,
         category=part.category,
