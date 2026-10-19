@@ -3,6 +3,7 @@
 from dataclasses import replace
 
 from wimm.core.risk import RiskTarget
+from wimm.core.row_consequence import row_consequence
 from wimm.i18n import N_, _
 from wimm.model.disk import DiskReport, DockerDisk, DockerImage, DockerVolume, StoppedContainer
 from wimm.model.enums import ActionKind
@@ -28,6 +29,13 @@ def _image_name(*, tag: str) -> tuple[str, str | None]:
     return (repository, digest[:SHORT_ID_CHARS]) if pinned else (tag, None)
 
 
+def _spec(*, kind: ActionKind, target: RiskTarget, target_id: str | None) -> ActionSpec:
+    """The action of a Docker row, with the same consequence text the dialog will show."""
+    return ActionSpec(
+        kind, target, target_id, consequence=row_consequence(action=kind, target=target)
+    )
+
+
 def _image_row(*, image: DockerImage) -> DiskRowView:
     title, pinned = _image_name(tag=image.tags[0]) if image.tags else (_(UNNAMED_IMAGE_TEXT), None)
     states = [_("in uso da un container") if image.in_use else _("non in uso")]
@@ -43,7 +51,11 @@ def _image_row(*, image: DockerImage) -> DiskRowView:
     target = RiskTarget(
         kind="image", has_repo_digests=not image.local_build, dangling=image.dangling
     )
-    action = None if image.in_use else ActionSpec(ActionKind.IMAGE_REMOVE, target, image.id)
+    action = (
+        None
+        if image.in_use
+        else _spec(kind=ActionKind.IMAGE_REMOVE, target=target, target_id=image.id)
+    )
     return make_row(
         title=title,
         subtitle=" · ".join(states),
@@ -58,7 +70,7 @@ def _container_row(*, container: StoppedContainer) -> DiskRowView:
         title=container.name,
         subtitle=_("fermo"),
         size=container.size,
-        action=ActionSpec(ActionKind.CONTAINER_REMOVE, target, container.id),
+        action=_spec(kind=ActionKind.CONTAINER_REMOVE, target=target, target_id=container.id),
     )
 
 
@@ -75,7 +87,9 @@ def _volume_state(*, volume: DockerVolume) -> tuple[str, bool]:
 
 def _volume_row(*, volume: DockerVolume) -> DiskRowView:
     state, removable = _volume_state(volume=volume)
-    action = ActionSpec(ActionKind.VOLUME_REMOVE, RiskTarget(kind="volume"), volume.name)
+    action = _spec(
+        kind=ActionKind.VOLUME_REMOVE, target=RiskTarget(kind="volume"), target_id=volume.name
+    )
     return make_row(
         title=volume.name,
         subtitle=state,
@@ -86,7 +100,9 @@ def _volume_row(*, volume: DockerVolume) -> DiskRowView:
 
 def _build_cache_row(*, docker: DockerDisk) -> DiskRowView:
     reclaimable = docker.build_cache_reclaimable
-    action = ActionSpec(ActionKind.BUILDER_PRUNE, RiskTarget(kind="build_cache"), None)
+    action = _spec(
+        kind=ActionKind.BUILDER_PRUNE, target=RiskTarget(kind="build_cache"), target_id=None
+    )
     row = make_row(
         title=_("Cache di build"),
         subtitle=_("liberabili {size}").format(size=format_size(size=reclaimable)),

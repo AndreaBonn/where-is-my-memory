@@ -14,8 +14,10 @@ from tests.core.disk_helpers import (
     volume,
 )
 from wimm.core.cache_catalog import withheld_kinds
+from wimm.core.planning_disk import plan_cache_clean
+from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DockerDisk
-from wimm.model.enums import ActionKind, Risk
+from wimm.model.enums import ActionKind, Risk, TargetId
 from wimm.model.snapshot import DockerStatus
 from wimm.ui.disk_model import DiskRowView, DiskSectionView, more_text
 from wimm.ui.disk_texts import (
@@ -246,6 +248,28 @@ def test_docker_unavailable_shows_only_the_docker_section_message() -> None:
         for key, section in by_key.items()
         if key != "docker"
     )
+
+
+def test_cache_row_subtitle_carries_the_dialog_consequence() -> None:
+    entry = cache(kind=CacheKind.UV, size=3 * MB)
+    disk = report(caches=(entry,))
+    (row,) = sections_by_key(sections=build_disk_sections(report=disk, min_age_days=MIN_AGE))[
+        "caches"
+    ].rows
+    request = ActionRequest(kind=ActionKind.CACHE_CLEAN, target_id=TargetId(CacheKind.UV.value))
+    planned = plan_cache_clean(request=request, report=disk)[0].assessed.consequences[0]
+    assert row.consequence
+    assert row.consequence == planned
+
+
+def test_cache_row_without_an_action_has_no_consequence() -> None:
+    disk = report(caches=(cache(kind=CacheKind.GO_MOD),))
+    sections = build_disk_sections(
+        report=disk, min_age_days=MIN_AGE, withheld=frozenset({CacheKind.GO_MOD})
+    )
+    (row,) = sections_by_key(sections=sections)["caches"].rows
+    assert row.action_kind is None
+    assert row.consequence == ""
 
 
 def test_caches_and_trash_are_separate_sections() -> None:

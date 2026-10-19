@@ -8,6 +8,7 @@ from wimm.core.cache_catalog import COMMAND_ONLY_KINDS
 from wimm.core.cache_titles import CACHE_TITLES
 from wimm.core.constants import DISK_SECTION_CAP
 from wimm.core.risk import RiskTarget
+from wimm.core.row_consequence import row_consequence
 from wimm.i18n import N_, _, ngettext
 from wimm.model.disk import CacheEntry, CacheKind, DevDir, DiskReport
 from wimm.model.enums import ActionKind
@@ -61,11 +62,14 @@ def _cache_row(*, entry: CacheEntry, withheld: frozenset[CacheKind]) -> DiskRowV
 
 def _cache_action(*, entry: CacheEntry) -> ActionSpec:
     trash = entry.kind is CacheKind.TRASH
+    kind = ActionKind.TRASH_EMPTY if trash else ActionKind.CACHE_CLEAN
+    target = RiskTarget(kind="trash" if trash else "cache", cache_kind=entry.kind)
     return ActionSpec(
-        kind=ActionKind.TRASH_EMPTY if trash else ActionKind.CACHE_CLEAN,
-        target=RiskTarget(kind="trash" if trash else "cache", cache_kind=entry.kind),
+        kind=kind,
+        target=target,
         # trash_empty takes no target (the planner finds the trash); a cache is named by kind.
         target_id=None if trash else entry.kind.value,
+        consequence=row_consequence(action=kind, target=target),
     )
 
 
@@ -79,7 +83,18 @@ def _devdir_title(*, path: PurePath) -> str:
 
 
 def _devdir_row(*, item: DevDir) -> DiskRowView:
-    action = ActionSpec(ActionKind.DEVDIR_DELETE, RiskTarget(kind="devdir"), item.path)
+    target = RiskTarget(kind="devdir")
+    action = ActionSpec(
+        ActionKind.DEVDIR_DELETE,
+        target,
+        item.path,
+        consequence=row_consequence(
+            action=ActionKind.DEVDIR_DELETE,
+            target=target,
+            folder_name=PurePath(item.path).name,
+            marker=item.marker,
+        ),
+    )
     age = ngettext(
         "progetto fermo da {days} giorno", "progetto fermo da {days} giorni", item.age_days
     ).format(days=item.age_days)
