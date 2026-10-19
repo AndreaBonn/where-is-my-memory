@@ -186,10 +186,14 @@ msgid "Modelli ollama"
 msgstr "ollama models"
 
 #: src/wimm/core/cache_titles.py:31
+msgid "Modelli ollama (sistema)"
+msgstr "ollama models (system)"
+
+#: src/wimm/core/cache_titles.py:32
 msgid "Emulatori Android (AVD)"
 msgstr "Android emulators (AVD)"
 
-#: src/wimm/core/cache_titles.py:32
+#: src/wimm/core/cache_titles.py:33
 msgid "SDK Android"
 msgstr "Android SDK"
 

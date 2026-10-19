@@ -1,0 +1,5 @@
+NAME                  ID              SIZE      MODIFIED     
+qwen3-embedding:8b    64b933495768    4.7 GB    12 days ago     
+gemma3:4b             a2af6cc3eb7f    3.3 GB    2 weeks ago     
+qwen3.5:9b            6488c96fa5fa    6.6 GB    2 weeks ago     
+qwen2.5vl:7b          5ced39dfa4ba    6.0 GB    2 months ago    

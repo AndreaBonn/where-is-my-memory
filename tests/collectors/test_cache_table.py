@@ -2,6 +2,7 @@ from pathlib import Path
 
 from wimm.collectors.cache_table import read_cache_table
 from wimm.core.cache_catalog import CacheAccess, RejectReason, ResolvedCache
+from wimm.core.item_tools import ITEM_ONLY_KINDS
 from wimm.model.disk import CacheKind
 
 
@@ -18,7 +19,8 @@ def test_read_cache_table_lists_every_kind_at_its_default_place(tmp_path: Path) 
 
     found = _by_kind(home=home, environ={})
 
-    assert len(found) == len(CacheKind)
+    assert set(found) == set(CacheKind) - ITEM_ONLY_KINDS
+    assert not ITEM_ONLY_KINDS & set(found)
     assert found[CacheKind.UV].path == home / ".cache" / "uv"
     assert found[CacheKind.MAVEN].path == home / ".m2" / "repository"
     assert all(cache.access is CacheAccess.CLEANABLE for cache in found.values())

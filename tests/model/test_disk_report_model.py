@@ -155,6 +155,7 @@ def test_cache_kinds_cover_the_spec_list() -> None:
         "jetbrains",
         "huggingface",
         "ollama",
+        "ollama_system",
         "android_avd",
         "android_sdk",
     }

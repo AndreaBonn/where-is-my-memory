@@ -54,3 +54,7 @@ def withheld_item_kinds(
 def is_item_removable(*, item: CacheItem) -> bool:
     """An AVD without its .ini cannot go: avdmanager finds the device through that file."""
     return item.kind is not CacheItemKind.ANDROID_AVD or bool(item.blobs)
+
+
+# Kinds with no folder behind them: only their items are offered, never the whole entry.
+ITEM_ONLY_KINDS = frozenset({CacheKind.OLLAMA_SYSTEM})

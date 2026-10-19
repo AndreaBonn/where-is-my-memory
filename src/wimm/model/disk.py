@@ -33,6 +33,7 @@ class CacheKind(Enum):
     JETBRAINS = "jetbrains"
     HUGGINGFACE = "huggingface"
     OLLAMA = "ollama"
+    OLLAMA_SYSTEM = "ollama_system"
     ANDROID_AVD = "android_avd"
     ANDROID_SDK = "android_sdk"
 
@@ -174,6 +175,18 @@ class CacheEntry(ImmutableModel):
         accounted = sum(item.size for item in self.items) + self.rest.shared
         if accounted + self.rest.unattributed > self.size:
             raise ValueError("items and rest must not exceed size")
+        if self.kind is CacheKind.OLLAMA_SYSTEM:
+            _require_system_store(entry=self)
+
+
+def _require_system_store(*, entry: CacheEntry) -> None:
+    """The system ollama store has no file behind it: no inode, no rest, items with an id."""
+    if entry.st_ino != 0 or entry.st_dev != 0:
+        raise ValueError("a system ollama store has no file: st_ino and st_dev must be 0")
+    if entry.rest != CacheRest():
+        raise ValueError("a system ollama store has no rest")
+    if any(not item.model_id for item in entry.items):
+        raise ValueError("every system ollama item needs a model_id")
 
 
 @dataclass(frozen=True, slots=True)

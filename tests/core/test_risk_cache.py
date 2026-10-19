@@ -29,7 +29,7 @@ RATED_SAFE: set[CacheKind] = {
 RATED_CAUTION: set[CacheKind] = {K.MAVEN, K.JETBRAINS, K.HUGGINGFACE, K.ANDROID_SDK}
 # Q2=A: not downloadable again for sure (`ollama create`, an AVD with its data).
 RATED_DANGER: set[CacheKind] = {K.OLLAMA, K.ANDROID_AVD}
-NOT_A_CLEANABLE_CACHE: set[CacheKind] = {K.TRASH}  # emptied by TRASH_EMPTY, never by CACHE_CLEAN
+NOT_A_CLEANABLE_CACHE: set[CacheKind] = {K.TRASH, K.OLLAMA_SYSTEM}  # TRASH_EMPTY / item-only
 
 
 def _assess(kind: CacheKind | None) -> tuple[Risk, tuple[str, ...]]:

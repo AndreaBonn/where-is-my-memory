@@ -6,6 +6,7 @@ from wimm.core.cache_catalog import (
     resolve_cache_paths,
 )
 from wimm.core.cache_specs import CACHE_COMMANDS, CACHE_SPECS, CacheBase, spec_for
+from wimm.core.item_tools import ITEM_ONLY_KINDS
 from wimm.model.disk import CacheKind
 
 NEW_KINDS = (
@@ -29,13 +30,15 @@ def test_cache_kind_has_the_twelve_new_types_beside_the_five_old_ones_and_the_mo
 
     assert set(NEW_KINDS) <= values
     assert {"uv", "npm", "pip", "trash", "thumbnails"} <= values
-    assert len(values) == 21
+    assert len(values) == 22
 
 
 def test_every_cache_kind_has_exactly_one_spec() -> None:
     kinds = [spec.kind for spec in CACHE_SPECS]
 
-    assert sorted(kind.value for kind in kinds) == sorted(kind.value for kind in CacheKind)
+    expected = set(CacheKind) - ITEM_ONLY_KINDS
+
+    assert sorted(kind.value for kind in kinds) == sorted(kind.value for kind in expected)
 
 
 def test_the_five_original_caches_stay_where_they_always_were() -> None:
@@ -66,7 +69,7 @@ def test_a_spec_names_the_variable_that_moves_the_tool_and_its_native_command() 
     assert maven.relative == ".m2/repository"
 
 
-@pytest.mark.parametrize("kind", list(CacheKind))
+@pytest.mark.parametrize("kind", [k for k in CacheKind if k not in ITEM_ONLY_KINDS])
 def test_relative_paths_are_never_absolute_or_climbing(kind: CacheKind) -> None:
     relative = spec_for(kind=kind).relative
 

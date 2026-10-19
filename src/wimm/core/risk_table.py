@@ -210,6 +210,8 @@ CACHE_ASSESSMENTS: dict[CacheKind, tuple[Risk, ConsequenceKey]] = {
     # asks for the typed confirmation and is never part of "Libera spazio".
     CacheKind.HUGGINGFACE: (Risk.CAUTION, ConsequenceKey.CACHE_HUGGINGFACE),
     CacheKind.OLLAMA: (Risk.DANGER, ConsequenceKey.CACHE_OLLAMA),
+    # OLLAMA_SYSTEM is absent on purpose: no whole-cache clean exists (ITEM_ONLY_KINDS), only
+    # its items, rated by ITEM_ASSESSMENTS. A stray lookup falls on the unlisted CAUTION.
     CacheKind.ANDROID_AVD: (Risk.DANGER, ConsequenceKey.CACHE_ANDROID_AVD),
     CacheKind.ANDROID_SDK: (Risk.CAUTION, ConsequenceKey.CACHE_ANDROID_SDK),
 }

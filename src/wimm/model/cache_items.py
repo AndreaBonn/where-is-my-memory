@@ -1,7 +1,10 @@
+import re
 from dataclasses import dataclass
 
 from .enums import CacheItemKind
 from .validation import ImmutableModel, require_bytes, require_nonnegative, require_text
+
+MODEL_ID_PATTERN = re.compile(r"[0-9a-f]{12}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,6 +42,7 @@ class CacheItem(ImmutableModel):
     `id` is stable within the cache (the folder name, `models--org--name`); `size` is
     what the item alone holds. `blobs` are the store files outside the folder that only
     this item reaches (removed with it); files inside the folder are not listed.
+    `model_id` is the 12-hex id `ollama list` prints; empty for every other item.
     """
 
     id: str
@@ -49,6 +53,7 @@ class CacheItem(ImmutableModel):
     st_dev: int
     kind: CacheItemKind
     blobs: tuple[ItemBlob, ...] = ()
+    model_id: str = ""
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
@@ -59,6 +64,10 @@ class CacheItem(ImmutableModel):
         require_bytes(value=self.size, field="size")
         require_nonnegative(value=self.st_ino, field="st_ino")
         require_nonnegative(value=self.st_dev, field="st_dev")
+        if type(self.model_id) is not str or (
+            self.model_id and not MODEL_ID_PATTERN.fullmatch(self.model_id)
+        ):
+            raise ValueError("model_id must be empty or 12 lowercase hex digits")
 
 
 @dataclass(frozen=True, slots=True)

@@ -15,6 +15,8 @@ from wimm.model.disk import (
 )
 from wimm.model.snapshot import DockerStatus
 
+from .ollama_system_helpers import system_entry
+
 FIXTURES = Path(__file__).parents[1] / "fixtures"
 SCANNED_AT = datetime(2026, 10, 16, 12, 0, tzinfo=UTC)
 MB = 1_000_000
@@ -91,6 +93,8 @@ def docker_disk(
 
 
 def cache(*, kind: CacheKind, size: int = MB, ino: int = 11, dev: int = 2049) -> CacheEntry:
+    if kind is CacheKind.OLLAMA_SYSTEM:  # no folder behind it: the model forbids an inode
+        return system_entry(size=size)
     return CacheEntry(
         kind=kind, path=f"/home/u/.cache/{kind.value}", size=size, st_ino=ino, st_dev=dev
     )

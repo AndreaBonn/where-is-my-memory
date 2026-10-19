@@ -8,6 +8,7 @@ from wimm.core.cache_catalog import (
     CacheObservations,
     sentinel_candidates,
 )
+from wimm.core.item_tools import ITEM_ONLY_KINDS
 from wimm.model.disk import CacheKind
 
 
@@ -52,7 +53,7 @@ def test_a_variable_equal_to_the_default_is_not_a_redirection() -> None:
     assert entry.access is CacheAccess.CLEANABLE
 
 
-@pytest.mark.parametrize("kind", list(CacheKind))
+@pytest.mark.parametrize("kind", [k for k in CacheKind if k not in ITEM_ONLY_KINDS])
 def test_every_type_offers_the_generic_cachedir_tag_as_sentinel(kind: CacheKind) -> None:
     path = Path("/home/u/anywhere")
 

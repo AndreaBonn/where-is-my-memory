@@ -28,6 +28,7 @@ CACHE_TITLES = MappingProxyType(
         # R24: model and Android caches, whose cleaning costs more than a download.
         CacheKind.HUGGINGFACE: N_("Modelli HuggingFace"),
         CacheKind.OLLAMA: N_("Modelli ollama"),
+        CacheKind.OLLAMA_SYSTEM: N_("Modelli ollama (sistema)"),
         CacheKind.ANDROID_AVD: N_("Emulatori Android (AVD)"),
         CacheKind.ANDROID_SDK: N_("SDK Android"),
     }
