@@ -749,3 +749,49 @@ Nella pagina Disco la riga di una cache, per esempio quella dei modelli HuggingF
 Lotto L3: rimozione del singolo modello HuggingFace (T-6.19..T-6.25).
 
 ---
+
+## 2026-10-19 | Sessione #12 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Lotto L3 del piano `specs/002-disk-granular`: rimozione del singolo modello HuggingFace dalla pagina Disco (T-6.19..T-6.25), con la review di chiusura. Tutti i commit sono su main; il repository non ha un remote.
+
+### Richiesta
+
+Realizzare il lotto L3: dalla sotto-riga di un modello HuggingFace si può rimuovere quel solo modello, dopo conferma, senza toccare gli altri e senza cancellare i file che un altro modello usa ancora.
+
+### Azioni Eseguite
+
+**Lotto L3**
+- T-6.19 e T-6.20 `0965acf`: azione `CACHE_ITEM_REMOVE`, impronta dell'azione con i blob esclusivi del modello e relativo planner. Verifica con context7: l'API di `huggingface_hub` conosce solo i blob dentro la cartella del modello, quindi la deviazione dal piano è confermata.
+- T-6.21 e T-6.22 `6e48744`: executor con i controlli rifatti al momento dell'esecuzione e rimozione tramite `safe_tree`.
+- T-6.23 `77ce167`: nuova misura del disco subito dopo la rimozione, così la pagina si aggiorna.
+- T-6.24 `6b10855`: bottone "Rimuovi" sulle sotto-righe dei modelli.
+
+**Review di chiusura (T-6.25)**
+- `security-reviewer` e `code-reviewer`: nessun CRITICAL né HIGH.
+- F16-F22 corretti in `b0e253a`: un blob si cancella solo se nessun modello rimasto lo raggiunge dopo la rimozione della cartella; gestito il lock sparito; l'esito parziale riporta i byte liberati; solo i file di `blobs/` contano come blob; la condizione S1 è provata per ogni tipo di elemento; `remove_file` spostata in `safe_file.py`.
+- Secondo giro di sicurezza: F23 (MEDIUM, una lettura incompleta dell'albero poteva cancellare un blob ancora usato) e F26 corretti in `c95e133`. Con una lettura incompleta nessun blob viene cancellato.
+
+### Verifica
+
+- Click-through sull'app reale con un hub finto in una HOME isolata: "Rimuovi" su coqui/XTTS-v2 apre il dialogo con la stessa conseguenza mostrata nella riga; la conferma rimuove la cartella e il blob esclusivo; il blob condiviso resta; il toast dice 6 MB liberati; la nuova misura toglie la riga. Render controllati a 360 e 1280 px.
+- `make lint`: pulito.
+- `make test-all`: 4306 passati, 1 saltato.
+
+CHECKS L3: security-reviewer ESEGUITO (due giri; F24 e F25 parked) | code-reviewer ESEGUITO (1 MEDIUM + 4 LOW, corretti) | verify ESEGUITO (click-through della rimozione, render 360 e 1280 px) | a11y-gate N/A (UI GTK, non HTML) | /analyze N/A (nessun cambio a spec o piano in L3).
+
+### Limiti noti / Aperti
+
+- F15 MEDIUM: alcuni test a tempo sono instabili sotto carico pesante (budget CPU della scansione dei processi, `spin_until` con timeout). Passano se rilanciati da soli. La decisione sulla soglia è lasciata all'utente.
+- F24 LOW (parked): resta una finestra stretta fra la lettura e la cancellazione; si cancella comunque solo l'inode pianificato.
+- F25 LOW (parked): un link con target assoluto scritto in modo diverso dalla radice non viene contato. HuggingFace usa link relativi, quindi il caso non si presenta con la cache normale.
+- Codex: il login è attivo ma il broker non è pronto, quindi tutti gli agent hanno lavorato in-house.
+
+### Note per il Cliente
+
+Nella pagina Disco ogni modello HuggingFace ha ora il bottone "Rimuovi". La finestra di conferma dice che cosa verrà liberato, e dopo la conferma il modello sparisce dall'elenco con lo spazio recuperato indicato. I file condivisi con altri modelli non vengono toccati. Nella prova su una cartella di test, la rimozione di un modello ha liberato 6 MB e ha lasciato intatto il file in comune. Le revisioni non hanno trovato difetti gravi; un difetto di media gravità, che in un caso raro poteva cancellare un file ancora in uso, è stato corretto: se l'elenco dei file non si legge per intero, l'app non cancella nulla. Restano aperti due casi minori molto rari e alcuni controlli automatici che a volte falliscono quando il computer è molto occupato, senza effetto sull'uso dell'app.
+
+### Prossimo passo
+
+Lotto L6 (selezione multipla), poi L4 e L5.
+
+---
