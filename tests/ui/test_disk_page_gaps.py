@@ -10,7 +10,7 @@ from tests.core.disk_helpers import report
 from tests.ui.conftest import (
     descendants,
 )
-from tests.ui.test_disk_page import SAMPLE, make_page, scan_button, show
+from tests.ui.disk_page_helpers import SAMPLE, make_page, scan_button, show
 from tests.ui.test_ui_widget_gaps import buttons_of
 from wimm.core.disk_wire import disk_report_from_json
 from wimm.model.disk import DiskReport, DockerDisk

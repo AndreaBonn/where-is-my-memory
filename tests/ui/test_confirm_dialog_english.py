@@ -6,8 +6,8 @@ from gi.repository import Adw
 from tests.core.disk_helpers import docker_disk, report, volume
 from tests.core.planning_helpers import group, proc, snapshot
 from tests.service.executor_fakes import container_step, make_plan, process_step
+from tests.ui.confirm_dialog_helpers import entry_rows, labels, open_dialog, stop
 from tests.ui.conftest import descendants
-from tests.ui.test_confirm_dialog import entry_rows, labels, open_dialog, stop
 from wimm.model.actions import ActionRequest
 from wimm.model.enums import ActionKind, TargetId
 from wimm.service.actions import ReclaimDelta

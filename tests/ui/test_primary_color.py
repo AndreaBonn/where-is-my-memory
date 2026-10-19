@@ -6,7 +6,7 @@ import pytest
 
 from tests.core.planning_helpers import group, proc, snapshot
 from tests.ui.conftest import FakeActionService, WindowFactory, present_and_settle
-from tests.ui.test_disk_page import buttons_in
+from tests.ui.disk_page_helpers import buttons_in
 from tests.ui.test_window_actions import primary_button
 from wimm.model.enums import ActionKind, Risk
 from wimm.model.snapshot import ActionOffer

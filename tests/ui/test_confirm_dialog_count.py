@@ -3,7 +3,7 @@
 import pytest
 
 from tests.core.planning_helpers import group, proc, snapshot
-from tests.ui.test_confirm_dialog import labels, open_dialog, stop
+from tests.ui.confirm_dialog_helpers import labels, open_dialog, stop
 from wimm.ui.dialogs.text import count_text
 
 pytestmark = pytest.mark.ui

@@ -1,88 +1,25 @@
 import pytest
-from gi.repository import Adw, Gtk
+from gi.repository import Adw
 
-from tests.core.disk_helpers import docker_disk, image, report, volume
-from tests.core.planning_helpers import container, group, proc, snapshot
-from tests.ui.conftest import FakeActionService, descendants
+from tests.core.disk_helpers import docker_disk, report, volume
+from tests.core.planning_helpers import group, proc, snapshot
 from wimm.core.risk_table import CONSEQUENCES, ConsequenceKey
-from wimm.model.actions import ActionRequest, Plan
-from wimm.model.disk import DiskReport
-from wimm.model.enums import ActionKind, Category, GroupId, TargetId
-from wimm.model.snapshot import Snapshot
-from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE, ConfirmDialog
-from wimm.ui.dialogs.facts import SHORT_ID_CHARS, UNNAMED_IMAGE
-from wimm.ui.dialogs.session import ConfirmSession, entries_for
+from wimm.model.actions import ActionRequest
+from wimm.model.enums import ActionKind, Category, TargetId
+from wimm.ui.dialogs.confirm import CONFIRM_RESPONSE
 from wimm.ui.format import format_size
 
 pytestmark = pytest.mark.ui
-GB = 1_000_000_000
-Confirmed = list[tuple[Plan, str | None]]
-
-
-def open_dialog(
-    *, snap: Snapshot, request: ActionRequest, subject: str | None, disk: DiskReport | None = None
-) -> tuple[ConfirmDialog, FakeActionService, Confirmed]:
-    service = FakeActionService(snapshot=snap)
-    service.disk_report = disk
-    plan = service.plan(request=request)
-    session = ConfirmSession(
-        plan=plan,
-        subject=subject,
-        entries=entries_for(plan=plan, snapshot=snap),
-        replan=lambda new: service.plan(request=new),
-    )
-    confirmed: Confirmed = []
-    dialog = ConfirmDialog(
-        session=session,
-        on_confirm=lambda p, typed: confirmed.append((p, typed)),
-        snapshot=snap,
-    )
-    return dialog, service, confirmed
-
-
-def stop(gid: str) -> ActionRequest:
-    return ActionRequest(kind=ActionKind.GROUP_STOP, group_id=GroupId(gid))
-
-
-def labels(dialog: ConfirmDialog) -> list[str]:
-    """Texts shown in the extra child: labels and row titles that are visible."""
-    extra = dialog.get_extra_child()
-    assert extra is not None
-    shown = [w for w in descendants(extra) if isinstance(w, Gtk.Label) and w.is_visible()]
-    texts = [w.get_label() for w in shown]
-    texts += [w.get_title() for w in descendants(extra) if isinstance(w, Adw.ActionRow)]
-    return texts
-
-
-def switches(dialog: ConfirmDialog) -> dict[str, Adw.SwitchRow]:
-    extra = dialog.get_extra_child()
-    assert extra is not None
-    return {w.get_title(): w for w in descendants(extra) if isinstance(w, Adw.SwitchRow)}
-
-
-def row_for(rows: dict[str, Adw.SwitchRow], *, part: str) -> Adw.SwitchRow:
-    """The one switch whose plain title mentions the technical name `part`."""
-    (row,) = [row for title, row in rows.items() if part in title]
-    return row
-
-
-def unnamed(*, image_id: str) -> str:
-    return UNNAMED_IMAGE.format(short=image_id.removeprefix("sha256:")[:SHORT_ID_CHARS])
-
-
-def entry_rows(dialog: ConfirmDialog) -> list[Adw.EntryRow]:
-    extra = dialog.get_extra_child()
-    assert extra is not None
-    return [w for w in descendants(extra) if isinstance(w, Adw.EntryRow) and w.is_visible()]
-
-
-def mixed_project() -> Snapshot:
-    members = (
-        proc(pid=1, reclaimable=GB),
-        proc(pid=2, category=Category.AI_CLI, reclaimable=GB // 10),
-        container(cid="db", reclaimable=GB // 2),
-    )
-    return snapshot(group(gid="p", name="whitebox", members=members))
+from tests.ui.confirm_dialog_helpers import (
+    GB,
+    entry_rows,
+    labels,
+    mixed_project,
+    open_dialog,
+    row_for,
+    stop,
+    switches,
+)
 
 
 def test_safe_dialog_names_the_target_the_recovery_and_uses_the_suggested_style(
@@ -207,167 +144,3 @@ def test_removing_every_entry_disables_the_button_and_adding_one_back_enables_it
     dialog.emit("response", CONFIRM_RESPONSE)
     assert [sorted(s.target_label for s in plan.steps) for plan, _ in confirmed] == [["name-db"]]
     assert confirmed[0][0].request.excluded_ids == frozenset({"1", "2"})
-
-
-def test_stop_all_lists_entries_grouped_by_group_with_one_total(display: None) -> None:
-    snap = snapshot(
-        group(gid="a", name="alfa", members=(proc(pid=1, reclaimable=100),)),
-        group(
-            gid="b",
-            name="beta",
-            members=(proc(pid=2, reclaimable=200), container(cid="c", reclaimable=300)),
-        ),
-    )
-    request = ActionRequest(kind=ActionKind.STOP_ALL_IDLE_SAFE)
-    dialog, service, _ = open_dialog(snap=snap, request=request, subject=None)
-    extra = dialog.get_extra_child()
-    assert extra is not None
-
-    titles = [w.get_title() for w in descendants(extra) if isinstance(w, Adw.PreferencesGroup)]
-    assert dialog.get_heading() == "Fermare i programmi che non usi?"
-    assert dialog.get_response_label(CONFIRM_RESPONSE) == "Libera la memoria"
-    assert titles == ["alfa", "beta"]
-    assert "600 B" in dialog.get_body()
-
-    row_for(switches(dialog), part="name-c").set_active(False)
-
-    assert service.planned[-1].kind is ActionKind.STOP_ALL_IDLE_SAFE
-    assert service.planned[-1].excluded_ids == frozenset({"c"})
-    assert "300 B" in dialog.get_body()
-
-
-def test_prune_dialog_offers_a_switch_per_image_and_replans_without_the_removed_one(
-    display: None,
-) -> None:
-    first = image(char="a", tags=(), dangling=True, size=5 * GB)
-    second = image(char="b", tags=(), dangling=True, size=2 * GB)
-    request = ActionRequest(kind=ActionKind.IMAGES_PRUNE_DANGLING)
-    service = FakeActionService(snapshot=snapshot())
-    service.disk_report = report(docker=docker_disk(images=(first, second)))
-    plan = service.plan(request=request)
-    session = ConfirmSession(
-        plan=plan,
-        subject=None,
-        entries=entries_for(plan=plan, snapshot=snapshot()),
-        replan=lambda new: service.plan(request=new),
-    )
-    dialog = ConfirmDialog(session=session, on_confirm=lambda *_: None)
-
-    rows = switches(dialog)
-    assert set(rows) == {unnamed(image_id=first.id), unnamed(image_id=second.id)}
-
-    rows[unnamed(image_id=second.id)].set_active(False)
-
-    assert service.planned[-1].excluded_ids == frozenset({second.id})
-    assert format_size(size=5 * GB) in dialog.get_body()
-
-
-def test_names_with_markup_characters_are_shown_literally(display: None) -> None:
-    # A group, process or volume name with "&" or "<" made the libadwaita title empty.
-    members = (proc(pid=1, reclaimable=GB), proc(pid=2, reclaimable=GB))
-    snap = snapshot(group(gid="p", name="R&D <lab>", members=members))
-
-    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="R&D <lab>")
-
-    extra = dialog.get_extra_child()
-    assert extra is not None
-    shown = [w.get_text() for w in descendants(extra) if isinstance(w, Gtk.Label)]
-    assert "R&D <lab>" in shown
-    assert "node · 1,0 GB" in shown  # positive pair: the plain names still render
-    (entry,) = [w for w in descendants(extra) if isinstance(w, Adw.EntryRow)]
-    entry.set_title("Scrivi R&D <lab> per confermare")
-    assert "Scrivi R&D <lab> per confermare" in [
-        w.get_text() for w in descendants(entry) if isinstance(w, Gtk.Label)
-    ]
-
-
-def test_free_safe_dialog_lets_each_item_be_left_out(display: None) -> None:
-    from tests.core.disk_helpers import MB, cache
-    from wimm.model.disk import CacheKind
-
-    disk = report(
-        docker=docker_disk(
-            images=(image(char="a", tags=(), dangling=True, size=2 * MB),),
-            build_cache_size=5 * MB,
-            build_cache_reclaimable=4 * MB,
-        ),
-        caches=(cache(kind=CacheKind.UV, size=3 * MB),),
-    )
-    request = ActionRequest(kind=ActionKind.DISK_FREE_SAFE)
-    dialog, service, _ = open_dialog(snap=snapshot(), request=request, subject=None, disk=disk)
-
-    rows = switches(dialog)
-    assert len(rows) == 3
-    rows["uv"].set_active(False)
-
-    assert service.planned[-1].excluded_ids == frozenset({"/home/u/.cache/uv"})
-    assert f"liberi circa {format_size(size=6 * MB)} di spazio sul disco" in dialog.get_body()
-
-
-def test_safe_stop_shows_what_stays_and_how_to_restart(display: None) -> None:
-    members = (proc(pid=1, reclaimable=GB), container(cid="db", reclaimable=GB // 2))
-    snap = snapshot(group(gid="p", name="whitebox", members=members))
-
-    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="whitebox")
-
-    shown = labels(dialog)
-    assert "Cosa resta" in shown
-    assert "Per riaccenderlo" in shown
-    assert not [text for text in shown if "docker start" in text]
-
-
-def test_body_explains_a_listed_amount_the_plan_cannot_free(display: None) -> None:
-    from dataclasses import replace
-
-    other = proc(pid=9, reclaimable=GB, uid=4242)  # another user's process: not stopped
-    snap = snapshot(group(gid="p", name="mixed", members=(proc(pid=1, reclaimable=GB), other)))
-    listed = replace(snap.groups[0].memory, reclaimable=2 * GB)
-    snap = replace(snap, groups=(replace(snap.groups[0], memory=listed),))
-
-    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="mixed")
-
-    body = dialog.get_body()
-    assert f"Liberi circa {format_size(size=GB)} di memoria." in body
-    assert f"Nella lista conta {format_size(size=2 * GB)}" in body
-
-
-def test_unticking_an_entry_does_not_blame_parts_that_cannot_stop(display: None) -> None:
-    from dataclasses import replace
-
-    members = (
-        proc(pid=1, reclaimable=GB),
-        proc(pid=2, reclaimable=GB),
-        proc(pid=9, reclaimable=GB, uid=4242),  # another user's process: not stopped
-    )
-    snap = snapshot(group(gid="p", name="mixed", members=members))
-    listed = replace(snap.groups[0].memory, reclaimable=3 * GB)
-    snap = replace(snap, groups=(replace(snap.groups[0], memory=listed),))
-    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="mixed")
-    assert "Nella lista conta" in dialog.get_body()
-
-    next(iter(switches(dialog).values())).set_active(False)
-
-    assert "Nella lista conta" not in dialog.get_body()
-
-
-def warning_box_classes(dialog: ConfirmDialog) -> set[str]:
-    extra = dialog.get_extra_child()
-    assert extra is not None
-    boxes = [w for w in descendants(extra) if w.has_css_class("wimm-warning")]
-    facts = [w for w in descendants(extra) if w.has_css_class("wimm-facts")]
-    return {name for name, found in (("wimm-warning", boxes), ("wimm-facts", facts)) if found}
-
-
-def test_consequences_use_warning_style_for_caution_and_plain_style_for_safe(
-    display: None,
-) -> None:
-    snap = snapshot(
-        group(gid="a", name="agent", members=(proc(pid=2, category=Category.AI_CLI),)),
-        group(gid="s", name="server", members=(proc(pid=1),)),
-    )
-
-    caution, _, _ = open_dialog(snap=snap, request=stop("a"), subject="agent")
-    safe, _, _ = open_dialog(snap=snap, request=stop("s"), subject="server")
-
-    assert warning_box_classes(caution) == {"wimm-warning"}
-    assert warning_box_classes(safe) == {"wimm-facts"}
