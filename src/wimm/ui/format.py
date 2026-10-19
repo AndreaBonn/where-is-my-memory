@@ -42,15 +42,6 @@ RISK_CONSEQUENCE = MappingProxyType(
         Risk.DANGER: N_("Pericolo: cancella dati"),
     }
 )
-# On the disk the cost depends on the item: "caution" sends the user to the confirmation,
-# which lists what is lost (a stopped container loses its own files for good).
-DISK_RISK_CONSEQUENCE = MappingProxyType(
-    {
-        Risk.SAFE: N_("Sicuro: si ricrea quando serve"),
-        Risk.CAUTION: N_("Attenzione: leggi prima cosa si perde"),
-        Risk.DANGER: N_("Pericolo: cancella dati"),
-    }
-)
 # libadwaita style classes (spec 10.4).
 RISK_STYLE = MappingProxyType({Risk.SAFE: "success", Risk.CAUTION: "warning", Risk.DANGER: "error"})
 # P1/P2: what a non-expert should know about the pressure, none when it is normal.

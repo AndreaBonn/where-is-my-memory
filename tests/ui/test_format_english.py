@@ -6,7 +6,6 @@ from wimm.i18n import _
 from wimm.model.enums import ActionKind, ActivityState, Category, Pressure, Risk
 from wimm.ui.format import (
     CATEGORY_LABELS,
-    DISK_RISK_CONSEQUENCE,
     PRESSURE_TEXT,
     RISK_CONSEQUENCE,
     RISK_TEXT,
@@ -53,7 +52,6 @@ def test_the_tables_translate_where_they_are_shown() -> None:
     assert _(CATEGORY_LABELS[Category.CONTAINER]) == "Docker container"
     assert [_(RISK_TEXT[risk]) for risk in Risk] == ["Safe", "Caution", "Danger"]
     assert _(RISK_CONSEQUENCE[Risk.CAUTION]) == "Caution: you may lose work"
-    assert _(DISK_RISK_CONSEQUENCE[Risk.SAFE]) == "Safe: it recreates itself when needed"
     assert [_(PRESSURE_TEXT[p]) for p in Pressure] == ["Normal", "High", "Critical"]
 
 

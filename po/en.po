@@ -145,7 +145,7 @@ msgid "Miniature"
 msgstr "Thumbnails"
 
 #: src/wimm/core/cache_titles.py:15 src/wimm/core/planning_disk.py:40
-#: src/wimm/ui/disk_view.py:146
+#: src/wimm/ui/disk_view.py:161
 msgid "Cestino"
 msgstr "Trash"
 
@@ -603,7 +603,7 @@ msgstr[1] "{count} minutes"
 msgid "meno di 1 minuto"
 msgstr "less than 1 minute"
 
-#: src/wimm/core/text.py:55 src/wimm/ui/format.py:182
+#: src/wimm/core/text.py:55 src/wimm/ui/format.py:173
 #, python-brace-format
 msgid "{count} h"
 msgstr "{count} h"
@@ -639,7 +639,7 @@ msgstr "no connection"
 msgid "{prefix} da {duration}"
 msgstr "{prefix} for {duration}"
 
-#: src/wimm/core/text.py:90 src/wimm/ui/format.py:152
+#: src/wimm/core/text.py:90 src/wimm/ui/format.py:143
 msgid "attività non misurabile"
 msgstr "activity cannot be measured"
 
@@ -1028,8 +1028,8 @@ msgstr "Things have changed, recalculating…"
 msgid "Dettagli"
 msgstr "Details"
 
-#: src/wimm/ui/action_flow.py:44 src/wimm/ui/format.py:88
-#: src/wimm/ui/format.py:89
+#: src/wimm/ui/action_flow.py:44 src/wimm/ui/format.py:79
+#: src/wimm/ui/format.py:80
 msgid "Riaccendi"
 msgstr "Start again"
 
@@ -1082,7 +1082,7 @@ msgstr "Terminal programs: with the same command as before."
 msgid "Le applicazioni: dal menu delle applicazioni, come al solito."
 msgstr "Applications: from the applications menu, as usual."
 
-#: src/wimm/ui/dialogs/facts.py:31 src/wimm/ui/disk_view_docker.py:155
+#: src/wimm/ui/dialogs/facts.py:31 src/wimm/ui/disk_view_docker.py:171
 msgid "Cache di build Docker"
 msgstr "Docker build cache"
 
@@ -1091,7 +1091,7 @@ msgstr "Docker build cache"
 msgid "Immagine senza nome ({short})"
 msgstr "Unnamed image ({short})"
 
-#: src/wimm/ui/dialogs/outcome.py:14 src/wimm/ui/format.py:71
+#: src/wimm/ui/dialogs/outcome.py:14 src/wimm/ui/format.py:62
 msgid "Chiudi"
 msgstr "Close"
 
@@ -1099,7 +1099,7 @@ msgstr "Close"
 msgid "Esito"
 msgstr "Result"
 
-#: src/wimm/ui/dialogs/outcome.py:16 src/wimm/ui/format.py:70
+#: src/wimm/ui/dialogs/outcome.py:16 src/wimm/ui/format.py:61
 msgid "Forza chiusura"
 msgstr "Force close"
 
@@ -1589,7 +1589,7 @@ msgstr ""
 msgid "dimensione sconosciuta"
 msgstr "unknown size"
 
-#: src/wimm/ui/disk_model.py:76
+#: src/wimm/ui/disk_model.py:77
 #, python-brace-format
 msgid "e altre {count}"
 msgstr "and {count} more"
@@ -1732,118 +1732,118 @@ msgstr "Models and emulators"
 msgid "Immagini Docker scaricate"
 msgstr "Downloaded Docker images"
 
-#: src/wimm/ui/disk_view.py:36 src/wimm/ui/pages/disk.py:26
+#: src/wimm/ui/disk_view.py:37 src/wimm/ui/pages/disk.py:26
 msgid "Nessun controllo ancora"
 msgstr "No check yet"
 
-#: src/wimm/ui/disk_view.py:49
+#: src/wimm/ui/disk_view.py:50
 #, python-brace-format
 msgid "Ultimo controllo alle {time}"
 msgstr "Last check at {time}"
 
-#: src/wimm/ui/disk_view.py:50
+#: src/wimm/ui/disk_view.py:51
 #, python-brace-format
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:84
+#: src/wimm/ui/disk_view.py:99
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:117
+#: src/wimm/ui/disk_view.py:132
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:123
+#: src/wimm/ui/disk_view.py:138
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:144
+#: src/wimm/ui/disk_view.py:159
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:144
+#: src/wimm/ui/disk_view.py:159
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:146
+#: src/wimm/ui/disk_view.py:161
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 
-#: src/wimm/ui/disk_view_docker.py:19
+#: src/wimm/ui/disk_view_docker.py:20
 msgid "Immagine senza nome"
 msgstr "Unnamed image"
 
-#: src/wimm/ui/disk_view_docker.py:33 src/wimm/ui/disk_view_docker.py:70
+#: src/wimm/ui/disk_view_docker.py:41 src/wimm/ui/disk_view_docker.py:82
 msgid "in uso da un container"
 msgstr "used by a container"
 
-#: src/wimm/ui/disk_view_docker.py:33
+#: src/wimm/ui/disk_view_docker.py:41
 msgid "non in uso"
 msgstr "not in use"
 
-#: src/wimm/ui/disk_view_docker.py:35
+#: src/wimm/ui/disk_view_docker.py:43
 #, python-brace-format
 msgid "versione fissata {digest}"
 msgstr "pinned version {digest}"
 
-#: src/wimm/ui/disk_view_docker.py:37
+#: src/wimm/ui/disk_view_docker.py:45
 msgid "senza nome"
 msgstr "unnamed"
 
-#: src/wimm/ui/disk_view_docker.py:39
+#: src/wimm/ui/disk_view_docker.py:47
 msgid "costruita in locale"
 msgstr "built locally"
 
-#: src/wimm/ui/disk_view_docker.py:59
+#: src/wimm/ui/disk_view_docker.py:71
 msgid "fermo"
 msgstr "stopped"
 
-#: src/wimm/ui/disk_view_docker.py:68
+#: src/wimm/ui/disk_view_docker.py:80
 msgid "non sappiamo se un contenitore lo usa"
 msgstr "we don't know if a container uses it"
 
-#: src/wimm/ui/disk_view_docker.py:72
+#: src/wimm/ui/disk_view_docker.py:84
 msgid "non rimovibile: data di creazione non nota"
 msgstr "cannot be removed: creation date unknown"
 
-#: src/wimm/ui/disk_view_docker.py:73
+#: src/wimm/ui/disk_view_docker.py:85
 msgid "non usato"
 msgstr "unused"
 
-#: src/wimm/ui/disk_view_docker.py:91
+#: src/wimm/ui/disk_view_docker.py:107
 msgid "Cache di build"
 msgstr "Build cache"
 
-#: src/wimm/ui/disk_view_docker.py:92
+#: src/wimm/ui/disk_view_docker.py:108
 #, python-brace-format
 msgid "liberabili {size}"
 msgstr "{size} can be freed"
 
-#: src/wimm/ui/disk_view_docker.py:131
+#: src/wimm/ui/disk_view_docker.py:147
 #, python-brace-format
 msgid "Docker non disponibile: {error}"
 msgstr "Docker not available: {error}"
 
-#: src/wimm/ui/disk_view_docker.py:132
+#: src/wimm/ui/disk_view_docker.py:148
 msgid "Docker"
 msgstr "Docker"
 
-#: src/wimm/ui/disk_view_docker.py:139
+#: src/wimm/ui/disk_view_docker.py:155
 msgid "Immagini Docker"
 msgstr "Docker images"
 
-#: src/wimm/ui/disk_view_docker.py:146
+#: src/wimm/ui/disk_view_docker.py:162
 msgid "Container fermi"
 msgstr "Stopped containers"
 
-#: src/wimm/ui/disk_view_docker.py:152
+#: src/wimm/ui/disk_view_docker.py:168
 msgid "Volumi Docker"
 msgstr "Docker volumes"
 
@@ -1963,140 +1963,132 @@ msgstr "Safe: you lose nothing"
 msgid "Attenzione: puoi perdere lavoro"
 msgstr "Caution: you may lose work"
 
-#: src/wimm/ui/format.py:42 src/wimm/ui/format.py:51
+#: src/wimm/ui/format.py:42
 msgid "Pericolo: cancella dati"
 msgstr "Danger: deletes data"
 
-#: src/wimm/ui/format.py:49
-msgid "Sicuro: si ricrea quando serve"
-msgstr "Safe: it recreates itself when needed"
-
-#: src/wimm/ui/format.py:50
-msgid "Attenzione: leggi prima cosa si perde"
-msgstr "Caution: read first what you lose"
-
-#: src/wimm/ui/format.py:60
+#: src/wimm/ui/format.py:51
 msgid "memoria quasi piena"
 msgstr "memory almost full"
 
-#: src/wimm/ui/format.py:61
+#: src/wimm/ui/format.py:52
 msgid "memoria quasi finita"
 msgstr "memory almost out"
 
-#: src/wimm/ui/format.py:65
+#: src/wimm/ui/format.py:56
 msgid "Alta"
 msgstr "High"
 
-#: src/wimm/ui/format.py:65
+#: src/wimm/ui/format.py:56
 msgid "Critica"
 msgstr "Critical"
 
-#: src/wimm/ui/format.py:65
+#: src/wimm/ui/format.py:56
 msgid "Normale"
 msgstr "Normal"
 
-#: src/wimm/ui/format.py:69
+#: src/wimm/ui/format.py:60
 msgid "Termina"
 msgstr "End"
 
-#: src/wimm/ui/format.py:72 src/wimm/ui/format.py:74
+#: src/wimm/ui/format.py:63 src/wimm/ui/format.py:65
 msgid "Ferma"
 msgstr "Stop"
 
-#: src/wimm/ui/format.py:73
+#: src/wimm/ui/format.py:64
 msgid "Rimuovi"
 msgstr "Remove"
 
-#: src/wimm/ui/format.py:75
+#: src/wimm/ui/format.py:66
 msgid "Spegni il progetto"
 msgstr "Shut down the project"
 
-#: src/wimm/ui/format.py:76
+#: src/wimm/ui/format.py:67
 msgid "Spegni e rimuovi i volumi"
 msgstr "Shut down and remove the volumes"
 
-#: src/wimm/ui/format.py:77
+#: src/wimm/ui/format.py:68
 msgid "Libera la memoria"
 msgstr "Free the memory"
 
-#: src/wimm/ui/format.py:78
+#: src/wimm/ui/format.py:69
 msgid "Rimuovi immagine"
 msgstr "Remove image"
 
-#: src/wimm/ui/format.py:79
+#: src/wimm/ui/format.py:70
 msgid "Elimina immagini senza nome"
 msgstr "Delete unnamed images"
 
-#: src/wimm/ui/format.py:80
+#: src/wimm/ui/format.py:71
 msgid "Elimina immagini inutilizzate"
 msgstr "Delete unused images"
 
-#: src/wimm/ui/format.py:81
+#: src/wimm/ui/format.py:72
 msgid "Svuota cache di build"
 msgstr "Empty the build cache"
 
-#: src/wimm/ui/format.py:82
+#: src/wimm/ui/format.py:73
 msgid "Elimina container fermi"
 msgstr "Delete stopped containers"
 
-#: src/wimm/ui/format.py:83
+#: src/wimm/ui/format.py:74
 msgid "Rimuovi volume"
 msgstr "Remove volume"
 
-#: src/wimm/ui/format.py:84
+#: src/wimm/ui/format.py:75
 msgid "Pulisci cache"
 msgstr "Clean the cache"
 
-#: src/wimm/ui/format.py:85
+#: src/wimm/ui/format.py:76
 msgid "Svuota cestino"
 msgstr "Empty the trash"
 
-#: src/wimm/ui/format.py:86
+#: src/wimm/ui/format.py:77
 msgid "Elimina cartella"
 msgstr "Delete folder"
 
-#: src/wimm/ui/format.py:87
+#: src/wimm/ui/format.py:78
 msgid "Libera spazio"
 msgstr "Free up space"
 
-#: src/wimm/ui/format.py:100
+#: src/wimm/ui/format.py:91
 #, python-brace-format
 msgid "da {count} s"
 msgstr "for {count} s"
 
-#: src/wimm/ui/format.py:102
+#: src/wimm/ui/format.py:93
 #, python-brace-format
 msgid "da {count} min"
 msgstr "for {count} min"
 
-#: src/wimm/ui/format.py:104
+#: src/wimm/ui/format.py:95
 #, python-brace-format
 msgid "da {count} h"
 msgstr "for {count} h"
 
-#: src/wimm/ui/format.py:106
+#: src/wimm/ui/format.py:97
 #, python-brace-format
 msgid "da {count} giorno"
 msgid_plural "da {count} giorni"
 msgstr[0] "for {count} day"
 msgstr[1] "for {count} days"
 
-#: src/wimm/ui/format.py:146
+#: src/wimm/ui/format.py:137
 msgid "in uso"
 msgstr "in use"
 
-#: src/wimm/ui/format.py:148
+#: src/wimm/ui/format.py:139
 #, python-brace-format
 msgid "non in uso {elapsed}"
 msgstr "not in use {elapsed}"
 
 #. TRANSLATORS: strftime pattern of a day without the year; English puts the month first.
-#: src/wimm/ui/format.py:170
+#: src/wimm/ui/format.py:161
 #, no-python-format
 msgid "%d/%m"
 msgstr "%m/%d"
 
-#: src/wimm/ui/format.py:185
+#: src/wimm/ui/format.py:176
 #, python-brace-format
 msgid "+{size} in {duration}"
 msgstr "+{size} in {duration}"
