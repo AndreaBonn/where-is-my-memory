@@ -179,7 +179,7 @@ CONSEQUENCES: dict[ConsequenceKey, str] = {
     ),
     ConsequenceKey.ITEM_PLAYWRIGHT: N_("Si riscarica con playwright install quando serve."),
     ConsequenceKey.ITEM_JETBRAINS: N_(
-        "Impostazioni e cache di questa versione dell'IDE: gli indici si rifanno all'avvio."
+        "Cache e indici di questa versione dell'IDE, rifatti all'avvio; le impostazioni restano."
     ),
     ConsequenceKey.TRASH: N_("I file nel cestino vengono eliminati in modo definitivo."),
     ConsequenceKey.DEVDIR: N_(
