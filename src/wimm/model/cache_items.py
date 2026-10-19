@@ -1,12 +1,7 @@
 from dataclasses import dataclass
 
 from .enums import CacheItemKind
-from .validation import ImmutableModel, require_bytes, require_nonnegative
-
-
-def _require_text(value: str, field: str) -> None:
-    if type(value) is not str or not value.strip():
-        raise ValueError(f"{field} must not be blank")
+from .validation import ImmutableModel, require_bytes, require_nonnegative, require_text
 
 
 @dataclass(frozen=True, slots=True)
@@ -27,16 +22,16 @@ class CacheItem(ImmutableModel):
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
-        _require_text(value=self.id, field="id")
-        _require_text(value=self.title, field="title")
-        _require_text(value=self.path, field="path")
+        require_text(value=self.id, field="id")
+        require_text(value=self.title, field="title")
+        require_text(value=self.path, field="path")
         require_bytes(value=self.size, field="size")
         require_nonnegative(value=self.st_ino, field="st_ino")
         require_nonnegative(value=self.st_dev, field="st_dev")
 
 
 @dataclass(frozen=True, slots=True)
-class CacheRest:
+class CacheRest(ImmutableModel):
     """Bytes of a cache that no single item owns.
 
     `shared` is reachable from links of two or more items; `unattributed` lies in the
@@ -47,5 +42,6 @@ class CacheRest:
     unattributed: int = 0
 
     def __post_init__(self) -> None:
+        ImmutableModel.__post_init__(self)
         require_bytes(value=self.shared, field="shared")
         require_bytes(value=self.unattributed, field="unattributed")

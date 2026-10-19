@@ -2,8 +2,9 @@
 
 A repo's `snapshots/` hold symlinks to its own `blobs/`, which are either regular files or
 links into the hub-wide store `blobs/<2 hex>/<sha>`. A regular file counts for every repo
-that owns it by folder or reaches it through a link; one claimed by two or more repos is
-shared and belongs to no item.
+that owns it by folder or reaches it through a link; files are told apart by identity
+(device, inode), so a hard link counts once and one claimed by two or more repos is shared
+and belongs to no item.
 """
 
 import posixpath
@@ -30,8 +31,10 @@ HERE = "."
 
 def _repo_kind(name: str) -> tuple[str, CacheItemKind] | None:
     for prefix, kind in KIND_BY_PREFIX.items():
-        if name.startswith(prefix) and len(name) > len(prefix):
-            return name[len(prefix) :], kind
+        if name.startswith(prefix):
+            repo_id = name[len(prefix) :]
+            if repo_id.replace(REPO_ID_SEPARATOR, "").strip():
+                return repo_id, kind
     return None
 
 
@@ -66,21 +69,28 @@ def _resolve(*, link: TreeEntry, by_path: dict[str, TreeEntry], root: str) -> st
     return current.path if current.type is EntryType.FILE else None
 
 
-def _claims(*, listing: TreeListing, repos: set[str]) -> dict[str, set[str]]:
-    """Map every regular file a repo owns or reaches to the repos claiming it."""
+Identity = tuple[int, int]
+
+
+def _identity(entry: TreeEntry) -> Identity:
+    return (entry.st_dev, entry.st_ino)
+
+
+def _claims(*, listing: TreeListing, repos: set[str]) -> dict[Identity, set[str]]:
+    """Map every regular file a repo owns or reaches, by identity, to the repos claiming it."""
     root = posixpath.normpath(listing.root)
     by_path = {entry.path: entry for entry in listing.entries}
-    claims: dict[str, set[str]] = defaultdict(set)
+    claims: dict[Identity, set[str]] = defaultdict(set)
     for entry in listing.entries:
         owner = entry.path.split(OWNER_SEPARATOR, 1)[0]
         if owner not in repos or entry.path == owner:
             continue
         if entry.type is EntryType.FILE:
-            claims[entry.path].add(owner)
+            claims[_identity(entry)].add(owner)
         elif entry.type is EntryType.SYMLINK:
             reached = _resolve(link=entry, by_path=by_path, root=root)
             if reached is not None:
-                claims[reached].add(owner)
+                claims[_identity(by_path[reached])].add(owner)
     return claims
 
 
@@ -89,15 +99,19 @@ def _make_item(*, folder: TreeEntry, size: int, root: str) -> CacheItem | None:
     if parsed is None:
         return None
     repo_id, kind = parsed
-    return CacheItem(
-        id=folder.path,
-        title=repo_id.replace(REPO_ID_SEPARATOR, OWNER_SEPARATOR),
-        path=f"{root.rstrip('/')}/{folder.path}",
-        size=size,
-        st_ino=folder.st_ino,
-        st_dev=folder.st_dev,
-        kind=kind,
-    )
+    try:
+        return CacheItem(
+            id=folder.path,
+            title=repo_id.replace(REPO_ID_SEPARATOR, OWNER_SEPARATOR),
+            path=f"{root.rstrip('/')}/{folder.path}",
+            size=size,
+            st_ino=folder.st_ino,
+            st_dev=folder.st_dev,
+            kind=kind,
+        )
+    except ValueError:
+        # An odd folder name must never take the whole report down; it is just not an item.
+        return None
 
 
 def hf_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
@@ -109,14 +123,14 @@ def hf_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
         and OWNER_SEPARATOR not in entry.path
         and _repo_kind(entry.path) is not None
     }
-    sizes = {path: entry.size for path, entry in ((e.path, e) for e in listing.entries)}
+    sizes = {_identity(e): e.size for e in listing.entries if e.type is EntryType.FILE}
     per_repo = dict.fromkeys(folders, 0)
     shared = 0
-    for path, owners in _claims(listing=listing, repos=set(folders)).items():
+    for identity, owners in _claims(listing=listing, repos=set(folders)).items():
         if len(owners) > 1:
-            shared += sizes[path]
+            shared += sizes[identity]
         else:
-            per_repo[next(iter(owners))] += sizes[path]
+            per_repo[next(iter(owners))] += sizes[identity]
     made = (
         _make_item(folder=folder, size=per_repo[name], root=listing.root)
         for name, folder in folders.items()

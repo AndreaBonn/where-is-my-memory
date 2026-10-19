@@ -15,6 +15,11 @@ def require_bytes(value: int, field: str) -> None:
         raise ValueError(f"{field} must be a nonnegative integer byte count")
 
 
+def require_text(value: str, field: str) -> None:
+    if type(value) is not str or not value.strip():
+        raise ValueError(f"{field} must not be blank")
+
+
 def require_immutable(value: object, field: str) -> None:
     if isinstance(value, list | dict | set | bytearray):
         raise ValueError(f"{field} must be immutable")

@@ -58,14 +58,17 @@ def test_list_tree_never_follows_or_resolves_links(
     assert all(entry.size == 0 for entry in found.values())
 
 
-def test_list_tree_counts_a_hard_link_once(tmp_path: Path) -> None:
+def test_list_tree_keeps_the_size_on_every_hard_link_with_one_shared_identity(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "tree"
     root.mkdir()
     (root / "one.bin").write_bytes(b"z" * 8192)
     os.link(root / "one.bin", root / "two.bin")
-    sizes = sorted(entry.size for entry in list_tree(root=root).entries)
-    assert sizes == [0, _blocks(root / "one.bin")]
-    assert sizes[1] > 0
+    entries = list_tree(root=root).entries
+    assert [entry.size for entry in entries] == [_blocks(root / "one.bin")] * 2
+    assert entries[0].size > 0
+    assert len({(entry.st_dev, entry.st_ino) for entry in entries}) == 1
 
 
 def test_list_tree_skips_unreadable_directory_without_raising(

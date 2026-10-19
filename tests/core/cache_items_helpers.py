@@ -1,3 +1,5 @@
+import zlib
+
 from wimm.core.cache_items import EntryType, TreeEntry, TreeListing
 
 ROOT = "/home/u/.cache/huggingface/hub"
@@ -8,8 +10,10 @@ def d(path: str, *, ino: int = 1) -> TreeEntry:
     return TreeEntry(path=path, type=EntryType.DIR, st_ino=ino, st_dev=DEV)
 
 
-def f(path: str, size: int) -> TreeEntry:
-    return TreeEntry(path=path, type=EntryType.FILE, size=size)
+def f(path: str, size: int, *, ino: int | None = None) -> TreeEntry:
+    """A regular file; without `ino` its identity is unique per path (no hard link)."""
+    identity = zlib.crc32(path.encode()) + 1 if ino is None else ino
+    return TreeEntry(path=path, type=EntryType.FILE, size=size, st_ino=identity, st_dev=DEV)
 
 
 def ln(path: str, target: str) -> TreeEntry:

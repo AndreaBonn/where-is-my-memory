@@ -4,7 +4,13 @@ from enum import Enum
 
 from .cache_items import CacheItem, CacheRest
 from .snapshot import DockerStatus
-from .validation import ImmutableModel, require_aware, require_bytes, require_nonnegative
+from .validation import (
+    ImmutableModel,
+    require_aware,
+    require_bytes,
+    require_nonnegative,
+    require_text,
+)
 
 
 class CacheKind(Enum):
@@ -31,11 +37,6 @@ class CacheKind(Enum):
     ANDROID_SDK = "android_sdk"
 
 
-def _require_text(value: str, field: str) -> None:
-    if type(value) is not str or not value.strip():
-        raise ValueError(f"{field} must not be blank")
-
-
 def _require_optional_bytes(value: int | None, field: str) -> None:
     if value is not None:
         require_bytes(value=value, field=field)
@@ -59,7 +60,7 @@ class DockerImage(ImmutableModel):
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
-        _require_text(value=self.id, field="id")
+        require_text(value=self.id, field="id")
         require_bytes(value=self.size, field="size")
         require_bytes(value=self.unique_size, field="unique_size")
         if self.unique_size > self.size:
@@ -82,7 +83,7 @@ class DockerVolume(ImmutableModel):
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
-        _require_text(value=self.name, field="name")
+        require_text(value=self.name, field="name")
         _require_optional_bytes(value=self.size, field="size")
         if self.ref_count is not None:
             require_nonnegative(value=self.ref_count, field="ref_count")
@@ -101,7 +102,7 @@ class StoppedContainer(ImmutableModel):
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
-        _require_text(value=self.id, field="id")
+        require_text(value=self.id, field="id")
         require_bytes(value=self.size, field="size")
 
 
@@ -163,7 +164,7 @@ class CacheEntry(ImmutableModel):
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
-        _require_text(value=self.path, field="path")
+        require_text(value=self.path, field="path")
         require_bytes(value=self.size, field="size")
         require_nonnegative(value=self.st_ino, field="st_ino")
         require_nonnegative(value=self.st_dev, field="st_dev")
@@ -192,7 +193,7 @@ class DevDir(ImmutableModel):
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
-        _require_text(value=self.path, field="path")
+        require_text(value=self.path, field="path")
         require_bytes(value=self.size, field="size")
         require_nonnegative(value=self.age_days, field="age_days")
         require_nonnegative(value=self.st_ino, field="st_ino")
