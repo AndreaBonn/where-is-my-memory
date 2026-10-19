@@ -48,6 +48,7 @@ class _Walk:
         self._count = 0
         self.entries: list[TreeEntry] = []
         self.disk_bytes = 0
+        self.skipped = 0
 
     def _account(self, info: os.stat_result) -> None:
         # Same rule as `dirsize`: a hard-linked file counts once, symlinks never count.
@@ -68,6 +69,7 @@ class _Walk:
         except (OSError, ValueError) as error:
             # ValueError: an entry TreeEntry refuses (a link with a blank target) is skipped.
             LOGGER.info("Skipping %s%s in cache tree: %s", prefix, name, error)
+            self.skipped += 1
             return None
 
     def _read(self, *, fd: int, prefix: str) -> list[str]:
@@ -77,6 +79,7 @@ class _Walk:
                 names = sorted(child.name for child in scanner)
         except OSError as error:
             LOGGER.info("Cannot list %s in cache tree: %s", prefix or "root", error)
+            self.skipped += 1
             return []
         subdirs: list[str] = []
         for name in names:
@@ -97,6 +100,7 @@ class _Walk:
             # Out of descriptors hides a whole subtree: say so louder than a routine change.
             level = logging.WARNING if error.errno in OUT_OF_DESCRIPTORS else logging.INFO
             LOGGER.log(level, "Skipping %s%s in cache tree: %s", prefix, name, error)
+            self.skipped += 1
             return None
         child_prefix = f"{prefix}{name}/"
         try:
@@ -110,6 +114,7 @@ class _Walk:
             root_fd = os.open(root, DIR_FLAGS)
         except OSError as error:
             LOGGER.info("Cannot open %s as a cache tree: %s", root, error)
+            self.skipped += 1
             return
         stack: list[Frame] = [(root_fd, "", [])]
         try:
@@ -136,10 +141,15 @@ def list_tree(*, root: Path, sleep: Callable[[float], None]) -> TreeListing:
     File sizes are disk space (``st_blocks * 512``), kept on every path: hard links are told
     apart by (st_dev, st_ino), which the core uses to count each file once. ``disk_bytes`` is
     the whole tree measured as ``measure_dir_size`` does. Symlinks keep their raw ``readlink``
-    text and are never resolved. Unreadable or vanished entries are skipped; nothing is raised
-    for them. ``sleep`` is called at the cadence of ``measure_dir_size`` and whatever it
-    raises (a cancelled scan) propagates.
+    text and are never resolved. Unreadable or vanished entries are skipped and counted in
+    ``skipped``; nothing is raised for them. ``sleep`` is called at the cadence of
+    ``measure_dir_size`` and whatever it raises (a cancelled scan) propagates.
     """
     walk = _Walk(sleep=sleep)
     walk.run(root=root)
-    return TreeListing(root=str(root), entries=tuple(walk.entries), disk_bytes=walk.disk_bytes)
+    return TreeListing(
+        root=str(root),
+        entries=tuple(walk.entries),
+        disk_bytes=walk.disk_bytes,
+        skipped=walk.skipped,
+    )

@@ -19,7 +19,7 @@ from wimm.model.cache_items import ItemBlob
 from wimm.model.disk import CacheKind
 
 from .control_protocols import StepOutcome, StepStatus
-from .errors import ControlFailed, InvalidRequest, ProtectedTarget, TargetChanged
+from .errors import InvalidRequest, ProtectedTarget, TargetChanged
 from .fs_controls import DiskFsControl
 from .safe_file import remove_file
 from .safe_tree import TreeRemoval, remove_directory
@@ -136,7 +136,10 @@ def _remove_blobs(
     """Remove the planned blobs that no remaining repo reaches; count those kept.
 
     `listing` is taken after the folder is gone, so a link another repo gained meanwhile shows.
+    A walk that skipped anything may have missed such a link: then every planned blob is kept.
     """
+    if listing.skipped:
+        return TreeRemoval(), len(fingerprint.blobs)
     reached = reached_identities(listing=listing)
     by_path = {entry.path: entry for entry in listing.entries}
     removal, kept = TreeRemoval(), 0
@@ -158,15 +161,29 @@ def _remove_blobs(
     return removal, kept
 
 
-def _require_complete(*, removal: TreeRemoval, where: str) -> None:
-    if removal.remaining:
-        raise ControlFailed(
-            f"{removal.remaining} entries left in {where} "
-            f"(first: {', '.join(removal.error_samples[:1]) or 'mount point skipped'})"
+def _left_behind(*, order: int, removal: TreeRemoval, where: str) -> StepOutcome:
+    """The folder could not be emptied: fail, but report the bytes already freed."""
+    first = ", ".join(removal.error_samples[:1]) or "mount point skipped"
+    message = f"{removal.remaining} entries left in {where} (first: {first})"
+    return StepOutcome(
+        order=order, status=StepStatus.FAILED, message=message, freed_bytes=removal.freed_bytes
+    )
+
+
+def _kept_note(*, kept: int, skipped: int) -> str | None:
+    if not kept:
+        return None
+    if skipped:
+        return (
+            f"{kept} store file(s) kept: "
+            f"{skipped} cache entries could not be read after the removal"
         )
+    return f"{kept} store file(s) kept: no longer used only by this model"
 
 
-def _outcome(*, order: int, removal: TreeRemoval, blobs: TreeRemoval, kept: int) -> StepOutcome:
+def _outcome(
+    *, order: int, removal: TreeRemoval, blobs: TreeRemoval, note: str | None
+) -> StepOutcome:
     if blobs.error_count:
         # The folder is gone: report what was freed instead of hiding it behind the failure.
         message = (
@@ -176,8 +193,7 @@ def _outcome(*, order: int, removal: TreeRemoval, blobs: TreeRemoval, kept: int)
         return StepOutcome(
             order=order, status=StepStatus.FAILED, message=message, freed_bytes=removal.freed_bytes
         )
-    # A technical note like the other step messages; the UI builds its texts from the status.
-    note = f"{kept} store file(s) kept: no longer used only by this model" if kept else None
+    # `note` is technical like the other step messages; the UI builds its texts from the status.
     return StepOutcome(
         order=order, status=StepStatus.DONE, message=note, freed_bytes=removal.freed_bytes
     )
@@ -191,7 +207,9 @@ def run_cache_item(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
         realpath=fingerprint.realpath, st_ino=fingerprint.st_ino, st_dev=fingerprint.st_dev
     )
     removal = remove_directory(fingerprint=folder, mountpoints=control.mounts())
-    _require_complete(removal=removal, where=fingerprint.realpath)
+    if removal.remaining:
+        return _left_behind(order=step.order, removal=removal, where=fingerprint.realpath)
     listing = list_tree(root=hub, sleep=_no_sleep)
     blobs, kept = _remove_blobs(hub=hub, fingerprint=fingerprint, listing=listing)
-    return _outcome(order=step.order, removal=removal + blobs, blobs=blobs, kept=kept)
+    note = _kept_note(kept=kept, skipped=listing.skipped)
+    return _outcome(order=step.order, removal=removal + blobs, blobs=blobs, note=note)

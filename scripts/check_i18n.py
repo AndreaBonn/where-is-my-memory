@@ -150,6 +150,9 @@ EXEMPT = {
     "service/executor_cache_item.py": {
         "{} store file(s) kept: no longer used only by this model",
         "{} store file(s) could not be removed (first: {})",
+        "{} store file(s) kept: {} cache entries could not be read after the removal",
+        "{} entries left in {} (first: {})",
+        "mount point skipped",
     },
     "service/executor_disk_fs.py": {"{} entries left in {} (first: {})", "mount point skipped"},
     "service/executor_docker.py": {

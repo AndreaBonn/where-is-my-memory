@@ -70,3 +70,10 @@ def test_tree_listing_rejects_a_negative_disk_bytes() -> None:
 
 def test_tree_listing_keeps_a_valid_disk_bytes() -> None:
     assert TreeListing(root="/r", entries=(), disk_bytes=4096).disk_bytes == 4096
+
+
+def test_a_listing_defaults_to_nothing_skipped_and_refuses_a_negative_count() -> None:
+    assert TreeListing(root="/r", entries=()).skipped == 0
+    assert TreeListing(root="/r", entries=(), skipped=3).skipped == 3
+    with pytest.raises(ValueError):
+        TreeListing(root="/r", entries=(), skipped=-1)

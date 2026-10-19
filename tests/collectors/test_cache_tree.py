@@ -1,3 +1,4 @@
+import errno
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -103,3 +104,77 @@ def test_list_tree_skips_unreadable_directory_without_raising(
 
 def test_list_tree_of_missing_root_is_empty(tmp_path: Path) -> None:
     assert list_tree(root=tmp_path / "gone", sleep=_noop).entries == ()
+
+
+def _unreadable_scandir(*, monkeypatch: pytest.MonkeyPatch, locked: Path) -> None:
+    real_scandir = os.scandir
+
+    def scandir(fd: int) -> Iterator[os.DirEntry[str]]:
+        if os.readlink(f"/proc/self/fd/{fd}") == str(locked):
+            raise PermissionError(13, "Permission denied", str(locked))
+        return real_scandir(fd)
+
+    monkeypatch.setattr(os, "scandir", scandir)
+
+
+def test_list_tree_counts_an_unreadable_directory_as_skipped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "tree"
+    (root / "locked").mkdir(parents=True)
+    (root / "locked" / "hidden").write_bytes(b"2")
+    _unreadable_scandir(monkeypatch=monkeypatch, locked=root / "locked")
+
+    assert list_tree(root=root, sleep=_noop).skipped == 1
+
+
+def test_list_tree_of_a_fully_readable_tree_skips_nothing(tmp_path: Path) -> None:
+    root = tmp_path / "tree"
+    (root / "a").mkdir(parents=True)
+    (root / "a" / "f").write_bytes(b"1")
+    (root / "a" / "link").symlink_to("f")
+
+    assert list_tree(root=root, sleep=_noop).skipped == 0
+
+
+def test_list_tree_counts_a_directory_it_cannot_open_for_lack_of_descriptors(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "tree"
+    (root / "deep").mkdir(parents=True)
+    (root / "deep" / "f").write_bytes(b"1")
+    real_open = os.open
+
+    def opener(path: str | Path, flags: int, *, dir_fd: int | None = None) -> int:
+        if path == "deep":
+            raise OSError(errno.EMFILE, "Too many open files")
+        return real_open(path, flags, dir_fd=dir_fd)
+
+    monkeypatch.setattr(os, "open", opener)
+
+    listing = list_tree(root=root, sleep=_noop)
+
+    assert listing.skipped == 1
+    assert {entry.path for entry in listing.entries} == {"deep"}
+
+
+def test_list_tree_counts_an_entry_it_cannot_stat(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = tmp_path / "tree"
+    root.mkdir()
+    (root / "ok").write_bytes(b"1")
+    (root / "bad").write_bytes(b"1")
+    real_stat = os.stat
+
+    def stat(path: str, **kwargs: object) -> os.stat_result:
+        if path == "bad":
+            raise PermissionError(13, "Permission denied")
+        return real_stat(path, **kwargs)  # type: ignore[arg-type]
+
+    monkeypatch.setattr(os, "stat", stat)
+
+    listing = list_tree(root=root, sleep=_noop)
+
+    assert listing.skipped == 1
+    assert {entry.path for entry in listing.entries} == {"ok"}

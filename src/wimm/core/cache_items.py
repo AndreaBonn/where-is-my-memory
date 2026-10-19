@@ -59,16 +59,20 @@ class TreeListing:
 
     `disk_bytes` is the disk space of the whole tree as one walk measured it, directories and
     the root included (a directory carries no size in `entries`), so a cache is sized by the
-    same observation its items come from.
+    same observation its items come from. `skipped` counts the entries or directories the walk
+    could not read or open: when it is not zero the listing may be missing nodes, so nothing
+    destructive may be decided from the absence of a link.
     """
 
     root: str
     entries: tuple[TreeEntry, ...]
     disk_bytes: int = 0
+    skipped: int = 0
 
     def __post_init__(self) -> None:
         require_text(value=self.root, field="root")
         require_bytes(value=self.disk_bytes, field="disk_bytes")
+        require_nonnegative(value=self.skipped, field="skipped")
         if not self.root.startswith("/"):
             raise ValueError("root must be absolute")
         if type(self.entries) is not tuple:
