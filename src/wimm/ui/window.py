@@ -19,6 +19,7 @@ from wimm.ui.dialogs.tray_help import tray_banner
 from wimm.ui.dialogs.welcome import welcome_if_first_run
 from wimm.ui.pages.overview import OverviewPage
 from wimm.ui.widgets import install_style, name_icon_button
+from wimm.ui.widgets.footer import app_footer
 from wimm.ui.window_actions import build_action_flow
 from wimm.ui.window_disk import DiskBinding
 from wimm.ui.window_notify import build_main_menu, group_controls
@@ -131,6 +132,7 @@ class MainWindow(Adw.Window):
         self.tray_banner = tray_banner(parent=self)
         toolbar.add_top_bar(self.tray_banner)
         toolbar.add_bottom_bar(bar)
+        toolbar.add_bottom_bar(app_footer())
         self.toasts = Adw.ToastOverlay(child=toolbar)
         self.set_content(self.toasts)
         breakpoint_ = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NARROW_CONDITION))

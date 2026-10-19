@@ -2281,7 +2281,7 @@ msgstr "The check failed. Try again with Check now."
 msgid "Controlla ora"
 msgstr "Check now"
 
-#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:109
+#: src/wimm/ui/pages/disk_header.py:15 src/wimm/ui/pages/disk_rows.py:113
 msgid "Controllo in corso"
 msgstr "Checking"
 
@@ -2637,6 +2637,10 @@ msgstr "Program type"
 msgid "Rischio"
 msgstr "Risk"
 
+#: src/wimm/ui/widgets/footer.py:25
+msgid "Apri il profilo GitHub di Andrea Bonacci"
+msgstr "Open Andrea Bonacci's GitHub profile"
+
 #: src/wimm/ui/widgets/group_controls.py:15
 msgid "1 ora"
 msgstr "1 hour"
@@ -2811,23 +2815,23 @@ msgstr "System parts"
 msgid "Questi programmi fanno funzionare il computer. Da qui non si possono chiudere, quindi non puoi rompere niente."
 msgstr "These programs keep the computer running. They cannot be closed from here, so you cannot break anything."
 
-#: src/wimm/ui/window.py:43
+#: src/wimm/ui/window.py:44
 msgid "Mostra dove va la memoria e cosa si può liberare."
 msgstr "Shows where the memory goes and what can be freed."
 
-#: src/wimm/ui/window.py:121
+#: src/wimm/ui/window.py:122
 msgid "Panoramica"
 msgstr "Overview"
 
-#: src/wimm/ui/window.py:122
+#: src/wimm/ui/window.py:123
 msgid "Disco"
 msgstr "Disk"
 
-#: src/wimm/ui/window.py:147
+#: src/wimm/ui/window.py:149
 msgid "Menu principale"
 msgstr "Main menu"
 
-#: src/wimm/ui/window.py:154
+#: src/wimm/ui/window.py:156
 msgid "Aggiorna (F5)"
 msgstr "Refresh (F5)"
 

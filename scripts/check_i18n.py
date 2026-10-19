@@ -133,6 +133,8 @@ EXEMPT = {
     "tray/status_notifier.py": {"Active"},  # StatusNotifierItem Status value
     # Endonyms: each language keeps its own name in every interface language.
     "ui/dialogs/preferences_language.py": {"Italiano", "English"},
+    # The author's name and profile URL read the same in every language.
+    "ui/widgets/footer.py": {"Andrea Bonacci", "https://github.com/AndreaBonn"},
     # Internal English: D-Bus error text, step messages and log text, never in the UI.
     "service/inspector_dbus.py": {"Snapshot is not ready"},
     "logging_setup.py": {"Cannot open private log; using stderr only: {}"},
