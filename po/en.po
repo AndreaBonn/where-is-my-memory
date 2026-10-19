@@ -1053,44 +1053,44 @@ msgstr "Command copied"
 msgid "Non riesco a copiare negli appunti"
 msgstr "Cannot copy to the clipboard"
 
-#: src/wimm/ui/dialogs/facts.py:21
+#: src/wimm/ui/dialogs/facts.py:22
 msgid "Cosa succede"
 msgstr "What happens"
 
-#: src/wimm/ui/dialogs/facts.py:22
+#: src/wimm/ui/dialogs/facts.py:23
 msgid "Cosa resta"
 msgstr "What stays"
 
-#: src/wimm/ui/dialogs/facts.py:23
+#: src/wimm/ui/dialogs/facts.py:24
 msgid "Per riaccenderlo"
 msgstr "To start it again"
 
-#: src/wimm/ui/dialogs/facts.py:24
+#: src/wimm/ui/dialogs/facts.py:25
 msgid "I file salvati, i dati e le impostazioni."
 msgstr "Saved files, data and settings."
 
-#: src/wimm/ui/dialogs/facts.py:26
+#: src/wimm/ui/dialogs/facts.py:27
 msgid "I contenitori: con «Riaccendi» nel messaggio che compare dopo, se tutto va a buon fine."
 msgstr "Containers: with \"Start again\" in the message that appears afterwards, if all goes well."
 
-#: src/wimm/ui/dialogs/facts.py:28
+#: src/wimm/ui/dialogs/facts.py:29
 #, python-brace-format
 msgid "I programmi del terminale: con lo stesso comando, nella cartella {cwd}."
 msgstr "Terminal programs: with the same command, in the folder {cwd}."
 
-#: src/wimm/ui/dialogs/facts.py:29
+#: src/wimm/ui/dialogs/facts.py:30
 msgid "I programmi del terminale: con lo stesso comando di prima."
 msgstr "Terminal programs: with the same command as before."
 
-#: src/wimm/ui/dialogs/facts.py:30
+#: src/wimm/ui/dialogs/facts.py:31
 msgid "Le applicazioni: dal menu delle applicazioni, come al solito."
 msgstr "Applications: from the applications menu, as usual."
 
-#: src/wimm/ui/dialogs/facts.py:31 src/wimm/ui/disk_view_docker.py:171
+#: src/wimm/ui/dialogs/facts.py:32 src/wimm/ui/disk_view_docker.py:171
 msgid "Cache di build Docker"
 msgstr "Docker build cache"
 
-#: src/wimm/ui/dialogs/facts.py:32
+#: src/wimm/ui/dialogs/facts.py:33
 #, python-brace-format
 msgid "Immagine senza nome ({short})"
 msgstr "Unnamed image ({short})"
@@ -1723,6 +1723,22 @@ msgstr "Only cleans what recreates itself: the trash and your data stay."
 #, python-brace-format
 msgid "Libera {size} senza rischi"
 msgstr "Free {size} with no risk"
+
+#: src/wimm/ui/disk_texts.py:122
+msgid "Condiviso fra più modelli"
+msgstr "Shared between models"
+
+#: src/wimm/ui/disk_texts.py:123
+msgid "File usati da più di un modello: restano finché ne resta uno."
+msgstr "Files used by more than one model: they stay as long as one remains."
+
+#: src/wimm/ui/disk_texts.py:124
+msgid "Non attribuito"
+msgstr "Unattributed"
+
+#: src/wimm/ui/disk_texts.py:126
+msgid "File che nessun modello usa, file di blocco e file alla radice della cache. Si liberano solo pulendo tutta la cache."
+msgstr "Files no model links to, lock files and files at the root of the cache. They are freed only by cleaning the whole cache."
 
 #: src/wimm/ui/disk_tiers.py:18
 msgid "Cache pesanti da riscaricare"

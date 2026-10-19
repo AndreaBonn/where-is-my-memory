@@ -116,3 +116,13 @@ def review_text(*, totals: DiskTotals | None) -> str:
         return ""
     template = REVIEW_MORE_TEXT if totals.safe > 0 else REVIEW_ONLY_TEXT
     return _(template).format(size=format_size(size=totals.review))
+
+
+# Sub-rows of a cache with items (S5, S8): the two rows that no single item owns.
+SHARED_ROW_TITLE = N_("Condiviso fra più modelli")
+SHARED_ROW_TEXT = N_("File usati da più di un modello: restano finché ne resta uno.")
+UNATTRIBUTED_ROW_TITLE = N_("Non attribuito")
+UNATTRIBUTED_ROW_TEXT = N_(
+    "File che nessun modello usa, file di blocco e file alla radice della cache. "
+    "Si liberano solo pulendo tutta la cache."
+)
