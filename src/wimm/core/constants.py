@@ -265,3 +265,7 @@ GROWTH_MAX_DROP_FRACTION = 0.25
 GROWTH_NOISE_BYTES = 32 * 1024 * 1024
 # Medians of the first and last third of the series stand for its start and end.
 GROWTH_EDGE_PARTS = 3
+
+# The UI shows at most this many items of one cache and folds the rest into "e altre N";
+# the core returns every item.
+CACHE_ITEMS_CAP = 50
