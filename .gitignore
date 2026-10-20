@@ -17,3 +17,7 @@ src/wimm/locale/
 CLAUDE.md
 specs/
 assets/SPECIFICHE.md
+
+# CI badge inputs (scripts/build_badges.py)
+pytest.log
+coverage.json

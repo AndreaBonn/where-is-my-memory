@@ -35,5 +35,62 @@ jobs:
           gir1.2-gtk-4.0 gir1.2-adw-1
       - run: make setup
       - run: make lint
-      - run: make test
+      - name: Test
+        shell: bash
+        run: make test 2>&1 | tee pytest.log
+      # Runs after red tests too, not when lint or setup stopped the job:
+      # grey badges would replace the last real numbers.
+      - name: Build badge data
+        if: ${{ !cancelled() && hashFiles('pytest.log') != '' }}
+        run: |
+          uv run coverage json -q -o coverage.json || true
+          uv run python scripts/build_badges.py pytest.log coverage.json badges
+      # v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        if: ${{ !cancelled() && hashFiles('pytest.log') != '' }}
+        with:
+          name: badges
+          path: badges/
       - run: make audit
+
+  # Commits the README badge data: needs write access, runs no project code.
+  badges:
+    needs: test
+    if: >-
+      !cancelled() && github.event_name == 'push'
+      && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      # v6.1.0
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          ref: main
+          persist-credentials: false
+      # v8.0.2
+      - id: download
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
+        continue-on-error: true
+        with:
+          name: badges
+          path: badges/
+      - name: Commit badges
+        if: steps.download.outcome == 'success'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add badges/test-badge.json badges/coverage-badge.json
+          git diff --cached --quiet && exit 0
+          git commit -m "ci: update badges [skip ci]"
+          url="https://x-access-token:${GH_TOKEN}@github.com/${REPO}.git"
+          # main may move while the tests run: rebase the commit and retry.
+          for attempt in 1 2 3; do
+            git push "$url" HEAD:main && exit 0
+            echo "push attempt ${attempt} rejected, rebasing on main"
+            git pull --rebase "$url" main
+          done
+          exit 1

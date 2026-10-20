@@ -4,7 +4,10 @@
 CORE_HAS_CODE := $(shell test ! -d src/wimm/core || \
 	find src/wimm/core -type f -name '*.py' \
 	-exec grep -lE '^[[:space:]]*[^#[:space:]]' {} + 2>/dev/null)
-CORE_COVERAGE := $(if $(strip $(CORE_HAS_CODE)),--cov=src/wimm/core --cov-fail-under=90)
+# The run measures all of src/wimm (README coverage badge); the 90% floor applies to core.
+CORE_COVERAGE := $(if $(strip $(CORE_HAS_CODE)),--cov=src/wimm --cov-report=)
+CORE_GATE := $(if $(strip $(CORE_HAS_CODE)),\
+	uv run coverage report --include='src/wimm/core/*' --skip-covered --fail-under=90)
 
 # The msgid is the Italian source text: only the English catalog exists (wimm.i18n).
 XGETTEXT_FLAGS := --from-code=UTF-8 --language=Python --keyword=N_ --keyword=pgettext:1c,2 \
@@ -19,6 +22,7 @@ setup:
 
 test:
 	uv run pytest -m "not integration and not ui and not dbus and not perf" $(CORE_COVERAGE)
+	$(CORE_GATE)
 
 test-all:
 	# tests/private_session.py gives every run its own display and session bus.
