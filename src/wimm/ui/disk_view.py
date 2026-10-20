@@ -25,7 +25,7 @@ from wimm.ui.disk_model import (
     make_row,
     more_text,
 )
-from wimm.ui.disk_ollama import OLLAMA_SYSTEM_SUBTITLE, parse_served
+from wimm.ui.disk_ollama import OLLAMA_SYSTEM_SUBTITLE, ollama_cache_row, parse_served
 from wimm.ui.disk_texts import (
     CHOOSE_FOLDER_LABEL,
     MISSING_ROOT_TEXT,
@@ -87,6 +87,7 @@ def _cache_row(
         size=entry.size,
         action=action,
     )
+    row = ollama_cache_row(row=row, kind=entry.kind, served=parse_served(value=served))
     view = item_rows(
         entry=entry, removable=entry.kind not in withheld, served=parse_served(value=served)
     )

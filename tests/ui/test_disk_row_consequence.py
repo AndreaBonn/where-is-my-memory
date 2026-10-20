@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import pytest
 
 from tests.core.disk_helpers import (
@@ -12,6 +14,7 @@ from tests.core.disk_helpers import (
 )
 from tests.core.planning_helpers import NOW, OWNER_UID, container, group, snapshot
 from wimm.core.item_tools import ITEM_ONLY_KINDS
+from wimm.core.ollama_served import ServedStore
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.row_consequence import join_consequences
 from wimm.model.actions import ActionRequest
@@ -19,6 +22,8 @@ from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import PlanId, TargetId
 from wimm.ui.disk_model import DiskRowView
 from wimm.ui.disk_view import build_disk_sections
+
+NO_SERVER = ServedStore.NONE.value
 
 MIN_AGE = 90
 NODE_MODULES = "/home/u/proj/node_modules"
@@ -121,7 +126,8 @@ def test_rows_without_an_action_have_no_consequence() -> None:
     "kind", [k for k in CacheKind if k is not CacheKind.TRASH and k not in ITEM_ONLY_KINDS]
 )
 def test_cache_row_carries_the_dialog_consequence(kind: CacheKind) -> None:
-    disk = report(caches=(cache(kind=kind, size=MB),))
+    # No ollama server runs: the home ollama store is only cleaned then (F37, decision D2).
+    disk = replace(report(caches=(cache(kind=kind, size=MB),)), ollama_served=NO_SERVER)
     (row,) = rows_of(disk=disk, key="caches")
     assert row.consequence
     assert row.consequence == plan_text(disk=disk, row=row)

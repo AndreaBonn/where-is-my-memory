@@ -13,6 +13,7 @@ import psutil
 
 from wimm.collectors.ollama_command import CommandRunner as OllamaCommandRunner
 from wimm.collectors.ollama_command import run_command as run_ollama_command
+from wimm.collectors.ollama_command import run_process_group
 from wimm.collectors.ollama_processes import ServeReader
 from wimm.collectors.root_facts import read_root_facts
 from wimm.core.cache_catalog import CacheResolution
@@ -54,7 +55,7 @@ NEUTRAL_CWD = "/"
 class SubprocessRunner:
     """Real runner: argument list, no shell, no stdin, captured output."""
 
-    def __init__(self, *, run: _Run = subprocess.run) -> None:
+    def __init__(self, *, run: _Run = run_process_group) -> None:
         self._run = run
 
     def run(

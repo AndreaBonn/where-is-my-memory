@@ -20,6 +20,7 @@ MODELS_VARIABLE = "OLLAMA_MODELS"
 HOST_VARIABLE = "OLLAMA_HOST"
 HOME_VARIABLE = "HOME"
 MAX_PORT = 65535
+SYSTEM_UID_LIMIT = 1000
 # Where ollama keeps a user's models when OLLAMA_MODELS is not set.
 DEFAULT_MODELS_DIR = (".ollama", "models")
 LOCAL_NAMES = frozenset({"", "localhost"})
@@ -37,7 +38,7 @@ class ServedStore(Enum):
     NONE = "none"  # S0: no server, the client commands fail
     USER_HOME = "user_home"  # S1: the user's server on the home store
     USER_OTHER = "user_other"  # S1': the user's server on another store, or unreadable
-    SYSTEM = "system"  # S2: one server of another user
+    SYSTEM = "system"  # S2: one server of a system account
     AMBIGUOUS = "ambiguous"  # S3: two or more servers, or a remote host
 
 
@@ -134,7 +135,7 @@ def served_store(*, facts: ServedFacts, realpath: Callable[[str], str]) -> Serve
     (process,) = facts.processes
     if process.uid != facts.current_uid:
         # The environ of another user's server is unreadable: only the default port is safe.
-        default = client.port == OLLAMA_DEFAULT_PORT
+        default = client.port == OLLAMA_DEFAULT_PORT and process.uid < SYSTEM_UID_LIMIT
         return ServedStore.SYSTEM if default else ServedStore.AMBIGUOUS
     if not _same_port(process=process, client=client):
         return ServedStore.AMBIGUOUS

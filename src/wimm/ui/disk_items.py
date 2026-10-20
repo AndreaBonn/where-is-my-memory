@@ -9,7 +9,7 @@ from wimm.core.risk import RiskTarget
 from wimm.core.row_consequence import row_consequence
 from wimm.i18n import _
 from wimm.model.cache_items import CacheItem
-from wimm.model.disk import CacheEntry
+from wimm.model.disk import CacheEntry, CacheKind
 from wimm.model.enums import ActionKind
 from wimm.ui.disk_model import ActionSpec, DiskRowView, make_row, more_text
 from wimm.ui.disk_ollama import ollama_offer
@@ -61,7 +61,8 @@ def _item_row(
 ) -> DiskRowView:
     offered, reason = ollama_offer(kind=entry.kind, item=item, served=served)
     action = _item_action(entry=entry, item=item) if removable and offered else None
-    row = make_row(title=item.title, subtitle=item.path, size=item.size, action=action)
+    subtitle = f"ID {item.model_id}" if entry.kind is CacheKind.OLLAMA_SYSTEM else item.path
+    row = make_row(title=item.title, subtitle=subtitle, size=item.size, action=action)
     return row if action else replace(row, note=reason)
 
 

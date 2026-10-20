@@ -99,6 +99,8 @@ REGEX_MARKS = ("\\", "(?", "[^")
 INTERNAL_ATTRIBUTES = frozenset({"message", "code"})
 # Strings a person never reads, or reads unchanged in every language, with the reason.
 EXEMPT = {
+    # Model identifiers use the same ID label in both interface languages.
+    "ui/disk_items.py": {"ID {}"},
     "core/constants.py": {
         # Process names and freedesktop menu categories matched against the system.
         "Xorg",

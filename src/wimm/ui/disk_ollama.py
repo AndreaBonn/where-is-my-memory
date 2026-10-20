@@ -5,6 +5,8 @@ for the models that server owns: the home ones in S1, the system ones in S2. In 
 situation the row stays, without an action, and says why in one line.
 """
 
+from dataclasses import replace
+
 from wimm.core.item_tools import is_item_removable
 from wimm.core.ollama_names import is_valid_model_name
 from wimm.core.ollama_served import ServedStore
@@ -12,8 +14,10 @@ from wimm.i18n import N_, _
 from wimm.model.cache_items import CacheItem
 from wimm.model.disk import CacheKind
 from wimm.model.enums import CacheItemKind
+from wimm.ui.disk_model import DiskRowView
 
 OLLAMA_SYSTEM_SUBTITLE = N_("dimensioni stimate da ollama")
+OLLAMA_STOP_TO_CLEAN = N_("Ferma ollama per pulire tutta la cache")
 _REASONS: dict[ServedStore, str] = {
     ServedStore.NONE: N_("Avvia ollama per rimuovere un modello"),
     ServedStore.USER_OTHER: N_("Il server ollama attivo usa un'altra cartella di modelli"),
@@ -35,6 +39,17 @@ def parse_served(*, value: str) -> ServedStore | None:
         return ServedStore(value)
     except ValueError:
         return None
+
+
+def ollama_cache_row(
+    *, row: DiskRowView, kind: CacheKind, served: ServedStore | None
+) -> DiskRowView:
+    """D2: keep the home store's danger badge, but offer cleaning only with no server."""
+    if kind is not CacheKind.OLLAMA or served is ServedStore.NONE:
+        return row
+    return replace(
+        row, action_kind=None, target_id=None, consequence="", note=_(OLLAMA_STOP_TO_CLEAN)
+    )
 
 
 def ollama_offer(

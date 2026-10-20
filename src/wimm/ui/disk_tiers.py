@@ -33,7 +33,7 @@ def _row_risk(*, row: DiskRowView) -> Risk | None:
     if row.action_kind is not None:
         return row.risk
     risks = [item.risk for item in row.items if item.action_kind is not None and item.risk]
-    return max(risks, default=None)
+    return max(risks, default=row.risk)
 
 
 def _moving_risk(*, row: DiskRowView, moves: dict[Risk, tuple[str, str]]) -> Risk | None:

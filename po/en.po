@@ -145,7 +145,7 @@ msgid "Miniature"
 msgstr "Thumbnails"
 
 #: src/wimm/core/cache_titles.py:15 src/wimm/core/planning_disk.py:41
-#: src/wimm/ui/disk_view.py:194
+#: src/wimm/ui/disk_view.py:195
 msgid "Cestino"
 msgstr "Trash"
 
@@ -985,19 +985,19 @@ msgstr "A download is writing this model: try again in a few minutes"
 msgid "Chiudi ollama (ollama serve) prima di cancellare i modelli"
 msgstr "Close ollama (ollama serve) before deleting the models"
 
-#: src/wimm/service/executor_ollama_home.py:47 src/wimm/ui/disk_ollama.py:18
+#: src/wimm/service/executor_ollama_home.py:48 src/wimm/ui/disk_ollama.py:22
 msgid "Avvia ollama per rimuovere un modello"
 msgstr "Start ollama to remove a model"
 
-#: src/wimm/service/executor_ollama_home.py:54 src/wimm/ui/disk_ollama.py:19
+#: src/wimm/service/executor_ollama_home.py:55 src/wimm/ui/disk_ollama.py:23
 msgid "Il server ollama attivo usa un'altra cartella di modelli"
 msgstr "The active ollama server uses another models folder"
 
-#: src/wimm/service/executor_ollama_home.py:61 src/wimm/ui/disk_ollama.py:20
+#: src/wimm/service/executor_ollama_home.py:62 src/wimm/ui/disk_ollama.py:24
 msgid "Il server ollama attivo è quello di sistema e non vede questi modelli"
 msgstr "The active ollama server is the system one and does not see these models"
 
-#: src/wimm/service/executor_ollama_home.py:68
+#: src/wimm/service/executor_ollama_home.py:69
 msgid "Non è chiaro quale server ollama risponda: non è stato rimosso nulla"
 msgstr "It is not clear which ollama server answers: nothing was removed"
 
@@ -1658,11 +1658,15 @@ msgstr "unknown size"
 msgid "e altre {count}"
 msgstr "and {count} more"
 
-#: src/wimm/ui/disk_ollama.py:16
+#: src/wimm/ui/disk_ollama.py:19
 msgid "dimensioni stimate da ollama"
 msgstr "sizes estimated by ollama"
 
-#: src/wimm/ui/disk_ollama.py:22
+#: src/wimm/ui/disk_ollama.py:20
+msgid "Ferma ollama per pulire tutta la cache"
+msgstr "Stop ollama to clean the entire cache"
+
+#: src/wimm/ui/disk_ollama.py:26
 msgid "Con più di un server ollama non so quale risponde: avvia solo il tuo per rimuovere"
 msgstr "With more than one ollama server I cannot tell which one answers: run only yours to remove"
 
@@ -1843,33 +1847,33 @@ msgstr "Last check at {time}"
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:132
+#: src/wimm/ui/disk_view.py:133
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:165
+#: src/wimm/ui/disk_view.py:166
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:171
+#: src/wimm/ui/disk_view.py:172
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:192
+#: src/wimm/ui/disk_view.py:193
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:192
+#: src/wimm/ui/disk_view.py:193
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:194
+#: src/wimm/ui/disk_view.py:195
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 

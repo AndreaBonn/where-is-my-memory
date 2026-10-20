@@ -121,9 +121,11 @@ def test_the_system_entry_row_has_its_title_the_estimate_subtitle_and_no_cache_a
 def test_a_home_entry_row_keeps_its_path_and_gets_the_report_situation() -> None:
     row = _cache_row(entry=_home_entry(), served=ServedStore.USER_HOME.value)
     assert row.subtitle == HOME_STORE
-    assert row.action_kind is ActionKind.CACHE_CLEAN
+    assert row.action_kind is None
+    assert row.note == "Ferma ollama per pulire tutta la cache"
     assert row.items[0].action_kind is ActionKind.CACHE_ITEM_REMOVE
     refused = _cache_row(entry=_home_entry(), served=ServedStore.NONE.value)
+    assert refused.action_kind is ActionKind.CACHE_CLEAN
     assert refused.items[0].action_kind is None
     assert refused.items[0].note == REASONS[ServedStore.NONE]
 
