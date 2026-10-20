@@ -151,6 +151,24 @@ class Part:
     id_scope: str = ""
 
 
+def scope_shared_app_keys(*, parts: list[Part]) -> list[Part]:
+    """Give distinct ids to app parts that share one appid across buckets.
+
+    A browser opened from a desktop app starts in the app's scope and inherits its appid,
+    yet is categorized BROWSER: two parts, one key. The part holding the oldest process
+    keeps the unscoped id stored in user state; the others are scoped by their category.
+    """
+    by_key: dict[str, list[Part]] = {}
+    for part in parts:
+        if part.key_class == KEY_CLASS_APP:
+            by_key.setdefault(part.key, []).append(part)
+    scoped: dict[int, Part] = {}
+    for shared in by_key.values():
+        for part in sorted(shared, key=lambda item: min(item.pids, default=0))[1:]:
+            scoped[id(part)] = replace(part, id_scope=part.category.value)
+    return [scoped.get(id(part), part) for part in parts]
+
+
 def compose_part(*, project: str, members: list[RawContainer]) -> Part:
     """Compose group: its working dir is the first one labelled by any container."""
     workdirs = (dict(item.labels).get(COMPOSE_WORKDIR_LABEL) for item in members)

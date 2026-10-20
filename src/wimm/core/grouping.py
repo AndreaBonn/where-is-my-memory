@@ -41,6 +41,7 @@ from .grouping_keys import (
     nearest_terminal,
     protected_label,
     root_process,
+    scope_shared_app_keys,
     stable_group_id,
     tool_group,
 )
@@ -245,7 +246,7 @@ def _process_parts(*, grouping: GroupingInput) -> list[Part]:
                 id_scope=bucket.value if items[0].key_class == KEY_CLASS_ROOT_PROCESS else "",
             )
         )
-    return parts
+    return scope_shared_app_keys(parts=parts)
 
 
 def _to_draft(*, part: Part) -> GroupDraft:

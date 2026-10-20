@@ -73,3 +73,23 @@ def test_scoped_id_differs_from_the_unscoped_one() -> None:
     assert stable_group_id(
         key_class="root_process", key="worker|", scope="OTHER"
     ) != stable_group_id(key_class="root_process", key="worker|", scope="TERMINAL")
+
+
+def test_one_appid_in_two_app_buckets_gives_two_groups_with_distinct_ids() -> None:
+    # A browser opened from a desktop app starts in the app's systemd scope and inherits
+    # its appid, but is categorized BROWSER: one key, two buckets, once one shared id.
+    app = replace(pair(10, category=Category.DESKTOP_APP, name="deadlineaura")[0], ppid=1)
+    browser = replace(pair(20, category=Category.BROWSER, name="chrome")[0], ppid=1)
+    drafts = build(
+        (app, CategoryDecision(category=Category.DESKTOP_APP, reason_code="x", appid="Aura")),
+        (browser, CategoryDecision(category=Category.BROWSER, reason_code="x", appid="Aura")),
+    )
+
+    by_category = {draft.category: draft for draft in drafts}
+    assert set(by_category) == {Category.DESKTOP_APP, Category.BROWSER}
+    assert by_category[Category.DESKTOP_APP].process_pids == (10,)
+    # The part holding the oldest process keeps the id saved before scoping.
+    assert by_category[Category.DESKTOP_APP].id == stable_group_id(key_class="app", key="Aura")
+    assert by_category[Category.BROWSER].id == stable_group_id(
+        key_class="app", key="Aura", scope=Category.BROWSER.value
+    )
