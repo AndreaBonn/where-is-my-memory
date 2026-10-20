@@ -56,7 +56,8 @@ def test_the_sampler_puts_the_applied_total_in_the_next_snapshot(tmp_path: Path)
 
 def test_plan_receives_the_latest_disk_report() -> None:
     rig = build_rig()
-    rig.scanner.gate.set()
+    # The gate stays closed until the refusal is seen: with it open, the first scan (a 10 ms GLib
+    # timer) finished while spin_until ran the loop under load, and the refusal never came.
     rig.scanner.result = report(caches=(cache(kind=CacheKind.UV, size=2 * MB),))
     setup = ActionSetup(executor=FakeExecutor(), owner_uid=OWNER_UID, measure_delay_s=0.0)
     service = AppService(sampler=rig.sampler, config=Config(), actions=setup)
@@ -67,6 +68,7 @@ def test_plan_receives_the_latest_disk_report() -> None:
         spin_until(predicate=lambda: service.snapshot() is not None)
         with pytest.raises(Exception, match="Disk report not available"):
             service.plan(request=request)
+        rig.scanner.gate.set()
         service.rescan_disk()
         spin_until(predicate=lambda: service.disk_report() is not None)
         plan = service.plan(request=request)
