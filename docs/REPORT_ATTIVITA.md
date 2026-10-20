@@ -896,3 +896,65 @@ Nella pagina Disco si può ora rimuovere un singolo elemento anche dalle cache d
 Lotto L5 (modelli ollama, uno per uno), T-6.36..T-6.40.
 
 ---
+
+## 2026-10-20 | Sessione #15 [FEATURE]
+
+Progetto: where-is-my-memory (comando `wimm`). Lotto L5 del piano `specs/002-disk-granular` (modelli ollama, uno per uno): T-6.36..T-6.40, con la review di chiusura. Con questo lotto il piano 002 è completo. Tutti i commit sono su main; il repository non ha un remote.
+
+### Richiesta
+
+Rimuovere un singolo modello ollama, sia dalla cartella della home sia dall'installazione di sistema (decisione Q2=A), sempre con `ollama rm` e mai cancellando file.
+
+Decisioni dell'utente del 2026-10-20 (nota `specs/002-disk-granular/design-l5-ollama.md`): D1, con il server di sistema attivo i modelli della home restano visibili senza azione, con il motivo; D2, la pulizia intera della home resta rifiutata con qualunque server attivo; D3, le dimensioni dei modelli di sistema sono stimate da `ollama list`; D4, i modelli di sistema entrano nei totali della pagina.
+
+### Azioni Eseguite
+
+**Lotto L5**
+- T-6.36 `f5dbbd0`: un elemento per ogni modello della cartella della home, con la dimensione presa dai suoi layer; i layer usati da più modelli vanno in "Condiviso".
+- Design `7cf4b23`: nota di progetto per l'installazione di sistema, con le decisioni D1-D4.
+- T-6.37 `fb97d42` e `091c4a1`: nuovo tipo per l'installazione di sistema (nessun file letto, solo `ollama list`), parser rigoroso dell'output, controllo dei nomi prima di ogni comando, classificazione del server attivo (S0 nessuno, S1 il tuo, S2 quello di sistema, S3 ambiguo).
+- T-6.38 `0990893` e `a5814ed`: rimozione con `ollama rm -- <nome>`. Un modello di sistema solo con il server di sistema e solo se nome e ID sono ancora quelli mostrati; un modello della home solo con il tuo server sulla stessa cartella e solo se il manifest è ancora lo stesso file.
+- T-6.39 `aa830a1`: righe della pagina. La voce di sistema dice "dimensioni stimate da ollama"; il bottone "Rimuovi" compare solo dove il server attivo può davvero agire, altrimenti la riga dice perché; la conferma è di livello Pericolo e chiede di scrivere il nome del modello.
+
+**Correzioni dalle review e dal click-through**
+- R1 `0990893` (code-reviewer, bloccante): con la voce di sistema nel report il bottone "Libera spazio" falliva per intero; ora la salta.
+- R2 e R3 `0990893`: caratteri di controllo a 8 bit tolti dai messaggi; un `rm` riuscito con verifica fallita lo dice.
+- Click-through `aa830a1`: la voce di sistema stava nella sezione "Si libera senza pensarci" pur avendo solo modelli Pericolo, e il motivo non compariva sulle righe dei modelli della home; entrambi corretti.
+- S-L5-1 MEDIUM, S-L5-2, S-L5-3, S-L5-5 (security-reviewer) e C-L5-2 (code-reviewer) `2483770`: il controllo del server confronta anche la porta a cui parla il client, considera ambigua la presenza di un processo ollama non leggibile, rifiuta una cartella modelli relativa e, prima di rimuovere un modello della home, verifica che `ollama list` lo mostri esattamente con quel nome.
+- C-L5-1 `48f16e1`: la specifica registra l'eccezione del motivo (D1) e le decisioni D1-D4.
+
+**Test e strumenti di verifica**
+- `53d272e`: un test D-Bus della tray perdeva un segnale sotto carico (iscrizione non ancora attiva); ora attende l'iscrizione.
+- `a6fe9b2`: il tempo di avvio in background (10 s) si misura con `make perf`; nella suite normale restano i controlli funzionali.
+
+### Verifica
+
+- Collector vero su questa macchina, in sola lettura: 4 modelli di sistema con i loro ID, 20,6 GB stimati. Con `OLLAMA_HOST` su un'altra porta la situazione diventa ambigua e la voce non compare.
+- Click-through sull'app vera a 360 e 1280 px, con un `ollama` finto messo prima nel PATH e il server di sistema reale attivo: i modelli della home mostrano il motivo e nessun bottone; quelli di sistema offrono "Rimuovi"; il dialogo resta bloccato finché non si scrive `gemma3:4b`; il finto riceve esattamente `rm -- gemma3:4b` e la riga sparisce dopo la nuova scansione. I modelli veri non sono mai stati toccati e `ollama rm` reale non è mai stato eseguito.
+- Mutation check sui controlli di sicurezza del lotto: ognuno rotto di proposito fa fallire almeno un test.
+- `make lint`: pulito.
+- `make test`: 4381 passati, 1 saltato.
+- `make test-all`: 4856 passati, 1 saltato.
+
+CHECKS L5: code-reviewer ESEGUITO (su T-6.38: R1 bloccante, R2, R3, corretti; sul lotto: C-L5-1, C-L5-2, C-L5-6 corretti, C-L5-3..5 dichiarati) | security-reviewer ESEGUITO (S-L5-1..3 e S-L5-5 corretti, S-L5-4 e S-L5-6 dichiarati) | verify ESEGUITO (collector reale e click-through a 360 e 1280 px) | a11y-gate N/A (UI GTK, non HTML) | /analyze N/A (spec aggiornata solo per registrare D1-D4).
+
+### Limiti noti / Aperti
+
+- S-L5-4 / C-L5-3: "di sistema" vuol dire "di un altro utente". Su un computer condiviso l'ollama personale di un altro utente risulterebbe di sistema; resta la conferma con il nome scritto.
+- S-L5-6: fra l'ultimo controllo e `ollama rm` passano circa 0,2 secondi; un `ollama pull` dello stesso nome in quell'istante verrebbe rimosso.
+- C-L5-4: lo spazio liberato da un modello di sistema è la stima di `ollama list` e può sovrastimare se il modello condivide layer.
+- C-L5-5: il sottotitolo `ollama:<nome>` dei modelli di sistema ripete il titolo.
+- F37 MEDIUM (precedente a L5): la riga "Modelli ollama" della home offre "Pulisci tutta la cache" anche con un server attivo, e l'esecuzione allora la rifiuta (D2). Con il server di sistema sempre acceso il bottone fallisce sempre.
+- F32 MEDIUM: la durata della scansione va rimisurata a macchina scarica con `make perf`.
+- F24, F25, F36 e H2 rimandati, come nelle sessioni precedenti.
+- Il disco del computer è quasi pieno (circa 2 GB liberi): a volte fa fallire la creazione delle cartelle temporanee dei test.
+
+### Note per il Cliente
+
+Nella pagina Disco si può ora rimuovere un singolo modello ollama, sia tra quelli salvati nella cartella personale sia tra quelli dell'installazione di sistema. L'app usa sempre il comando ufficiale di ollama e non cancella mai file di propria iniziativa. Il bottone "Rimuovi" compare solo quando il servizio ollama attivo può davvero eseguire l'operazione; negli altri casi la riga spiega perché non è disponibile. Prima di rimuovere un modello occorre scrivere il suo nome per conferma, e l'app ricontrolla che sia ancora quello mostrato. Le dimensioni dei modelli di sistema sono stime fornite da ollama e rientrano nei totali della pagina. Nella prova con un programma ollama finto, su schermo stretto e largo, il comando ricevuto era esattamente quello atteso e la riga è sparita dopo la nuova scansione; i modelli veri non sono stati toccati. Con questo lotto il piano di lavoro sulla pagina Disco è completo. Restano alcune migliorie minori e un bottone di pulizia totale che, con il servizio di sistema acceso, viene rifiutato.
+
+### Prossimo passo
+
+Piano 002 completato. Restano le voci aperte sopra e i controlli manuali riservati all'utente (M-2, M-4, M-8, M-13, logout, rimozione dello stash `WIP on main: 8cdf9e8`).
+
+---
