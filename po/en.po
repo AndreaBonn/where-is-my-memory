@@ -145,7 +145,7 @@ msgid "Miniature"
 msgstr "Thumbnails"
 
 #: src/wimm/core/cache_titles.py:15 src/wimm/core/planning_disk.py:41
-#: src/wimm/ui/disk_view.py:182
+#: src/wimm/ui/disk_view.py:184
 msgid "Cestino"
 msgstr "Trash"
 
@@ -977,7 +977,7 @@ msgstr "The item no longer exists"
 msgid "La cache è un collegamento: puliscila con il comando dello strumento"
 msgstr "The cache is a link: clean it with the tool's own command"
 
-#: src/wimm/service/executor_cache_item.py:41
+#: src/wimm/service/executor_cache_item.py:46
 msgid "Un download sta scrivendo questo modello: riprova tra qualche minuto"
 msgstr "A download is writing this model: try again in a few minutes"
 
@@ -985,7 +985,23 @@ msgstr "A download is writing this model: try again in a few minutes"
 msgid "Chiudi ollama (ollama serve) prima di cancellare i modelli"
 msgstr "Close ollama (ollama serve) before deleting the models"
 
-#: src/wimm/service/executor_ollama_item.py:42
+#: src/wimm/service/executor_ollama_home.py:47
+msgid "Avvia ollama per rimuovere un modello"
+msgstr "Start ollama to remove a model"
+
+#: src/wimm/service/executor_ollama_home.py:54
+msgid "Il server ollama attivo usa un'altra cartella di modelli"
+msgstr "The active ollama server uses another models folder"
+
+#: src/wimm/service/executor_ollama_home.py:61
+msgid "Il server ollama attivo è quello di sistema e non vede questi modelli"
+msgstr "The active ollama server is the system one and does not see these models"
+
+#: src/wimm/service/executor_ollama_home.py:68
+msgid "Non è chiaro quale server ollama risponda: non è stato rimosso nulla"
+msgstr "It is not clear which ollama server answers: nothing was removed"
+
+#: src/wimm/service/executor_ollama_item.py:46
 msgid "Il server ollama attivo non è quello di sistema: non è stato rimosso nulla"
 msgstr "The active ollama server is not the system one: nothing was removed"
 
@@ -1819,33 +1835,33 @@ msgstr "Last check at {time}"
 msgid "Ultimo controllo il {date} alle {time}"
 msgstr "Last check on {date} at {time}"
 
-#: src/wimm/ui/disk_view.py:120
+#: src/wimm/ui/disk_view.py:122
 #, python-brace-format
 msgid "progetto fermo da {days} giorno"
 msgid_plural "progetto fermo da {days} giorni"
 msgstr[0] "project idle for {days} day"
 msgstr[1] "project idle for {days} days"
 
-#: src/wimm/ui/disk_view.py:153
+#: src/wimm/ui/disk_view.py:155
 #, python-brace-format
 msgid "Nessuna cartella di dipendenze più vecchia di {days} giorno nelle radici configurate"
 msgid_plural "Nessuna cartella di dipendenze più vecchia di {days} giorni nelle radici configurate"
 msgstr[0] "No dependency folder older than {days} day in the configured roots"
 msgstr[1] "No dependency folder older than {days} days in the configured roots"
 
-#: src/wimm/ui/disk_view.py:159
+#: src/wimm/ui/disk_view.py:161
 msgid "Cartelle di dipendenze"
 msgstr "Dependency folders"
 
-#: src/wimm/ui/disk_view.py:180
+#: src/wimm/ui/disk_view.py:182
 msgid "Cache"
 msgstr "Cache"
 
-#: src/wimm/ui/disk_view.py:180
+#: src/wimm/ui/disk_view.py:182
 msgid "Nessuna cache trovata"
 msgstr "No cache found"
 
-#: src/wimm/ui/disk_view.py:182
+#: src/wimm/ui/disk_view.py:184
 msgid "Cestino non rilevato"
 msgstr "Trash not detected"
 

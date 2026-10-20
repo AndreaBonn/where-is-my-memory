@@ -7,7 +7,6 @@ import psutil
 import pytest
 
 from tests.collectors.ollama_models_helpers import CURRENT_UID, TOOL, FakeProcess, FakeReader
-from tests.service.executor_fakes import make_plan
 from tests.service.fs_fakes import build_rig
 from tests.service.ollama_item_fakes import (
     ENVIRON,
@@ -22,8 +21,6 @@ from tests.service.ollama_item_fakes import (
 )
 from wimm.collectors.ollama_command import OllamaCommandError, run_command
 from wimm.core.constants import CACHE_COMMAND_TIMEOUT_S, OLLAMA_LIST_TIMEOUT_S
-from wimm.model.actions import ItemFingerprint, PlanStep
-from wimm.model.enums import ActionKind, Risk
 from wimm.service.control_protocols import StepStatus
 from wimm.service.errors import ControlFailed, ProtectedTarget, TargetChanged
 from wimm.service.executor_ollama_item import NotSystemServed, check_ollama_item, run_ollama_item
@@ -212,28 +209,3 @@ def test_the_real_seams_are_the_defaults_of_the_production_control(tmp_path: Pat
     assert control.ollama_runner is run_command
     assert control.serve_reader is psutil
     assert control.environ is os.environ
-
-
-def test_a_home_model_is_still_refused_and_the_ollama_commands_are_not_touched(
-    tmp_path: Path,
-) -> None:
-    home = tmp_path / "home"
-    manifest = home / ".ollama/models/manifests/registry/library/gemma3/4b"
-    manifest.parent.mkdir(parents=True)
-    manifest.write_text("{}", encoding="utf-8")
-    ollama = FakeOllama()
-    rig = ollama_rig(home=home, ollama=ollama)
-    info = os.lstat(manifest)
-    step = PlanStep(
-        order=1,
-        kind=ActionKind.CACHE_ITEM_REMOVE,
-        target_label=NAME,
-        fingerprint=ItemFingerprint(realpath=str(manifest), st_ino=info.st_ino, st_dev=info.st_dev),
-        risk=Risk.DANGER,
-    )
-
-    with pytest.raises(ProtectedTarget):
-        rig.executor().execute(plan=make_plan(steps=[step]))
-
-    assert ollama.calls == []
-    assert manifest.exists()

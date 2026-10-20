@@ -23,8 +23,8 @@ DEFAULT_HOST = "registry.ollama.ai"
 DEFAULT_NAMESPACE = "library"
 
 
-def _display_name(*, parts: list[str]) -> str:
-    """The name `ollama rm` takes: the default host and namespace are left out."""
+def display_name(*, parts: list[str]) -> str:
+    """The name `ollama rm` takes for `[manifests, host, namespace, name, tag]`."""
     _, host, namespace, name, tag = parts
     prefix = "" if namespace == DEFAULT_NAMESPACE and host == DEFAULT_HOST else f"{namespace}/"
     host_part = "" if host == DEFAULT_HOST else f"{host}/"
@@ -96,8 +96,8 @@ def ollama_items(*, listing: TreeListing) -> tuple[tuple[CacheItem, ...], int]:
     root = listing.root.rstrip("/")
     items = tuple(
         CacheItem(
-            id=_display_name(parts=path.split("/")),
-            title=_display_name(parts=path.split("/")),
+            id=display_name(parts=path.split("/")),
+            title=display_name(parts=path.split("/")),
             path=f"{root}/{path}",
             size=size,
             st_ino=by_path[path].st_ino,

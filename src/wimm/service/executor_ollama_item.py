@@ -53,14 +53,14 @@ def _fingerprint(*, step: PlanStep) -> ServedModelFingerprint:
     return fingerprint
 
 
-def _tool(*, control: DiskFsControl) -> str:
+def ollama_tool(*, control: DiskFsControl) -> str:
     found = control.which(OLLAMA_NAME)
     if found is None or not os.path.isabs(found):
         raise ProtectedTarget("The ollama tool is not available by an absolute path")
     return found
 
 
-def _require_system_server(*, control: DiskFsControl) -> None:
+def served_situation(*, control: DiskFsControl) -> ServedStore:
     """The situation is read now, from the processes and the environment, never from the plan."""
     facts = ServedFacts(
         processes=collect_serve_processes(reader=control.serve_reader, current_uid=control.uid),
@@ -69,36 +69,40 @@ def _require_system_server(*, control: DiskFsControl) -> None:
         home_store=home_store_path(table=control.caches, home=control.home),
         default_models=default_models_path(home=control.home),
     )
-    situation = served_store(facts=facts, realpath=os.path.realpath)
+    return served_store(facts=facts, realpath=os.path.realpath)
+
+
+def _require_system_server(*, control: DiskFsControl) -> None:
+    situation = served_situation(control=control)
     if situation is not ServedStore.SYSTEM:
         raise NotSystemServed(f"{NotSystemServed.message} (situation: {situation.value})")
 
 
-def _command_env(*, control: DiskFsControl) -> dict[str, str]:
+def command_env(*, control: DiskFsControl) -> dict[str, str]:
     """The same dictionary for `list` and `rm`, so both talk to the same server."""
     return {key: control.environ[key] for key in OLLAMA_COMMAND_ENV_KEYS if key in control.environ}
 
 
-def _run(*, control: DiskFsControl, argv: list[str], timeout_s: float) -> CommandOutput:
+def run_ollama(*, control: DiskFsControl, argv: list[str], timeout_s: float) -> CommandOutput:
     try:
         return control.ollama_runner(
-            argv=argv, timeout_s=timeout_s, env=_command_env(control=control)
+            argv=argv, timeout_s=timeout_s, env=command_env(control=control)
         )
     except OllamaCommandError as error:
         raise ControlFailed(f"ollama {argv[1]} failed: {printable(text=str(error))}") from error
 
 
-def _detail(*, result: CommandOutput) -> str:
+def command_detail(*, result: CommandOutput) -> str:
     """Both streams, cleaned: `ollama rm` writes its spinner and its error to the terminal."""
     return printable(text=f"{result.stdout}\n{result.stderr}")
 
 
 def _listing(*, tool: str, control: DiskFsControl) -> tuple[ListedModel, ...]:
-    result = _run(
+    result = run_ollama(
         control=control, argv=[tool, OLLAMA_LIST_COMMAND], timeout_s=OLLAMA_LIST_TIMEOUT_S
     )
     if result.returncode:
-        detail = _detail(result=result)
+        detail = command_detail(result=result)
         raise ControlFailed(f"ollama list exited with code {result.returncode}: {detail}")
     models = parse_ollama_list(text=result.stdout)
     if models is None:
@@ -123,21 +127,21 @@ def _planned_row(
 def check_ollama_item(*, step: PlanStep, control: DiskFsControl) -> bool:
     """Raise if the model must not be removed now; True if it is listed, False if gone."""
     fingerprint = _fingerprint(step=step)
-    tool = _tool(control=control)
+    tool = ollama_tool(control=control)
     return _planned_row(tool=tool, fingerprint=fingerprint, control=control) is not None
 
 
 def run_ollama_item(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
     """Check again, `ollama rm`, then list again: DONE only if the name is no longer there."""
     fingerprint = _fingerprint(step=step)
-    tool = _tool(control=control)
+    tool = ollama_tool(control=control)
     row = _planned_row(tool=tool, fingerprint=fingerprint, control=control)
     if row is None:
         return StepOutcome(order=step.order, status=StepStatus.ALREADY_GONE)
     argv = [tool, REMOVE_COMMAND, END_OF_OPTIONS, fingerprint.name]
-    result = _run(control=control, argv=argv, timeout_s=CACHE_COMMAND_TIMEOUT_S)
+    result = run_ollama(control=control, argv=argv, timeout_s=CACHE_COMMAND_TIMEOUT_S)
     if result.returncode:
-        detail = _detail(result=result)
+        detail = command_detail(result=result)
         raise ControlFailed(f"ollama rm exited with code {result.returncode}: {detail}")
     try:
         listed = _listing(tool=tool, control=control)
