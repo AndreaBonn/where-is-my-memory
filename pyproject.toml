@@ -22,8 +22,12 @@ dev = [
     "ruff",
     "mypy",
     "pygobject-stubs",
-    # Stubs matching the apt runtime (psutil 5.9.8); no stubs exist for docker 5.x.
+    # Stubs matching the apt runtime (psutil 5.9.8, requests 2.31, Pillow 10.2); no stubs
+    # exist for docker 5.x. CI lacks python3-typeshed, so these must come from the lock.
     "types-psutil==5.9.5.20240516",
+    # Later builds depend on urllib3 itself, which apt provides (tests/test_lockfile.py).
+    "types-requests==2.31.0.6",
+    "types-pillow==10.2.0.20240822",
 ]
 
 [tool.uv]
