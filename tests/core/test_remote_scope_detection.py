@@ -56,7 +56,7 @@ def test_scope_with_sshd_makes_its_dev_server_actionable() -> None:
 
 def test_sshd_named_only_in_its_command_line_marks_the_scope_remote() -> None:
     processes = tree(
-        process(pid=210, name="sshd", cmdline=("sshd: bonn@pts/0",), cgroup=REMOTE_SCOPE),
+        process(pid=210, name="sshd", cmdline=("sshd: u@pts/0",), cgroup=REMOTE_SCOPE),
         process(pid=211, ppid=210, name="node", cgroup=REMOTE_SCOPE),
     )
 

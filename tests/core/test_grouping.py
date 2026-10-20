@@ -12,8 +12,8 @@ from wimm.model.raw import Mount, RawContainer, RawProcess
 
 from .helpers import ProcessChanges, process
 
-HOME = "/home/bonn"
-WHITEBOX_DIR = "/home/bonn/dev/ai-whitebox-core"
+HOME = "/home/u"
+WHITEBOX_DIR = "/home/u/dev/demo-stack"
 COMPOSE_PROJECT = "com.docker.compose.project"
 COMPOSE_WORKDIR = "com.docker.compose.project.working_dir"
 
@@ -109,7 +109,7 @@ def test_build_groups_compose_without_any_working_dir_has_none() -> None:
 
 
 def test_build_groups_processes_with_same_project_root_make_one_group() -> None:
-    root = "/home/bonn/dev/api"
+    root = "/home/u/dev/api"
     pairs = (
         dev(10, cwd=root, name="node", category=Category.DEV_PROCESS),
         dev(11, cwd=root + "/src", name="vite", category=Category.DEV_SERVER),

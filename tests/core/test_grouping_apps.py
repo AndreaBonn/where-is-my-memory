@@ -9,7 +9,7 @@ from wimm.model.raw import RawProcess
 
 from .helpers import FIREFOX, TERMINAL, USER_PATH, VTE, ProcessChanges, process
 
-HOME = "/home/bonn"
+HOME = "/home/u"
 CODE_SCOPE = USER_PATH + "app-gnome-code-1.scope"
 
 Pair = tuple[RawProcess, CategoryDecision]

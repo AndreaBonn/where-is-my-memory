@@ -26,12 +26,12 @@
     "containers_truncated": 0
   },
   "caches": [
-    {"kind": "uv", "path": "/home/bonn/.cache/uv", "size": 3000000000, "st_ino": 5, "st_dev": 2049},
-    {"kind": "trash", "path": "/home/bonn/.local/share/Trash", "size": 40000000,
+    {"kind": "uv", "path": "/home/u/.cache/uv", "size": 3000000000, "st_ino": 5, "st_dev": 2049},
+    {"kind": "trash", "path": "/home/u/.local/share/Trash", "size": 40000000,
      "st_ino": 6, "st_dev": 2049}
   ],
   "devdirs": [
-    {"path": "/home/bonn/Documenti/00_Lavoro/old/node_modules", "size": 700000000,
+    {"path": "/home/u/Documenti/00_Lavoro/old/node_modules", "size": 700000000,
      "age_days": 200, "st_ino": 77, "st_dev": 2049}
   ],
   "devdirs_truncated": 3

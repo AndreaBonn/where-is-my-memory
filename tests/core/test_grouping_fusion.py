@@ -12,8 +12,8 @@ from wimm.model.raw import Mount, RawContainer, RawProcess
 
 from .helpers import ProcessChanges, process
 
-HOME = "/home/bonn"
-WHITEBOX_DIR = "/home/bonn/dev/ai-whitebox-core"
+HOME = "/home/u"
+WHITEBOX_DIR = "/home/u/dev/demo-stack"
 COMPOSE_PROJECT = "com.docker.compose.project"
 COMPOSE_WORKDIR = "com.docker.compose.project.working_dir"
 
@@ -101,9 +101,9 @@ def test_build_groups_compose_plus_uvicorn_under_working_dir_fuses_into_project(
 
 def test_build_groups_root_ancestor_of_working_dir_fuses() -> None:
     groups = build(
-        pairs=(dev(30, cwd="/home/bonn/dev", name="make"),),
+        pairs=(dev(30, cwd="/home/u/dev", name="make"),),
         containers=(container(name="w", project="whitebox", workdir=WHITEBOX_DIR),),
-        roots={"/home/bonn/dev": "/home/bonn/dev"},
+        roots={"/home/u/dev": "/home/u/dev"},
     )
 
     assert len(groups) == 1

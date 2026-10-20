@@ -8,7 +8,7 @@ from wimm.model.enums import Category
 
 from .helpers import ProcessChanges, process
 
-HOME = "/home/bonn"
+HOME = "/home/u"
 
 
 def pair(pid: int, /, *, category: Category, **changes: Unpack[ProcessChanges]) -> Pair:

@@ -134,8 +134,8 @@ def build_input(
     )
 
 
-HOME = "/home/bonn"
-WHITEBOX_DIR = "/home/bonn/dev/ai-whitebox-core"
+HOME = "/home/u"
+WHITEBOX_DIR = "/home/u/dev/demo-stack"
 COMPOSE_PROJECT = "com.docker.compose.project"
 COMPOSE_WORKDIR = "com.docker.compose.project.working_dir"
 UVICORN_PID = 30

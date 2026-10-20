@@ -78,9 +78,7 @@ def test_fixture_members_show_command_cwd_ports_image_and_mounts(
     assert container.title == "Accesso utenti (whitebox-keycloak)"
     assert container.image == "quay.io/keycloak/keycloak:26.0.8"
     assert container.state == "running"
-    assert container.mounts == (
-        "bind: /home/bonn/projects/ai-whitebox-core/vault -> /opt/keycloak/vault",
-    )
+    assert container.mounts == ("bind: /home/u/projects/demo-stack/vault -> /opt/keycloak/vault",)
     assert (container.command, container.cwd, container.started) == (None, None, None)
     assert container.memory == "682 MB"
     assert [a.label for a in container.actions] == ["Ferma"]
@@ -88,7 +86,7 @@ def test_fixture_members_show_command_cwd_ports_image_and_mounts(
     assert (process.key, process.kind, process.name) == ("941149", "process", "uvicorn")
     assert process.title == "Server web (uvicorn)"
     assert process.command == "uvicorn app:main --port 8000"
-    assert process.cwd == "/home/bonn/projects/ai-whitebox-core"
+    assert process.cwd == "/home/u/projects/demo-stack"
     assert process.ports == "8000"
     assert process.started == "16/10 06:46"
     assert process.memory == "180 MB"
