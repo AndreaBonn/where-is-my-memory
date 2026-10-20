@@ -1,5 +1,6 @@
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -63,7 +64,15 @@ def test_apply_config_keeps_unrelated_names_actionable() -> None:
     assert executor.execute(plan=plan)[0].status is StepStatus.DONE
 
 
+def runs_where_children_are_actionable() -> bool:
+    """True inside the user manager or over SSH; elsewhere (a CI runner) R28 protects all."""
+    cgroup = Path("/proc/self/cgroup").read_text(encoding="utf-8")
+    return f"user@{os.getuid()}.service" in cgroup or "SSH_CONNECTION" in os.environ
+
+
 def test_psutil_control_protects_a_name_added_after_construction() -> None:
+    if not runs_where_children_are_actionable():
+        pytest.skip("outside user@<uid>.service and SSH every process is SYSTEM (R28)")
     with spawned(args=python_child(script="import time; time.sleep(30)")) as child:
         # Remote sessions actionable: the suite may run over SSH, whose scope is protected.
         control = PsutilProcessControl(owner_uid=os.getuid(), remote_sessions_actionable=True)

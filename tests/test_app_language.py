@@ -57,6 +57,7 @@ def test_startup_language_without_config_follows_system(monkeypatch: pytest.Monk
     assert i18n.current_language() == i18n.ENGLISH
 
 
+@pytest.mark.usefixtures("english_catalog")
 def test_startup_language_with_a_broken_config_stays_quiet(
     monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:

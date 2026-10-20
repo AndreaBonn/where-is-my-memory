@@ -35,6 +35,10 @@ def isolate_user_directories(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     # setenv first: delenv of an absent variable records nothing to undo.
     monkeypatch.setenv(name="LANGUAGE", value="")
     monkeypatch.delenv(name="LANGUAGE")
+    # The host locale picks the startup language: CI runs under C.UTF-8, which means English.
+    for variable in ("LC_ALL", "LC_MESSAGES"):
+        monkeypatch.delenv(name=variable, raising=False)
+    monkeypatch.setenv(name="LANG", value="it_IT.UTF-8")
 
 
 @pytest.fixture(autouse=True)

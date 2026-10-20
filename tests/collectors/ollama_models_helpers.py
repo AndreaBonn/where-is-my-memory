@@ -1,5 +1,6 @@
 """Fakes for the system ollama collector: no real ollama and no real /proc (T-6.37c)."""
 
+import os
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -13,7 +14,8 @@ from wimm.model import CacheEntry, CacheItem, CacheItemKind, CacheKind
 
 LIST_FIXTURE = Path(__file__).parents[1] / "fixtures" / "ollama" / "list_0_18_0.txt"
 TOOL = "/usr/local/bin/ollama"
-CURRENT_UID = 1000
+# The real uid: the executor rigs compare it with the owner of files made in tmp_path.
+CURRENT_UID = os.getuid()
 SERVICE_UID = 997
 HOME = Path("/home/u")
 HOME_STORE = "/home/u/.ollama/models"

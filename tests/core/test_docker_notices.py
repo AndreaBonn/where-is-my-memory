@@ -78,6 +78,7 @@ def test_no_engine_text_is_the_reason_after_docker_non_disponibile() -> None:
     )
 
 
+@pytest.mark.usefixtures("english_catalog")
 def test_text_follows_the_active_language() -> None:
     notice = EngineNotice(code=NoticeCode.NO_ENGINE, endpoint="")
     i18n.set_language(language=i18n.ENGLISH)
