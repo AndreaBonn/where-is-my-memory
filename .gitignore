@@ -12,3 +12,8 @@ staging/
 .env
 *.log
 src/wimm/locale/
+
+# Internal working files: kept locally, not published.
+CLAUDE.md
+specs/
+assets/SPECIFICHE.md
