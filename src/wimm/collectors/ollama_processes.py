@@ -7,7 +7,7 @@ current user's own server; for the others the answer is "unknown" (None), never 
 import logging
 from collections.abc import Iterable, Mapping
 from pathlib import PurePosixPath
-from typing import Any, Protocol
+from typing import Any, NamedTuple, Protocol
 
 import psutil
 
@@ -16,7 +16,7 @@ from wimm.core.ollama_serve import OLLAMA_SERVE_ARGUMENT
 from wimm.core.ollama_served import ServeProcess
 
 LOGGER = logging.getLogger(__name__)
-SERVE_ATTRS = ["cmdline", "uids"]
+SERVE_ATTRS = ["name", "cmdline", "uids"]
 
 
 class ServeCandidate(Protocol):
@@ -46,11 +46,18 @@ def _environ_of(*, process: ServeCandidate) -> dict[str, str] | None:
         return None
 
 
-def _serve_process(*, process: ServeCandidate, current_uid: int) -> ServeProcess | None:
+def _unreadable_ollama(*, info: Mapping[str, Any]) -> bool:
+    """An `ollama` process whose command line or uids psutil was denied: it may be a server."""
+    denied = not info.get("cmdline") or info.get("uids") is None
+    return info.get("name") == OLLAMA_NAME and denied
+
+
+def _classify(*, process: ServeCandidate, current_uid: int) -> ServeProcess | bool | None:
+    """A server, True for an unreadable ollama process, None for anything else."""
     try:
         info = process.info
-        if not _is_serve(cmdline=info["cmdline"]):
-            return None
+        if info.get("uids") is None or not _is_serve(cmdline=info.get("cmdline")):
+            return True if _unreadable_ollama(info=info) else None
         uid = int(info["uids"].real)
     except (psutil.Error, KeyError, AttributeError):
         return None
@@ -58,10 +65,21 @@ def _serve_process(*, process: ServeCandidate, current_uid: int) -> ServeProcess
     return ServeProcess(uid=uid, environ=environ)
 
 
+class OllamaProcesses(NamedTuple):
+    serves: tuple[ServeProcess, ...]
+    unreadable: int
+
+
+def collect_ollama_processes(*, reader: ServeReader, current_uid: int) -> OllamaProcesses:
+    """The visible `ollama serve` processes and how many `ollama` processes cannot be read."""
+    found = [
+        _classify(process=process, current_uid=current_uid)
+        for process in reader.process_iter(SERVE_ATTRS)
+    ]
+    serves = tuple(item for item in found if isinstance(item, ServeProcess))
+    return OllamaProcesses(serves=serves, unreadable=sum(item is True for item in found))
+
+
 def collect_serve_processes(*, reader: ServeReader, current_uid: int) -> tuple[ServeProcess, ...]:
     """Every `ollama serve` visible to the current user; unreadable processes are skipped."""
-    found = (
-        _serve_process(process=process, current_uid=current_uid)
-        for process in reader.process_iter(SERVE_ATTRS)
-    )
-    return tuple(item for item in found if item is not None)
+    return collect_ollama_processes(reader=reader, current_uid=current_uid).serves

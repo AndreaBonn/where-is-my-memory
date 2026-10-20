@@ -46,7 +46,8 @@ def test_the_model_is_removed_while_the_home_server_runs(tmp_path: Path) -> None
     assert outcome.status is StepStatus.DONE
     assert outcome.freed_bytes == blobs_disk_bytes(store=tmp_path / "home/.ollama/models")
     assert not manifest.exists()
-    (rm,) = ollama.calls
+    assert [call["argv"][1] for call in ollama.calls] == ["list", "rm"]
+    (rm,) = ollama.rm_calls
     assert rm["argv"] == [TOOL, "rm", "--", NAME]
     assert rm["timeout_s"] == CACHE_COMMAND_TIMEOUT_S
     assert rm["env"] == COMMAND_ENV

@@ -20,7 +20,7 @@ from wimm.collectors.ollama_command import (
     OllamaCommandError,
     run_command,
 )
-from wimm.collectors.ollama_processes import ServeReader, collect_serve_processes
+from wimm.collectors.ollama_processes import ServeReader, collect_ollama_processes
 from wimm.core.cache_catalog import CacheResolution
 from wimm.core.constants import (
     OLLAMA_COMMAND_ENV_KEYS,
@@ -124,12 +124,14 @@ class OllamaSystemSource:
         return found if found and os.path.isabs(found) else None
 
     def _situation(self, *, home: Path, table: CacheResolution) -> ServedStore:
+        found = collect_ollama_processes(reader=self.reader, current_uid=self.current_uid)
         facts = ServedFacts(
-            processes=collect_serve_processes(reader=self.reader, current_uid=self.current_uid),
+            processes=found.serves,
             current_uid=self.current_uid,
             ollama_host=self.environ.get("OLLAMA_HOST"),
             home_store=home_store_path(table=table, home=home),
             default_models=default_models_path(home=home),
+            unreadable_ollama=found.unreadable,
         )
         return served_store(facts=facts, realpath=self.realpath)
 

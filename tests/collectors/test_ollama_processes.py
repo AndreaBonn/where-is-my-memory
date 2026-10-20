@@ -2,8 +2,14 @@
 
 import psutil
 
-from tests.collectors.ollama_models_helpers import CURRENT_UID, SERVICE_UID, FakeProcess, FakeReader
-from wimm.collectors.ollama_processes import collect_serve_processes
+from tests.collectors.ollama_models_helpers import (
+    CURRENT_UID,
+    SERVICE_UID,
+    TOOL,
+    FakeProcess,
+    FakeReader,
+)
+from wimm.collectors.ollama_processes import collect_ollama_processes, collect_serve_processes
 from wimm.core.ollama_served import ServeProcess
 
 
@@ -53,3 +59,40 @@ def test_a_process_that_vanished_is_skipped() -> None:
     assert _collect(Vanishing(uid=SERVICE_UID), FakeProcess(uid=SERVICE_UID)) == (
         ServeProcess(uid=SERVICE_UID, environ=None),
     )
+
+
+def _unreadable(*processes: FakeProcess) -> int:
+    return collect_ollama_processes(
+        reader=FakeReader(*processes), current_uid=CURRENT_UID
+    ).unreadable
+
+
+def test_an_ollama_process_with_a_denied_command_line_is_counted() -> None:
+    denied = FakeProcess(uid=SERVICE_UID, cmdline=None)
+
+    assert _unreadable(denied) == 1
+    assert _unreadable(denied, FakeProcess(uid=SERVICE_UID, cmdline=None, pid=9)) == 2
+    assert _collect(denied) == ()
+
+
+def test_an_ollama_serve_with_denied_uids_is_counted_and_not_a_server() -> None:
+    denied = FakeProcess(uid=SERVICE_UID, uids_denied=True)
+
+    assert _unreadable(denied) == 1
+    assert _collect(denied) == ()
+
+
+def test_unreadable_processes_that_are_not_ollama_are_not_counted() -> None:
+    other = FakeProcess(uid=1, cmdline=None, name="python3")
+    nameless = FakeProcess(uid=2, cmdline=None, name=None)
+
+    assert _unreadable(other, nameless) == 0
+    assert _unreadable(other, FakeProcess(uid=3, cmdline=None)) == 1
+
+
+def test_readable_ollama_processes_are_not_counted_as_unreadable() -> None:
+    client = FakeProcess(uid=1, cmdline=[TOOL, "run", "gemma3:4b"])
+
+    assert _unreadable(FakeProcess(uid=SERVICE_UID), client) == 0
+    found = collect_ollama_processes(reader=FakeReader(FakeProcess(uid=SERVICE_UID)), current_uid=1)
+    assert found.serves == (ServeProcess(uid=SERVICE_UID, environ=None),)

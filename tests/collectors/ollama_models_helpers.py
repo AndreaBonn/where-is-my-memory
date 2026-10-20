@@ -8,6 +8,7 @@ from typing import Any
 from wimm.collectors.ollama_command import CommandOutput, OllamaCommandError
 from wimm.collectors.ollama_models import OllamaScan, OllamaSystemSource
 from wimm.core.cache_catalog import CacheAccess, CacheResolution, ResolvedCache
+from wimm.core.constants import OLLAMA_NAME
 from wimm.model import CacheEntry, CacheItem, CacheItemKind, CacheKind
 
 LIST_FIXTURE = Path(__file__).parents[1] / "fixtures" / "ollama" / "list_0_18_0.txt"
@@ -38,10 +39,14 @@ class FakeProcess:
     environ_error: Exception | None = None
     environ_calls: int = 0
     pid: int = 2600
+    name: str | None = OLLAMA_NAME
+    uids_denied: bool = False
 
     @property
     def info(self) -> dict[str, Any]:
-        return {"cmdline": self.cmdline, "uids": _Uids(real=self.uid)}
+        """Like psutil's `process_iter(attrs)`: an attribute it was denied is None."""
+        uids = None if self.uids_denied else _Uids(real=self.uid)
+        return {"name": self.name, "cmdline": self.cmdline, "uids": uids}
 
     def environ(self) -> Mapping[str, str]:
         self.environ_calls += 1

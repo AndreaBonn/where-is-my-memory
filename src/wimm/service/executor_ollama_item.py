@@ -9,7 +9,7 @@ import logging
 import os
 
 from wimm.collectors.ollama_command import CommandOutput, OllamaCommandError
-from wimm.collectors.ollama_processes import collect_serve_processes
+from wimm.collectors.ollama_processes import collect_ollama_processes
 from wimm.core.constants import (
     CACHE_COMMAND_TIMEOUT_S,
     OLLAMA_COMMAND_ENV_KEYS,
@@ -62,12 +62,14 @@ def ollama_tool(*, control: DiskFsControl) -> str:
 
 def served_situation(*, control: DiskFsControl) -> ServedStore:
     """The situation is read now, from the processes and the environment, never from the plan."""
+    found = collect_ollama_processes(reader=control.serve_reader, current_uid=control.uid)
     facts = ServedFacts(
-        processes=collect_serve_processes(reader=control.serve_reader, current_uid=control.uid),
+        processes=found.serves,
         current_uid=control.uid,
         ollama_host=control.environ.get("OLLAMA_HOST"),
         home_store=home_store_path(table=control.caches, home=control.home),
         default_models=default_models_path(home=control.home),
+        unreadable_ollama=found.unreadable,
     )
     return served_store(facts=facts, realpath=os.path.realpath)
 
@@ -97,7 +99,7 @@ def command_detail(*, result: CommandOutput) -> str:
     return printable(text=f"{result.stdout}\n{result.stderr}")
 
 
-def _listing(*, tool: str, control: DiskFsControl) -> tuple[ListedModel, ...]:
+def list_models(*, tool: str, control: DiskFsControl) -> tuple[ListedModel, ...]:
     result = run_ollama(
         control=control, argv=[tool, OLLAMA_LIST_COMMAND], timeout_s=OLLAMA_LIST_TIMEOUT_S
     )
@@ -115,7 +117,7 @@ def _planned_row(
 ) -> ListedModel | None:
     """The listed row of the planned model; None if it is gone; raise if it is another model."""
     _require_system_server(control=control)
-    for model in _listing(tool=tool, control=control):
+    for model in list_models(tool=tool, control=control):
         if model.name != fingerprint.name:
             continue
         if model.model_id != fingerprint.model_id:
@@ -144,7 +146,7 @@ def run_ollama_item(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
         detail = command_detail(result=result)
         raise ControlFailed(f"ollama rm exited with code {result.returncode}: {detail}")
     try:
-        listed = _listing(tool=tool, control=control)
+        listed = list_models(tool=tool, control=control)
     except ControlFailed as err:
         # rm said it worked; only the confirmation is missing, so the outcome stays unknown.
         raise ControlFailed(f"ollama rm exited 0 but the check after it failed: {err}") from err

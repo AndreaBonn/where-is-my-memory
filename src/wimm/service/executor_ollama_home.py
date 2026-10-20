@@ -31,6 +31,7 @@ from .executor_ollama_item import (
     END_OF_OPTIONS,
     REMOVE_COMMAND,
     command_detail,
+    list_models,
     ollama_tool,
     run_ollama,
     served_situation,
@@ -185,6 +186,13 @@ def _inspect(*, step: PlanStep, control: DiskFsControl) -> HomeModel | None:
     return HomeModel(name=name, size=_recognise(root=root, fingerprint=fingerprint).size)
 
 
+def _require_listed_once(*, tool: str, name: str, control: DiskFsControl) -> None:
+    """`ollama list` must show exactly one row with this name, or `rm` could hit another model."""
+    rows = [model for model in list_models(tool=tool, control=control) if model.name == name]
+    if len(rows) != 1:
+        raise TargetChanged(f"{name} is listed {len(rows)} times by ollama list, expected once")
+
+
 def check_ollama_home_item(*, step: PlanStep, control: DiskFsControl) -> bool:
     """Raise if the model must not be removed now; True if its manifest is there, False if gone."""
     ollama_tool(control=control)
@@ -201,6 +209,7 @@ def run_ollama_home_item(*, step: PlanStep, control: DiskFsControl) -> StepOutco
     model = _inspect(step=step, control=control)
     if model is None:
         return StepOutcome(order=step.order, status=StepStatus.ALREADY_GONE)
+    _require_listed_once(tool=tool, name=model.name, control=control)
     argv = [tool, REMOVE_COMMAND, END_OF_OPTIONS, model.name]
     result = run_ollama(control=control, argv=argv, timeout_s=CACHE_COMMAND_TIMEOUT_S)
     if result.returncode:

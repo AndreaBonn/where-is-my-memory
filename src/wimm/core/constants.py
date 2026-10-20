@@ -248,6 +248,7 @@ CACHE_COMMAND_TIMEOUT_S = 300
 OLLAMA_LIST_TIMEOUT_S = 10
 OLLAMA_LIST_COMMAND = "list"
 OLLAMA_SYSTEM_PATH = "ollama list"
+OLLAMA_DEFAULT_PORT = 11434
 OLLAMA_COMMAND_ENV_KEYS = ("PATH", "LANG", "HOME", "OLLAMA_HOST")
 # SPECIFICHE 8.4 (trash): the folders under the trash whose content is removed.
 TRASH_CONTENT_DIRS = ("files", "info")

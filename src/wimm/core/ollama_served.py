@@ -9,18 +9,28 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 from wimm.model.disk import CacheKind
 
 from .cache_catalog import CacheResolution
+from .constants import OLLAMA_DEFAULT_PORT
 
 MODELS_VARIABLE = "OLLAMA_MODELS"
+HOST_VARIABLE = "OLLAMA_HOST"
+HOME_VARIABLE = "HOME"
+MAX_PORT = 65535
 # Where ollama keeps a user's models when OLLAMA_MODELS is not set.
 DEFAULT_MODELS_DIR = (".ollama", "models")
 LOCAL_NAMES = frozenset({"", "localhost"})
 _SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*://")
 _BRACKETED = re.compile(r"^\[([^\]]*)\]")
+
+
+@dataclass(frozen=True, slots=True)
+class Endpoint:
+    name: str
+    port: int
 
 
 class ServedStore(Enum):
@@ -48,18 +58,30 @@ class ServedFacts:
     ollama_host: str | None
     home_store: str
     default_models: str
+    # `ollama` processes whose command line could not be read: they may be servers.
+    unreadable_ollama: int = 0
 
 
-def _host_name(*, host: str) -> str:
-    rest = _SCHEME.sub("", host.strip()).split("/", 1)[0]
+def _endpoint(*, host: str | None) -> Endpoint | None:
+    """(name, port) of an OLLAMA_HOST value; None when it has userinfo or a broken port."""
+    rest = _SCHEME.sub("", (host or "").strip()).split("/", 1)[0]
+    if "@" in rest:
+        return None
     bracketed = _BRACKETED.match(rest)
     if bracketed:
-        return bracketed.group(1)
-    return rest if rest.count(":") > 1 else rest.split(":", 1)[0]
+        name, port_text = bracketed.group(1), rest[bracketed.end() :].removeprefix(":")
+    elif rest.count(":") > 1:
+        name, port_text = rest, ""
+    else:
+        name, _, port_text = rest.partition(":")
+    if not port_text:
+        return Endpoint(name=name, port=OLLAMA_DEFAULT_PORT)
+    if not port_text.isascii() or not port_text.isdigit() or not 0 < int(port_text) <= MAX_PORT:
+        return None
+    return Endpoint(name=name, port=int(port_text))
 
 
-def _is_local(*, host: str | None) -> bool:
-    name = _host_name(host=host or "")
+def _is_local(*, name: str) -> bool:
     if name in LOCAL_NAMES:
         return True
     try:
@@ -69,25 +91,53 @@ def _is_local(*, host: str | None) -> bool:
     return address.is_loopback or address.is_unspecified
 
 
+def _models_folder(*, environ: Mapping[str, str], facts: ServedFacts) -> str | None:
+    """Where the user's server keeps its models; None for a value that is not absolute."""
+    explicit = environ.get(MODELS_VARIABLE)
+    if explicit:
+        return explicit if PurePosixPath(explicit).is_absolute() else None
+    home = environ.get(HOME_VARIABLE)
+    if not home:
+        return facts.default_models
+    return default_models_path(home=Path(home)) if PurePosixPath(home).is_absolute() else None
+
+
 def _user_server_store(
     *, process: ServeProcess, facts: ServedFacts, realpath: Callable[[str], str]
 ) -> ServedStore:
     if process.environ is None:
         return ServedStore.USER_OTHER
-    models = process.environ.get(MODELS_VARIABLE) or facts.default_models
+    models = _models_folder(environ=process.environ, facts=facts)
+    if models is None:
+        return ServedStore.USER_OTHER
     same = realpath(models) == realpath(facts.home_store)
     return ServedStore.USER_HOME if same else ServedStore.USER_OTHER
 
 
+def _same_port(*, process: ServeProcess, client: Endpoint) -> bool:
+    """The user's own server listens where the client talks; an unreadable one is not checked."""
+    if process.environ is None:
+        return True
+    server = _endpoint(host=process.environ.get(HOST_VARIABLE))
+    return server is not None and server.port == client.port
+
+
 def served_store(*, facts: ServedFacts, realpath: Callable[[str], str]) -> ServedStore:
     """Classify the situation S0-S3; `realpath` resolves links so two spellings compare equal."""
-    if not _is_local(host=facts.ollama_host) or len(facts.processes) > 1:
+    client = _endpoint(host=facts.ollama_host)
+    if client is None or not _is_local(name=client.name):
+        return ServedStore.AMBIGUOUS
+    if len(facts.processes) > 1 or facts.unreadable_ollama > 0:
         return ServedStore.AMBIGUOUS
     if not facts.processes:
         return ServedStore.NONE
     (process,) = facts.processes
     if process.uid != facts.current_uid:
-        return ServedStore.SYSTEM
+        # The environ of another user's server is unreadable: only the default port is safe.
+        default = client.port == OLLAMA_DEFAULT_PORT
+        return ServedStore.SYSTEM if default else ServedStore.AMBIGUOUS
+    if not _same_port(process=process, client=client):
+        return ServedStore.AMBIGUOUS
     return _user_server_store(process=process, facts=facts, realpath=realpath)
 
 

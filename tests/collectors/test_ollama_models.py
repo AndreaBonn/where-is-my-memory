@@ -141,3 +141,12 @@ def test_the_situation_is_known_even_when_the_tool_is_missing() -> None:
     result = scan(runner=FakeRunner(), tool=None, reader=FakeReader(FakeProcess(uid=CURRENT_UID)))
     assert result.entry is None
     assert result.situation is ServedStore.USER_HOME
+
+
+def test_an_unreadable_ollama_process_beside_the_system_server_gives_no_entry() -> None:
+    runner = FakeRunner()
+    reader = FakeReader(FakeProcess(uid=SERVICE_UID), FakeProcess(uid=SERVICE_UID, cmdline=None))
+
+    assert collect(runner=runner, reader=reader) is None
+    assert runner.calls == []
+    assert collect(runner=FakeRunner(), reader=FakeReader(FakeProcess(uid=SERVICE_UID))) is not None
