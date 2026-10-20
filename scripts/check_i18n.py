@@ -113,6 +113,8 @@ EXEMPT = {
         "Email",
         "Chat",
         "InstantMessaging",
+        # The path field of the system ollama entry: names the command, never shown (T-6.37c).
+        "ollama list",
     },
     # Unicode general-category codes matched against unicodedata, never shown.
     "core/planning_restart.py": {"Cc", "Cf", "Zl", "Zp"},

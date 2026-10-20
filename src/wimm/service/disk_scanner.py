@@ -7,8 +7,6 @@ file), so ``AppService`` calls it only from its dedicated disk worker.
 import logging
 import threading
 import time
-from collections.abc import Callable
-from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
@@ -16,9 +14,11 @@ from wimm.collectors import CollectorResult
 from wimm.collectors.caches import collect_caches
 from wimm.collectors.devdirs import DevDirSettings, scan_devdirs
 from wimm.collectors.disk_report import DockerDiskSource
+from wimm.collectors.ollama_models import real_ollama_source
 from wimm.config import Config
+from wimm.core.cache_catalog import CacheResolution
 from wimm.core.disk_rules import build_disk_report, filter_devdirs
-from wimm.model.disk import DiskReport, DockerDisk
+from wimm.model.disk import CacheEntry, DiskReport, DockerDisk
 from wimm.service.sampler import wall_clock
 from wimm.service.sampler_environment import resolve_cache_table
 
@@ -39,8 +39,17 @@ class DockerSource(Protocol):
     def collect(self) -> CollectorResult[DockerDisk]: ...
 
 
+class OllamaSource(Protocol):
+    def collect(
+        self, *, home: Path, table: CacheResolution, caches: tuple[CacheEntry, ...]
+    ) -> CacheEntry | None: ...
+
+
 class RealDiskScanner:
-    """Scans with the collectors; ``config`` is read at each scan, so edits apply to the next."""
+    """Scans with the collectors; ``config`` is read at each scan, so edits apply to the next.
+
+    ``ollama`` is the system-wide ollama store (T-6.37c); without it the scan lists none.
+    """
 
     def __init__(
         self,
@@ -48,12 +57,12 @@ class RealDiskScanner:
         docker: DockerSource,
         home: Path,
         cache_dir: Path,
-        clock: Callable[[], datetime] = wall_clock,
+        ollama: OllamaSource | None = None,
     ) -> None:
         self._docker = docker
         self._home = home
         self._cache_dir = cache_dir
-        self._clock = clock
+        self._ollama = ollama
         self._cancelled = threading.Event()
 
     def cancel(self) -> None:
@@ -78,12 +87,16 @@ class RealDiskScanner:
         Docker being unreachable is not an error: the report carries it as unavailable.
         Folders the collectors cannot read are skipped and counted.
         """
-        started = self._clock()
+        started = wall_clock()
         docker = self._docker.collect().data
         self._check()
         table = resolve_cache_table(home=self._home, roots=config.devdirs_roots)
         caches = collect_caches(table=table, cache_dir=self._cache_dir, sleep=self._pause)
         self._check()
+        if self._ollama is not None:
+            system = self._ollama.collect(home=self._home, table=table, caches=caches)
+            caches = caches if system is None else (*caches, system)
+            self._check()
         settings = DevDirSettings(
             roots=config.admitted_roots, home=self._home, max_depth=config.devdirs_max_depth
         )
@@ -98,4 +111,9 @@ class RealDiskScanner:
 
 def build_disk_scanner(*, home: Path, cache_dir: Path) -> RealDiskScanner:
     """The scanner with the real Docker reader, for the running application."""
-    return RealDiskScanner(docker=DockerDiskSource(), home=home, cache_dir=cache_dir)
+    return RealDiskScanner(
+        docker=DockerDiskSource(),
+        home=home,
+        cache_dir=cache_dir,
+        ollama=real_ollama_source(),
+    )

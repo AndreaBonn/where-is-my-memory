@@ -243,6 +243,12 @@ SECONDS_PER_DAY = 86400
 # SPECIFICHE 8.4 (caches): pip falls back to removing the folder content when the tool is not
 # on PATH. Thumbnails and trash have no command.
 CACHE_COMMAND_TIMEOUT_S = 300
+# Design note L5 (T-6.37c): `ollama list` in the scan answers in about 0.2 s; the system
+# store entry has no file behind it, so its path field only names the command.
+OLLAMA_LIST_TIMEOUT_S = 10
+OLLAMA_LIST_COMMAND = "list"
+OLLAMA_SYSTEM_PATH = "ollama list"
+OLLAMA_COMMAND_ENV_KEYS = ("PATH", "LANG", "HOME", "OLLAMA_HOST")
 # SPECIFICHE 8.4 (trash): the folders under the trash whose content is removed.
 TRASH_CONTENT_DIRS = ("files", "info")
 MOUNTINFO_PATH = "/proc/self/mountinfo"

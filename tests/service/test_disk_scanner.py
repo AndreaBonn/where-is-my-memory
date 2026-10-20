@@ -129,6 +129,11 @@ class FixedDocker:
         return CollectorResult(data=docker_disk())
 
 
+class NoOllama:
+    def collect(self, **_: object) -> None:
+        return None
+
+
 def test_build_disk_scanner_scans_the_given_home_and_keeps_sizes_in_the_given_cache_dir(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -136,6 +141,8 @@ def test_build_disk_scanner_scans_the_given_home_and_keeps_sizes_in_the_given_ca
     (home / ".cache" / "uv").mkdir(parents=True)
     (home / ".cache" / "uv" / "wheel").write_bytes(b"x" * 5000)
     monkeypatch.setattr("wimm.service.disk_scanner.DockerDiskSource", FixedDocker)
+    # Never the real ollama: this machine may run one.
+    monkeypatch.setattr("wimm.service.disk_scanner.real_ollama_source", NoOllama)
     scanner = build_disk_scanner(home=home, cache_dir=tmp_path / "state")
 
     result = scanner.scan(config=Config(devdirs_roots=(home,)))
