@@ -31,6 +31,7 @@ from .planning_drafts import (
 )
 from .planning_restart import StoppedContainer, plan_restart
 from .planning_tools import ToolPlanner, no_tool
+from .terminal_text import visible_text
 
 __all__ = ["PlanningContext", "cmdline_hash", "plan_action"]
 
@@ -176,9 +177,11 @@ def _confirm_phrase(*, drafts: list[Draft]) -> str | None:
     danger = [draft for draft in drafts if draft.risk is Risk.DANGER]
     if not danger:
         return None
-    if not danger[0].name.strip():
+    # The phrase is typed back, so it holds only what the dialog can show.
+    phrase = visible_text(text=danger[0].name)
+    if not phrase:
         raise InvalidRequest("A danger plan needs a non-empty target name to confirm")
-    return danger[0].name
+    return phrase
 
 
 def _build_plan(*, request: ActionRequest, drafts: list[Draft], context: PlanningContext) -> Plan:

@@ -2,7 +2,7 @@
 
 import pytest
 
-from wimm.core.terminal_text import printable
+from wimm.core.terminal_text import printable, visible_text
 
 SPINNER = "\x1b[?25l\x1b[?2026h\x1b[1G⠋ \x1b[K\x1b[?25h\x1b[?2026l\x1b[2K\x1b[1G"
 SPINNER += "Error: model 'x' not found"
@@ -34,3 +34,20 @@ def test_control_characters_and_odd_spacing_are_cleaned(text: str, clean: str) -
 
 def test_a_long_output_keeps_its_tail() -> None:
     assert printable(text="head " + "x" * 300 + " tail", limit=20) == "x" * 15 + " tail"
+
+
+@pytest.mark.parametrize(
+    ("text", "shown"),
+    [
+        # U+202E reverses what follows: "evil\u202egpj.exe" displays as "evilexe.jpg".
+        ("evil\u202egpj.exe", "evilgpj.exe"),
+        ("\u2067postgres\u2069", "postgres"),
+        ("a\u200eb\u200fc\u061cd\u202ae\u202cf", "abcdef"),
+        ("one\ntwo\tthree\x00\x1b", "one two three"),
+        # Letters of a right-to-left script and accents are text, not controls.
+        ("مدل · caffè", "مدل · caffè"),
+        ("plain", "plain"),
+    ],
+)
+def test_visible_text_drops_bidi_and_control_characters(text: str, shown: str) -> None:
+    assert visible_text(text=text) == shown

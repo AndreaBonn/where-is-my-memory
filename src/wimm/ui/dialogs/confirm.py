@@ -6,6 +6,7 @@ gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 from gi.repository import Adw, GLib, Gtk
 
+from wimm.core.terminal_text import visible_text
 from wimm.i18n import _
 from wimm.model.actions import Plan
 from wimm.model.enums import ActionKind, Risk
@@ -39,7 +40,7 @@ def _build_group(*, title: str | None) -> Adw.PreferencesGroup:
     group = Adw.PreferencesGroup()
     if title is not None:
         # The group title is markup and has no switch: escape names such as "R&D <lab>".
-        group.set_title(GLib.markup_escape_text(title))
+        group.set_title(GLib.markup_escape_text(visible_text(text=title)))
     return group
 
 
@@ -70,7 +71,8 @@ class ConfirmDialog(Adw.AlertDialog):
         self._phrase_box.append(self._phrase)
         self._phrase_hint = Gtk.Label(label=_(PHRASE_HINT), xalign=0, wrap=True)
         self._phrase_hint.add_css_class("dim-label")
-        self.set_heading(dialog_title(kind=session.kind, subject=session.subject))
+        subject = None if session.subject is None else visible_text(text=session.subject)
+        self.set_heading(dialog_title(kind=session.kind, subject=subject))
         self.add_response(CANCEL_RESPONSE, _(CANCEL_LABEL))
         self.add_response(CONFIRM_RESPONSE, confirm_label(kind=session.kind))
         self.set_close_response(CANCEL_RESPONSE)
@@ -109,11 +111,12 @@ class ConfirmDialog(Adw.AlertDialog):
         return box
 
     def _build_row(self, *, entry: StepEntry) -> Adw.PreferencesRow:
+        # Names come from the system: a bidi mark must not reorder the target shown.
+        title = visible_text(text=entry.label)
+        subtitle = visible_text(text=entry.consequence)
         if not self._session.multiple or entry.step_id is None:
-            return Adw.ActionRow(title=entry.label, subtitle=entry.consequence, use_markup=False)
-        row = Adw.SwitchRow(
-            title=entry.label, subtitle=entry.consequence, use_markup=False, active=True
-        )
+            return Adw.ActionRow(title=title, subtitle=subtitle, use_markup=False)
+        row = Adw.SwitchRow(title=title, subtitle=subtitle, use_markup=False, active=True)
         row.connect("notify::active", self._on_toggled, entry.step_id)
         return row
 
@@ -167,11 +170,11 @@ class ConfirmDialog(Adw.AlertDialog):
         own = self._session.shows_own_consequences
         facts = () if plan is None or own else facts_for(plan=plan, snapshot=self._snapshot)
         for title, text in facts:
-            heading = Gtk.Label(label=title, xalign=0, wrap=True)
+            heading = Gtk.Label(label=visible_text(text=title), xalign=0, wrap=True)
             heading.add_css_class("heading")
             self._warning.append(heading)
             for line in text.split(LINE_SEPARATOR):
-                self._warning.append(Gtk.Label(label=line, xalign=0, wrap=True))
+                self._warning.append(Gtk.Label(label=visible_text(text=line), xalign=0, wrap=True))
         risky = plan is not None and plan.risk is not Risk.SAFE
         for name, on in ((WARNING_CLASS, risky), (FACTS_CLASS, not risky)):
             if on:

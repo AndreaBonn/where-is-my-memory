@@ -86,6 +86,27 @@ def test_names_with_markup_characters_are_shown_literally(display: None) -> None
     ]
 
 
+def test_bidi_marks_in_names_cannot_reorder_what_the_dialog_shows(display: None) -> None:
+    # U+202E makes "evil" U+202E "gpj.exe" display as "evilexe.jpg".
+    members = (proc(pid=1, name="evil\u202egpj.exe"), proc(pid=2, name="node"))
+    snap = snapshot(group(gid="p", name="lab\u2067x\u2069", members=members))
+
+    dialog, _, _ = open_dialog(snap=snap, request=stop("p"), subject="lab\u2067x\u2069")
+
+    extra = dialog.get_extra_child()
+    assert extra is not None
+    heading = dialog.get_heading() or ""
+    shown = [heading] + [
+        w.get_title() or ""
+        for w in descendants(extra)
+        if isinstance(w, Adw.PreferencesRow | Adw.PreferencesGroup)
+    ]
+    assert not any(mark in text for text in shown for mark in "\u202e\u2067\u2069")
+    assert "labx" in heading
+    assert any(text.startswith("evilgpj.exe") for text in shown)
+    assert any(text.startswith("node") for text in shown)  # positive pair: plain names stay
+
+
 def test_free_safe_dialog_lets_each_item_be_left_out(display: None) -> None:
     from tests.core.disk_helpers import MB, cache
     from wimm.model.disk import CacheKind

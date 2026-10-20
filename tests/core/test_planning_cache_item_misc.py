@@ -81,3 +81,15 @@ def test_an_avd_without_its_ini_is_refused_by_the_planner(with_ini: bool) -> Non
     else:
         with pytest.raises(InvalidRequest, match="ini"):
             _remove(entry=entry)
+
+
+def test_the_confirm_phrase_of_a_danger_item_is_the_name_as_shown() -> None:
+    # A phrase holding U+202E could not be typed, and its displayed form would differ.
+    entry = _entry(kind=CacheKind.ANDROID_AVD, folder="avd", id="Pixel\u202e9", item_kind=AVD)
+    ini = ItemBlob(path="Pixel.ini", size=10, st_ino=12, st_dev=2049)
+    entry = replace(entry, items=(replace(entry.items[0], blobs=(ini,)),))
+
+    plan = _remove(entry=entry)
+
+    assert plan.risk is Risk.DANGER
+    assert plan.confirm_phrase == "Pixel9"
