@@ -51,3 +51,18 @@ def test_a_long_output_keeps_its_tail() -> None:
 )
 def test_visible_text_drops_bidi_and_control_characters(text: str, shown: str) -> None:
     assert visible_text(text=text) == shown
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "a​b",  # zero width space
+        "a﻿b",  # byte order mark
+        "a­b",  # soft hyphen
+        "a⁠b",  # word joiner
+        "a\U000e0041b",  # tag character
+    ],
+)
+def test_visible_text_drops_invisible_format_characters(text: str) -> None:
+    # A name holding one of these displays as "ab", so the typed phrase must be "ab" too.
+    assert visible_text(text=text) == "ab"

@@ -120,6 +120,7 @@ EXEMPT = {
     },
     # Unicode general-category codes matched against unicodedata, never shown.
     "core/planning_restart.py": {"Cc", "Cf", "Zl", "Zp"},
+    "core/terminal_text.py": {"Cc", "Cf"},
     # Clipboard MIME type that password managers read; fixed by the protocol.
     "ui/toasts.py": {"x-kde-passwordManagerHint"},
     "core/risk_table.py": {

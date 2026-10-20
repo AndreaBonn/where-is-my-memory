@@ -1,6 +1,7 @@
 """Tool output made safe to log or to put in an error message (T-6.38b)."""
 
 import re
+import unicodedata
 
 TAIL_CHARS = 200
 _TERMINAL_ESCAPE = re.compile(
@@ -20,16 +21,18 @@ def printable(*, text: str, limit: int = TAIL_CHARS) -> str:
     return " ".join(clean.split())[-limit:]
 
 
-# Marks, embeddings, overrides and isolates (Unicode bidi controls): they reorder the
-# characters around them, so a name can display as something it is not.
-_BIDI_CONTROL = re.compile("[\u061c\u200e\u200f\u202a-\u202e\u2066-\u2069]")
+# Controls (Cc) and format characters (Cf): the bidi marks, overrides and isolates that
+# reorder the text around them, and the invisible ones (zero width space, BOM, soft
+# hyphen, tags) that a reader cannot see and so cannot type back.
+_HIDDEN_CATEGORIES = frozenset({"Cc", "Cf"})
 
 
 def visible_text(*, text: str) -> str:
-    """`text` on one line without controls or bidi marks: what a user can read and type.
+    """`text` on one line without controls or format characters: what a user reads and types.
 
     Process, folder and model names come from the system, and a confirmation dialog must
     not show a reordered target ("evil" U+202E "gpj.exe" displays as "evilexe.jpg").
     """
     spaced = text.replace("\t", " ").replace("\n", " ").replace("\r", " ")
-    return " ".join(_CONTROL.sub("", _BIDI_CONTROL.sub("", spaced)).split())
+    kept = "".join(c for c in spaced if unicodedata.category(c) not in _HIDDEN_CATEGORIES)
+    return " ".join(kept.split())

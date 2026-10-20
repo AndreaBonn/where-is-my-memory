@@ -223,9 +223,9 @@ def plan_action(*, request: ActionRequest, snapshot: Snapshot, context: Planning
     or group id; `excluded_ids` holds member or group ids, `selected_ids` the ticked disk
     rows. Disk actions read the report from `context.disk_report`; image and container
     prunes expand to one removal step per id (Q-13). With several danger steps
-    `confirm_phrase` is the name
+    `confirm_phrase` is the visible name (`visible_text`)
     of the first danger target in step order; with none it is None. A danger target
-    with a blank name is refused rather than given an empty phrase.
+    whose visible name is blank is refused rather than given a phrase nobody can type.
 
     Raises
     ------
