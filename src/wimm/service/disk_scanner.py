@@ -7,6 +7,7 @@ file), so ``AppService`` calls it only from its dedicated disk worker.
 import logging
 import threading
 import time
+from dataclasses import replace
 from pathlib import Path
 from typing import Protocol
 
@@ -14,7 +15,7 @@ from wimm.collectors import CollectorResult
 from wimm.collectors.caches import collect_caches
 from wimm.collectors.devdirs import DevDirSettings, scan_devdirs
 from wimm.collectors.disk_report import DockerDiskSource
-from wimm.collectors.ollama_models import real_ollama_source
+from wimm.collectors.ollama_models import OllamaScan, real_ollama_source
 from wimm.config import Config
 from wimm.core.cache_catalog import CacheResolution
 from wimm.core.disk_rules import build_disk_report, filter_devdirs
@@ -42,7 +43,7 @@ class DockerSource(Protocol):
 class OllamaSource(Protocol):
     def collect(
         self, *, home: Path, table: CacheResolution, caches: tuple[CacheEntry, ...]
-    ) -> CacheEntry | None: ...
+    ) -> OllamaScan: ...
 
 
 class RealDiskScanner:
@@ -93,9 +94,11 @@ class RealDiskScanner:
         table = resolve_cache_table(home=self._home, roots=config.devdirs_roots)
         caches = collect_caches(table=table, cache_dir=self._cache_dir, sleep=self._pause)
         self._check()
+        served = ""
         if self._ollama is not None:
-            system = self._ollama.collect(home=self._home, table=table, caches=caches)
-            caches = caches if system is None else (*caches, system)
+            looked = self._ollama.collect(home=self._home, table=table, caches=caches)
+            caches = caches if looked.entry is None else (*caches, looked.entry)
+            served = looked.situation.value
             self._check()
         settings = DevDirSettings(
             roots=config.admitted_roots, home=self._home, max_depth=config.devdirs_max_depth
@@ -106,7 +109,8 @@ class RealDiskScanner:
         if found.error_count:
             LOGGER.info("Development folder scan skipped %d unreadable entries", found.error_count)
         devdirs = filter_devdirs(candidates=found.devdirs, min_age_days=config.devdirs_min_age_days)
-        return build_disk_report(scanned_at=started, docker=docker, caches=caches, devdirs=devdirs)
+        built = build_disk_report(scanned_at=started, docker=docker, caches=caches, devdirs=devdirs)
+        return replace(built, ollama_served=served)
 
 
 def build_disk_scanner(*, home: Path, cache_dir: Path) -> RealDiskScanner:

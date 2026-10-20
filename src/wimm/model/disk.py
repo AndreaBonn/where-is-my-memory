@@ -217,13 +217,19 @@ class DevDir(ImmutableModel):
 
 @dataclass(frozen=True, slots=True)
 class DiskReport(ImmutableModel):
+    """`ollama_served` is the value of the ollama server situation S0-S3 the scan saw ("" if
+    the scan did not look); it decides which ollama models the page may offer to remove."""
+
     scanned_at: datetime
     docker: DockerDisk
     caches: tuple[CacheEntry, ...]
     devdirs: tuple[DevDir, ...]
     devdirs_truncated: int = 0
+    ollama_served: str = ""
 
     def __post_init__(self) -> None:
         ImmutableModel.__post_init__(self)
         require_aware(value=self.scanned_at, field="scanned_at")
         require_nonnegative(value=self.devdirs_truncated, field="devdirs_truncated")
+        if type(self.ollama_served) is not str:
+            raise ValueError("ollama_served must be text")

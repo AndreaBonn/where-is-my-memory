@@ -24,11 +24,22 @@ MOVES: dict[str, dict[Risk, tuple[str, str]]] = {
 ALWAYS_SAFE_ACTIONS = frozenset({ActionKind.IMAGES_PRUNE_DANGLING})
 
 
+def _row_risk(*, row: DiskRowView) -> Risk | None:
+    """The row's own risk; a row with no action of its own takes its riskiest item's.
+
+    The system ollama store has no whole-cache clean, only models to remove one by one: its
+    row belongs with them, not in the safe tier a riskless row would stay in.
+    """
+    if row.action_kind is not None:
+        return row.risk
+    risks = [item.risk for item in row.items if item.action_kind is not None and item.risk]
+    return max(risks, default=None)
+
+
 def _moving_risk(*, row: DiskRowView, moves: dict[Risk, tuple[str, str]]) -> Risk | None:
     """The risk under which ``row`` leaves its section; None when it stays."""
-    if row.action_kind is None or row.risk not in moves:
-        return None
-    return row.risk
+    risk = _row_risk(row=row)
+    return risk if risk in moves else None
 
 
 def _split(section: DiskSectionView) -> list[DiskSectionView]:

@@ -73,6 +73,14 @@ def _home_names(*, caches: tuple[CacheEntry, ...]) -> frozenset[str]:
     )
 
 
+@dataclass(frozen=True, slots=True)
+class OllamaScan:
+    """What one look at ollama gave: the system entry, if shown, and the server situation."""
+
+    entry: CacheEntry | None
+    situation: ServedStore
+
+
 @dataclass(frozen=True, slots=True, kw_only=True)
 class OllamaSystemSource:
     """Everything the collector touches, injected: tool lookup, command, processes, uid, env."""
@@ -86,13 +94,20 @@ class OllamaSystemSource:
 
     def collect(
         self, *, home: Path, table: CacheResolution, caches: tuple[CacheEntry, ...]
+    ) -> OllamaScan:
+        """The server situation, and the system store entry (None with a WARNING if not shown)."""
+        situation = self._situation(home=home, table=table)
+        return OllamaScan(
+            entry=self._system_entry(situation=situation, caches=caches), situation=situation
+        )
+
+    def _system_entry(
+        self, *, situation: ServedStore, caches: tuple[CacheEntry, ...]
     ) -> CacheEntry | None:
-        """The system store entry, or None with a WARNING when it cannot be shown."""
         tool = self._tool()
         if tool is None:
             LOGGER.warning("System ollama store skipped: the ollama tool was not found")
             return None
-        situation = self._situation(home=home, table=table)
         if situation is not ServedStore.SYSTEM:
             LOGGER.warning("System ollama store skipped: server situation is %s", situation.value)
             return None

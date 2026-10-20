@@ -8,11 +8,13 @@ import pytest
 from tests.core.disk_helpers import docker_disk
 from tests.core.ollama_system_helpers import system_entry
 from wimm.collectors import CollectorResult
+from wimm.collectors.ollama_models import OllamaScan
 from wimm.config import Config
 from wimm.core.cache_catalog import CacheResolution
 from wimm.core.disk_rules import safe_reclaimable_bytes
+from wimm.core.ollama_served import ServedStore
 from wimm.model import CacheEntry
-from wimm.model.disk import DockerDisk
+from wimm.model.disk import DiskReport, DockerDisk
 from wimm.service.disk_scanner import RealDiskScanner, build_disk_scanner
 
 UV_BYTES = 5000
@@ -26,15 +28,18 @@ class FixedDocker:
 class FakeOllama:
     """Records what the scan hands over; answers with a fixed entry (or none)."""
 
-    def __init__(self, *, entry: CacheEntry | None) -> None:
+    def __init__(
+        self, *, entry: CacheEntry | None, situation: ServedStore = ServedStore.SYSTEM
+    ) -> None:
         self.entry = entry
+        self.situation = situation
         self.calls: list[tuple[Path, CacheResolution, tuple[CacheEntry, ...]]] = []
 
     def collect(
         self, *, home: Path, table: CacheResolution, caches: tuple[CacheEntry, ...]
-    ) -> CacheEntry | None:
+    ) -> OllamaScan:
         self.calls.append((home, table, caches))
-        return self.entry
+        return OllamaScan(entry=self.entry, situation=self.situation)
 
 
 @pytest.fixture(autouse=True)
@@ -42,14 +47,18 @@ def xdg_cache_at_the_fake_home(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "home" / ".cache"))
 
 
-def _scan(*, tmp_path: Path, ollama: FakeOllama | None) -> tuple[CacheEntry, ...]:
+def _scan_report(*, tmp_path: Path, ollama: FakeOllama | None) -> DiskReport:
     home = tmp_path / "home"
     (home / ".cache" / "uv").mkdir(parents=True)
     (home / ".cache" / "uv" / "wheel").write_bytes(b"x" * UV_BYTES)
     scanner = RealDiskScanner(
         docker=FixedDocker(), home=home, cache_dir=tmp_path / "sizes", ollama=ollama
     )
-    return scanner.scan(config=Config(devdirs_roots=(home,))).caches
+    return scanner.scan(config=Config(devdirs_roots=(home,)))
+
+
+def _scan(*, tmp_path: Path, ollama: FakeOllama | None) -> tuple[CacheEntry, ...]:
+    return _scan_report(tmp_path=tmp_path, ollama=ollama).caches
 
 
 def test_the_system_entry_joins_the_report_caches_and_is_sorted_with_them(tmp_path: Path) -> None:
@@ -111,3 +120,15 @@ def test_the_running_application_scanner_uses_the_real_ollama_source(
         config=Config(devdirs_roots=(home,))
     )
     assert report.caches == (entry,)
+
+
+@pytest.mark.parametrize("situation", list(ServedStore))
+def test_the_report_keeps_the_server_situation_even_without_a_system_entry(
+    tmp_path: Path, situation: ServedStore
+) -> None:
+    report = _scan_report(tmp_path=tmp_path, ollama=FakeOllama(entry=None, situation=situation))
+    assert report.ollama_served == situation.value
+
+
+def test_the_report_has_no_situation_when_the_scan_has_no_ollama_source(tmp_path: Path) -> None:
+    assert _scan_report(tmp_path=tmp_path, ollama=None).ollama_served == ""

@@ -25,6 +25,7 @@ from wimm.ui.disk_model import (
     make_row,
     more_text,
 )
+from wimm.ui.disk_ollama import OLLAMA_SYSTEM_SUBTITLE, parse_served
 from wimm.ui.disk_texts import (
     CHOOSE_FOLDER_LABEL,
     MISSING_ROOT_TEXT,
@@ -69,17 +70,26 @@ def withheld_for_report(
     return withheld_kinds(which=which) | items
 
 
-def _cache_row(*, entry: CacheEntry, withheld: frozenset[CacheKind]) -> DiskRowView:
+def _cache_row(
+    *, entry: CacheEntry, withheld: frozenset[CacheKind], served: str = ""
+) -> DiskRowView:
     # A missing tool takes the action away from what it cleans: a command-only cache, or
     # the items of a cache removed one by one with their tool (Android).
     cache_withheld = entry.kind in withheld and entry.kind in COMMAND_ONLY_KINDS
     # An item-only cache (the system ollama store) has no whole-cache clean at all.
     no_clean = cache_withheld or entry.kind in ITEM_ONLY_KINDS
     action = None if no_clean else _cache_action(entry=entry)
+    # The system store has no path to show (its "path" is the command): say what the size is.
+    system = entry.kind is CacheKind.OLLAMA_SYSTEM
     row = make_row(
-        title=_(CACHE_TITLES[entry.kind]), subtitle=entry.path, size=entry.size, action=action
+        title=_(CACHE_TITLES[entry.kind]),
+        subtitle=_(OLLAMA_SYSTEM_SUBTITLE) if system else entry.path,
+        size=entry.size,
+        action=action,
     )
-    view = item_rows(entry=entry, removable=entry.kind not in withheld)
+    view = item_rows(
+        entry=entry, removable=entry.kind not in withheld, served=parse_served(value=served)
+    )
     return replace(row, items=view.rows, items_more=view.more_text) if view.rows else row
 
 
@@ -172,7 +182,7 @@ def _local_sections(
 ) -> tuple[DiskSectionView, ...]:
     def rows(*, trash: bool) -> tuple[DiskRowView, ...]:
         return tuple(
-            _cache_row(entry=e, withheld=withheld)
+            _cache_row(entry=e, withheld=withheld, served=report.ollama_served)
             for e in report.caches
             if (e.kind is CacheKind.TRASH) is trash
         )

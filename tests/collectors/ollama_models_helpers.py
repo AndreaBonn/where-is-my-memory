@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from wimm.collectors.ollama_command import CommandOutput, OllamaCommandError
-from wimm.collectors.ollama_models import OllamaSystemSource
+from wimm.collectors.ollama_models import OllamaScan, OllamaSystemSource
 from wimm.core.cache_catalog import CacheAccess, CacheResolution, ResolvedCache
 from wimm.model import CacheEntry, CacheItem, CacheItemKind, CacheKind
 
@@ -133,6 +133,18 @@ def home_entry(*names: str) -> CacheEntry:
     )
 
 
+def scan(
+    *,
+    runner: FakeRunner,
+    caches: tuple[CacheEntry, ...] = (),
+    store: str | None = None,
+    **options: Any,
+) -> OllamaScan:
+    return source(runner=runner, **options).collect(
+        home=HOME, table=table(store=store), caches=caches
+    )
+
+
 def collect(
     *,
     runner: FakeRunner,
@@ -140,6 +152,4 @@ def collect(
     store: str | None = None,
     **options: Any,
 ) -> CacheEntry | None:
-    return source(runner=runner, **options).collect(
-        home=HOME, table=table(store=store), caches=caches
-    )
+    return scan(runner=runner, caches=caches, store=store, **options).entry

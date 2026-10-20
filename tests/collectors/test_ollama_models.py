@@ -12,7 +12,9 @@ from tests.collectors.ollama_models_helpers import (
     FakeReader,
     FakeRunner,
     collect,
+    scan,
 )
+from wimm.core.ollama_served import ServedStore
 from wimm.model import CacheItemKind, CacheKind, CacheRest
 
 NAMES = {"qwen3-embedding:8b", "gemma3:4b", "qwen3.5:9b", "qwen2.5vl:7b"}
@@ -110,3 +112,32 @@ def test_any_situation_other_than_system_gives_no_entry_and_no_list(
     assert entry is None
     assert runner.calls == []
     assert situation in caplog.text
+
+
+def test_the_scan_carries_the_situation_with_the_entry_in_s2() -> None:
+    result = scan(runner=FakeRunner())
+    assert result.entry is not None
+    assert result.situation is ServedStore.SYSTEM
+
+
+@pytest.mark.parametrize(
+    ("processes", "environ", "situation"),
+    [
+        ((), {}, ServedStore.NONE),
+        ((FakeProcess(uid=CURRENT_UID),), {}, ServedStore.USER_HOME),
+        ((FakeProcess(uid=CURRENT_UID, environ_error=OSError()),), {}, ServedStore.USER_OTHER),
+        ((FakeProcess(uid=SERVICE_UID), FakeProcess(uid=SERVICE_UID)), {}, ServedStore.AMBIGUOUS),
+    ],
+)
+def test_the_scan_carries_the_situation_when_there_is_no_entry(
+    processes: tuple[FakeProcess, ...], environ: dict[str, str], situation: ServedStore
+) -> None:
+    result = scan(runner=FakeRunner(), reader=FakeReader(*processes), environ=environ)
+    assert result.entry is None
+    assert result.situation is situation
+
+
+def test_the_situation_is_known_even_when_the_tool_is_missing() -> None:
+    result = scan(runner=FakeRunner(), tool=None, reader=FakeReader(FakeProcess(uid=CURRENT_UID)))
+    assert result.entry is None
+    assert result.situation is ServedStore.USER_HOME

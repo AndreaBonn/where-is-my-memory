@@ -8,7 +8,9 @@ import pytest
 from tests.core.disk_helpers import docker_disk
 from wimm.collectors import CollectorResult
 from wimm.collectors.devdirs import DevDirScan
+from wimm.collectors.ollama_models import OllamaScan
 from wimm.config import Config
+from wimm.core.ollama_served import ServedStore
 from wimm.model.disk import DockerDisk
 from wimm.service.disk_scanner import RealDiskScanner, ScanCancelled, build_disk_scanner
 
@@ -130,8 +132,8 @@ class FixedDocker:
 
 
 class NoOllama:
-    def collect(self, **_: object) -> None:
-        return None
+    def collect(self, **_: object) -> OllamaScan:
+        return OllamaScan(entry=None, situation=ServedStore.NONE)
 
 
 def test_build_disk_scanner_scans_the_given_home_and_keeps_sizes_in_the_given_cache_dir(

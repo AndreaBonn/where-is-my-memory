@@ -117,6 +117,7 @@ SCHEMAS: dict[type, Schema] = {
         "marker": TEXT,
     },
 }
+REPORT_OPTIONAL_FIELDS: dict[str, Any] = {"ollama_served": ""}
 REPORT_SCHEMA: Schema = {
     "schema": literal(expected=m.SCHEMA_VERSION),
     "scanned_at": timestamp,
@@ -124,6 +125,7 @@ REPORT_SCHEMA: Schema = {
     "caches": sequence(decoder=_record(cls=m.CacheEntry)),
     "devdirs": sequence(decoder=_record(cls=m.DevDir)),
     "devdirs_truncated": INTEGER,
+    "ollama_served": TEXT,
 }
 
 
@@ -144,7 +146,9 @@ def _encode(value: Any) -> Any:
 def disk_report_to_json(*, report: m.DiskReport) -> str:
     """Encode a disk report as JSON of the current `SCHEMA_VERSION`."""
     data = {
-        name: _encode(value=getattr(report, name)) for name in REPORT_SCHEMA if name != "schema"
+        name: _encode(value=getattr(report, name))
+        for name in REPORT_SCHEMA
+        if name != "schema" and getattr(report, name) != REPORT_OPTIONAL_FIELDS.get(name)
     }
     return json.dumps({"schema": m.SCHEMA_VERSION, **data}, ensure_ascii=False, allow_nan=False)
 
@@ -154,7 +158,10 @@ def disk_report_from_json(*, text: str) -> m.DiskReport:
     try:
         if type(text) is not str:
             raise SnapshotFormatError("disk report: expected str")
-        values = decode_fields(value=json.loads(text), schema=REPORT_SCHEMA, path="disk report")
+        document = json.loads(text)
+        if isinstance(document, dict):
+            document = {**REPORT_OPTIONAL_FIELDS, **document}
+        values = decode_fields(value=document, schema=REPORT_SCHEMA, path="disk report")
         values.pop("schema")
         return m.DiskReport(**values)
     except (ValueError, RecursionError) as error:

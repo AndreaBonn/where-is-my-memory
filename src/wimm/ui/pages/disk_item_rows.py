@@ -15,15 +15,15 @@ RowAction = Callable[[DiskRowView], None]
 
 
 def item_accessible_name(*, row: DiskRowView) -> str:
-    """Title and size, then the row text: the path and the consequence, or what a rest row means."""
-    return ". ".join(
-        part for part in (row.title, row.size_text, row.subtitle, row.consequence) if part
-    )
+    """Title and size, then the row text: the path, then the consequence or the reason."""
+    parts = (row.title, row.size_text, row.subtitle, row.consequence or row.note)
+    return ". ".join(part for part in parts if part)
 
 
-def _item_subtitle(*, row: DiskRowView) -> str:
-    """The path, and the consequence on its own line under it when the row has an action."""
-    return f"{row.subtitle}\n{row.consequence}" if row.consequence else row.subtitle
+def item_subtitle(*, row: DiskRowView) -> str:
+    """The path, then on its own line the consequence (with an action) or the reason (without)."""
+    second = row.consequence or row.note
+    return f"{row.subtitle}\n{second}" if second else row.subtitle
 
 
 def _item_suffix(*, row: DiskRowView) -> Gtk.Box:
@@ -85,7 +85,7 @@ def build_item_row(
     """
     widget = Adw.ActionRow(
         title=row.title,
-        subtitle=_item_subtitle(row=row),
+        subtitle=item_subtitle(row=row),
         use_markup=False,
         title_lines=2,
         subtitle_lines=0,

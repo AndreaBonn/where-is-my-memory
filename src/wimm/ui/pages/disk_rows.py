@@ -72,13 +72,14 @@ def _build_suffix(*, row: DiskRowView) -> Gtk.Box:
 
 
 def row_subtitle(*, row: DiskRowView) -> str:
-    """The path, and the consequence on its own line under it when the row has an action."""
-    return f"{row.subtitle}\n{row.consequence}" if row.consequence else row.subtitle
+    """The path, then the consequence (a row with an action) or the reason (one without)."""
+    lines = (row.subtitle, row.consequence or row.note)
+    return "\n".join(line for line in lines if line)
 
 
 def row_accessible_name(*, row: DiskRowView) -> str:
     """Title, path and consequence as one sentence run, so a screen reader reads the effect."""
-    return ". ".join(part for part in (row.title, row.subtitle, row.consequence) if part)
+    return ". ".join(part for part in (row.title, row.subtitle, row.consequence, row.note) if part)
 
 
 def _action_label(*, row: DiskRowView, kind: ActionKind) -> str:
