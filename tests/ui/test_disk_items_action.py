@@ -11,6 +11,7 @@ from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.row_consequence import join_consequences
 from wimm.model.actions import ActionRequest
 from wimm.model.cache_items import ItemBlob
+from wimm.model.disk import CacheEntry
 from wimm.model.enums import ActionKind, CacheItemKind, PlanId, Risk, TargetId
 from wimm.ui.disk_items import item_rows
 
@@ -24,26 +25,29 @@ def test_model_sub_row_has_the_removal_action_and_target() -> None:
     assert row.risk_text and row.risk_style
 
 
+def _entry_of_kind(*, kind: CacheItemKind) -> CacheEntry:
+    """Two items of `kind`, each as the scan reports that kind, so each one is offered."""
+    entry = _entry(count=2)
+    # A device is offered only with its .ini beside it, as the scan always reports it.
+    blobs = (ItemBlob(path="m.ini", size=1, st_ino=90, st_dev=2049),)
+    items = tuple(
+        replace(
+            item,
+            kind=kind,
+            blobs=blobs if kind is CacheItemKind.ANDROID_AVD else (),
+            # An ollama item is named as `ollama rm` takes it, with its tag.
+            id=f"{item.title}:latest" if kind is CacheItemKind.OLLAMA_MODEL else item.id,
+        )
+        for item in entry.items
+    )
+    return replace(entry, items=items)
+
+
 @pytest.mark.parametrize("kind", list(CacheItemKind))
 def test_sub_row_consequence_equals_the_dialog_text_for_every_item_kind(
     kind: CacheItemKind,
 ) -> None:
-    entry = _entry(count=2)
-    # A device is offered only with its .ini beside it, as the scan always reports it.
-    blobs = (ItemBlob(path="m.ini", size=1, st_ino=90, st_dev=2049),)
-    entry = replace(
-        entry,
-        items=tuple(
-            replace(
-                item,
-                kind=kind,
-                blobs=blobs if kind is CacheItemKind.ANDROID_AVD else (),
-                # An ollama item is named as `ollama rm` takes it, with its tag.
-                id=f"{item.title}:latest" if kind is CacheItemKind.OLLAMA_MODEL else item.id,
-            )
-            for item in entry.items
-        ),
-    )
+    entry = _entry_of_kind(kind=kind)
     row = item_rows(entry=entry).rows[1]
     assert row.action_kind is not None and row.target_id is not None
     context = PlanningContext(
