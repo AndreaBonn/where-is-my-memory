@@ -43,7 +43,7 @@ def load_window_size(*, path: Path) -> tuple[int, int]:
         width, height = data["width"], data["height"]
     except FileNotFoundError:
         return DEFAULT_WIDTH, DEFAULT_HEIGHT
-    except (OSError, ValueError, KeyError, TypeError):
+    except (OSError, ValueError, KeyError, TypeError, RecursionError):
         LOGGER.warning("Ignoring unreadable window state %s", path)
         return DEFAULT_WIDTH, DEFAULT_HEIGHT
     if not all(isinstance(v, int) and not isinstance(v, bool) for v in (width, height)):

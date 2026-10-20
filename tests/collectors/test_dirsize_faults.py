@@ -211,6 +211,25 @@ def test_cache_from_another_version_is_ignored_and_rewritten(
     assert "k" not in rewritten["entries"]
 
 
+def test_cache_nested_beyond_the_parser_limit_is_ignored_and_rewritten(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
+    root = tmp_path / "tree"
+    root.mkdir()
+    (root / "f.bin").write_bytes(b"x" * 5000)
+    cache_dir = tmp_path / "sizes"
+    cache_dir.mkdir()
+    cache_file = cache_dir / DISK_CACHE_FILENAME
+    cache_file.write_text("[" * 200_000)  # json.loads raises RecursionError, not ValueError
+
+    with caplog.at_level(logging.WARNING, logger=dirsize.LOGGER.name):
+        result = _measure(root, cache_dir)
+
+    assert result.size_bytes == _blocks(root, root / "f.bin")
+    assert any("Ignoring corrupt size cache" in r.getMessage() for r in caplog.records)
+    assert "entries" in json.loads(cache_file.read_text())
+
+
 @pytest.mark.parametrize("field", ["size", "errors"])
 def test_cache_entry_with_a_non_integer_field_is_rescanned(tmp_path: Path, field: str) -> None:
     root = tmp_path / "tree"

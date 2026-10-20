@@ -39,7 +39,14 @@ def test_window_size_roundtrips_through_a_private_json_file(tmp_path: Path) -> N
 
 @pytest.mark.parametrize(
     "content",
-    ["not json", "[]", '{"width": "wide", "height": 5}', '{"width": true, "height": 700}', "{}"],
+    [
+        "not json",
+        "[]",
+        pytest.param("[" * 200_000, id="deep-nesting"),
+        '{"width": "wide", "height": 5}',
+        '{"width": true, "height": 700}',
+        "{}",
+    ],
 )
 def test_unreadable_window_state_falls_back_to_the_default(tmp_path: Path, content: str) -> None:
     path = tmp_path / STATE_FILE

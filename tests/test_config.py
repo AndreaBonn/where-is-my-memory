@@ -214,6 +214,7 @@ def test_save_load_round_trip(paths: UserPaths, tmp_path: Path) -> None:
         ("{", "Expecting property name"),
         ("[]", "Configuration must be a JSON object"),
         ("null", "Configuration must be a JSON object"),
+        pytest.param("[" * 200_000, "maximum recursion depth", id="deep-nesting"),
         ("\udcff", "codec can't decode"),
     ],
 )

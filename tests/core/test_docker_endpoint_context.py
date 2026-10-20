@@ -32,7 +32,13 @@ def test_unknown_context_is_reported() -> None:
 
 @pytest.mark.parametrize(
     "text",
-    ["not json", "[]", json.dumps({"Endpoints": {}}), json.dumps({"Endpoints": {"docker": {}}})],
+    [
+        "not json",
+        "[]",
+        pytest.param("[" * 200_000, id="deep-nesting"),
+        json.dumps({"Endpoints": {}}),
+        json.dumps({"Endpoints": {"docker": {}}}),
+    ],
 )
 def test_malformed_meta_is_reported(text: str) -> None:
     fixture = Fixture()
@@ -58,7 +64,15 @@ def test_context_name_reaches_the_reader_only_as_a_sha256_digest(name: str) -> N
     assert re.fullmatch(r"[0-9a-f]{64}", fixture.meta_calls[0])
 
 
-@pytest.mark.parametrize("config", ["not json", "[]", json.dumps({"currentContext": 3})])
+@pytest.mark.parametrize(
+    "config",
+    [
+        "not json",
+        "[]",
+        pytest.param("[" * 200_000, id="deep-nesting"),
+        json.dumps({"currentContext": 3}),
+    ],
+)
 def test_unusable_config_is_ignored_without_failing(config: str) -> None:
     fixture = Fixture({DEFAULT_SOCKET: sock(DEFAULT_SOCKET)})
     resolution = fixture.resolve(config=config)

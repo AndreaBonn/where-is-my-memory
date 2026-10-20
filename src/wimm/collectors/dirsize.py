@@ -126,7 +126,7 @@ def _load_entries(cache_file: Path) -> dict[str, Any]:
         entries = document["entries"]
         if document["version"] != DISK_CACHE_VERSION or not isinstance(entries, dict):
             raise ValueError("unexpected cache layout")
-    except (ValueError, KeyError, TypeError) as error:
+    except (ValueError, KeyError, TypeError, RecursionError) as error:
         LOGGER.warning("Ignoring corrupt size cache %s: %s", cache_file, error)
         return {}
     return entries

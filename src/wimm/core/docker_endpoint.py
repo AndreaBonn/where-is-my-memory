@@ -84,7 +84,7 @@ def context_digest(name: str) -> str:
 def _parse_json_object(text: str | None) -> dict[str, object] | None:
     try:
         value = json.loads(text) if text is not None else None
-    except ValueError:
+    except (ValueError, RecursionError):
         return None
     return value if isinstance(value, dict) else None
 

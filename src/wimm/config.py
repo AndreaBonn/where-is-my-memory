@@ -270,7 +270,7 @@ def load_config(paths: UserPaths, home: Path) -> ConfigParseResult:
             raise ValueError("Configuration must be a JSON object")
     except FileNotFoundError:
         raw = {}
-    except (ValueError, OSError) as error:
+    except (ValueError, OSError, RecursionError) as error:
         LOGGER.warning("Cannot load configuration: %s", error)
         raw = {}
     return parse_config(raw=raw, home=home)
