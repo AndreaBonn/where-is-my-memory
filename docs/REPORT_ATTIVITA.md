@@ -958,3 +958,50 @@ Nella pagina Disco si può ora rimuovere un singolo modello ollama, sia tra quel
 Piano 002 completato. Restano le voci aperte sopra e i controlli manuali riservati all'utente (M-2, M-4, M-8, M-13, logout, rimozione dello stash `WIP on main: 8cdf9e8`).
 
 ---
+
+## 2026-10-20 | Sessione #16 [FIX]
+
+Progetto: where-is-my-memory (comando `wimm`). Chiusura dei punti aperti dopo il piano 002. Tutti i commit sono su main.
+
+### Richiesta
+
+"chiudi tutti i punti aperti"
+
+### Azioni Eseguite
+
+**Corretti**
+- F37 `ce77478`: la riga "Modelli ollama" della home offre "Pulisci tutta la cache" solo quando nessun server ollama è attivo; altrimenti dice "Ferma ollama per pulire tutta la cache" (coerente con D2).
+- C-L5-5 `ce77478`: i modelli di sistema mostrano il loro ID (per esempio "ID a2af6cc3eb7f") invece di ripetere il nome.
+- S-L5-4 e C-L5-3 `ce77478`: conta come server di sistema solo quello di un account di sistema (uid sotto 1000); quello di un altro utente normale è una situazione ambigua e non offre rimozioni.
+- H2 `ce77478`: allo scadere del timeout viene fermato l'intero gruppo di processi dello strumento (per esempio la JVM di sdkmanager), e l'attesa successiva ha un limite, così un processo uscito dal gruppo non blocca l'app (finding V1 della review: prima 3 secondi di blocco, ora meno di 2).
+- F32 (misura, nessun commit): scansione delle cache a cache calda, 5 esecuzioni per versione. Prima di L4 (`148487a`) mediana 3,71 s, minimo 3,54 s; adesso mediana 3,98 s, minimo 3,53 s. Differenza dentro la variabilità fra esecuzioni, nessuna regressione misurabile. Riserva: il carico della macchina è salito da 5 a 14 durante la misura.
+- `ea1931d`: un test del report del disco a volte non vedeva il rifiuto atteso. Causa trovata e riprodotta: la prima scansione, un timer di 10 ms, finiva prima del controllo quando il ciclo GLib girava più a lungo sotto carico. Ora il gate dello scanner finto si apre solo dopo il rifiuto.
+
+**Chiusi con motivo (nessuna correzione possibile o già decisa)**
+- F24: fra lettura e cancellazione nella cache HuggingFace si cancella solo l'inode pianificato, quindi un file sostituito non viene toccato.
+- F25: un link assoluto scritto in modo diverso dalla radice finisce in "Non attribuito", cioè dal lato sicuro; HuggingFace usa link relativi e seguire i link è vietato dal progetto.
+- F36: con un PATH senza Java la rimozione Android fallisce senza cancellare nulla; l'app avviata dal desktop eredita il PATH della sessione.
+- S-L5-6: ollama non offre una rimozione condizionata all'ID; i circa 0,2 secondi fra controllo e `rm` restano e la verifica successiva li rileva.
+- C-L5-4: lo spazio liberato dai modelli di sistema è una stima, per decisione D3.
+
+### Verifica
+
+- `make lint` pulito; `make test-all`: 4878 passati, 1 saltato.
+- Test visti fallire prima del fix e mutation check su F37, C-L5-5, S-L5-4 e H2: dichiarati dall'agent che ha scritto il codice, non rieseguiti. Visti rossi di persona: il test di V1 (3,0 s di blocco) e quello del report del disco (riprodotto facendo girare il ciclo GLib).
+- App vera a 360 e 1280 px con un `ollama` finto nel PATH e il server di sistema reale: la riga della home mostra il motivo e nessun bottone di pulizia; i modelli di sistema mostrano l'ID e "Rimuovi".
+
+CHECKS: code-reviewer ESEGUITO (V1 medio corretto con test, V2 e V3 corretti) | verify ESEGUITO (render e righe sull'app vera a 360 e 1280 px) | security-reviewer N/A (correzioni di finding già esaminati dalla review di sicurezza di L5) | a11y-gate N/A (UI GTK) | /analyze N/A.
+
+### Limiti noti / Aperti
+
+Nessun finding aperto. Restano i controlli riservati all'utente (logout, M-2, M-4, M-8, M-13, rimozione dello stash `WIP on main: 8cdf9e8`) e lo spazio quasi esaurito sul disco del computer (circa 2 GB liberi).
+
+### Note per il Cliente
+
+Sono stati chiusi tutti i punti rimasti aperti dopo il piano di lavoro sulla pagina Disco. Il bottone di pulizia totale dei modelli ollama ora compare solo quando nessun servizio ollama è attivo, e negli altri casi spiega cosa fare. I modelli di sistema mostrano un codice identificativo al posto di un nome ripetuto, e un ollama di un altro utente del computer non viene più scambiato per quello di sistema. Se uno strumento esterno si blocca, l'app lo ferma insieme ai suoi processi figli senza restare in attesa. La velocità della scansione non è peggiorata. Alcuni casi non erano correggibili e sono stati chiusi con la spiegazione del perché sono sicuri.
+
+### Prossimo passo
+
+I controlli manuali riservati all'utente.
+
+---
