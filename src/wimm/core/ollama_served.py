@@ -9,8 +9,15 @@ import re
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
+
+from wimm.model.disk import CacheKind
+
+from .cache_catalog import CacheResolution
 
 MODELS_VARIABLE = "OLLAMA_MODELS"
+# Where ollama keeps a user's models when OLLAMA_MODELS is not set.
+DEFAULT_MODELS_DIR = (".ollama", "models")
 LOCAL_NAMES = frozenset({"", "localhost"})
 _SCHEME = re.compile(r"^[a-z][a-z0-9+.-]*://")
 _BRACKETED = re.compile(r"^\[([^\]]*)\]")
@@ -82,3 +89,16 @@ def served_store(*, facts: ServedFacts, realpath: Callable[[str], str]) -> Serve
     if process.uid != facts.current_uid:
         return ServedStore.SYSTEM
     return _user_server_store(process=process, facts=facts, realpath=realpath)
+
+
+def default_models_path(*, home: Path) -> str:
+    """The store an ollama server of this user uses when OLLAMA_MODELS is not set."""
+    return str(home.joinpath(*DEFAULT_MODELS_DIR))
+
+
+def home_store_path(*, table: CacheResolution, home: Path) -> str:
+    """The home store wimm measures: the OLLAMA cache of the start-up table, or the default."""
+    for cache in table.caches:
+        if cache.kind is CacheKind.OLLAMA:
+            return str(cache.path)
+    return default_models_path(home=home)

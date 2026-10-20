@@ -149,6 +149,9 @@ from .raw import (
 from .raw import (
     RawSocket as RawSocket,
 )
+from .served_fingerprint import (
+    ServedModelFingerprint as ServedModelFingerprint,
+)
 from .snapshot import (
     ActionOffer as ActionOffer,
 )

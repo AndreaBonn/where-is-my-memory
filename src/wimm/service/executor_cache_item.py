@@ -19,10 +19,12 @@ from wimm.i18n import N_
 from wimm.model.actions import DirFingerprint, ItemFingerprint, PlanStep
 from wimm.model.cache_items import CacheItem, ItemBlob
 from wimm.model.disk import CacheKind
+from wimm.model.served_fingerprint import ServedModelFingerprint
 
 from .control_protocols import StepOutcome, StepStatus
 from .errors import InvalidRequest, ProtectedTarget, TargetChanged
 from .executor_cache_item_command import item_argv, run_item_command
+from .executor_ollama_item import check_ollama_item, run_ollama_item
 from .fs_controls import DiskFsControl
 from .safe_file import remove_file
 from .safe_tree import TreeRemoval, remove_directory
@@ -120,6 +122,8 @@ def _refuse_fresh_lock(*, hub: Path, name: str, control: DiskFsControl) -> None:
 
 def check_cache_item(*, step: PlanStep, control: DiskFsControl) -> bool:
     """Raise if the item must not be removed now; True if its folder is there, False if gone."""
+    if isinstance(step.fingerprint, ServedModelFingerprint):
+        return check_ollama_item(step=step, control=control)
     fingerprint = _fingerprint(step=step)
     cache = _cache_of(folder=fingerprint.realpath, control=control)
     if not _verify_folder(fingerprint=fingerprint):
@@ -225,6 +229,8 @@ def _outcome(
 
 def run_cache_item(*, step: PlanStep, control: DiskFsControl) -> StepOutcome:
     """Use the Android tool, or remove the folder and any exclusively reached store blobs."""
+    if isinstance(step.fingerprint, ServedModelFingerprint):
+        return run_ollama_item(step=step, control=control)
     fingerprint = _fingerprint(step=step)
     cache = _cache_of(folder=fingerprint.realpath, control=control)
     if cache.kind in COMMAND_KINDS:

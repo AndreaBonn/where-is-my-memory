@@ -9,6 +9,7 @@ from wimm.model import (
     ItemFingerprint,
     PlanStep,
     Risk,
+    ServedModelFingerprint,
     TargetId,
     TargetShape,
 )
@@ -28,7 +29,10 @@ def _fingerprint(*, blobs: tuple[ItemBlob, ...] = ()) -> ItemFingerprint:
 def test_cache_item_remove_targets_one_item_and_wants_an_item_fingerprint() -> None:
     assert ActionKind.CACHE_ITEM_REMOVE.value == "cache_item_remove"
     assert ACTION_TARGET_SHAPES[ActionKind.CACHE_ITEM_REMOVE] is TargetShape.TARGET
-    assert ACTION_FINGERPRINT_TYPES[ActionKind.CACHE_ITEM_REMOVE] == (ItemFingerprint,)
+    assert ACTION_FINGERPRINT_TYPES[ActionKind.CACHE_ITEM_REMOVE] == (
+        ItemFingerprint,
+        ServedModelFingerprint,
+    )
 
 
 def test_request_needs_a_target_id() -> None:

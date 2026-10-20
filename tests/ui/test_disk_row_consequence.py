@@ -11,6 +11,7 @@ from tests.core.disk_helpers import (
     volume,
 )
 from tests.core.planning_helpers import NOW, OWNER_UID, container, group, snapshot
+from wimm.core.item_tools import ITEM_ONLY_KINDS
 from wimm.core.planning import PlanningContext, plan_action
 from wimm.core.row_consequence import join_consequences
 from wimm.model.actions import ActionRequest
@@ -116,7 +117,9 @@ def test_rows_without_an_action_have_no_consequence() -> None:
         assert row.consequence == ""
 
 
-@pytest.mark.parametrize("kind", [k for k in CacheKind if k is not CacheKind.TRASH])
+@pytest.mark.parametrize(
+    "kind", [k for k in CacheKind if k is not CacheKind.TRASH and k not in ITEM_ONLY_KINDS]
+)
 def test_cache_row_carries_the_dialog_consequence(kind: CacheKind) -> None:
     disk = report(caches=(cache(kind=kind, size=MB),))
     (row,) = rows_of(disk=disk, key="caches")
@@ -136,3 +139,12 @@ def test_devdir_row_names_npm_install_as_the_rebuild() -> None:
     (row,) = rows_of(disk=disk, key="devdirs")
     expected = "Per usare di nuovo il progetto serve ricostruire la cartella con npm install."
     assert row.consequence == expected == plan_text(disk=disk, row=row)
+
+
+@pytest.mark.parametrize("kind", sorted(ITEM_ONLY_KINDS, key=str))
+def test_an_item_only_cache_row_has_no_action_and_no_consequence(kind: CacheKind) -> None:
+    # The planner refuses a whole-cache clean of these kinds: the row must not offer one.
+    disk = report(caches=(cache(kind=kind, size=MB),))
+    (row,) = rows_of(disk=disk, key="caches")
+    assert row.action_kind is None
+    assert row.consequence == ""

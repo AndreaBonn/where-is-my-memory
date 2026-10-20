@@ -8,7 +8,7 @@ from pathlib import Path, PurePath
 from wimm.core.cache_catalog import COMMAND_ONLY_KINDS, withheld_kinds
 from wimm.core.cache_titles import CACHE_TITLES
 from wimm.core.constants import DISK_SECTION_CAP
-from wimm.core.item_tools import withheld_item_kinds
+from wimm.core.item_tools import ITEM_ONLY_KINDS, withheld_item_kinds
 from wimm.core.risk import RiskTarget
 from wimm.core.row_consequence import row_consequence
 from wimm.i18n import N_, _, ngettext
@@ -73,7 +73,9 @@ def _cache_row(*, entry: CacheEntry, withheld: frozenset[CacheKind]) -> DiskRowV
     # A missing tool takes the action away from what it cleans: a command-only cache, or
     # the items of a cache removed one by one with their tool (Android).
     cache_withheld = entry.kind in withheld and entry.kind in COMMAND_ONLY_KINDS
-    action = None if cache_withheld else _cache_action(entry=entry)
+    # An item-only cache (the system ollama store) has no whole-cache clean at all.
+    no_clean = cache_withheld or entry.kind in ITEM_ONLY_KINDS
+    action = None if no_clean else _cache_action(entry=entry)
     row = make_row(
         title=_(CACHE_TITLES[entry.kind]), subtitle=entry.path, size=entry.size, action=action
     )

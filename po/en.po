@@ -144,7 +144,7 @@ msgstr "Podman containers the engine does not list, not modifiable from here"
 msgid "Miniature"
 msgstr "Thumbnails"
 
-#: src/wimm/core/cache_titles.py:15 src/wimm/core/planning_disk.py:40
+#: src/wimm/core/cache_titles.py:15 src/wimm/core/planning_disk.py:41
 #: src/wimm/ui/disk_view.py:182
 msgid "Cestino"
 msgstr "Trash"
@@ -356,12 +356,12 @@ msgstr "Open the panel to see what takes up space."
 msgid "Disco quasi pieno ({pct}% libero)"
 msgstr "Disk almost full ({pct}% free)"
 
-#: src/wimm/core/planning_disk.py:43
+#: src/wimm/core/planning_disk.py:44
 #, python-brace-format
 msgid "Il report mostra le {shown} voci più grandi: altre {hidden} restano e serve una nuova scansione dopo la pulizia."
 msgstr "The report shows the {shown} largest items: {hidden} more remain, and a new scan is needed after the cleanup."
 
-#: src/wimm/core/planning_disk.py:151 src/wimm/core/planning_disk.py:152
+#: src/wimm/core/planning_disk.py:152 src/wimm/core/planning_disk.py:153
 msgid "Build cache"
 msgstr "Build cache"
 
@@ -977,13 +977,17 @@ msgstr "The item no longer exists"
 msgid "La cache è un collegamento: puliscila con il comando dello strumento"
 msgstr "The cache is a link: clean it with the tool's own command"
 
-#: src/wimm/service/executor_cache_item.py:39
+#: src/wimm/service/executor_cache_item.py:41
 msgid "Un download sta scrivendo questo modello: riprova tra qualche minuto"
 msgstr "A download is writing this model: try again in a few minutes"
 
 #: src/wimm/service/executor_disk_fs.py:49
 msgid "Chiudi ollama (ollama serve) prima di cancellare i modelli"
 msgstr "Close ollama (ollama serve) before deleting the models"
+
+#: src/wimm/service/executor_ollama_item.py:42
+msgid "Il server ollama attivo non è quello di sistema: non è stato rimosso nulla"
+msgstr "The active ollama server is not the system one: nothing was removed"
 
 #: src/wimm/service/notifier.py:21
 msgid "Vedi e decidi"

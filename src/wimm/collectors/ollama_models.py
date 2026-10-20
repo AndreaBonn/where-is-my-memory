@@ -7,7 +7,6 @@ WARNING says why: an invented or partial list would be shown as the user's disk.
 
 import logging
 import os
-import re
 import shutil
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
@@ -31,20 +30,17 @@ from wimm.core.constants import (
     OLLAMA_SYSTEM_PATH,
 )
 from wimm.core.ollama_list import ListedModel, parse_ollama_list
-from wimm.core.ollama_served import ServedFacts, ServedStore, served_store
+from wimm.core.ollama_served import (
+    ServedFacts,
+    ServedStore,
+    default_models_path,
+    home_store_path,
+    served_store,
+)
+from wimm.core.terminal_text import printable
 from wimm.model import CacheEntry, CacheItem, CacheItemKind, CacheKind
 
 LOGGER = logging.getLogger(__name__)
-DEFAULT_MODELS_DIR = (".ollama", "models")
-LOG_OUTPUT_CHARS = 200
-_TERMINAL_ESCAPE = re.compile(r"\x1b(?:\[[0-?]*[ -/]*[@-~]|[@-Z\\-_])")
-_CONTROL = re.compile(r"[\x00-\x08\x0b-\x1f\x7f]")
-
-
-def _printable(*, text: str) -> str:
-    """The text without terminal escapes or control characters, for a log line."""
-    clean = _CONTROL.sub("", _TERMINAL_ESCAPE.sub("", text.replace("\r", "\n")))
-    return " ".join(clean.split())[-LOG_OUTPUT_CHARS:]
 
 
 def _item(*, model: ListedModel) -> CacheItem:
@@ -69,13 +65,6 @@ def _entry(*, models: tuple[ListedModel, ...]) -> CacheEntry:
         st_dev=0,
         items=tuple(_item(model=model) for model in models),
     )
-
-
-def _home_store(*, table: CacheResolution, home: Path) -> str:
-    for cache in table.caches:
-        if cache.kind is CacheKind.OLLAMA:
-            return str(cache.path)
-    return str(home.joinpath(*DEFAULT_MODELS_DIR))
 
 
 def _home_names(*, caches: tuple[CacheEntry, ...]) -> frozenset[str]:
@@ -124,8 +113,8 @@ class OllamaSystemSource:
             processes=collect_serve_processes(reader=self.reader, current_uid=self.current_uid),
             current_uid=self.current_uid,
             ollama_host=self.environ.get("OLLAMA_HOST"),
-            home_store=_home_store(table=table, home=home),
-            default_models=str(home.joinpath(*DEFAULT_MODELS_DIR)),
+            home_store=home_store_path(table=table, home=home),
+            default_models=default_models_path(home=home),
         )
         return served_store(facts=facts, realpath=self.realpath)
 
@@ -146,7 +135,7 @@ def _parse(*, result: CommandOutput) -> tuple[ListedModel, ...] | None:
         LOGGER.warning(
             "System ollama store skipped: ollama list exit code %d: %s",
             result.returncode,
-            _printable(text=result.stderr or result.stdout),
+            printable(text=result.stderr or result.stdout),
         )
         return None
     models = parse_ollama_list(text=result.stdout)

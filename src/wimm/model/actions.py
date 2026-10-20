@@ -5,6 +5,7 @@ from types import MappingProxyType
 
 from .cache_items import ItemBlob, require_unique_blob_paths
 from .enums import ActionKind, GroupId, PlanId, Risk, TargetId, TargetShape
+from .served_fingerprint import ServedModelFingerprint
 from .validation import ImmutableModel, require_aware, require_bytes, require_nonnegative
 
 ACTION_TARGET_SHAPES: Mapping[ActionKind, TargetShape] = MappingProxyType(
@@ -182,6 +183,7 @@ Fingerprint = (
     | VolumeFingerprint
     | DirFingerprint
     | ItemFingerprint
+    | ServedModelFingerprint
 )
 
 
@@ -203,7 +205,7 @@ ACTION_FINGERPRINT_TYPES: Mapping[ActionKind, tuple[type, ...]] = MappingProxyTy
         ActionKind.VOLUME_REMOVE: (VolumeFingerprint,),
         ActionKind.DEVDIR_DELETE: (DirFingerprint,),
         ActionKind.CACHE_CLEAN: (DirFingerprint,),
-        ActionKind.CACHE_ITEM_REMOVE: (ItemFingerprint,),
+        ActionKind.CACHE_ITEM_REMOVE: (ItemFingerprint, ServedModelFingerprint),
         ActionKind.TRASH_EMPTY: (DirFingerprint,),
         ActionKind.IMAGES_PRUNE_DANGLING: (type(None),),
         ActionKind.IMAGES_PRUNE_UNUSED: (type(None),),

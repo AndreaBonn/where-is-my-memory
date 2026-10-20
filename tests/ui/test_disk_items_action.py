@@ -34,7 +34,13 @@ def test_sub_row_consequence_equals_the_dialog_text_for_every_item_kind(
     entry = replace(
         entry,
         items=tuple(
-            replace(item, kind=kind, blobs=blobs if kind is CacheItemKind.ANDROID_AVD else ())
+            replace(
+                item,
+                kind=kind,
+                blobs=blobs if kind is CacheItemKind.ANDROID_AVD else (),
+                # An ollama item is named as `ollama rm` takes it, with its tag.
+                id=f"{item.title}:latest" if kind is CacheItemKind.OLLAMA_MODEL else item.id,
+            )
             for item in entry.items
         ),
     )

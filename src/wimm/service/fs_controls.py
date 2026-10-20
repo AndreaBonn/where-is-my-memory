@@ -11,6 +11,9 @@ from typing import Protocol
 
 import psutil
 
+from wimm.collectors.ollama_command import CommandRunner as OllamaCommandRunner
+from wimm.collectors.ollama_command import run_command as run_ollama_command
+from wimm.collectors.ollama_processes import ServeReader
 from wimm.collectors.root_facts import read_root_facts
 from wimm.core.cache_catalog import CacheResolution
 from wimm.core.root_policy import RootFacts
@@ -141,3 +144,7 @@ class DiskFsControl:
     owner_of: Callable[[str], int] = file_owner
     processes: Callable[[], Sequence[ProcessIdentity]] = list_process_identities
     read_facts: Callable[..., RootFacts | None] = read_root_facts
+    # The ollama client commands (T-6.38b): they need the whole output, which `runner` truncates.
+    ollama_runner: OllamaCommandRunner = run_ollama_command
+    serve_reader: ServeReader = psutil
+    environ: Mapping[str, str] = field(default_factory=lambda: os.environ)

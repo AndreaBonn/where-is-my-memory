@@ -23,6 +23,7 @@ from wimm.model.disk import CacheEntry, CacheKind, DiskReport, DockerDisk, Docke
 from wimm.model.enums import ActionKind, Category
 from wimm.model.errors import InvalidRequest
 
+from .item_tools import ITEM_ONLY_KINDS
 from .planning_drafts import Draft, assess_draft, volume_draft
 from .planning_tools import CacheToolMissing, no_tool
 from .risk import RiskTarget, TargetKind
@@ -245,6 +246,8 @@ def plan_cache_clean(
         ),
         None,
     )
+    if entry is not None and entry.kind in ITEM_ONLY_KINDS:
+        raise InvalidRequest(f"Cache {entry.kind.value} is removed one item at a time")
     if entry is not None and entry.kind in withheld_kinds(which=which):
         raise CacheToolMissing(f"Cache {entry.kind.value} is cleaned only by its own command")
     return _cache_draft(entry=entry, kind=ActionKind.CACHE_CLEAN)

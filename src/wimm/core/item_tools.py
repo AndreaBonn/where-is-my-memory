@@ -57,4 +57,4 @@ def is_item_removable(*, item: CacheItem) -> bool:
 
 
 # Kinds with no folder behind them: only their items are offered, never the whole entry.
-ITEM_ONLY_KINDS = frozenset({CacheKind.OLLAMA_SYSTEM})
+ITEM_ONLY_KINDS: frozenset[CacheKind] = frozenset({CacheKind.OLLAMA_SYSTEM})

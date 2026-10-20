@@ -12,6 +12,7 @@ from tests.core.disk_helpers import (
     stopped,
     volume,
 )
+from wimm.core.item_tools import ITEM_ONLY_KINDS
 from wimm.core.planning_disk import DISK_PLANNERS, plan_cache_clean
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DiskReport
@@ -74,7 +75,7 @@ def test_planner_drafts_each_carry_a_consequence(request_: ActionRequest) -> Non
     assert all(draft.assessed.consequences and draft.assessed.consequences[0] for draft in drafts)
 
 
-@pytest.mark.parametrize("kind", list(CacheKind))
+@pytest.mark.parametrize("kind", [k for k in CacheKind if k not in ITEM_ONLY_KINDS])
 def test_cache_clean_draft_carries_a_consequence(kind: CacheKind) -> None:
     if kind is CacheKind.TRASH:
         pytest.skip("the trash is emptied by trash_empty, covered above")

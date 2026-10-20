@@ -8,6 +8,7 @@ the same ratings `safe_reclaimable_bytes` sums for the header.
 from collections.abc import Callable
 
 from wimm.core.cache_catalog import withheld_kinds
+from wimm.core.item_tools import ITEM_ONLY_KINDS
 from wimm.model.actions import ActionRequest
 from wimm.model.disk import CacheKind, DiskReport
 from wimm.model.enums import ActionKind, Risk, TargetId
@@ -27,7 +28,8 @@ def _candidates(*, report: DiskReport, which: Callable[[str], str | None]) -> li
     withheld = withheld_kinds(which=which)
     for entry in report.caches:
         # An empty cache has nothing to free: no step of 0 B in the dialog.
-        offered = entry.kind is not CacheKind.TRASH and entry.kind not in withheld
+        # An item-only cache (the system ollama store) has no whole-cache clean to offer.
+        offered = entry.kind is not CacheKind.TRASH and entry.kind not in withheld | ITEM_ONLY_KINDS
         if offered and entry.size > 0:
             request = _single(kind=ActionKind.CACHE_CLEAN, target=entry.kind.value)
             drafts += plan_cache_clean(request=request, report=report, which=which)
