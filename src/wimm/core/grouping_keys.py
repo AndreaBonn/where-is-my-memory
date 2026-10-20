@@ -1,4 +1,5 @@
 import hashlib
+import math
 from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from itertools import chain
@@ -151,20 +152,26 @@ class Part:
     id_scope: str = ""
 
 
-def scope_shared_app_keys(*, parts: list[Part]) -> list[Part]:
+def scope_shared_app_keys(*, parts: list[Part], by_pid: Mapping[int, Pair]) -> list[Part]:
     """Give distinct ids to app parts that share one appid across buckets.
 
     A browser opened from a desktop app starts in the app's scope and inherits its appid,
-    yet is categorized BROWSER: two parts, one key. The part holding the oldest process
+    yet is categorized BROWSER: two parts, one key. The part whose process started first
     keeps the unscoped id stored in user state; the others are scoped by their category.
+    Start time, not pid, decides: pids wrap around.
     """
+
+    def started(part: Part) -> tuple[float, int]:
+        times = (by_pid[pid][0].create_time for pid in part.pids if pid in by_pid)
+        return min((t for t in times if t is not None), default=math.inf), min(part.pids)
+
     by_key: dict[str, list[Part]] = {}
     for part in parts:
         if part.key_class == KEY_CLASS_APP:
             by_key.setdefault(part.key, []).append(part)
     scoped: dict[int, Part] = {}
     for shared in by_key.values():
-        for part in sorted(shared, key=lambda item: min(item.pids, default=0))[1:]:
+        for part in sorted(shared, key=started)[1:]:
             scoped[id(part)] = replace(part, id_scope=part.category.value)
     return [scoped.get(id(part), part) for part in parts]
 

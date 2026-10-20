@@ -93,3 +93,20 @@ def test_one_appid_in_two_app_buckets_gives_two_groups_with_distinct_ids() -> No
     assert by_category[Category.BROWSER].id == stable_group_id(
         key_class="app", key="Aura", scope=Category.BROWSER.value
     )
+
+
+def test_the_oldest_start_keeps_the_unscoped_id_when_pids_have_wrapped() -> None:
+    app = replace(
+        pair(900, category=Category.DESKTOP_APP, name="aura", create_time=100.0)[0], ppid=1
+    )
+    browser = replace(
+        pair(20, category=Category.BROWSER, name="chrome", create_time=500.0)[0], ppid=1
+    )
+    drafts = build(
+        (app, CategoryDecision(category=Category.DESKTOP_APP, reason_code="x", appid="Aura")),
+        (browser, CategoryDecision(category=Category.BROWSER, reason_code="x", appid="Aura")),
+    )
+
+    by_category = {draft.category: draft.id for draft in drafts}
+    assert by_category[Category.DESKTOP_APP] == stable_group_id(key_class="app", key="Aura")
+    assert by_category[Category.BROWSER] != by_category[Category.DESKTOP_APP]

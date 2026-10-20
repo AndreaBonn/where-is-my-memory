@@ -246,7 +246,7 @@ def _process_parts(*, grouping: GroupingInput) -> list[Part]:
                 id_scope=bucket.value if items[0].key_class == KEY_CLASS_ROOT_PROCESS else "",
             )
         )
-    return scope_shared_app_keys(parts=parts)
+    return scope_shared_app_keys(parts=parts, by_pid=by_pid)
 
 
 def _to_draft(*, part: Part) -> GroupDraft:
